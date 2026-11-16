@@ -81,6 +81,8 @@ public static partial class RustEmitter {
         return this.Maker(new RsFunction(name, "pub", parameters, null, new RsBlock([], null)), member);
 
       var returns = this.ResultType(function);
+      if (this._throwing.Contains(function.Name))
+        returns = Fallible(returns);
       var statements = new List<RsStatement>();
       foreach (var parameter in function.Parameters.Where(this._reassigned.Contains)) {
         // A parameter given a string or a new array of its own holds a copy it owns from the start.
@@ -99,7 +101,9 @@ public static partial class RustEmitter {
         statements.Add(this.SharedDeclaration(parameter, new RsPath(this._locals[parameter]) { Type = parameter.Type }));
       statements.AddRange(this.NestedFunctions());
       this.Statements(function.Body.Statements, statements);
-      var body = Tidy.Function(new RsBlock(statements, null), function.ReturnType == IrType.Void);
+      if (this._throwing.Contains(function.Name) && function.ReturnType == IrType.Void && !(statements.Count > 0 && Diverges(statements[^1])))
+        statements.Add(new RsExpressionStatement(this.Returned(null)));
+      var body = Tidy.Function(new RsBlock(statements, null), function.ReturnType == IrType.Void && !this._throwing.Contains(function.Name));
       return new RsFunction(name, function.IsPublic || this._free.ContainsKey(function.Name) ? "pub" : "", parameters, returns, body) { Generics = generics.Length > 0 ? generics : Lifetime(function, this._arrayFacts).Length > 0 ? "<'a>" : "" };
     }
 
@@ -253,6 +257,19 @@ public static partial class RustEmitter {
         case IrGlobalAssign assign:
           this.CountIn(assign.Value, bindings, depth);
           break;
+        case IrTry attempt: {
+          // A catch clause or a finally may run after any part of the body: every path is taken as the worst.
+          this.Count(attempt.Body.Statements, bindings, depth);
+          foreach (var clause in attempt.Catches) {
+            if (clause.Filter is { } filter)
+              this.CountIn(filter, bindings, depth);
+            this.Count(clause.Body.Statements, bindings, depth);
+          }
+
+          if (attempt.Finally is { } final)
+            this.Count(final.Statements, bindings, depth);
+          break;
+        }
         case IrForEachCollection loop:
           this.CountIn(loop.Collection, bindings, depth);
           if (loop.Element is { } loopElement)

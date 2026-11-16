@@ -17,6 +17,15 @@ public sealed record RsClosure(bool Move, IReadOnlyList<RsParameter> Parameters,
 /// <param name="Elements">The elements, two or more.</param>
 public sealed record RsTuple(IReadOnlyList<RsExpression> Elements) : RsExpression;
 
+/// <summary><c>value?</c>: the value of an <c>Ok</c>, or the <c>Err</c> returned from the function.</summary>
+/// <param name="Operand">The <c>Result</c>.</param>
+public sealed record RsTry(RsExpression Operand) : RsExpression;
+
+/// <summary><c>let Err(error) = outcome</c>: the condition of an <c>if let</c>, which holds where the value matches the pattern.</summary>
+/// <param name="Pattern">The pattern as it is written, of names the backend chose.</param>
+/// <param name="Value">The value matched.</param>
+public sealed record RsLetCondition(string Pattern, RsExpression Value) : RsExpression;
+
 /// <summary>An item declared among the statements of a block, such as a function that captures nothing: <c>fn f(m: i32) -&gt; i32 { … }</c>.</summary>
 /// <param name="Item">The item.</param>
 public sealed record RsItemStatement(RsItem Item) : RsStatement;

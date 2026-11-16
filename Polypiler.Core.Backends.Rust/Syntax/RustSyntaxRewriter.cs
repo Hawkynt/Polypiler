@@ -50,6 +50,8 @@ public static class RustSyntaxRewriter {
     RsFile file => file.Items,
     RsClosure closure => [closure.Body],
     RsTuple tuple => tuple.Elements,
+    RsTry attempt => [attempt.Operand],
+    RsLetCondition condition => [condition.Value],
     RsItemStatement statement => [statement.Item],
     _ => []
   };
@@ -129,6 +131,8 @@ public static class RustSyntaxRewriter {
       RsInlineModule module => module with { Items = Many<RsItem>(module.Items.Count) },
       RsClosure closure => closure with { Body = Next<RsExpression>() },
       RsTuple tuple => tuple with { Elements = Many<RsExpression>(tuple.Elements.Count) },
+      RsTry attempt => attempt with { Operand = Next<RsExpression>() },
+      RsLetCondition condition => condition with { Value = Next<RsExpression>() },
       RsItemStatement statement => statement with { Item = Next<RsItem>() },
       _ => ((RsFile)node) with { Items = Many<RsItem>(((RsFile)node).Items.Count) }
     };

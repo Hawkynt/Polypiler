@@ -355,6 +355,10 @@ public static class RustPrinter {
         return "{}";
       case RsTuple tuple:
         return Arguments(tuple.Elements) is { } items ? $"({items})" : null;
+      case RsTry attempt:
+        return Flat(attempt.Operand) is { } tried ? tried + "?" : null;
+      case RsLetCondition condition:
+        return Flat(condition.Value) is { } matched ? $"let {condition.Pattern} = {matched}" : null;
       case RsClosure { Body: not RsBlockExpression } closure:
         return Flat(closure.Body) is { } closureBody ? ClosureHead(closure) + closureBody : null;
       case RsLoop { Body: { Statements.Count: 0, Tail: null } } loop:
@@ -600,6 +604,10 @@ public static class RustPrinter {
         return Closure(closure, indent, column, trailing);
       case RsTuple tuple:
         return "(" + VerticalArguments(tuple.Elements, indent) + ")";
+      case RsTry attempt:
+        return Expression(attempt.Operand, indent, column, trailing + 1) + "?";
+      case RsLetCondition condition:
+        return $"let {condition.Pattern} = " + Expression(condition.Value, indent, column + condition.Pattern.Length + 7, trailing);
       case RsWhile loop:
         return $"{Label(loop.Label)}while {Condition(loop.Condition, indent, column + Label(loop.Label).Length + 6)}{Block(loop.Body, indent)}";
       case RsLoop loop:
@@ -736,7 +744,7 @@ public static class RustPrinter {
   /// </summary>
   private static bool Overflows(RsExpression last, int count) => last switch {
     RsIf or RsMatch or RsWhile or RsLoop or RsFor or RsLabeledBlock or RsBlockExpression or RsClosure => true,
-    RsCall or RsMacro or RsArray => count == 1,
+    RsCall or RsMacro or RsArray or RsStructLiteral => count == 1,
     RsUnary unary => Overflows(unary.Operand, count),
     RsReference reference => Overflows(reference.Operand, count),
     RsCast cast => Overflows(cast.Operand, count),

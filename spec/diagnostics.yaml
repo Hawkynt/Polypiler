@@ -1087,7 +1087,7 @@ codes:
     severity: error
     exit: UnsupportedConstruct
     title: exception region under the panic trap policy
-    message: "exception region in <function> cannot be emitted under the trap policy 'panic': 'exception handling' is not supported by the Rust backend"
+    message: "exception region in <function> cannot be emitted under the trap policy 'panic': '<construct>' is not supported by the Rust backend"
     rule: rust.backend.exceptions
     area: rust
     owner: "#458"

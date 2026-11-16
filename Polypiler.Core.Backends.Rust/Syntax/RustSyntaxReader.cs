@@ -496,6 +496,8 @@ public static class RustSyntaxReader {
         if (this.Accept(".")) {
           var name = this.Peek().Kind == Kind.Number ? this.Next().Text : this.Identifier();
           expression = this.Is("(") ? new RsMethodCall(expression, name, this.Arguments(")")) : new RsField(expression, name);
+        } else if (this.Accept("?")) {
+          expression = new RsTry(expression);
         } else if (this.Is("(") && expression is RsPath or RsCall or RsIndex or RsParenthesized) {
           expression = new RsCall(expression, this.Arguments(")"));
         } else if (this.Is("[")) {
@@ -685,6 +687,14 @@ public static class RustSyntaxReader {
       var outer = this._noStruct;
       this._noStruct = true;
       try {
+        if (this.Accept("let")) {
+          var pattern = new StringBuilder();
+          while (!this.Is("="))
+            pattern.Append(this.Next().Text);
+          this.Expect("=");
+          return new RsLetCondition(pattern.ToString(), this.Expression());
+        }
+
         return this.Expression();
       } finally {
         this._noStruct = outer;

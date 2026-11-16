@@ -370,6 +370,29 @@ internal static class Strings {
           }
       }
       """, ["ply_set_find", "ply_slot_stamp"]),
+    ["ply_error"] = ("""
+      fn ply_error(class: usize, message: Vec<u16>, inner: Option<Rc<PlyError>>) -> Rc<PlyError> {
+          Rc::new(PlyError {
+              class,
+              message,
+              inner,
+          })
+      }
+      """, []),
+    ["ply_is"] = ("""
+      fn ply_is(class: usize, target: usize) -> bool {
+          let mut at = class;
+          while at != target && at != PLY_ERROR_BASES[at] {
+              at = PLY_ERROR_BASES[at];
+          }
+          at == target
+      }
+      """, []),
+    ["ply_unhandled"] = ("""
+      fn ply_unhandled(error: &PlyError) -> ! {
+          panic!("{}", PLY_ERROR_NAMES[error.class])
+      }
+      """, []),
     ["ply_with"] = ("""
       fn ply_with<T, R>(cell: &Mutex<T>, access: impl FnOnce(&mut T) -> R) -> R {
           let mut guard = cell.lock().unwrap_or_else(PoisonError::into_inner);

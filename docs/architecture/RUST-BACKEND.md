@@ -4,8 +4,8 @@
 [#458](https://github.com/Hawkynt/Polypiler/issues/458), [#459](https://github.com/Hawkynt/Polypiler/issues/459));
 arrays and slices, structs, enums, classes, interfaces and module state since
 [#460](https://github.com/Hawkynt/Polypiler/issues/460) and [#462](https://github.com/Hawkynt/Polypiler/issues/462);
-closures, function values, optional values, module state behind a `Mutex`, lists, maps and sets since
-phase 2; lazy sequences and `Result` follow. The runner that builds
+closures, function values, optional values, module state behind a `Mutex`, lists, maps and sets and
+exceptions as `Result` since phase 2; lazy sequences follow. The runner that builds
 and executes the output is [#468](https://github.com/Hawkynt/Polypiler/issues/468).
 Related: [backends](BACKENDS.md) · [pipeline](PIPELINE.md) · [exceptions](../reference/exceptions.md) ·
 [integer operations](../reference/integer-operations.md).
@@ -83,7 +83,10 @@ name escapes as a raw identifier (`r#gen`). The MSRV decides the rows of `RustCa
 | `return` | the tail of the function, `return v;` elsewhere |
 | a value assigned in every branch | `let x = if c { a } else { b };` (clippy's `needless_late_init`) |
 | a throw of a library exception | `panic!("<IrTrap>")` |
-| `try`/`catch` | refused, `PLY1560` |
+| an exception of a class of the module | `Rc<PlyError>` - `pub struct PlyError { pub class: usize, pub message: Vec<u16>, pub inner: Option<Rc<PlyError>> }`, the class a number whose bases `PLY_ERROR_BASES` lists; made by `ply_error(class, message, inner)` from what its constructors hand down to `Exception`'s; `Message`, `InnerException` its fields; see [Exceptions](#exceptions) |
+| `try`/`catch` | the body a labelled block that gives the exception - `let error: Rc<PlyError> = 't0: { … break 't0 e … };`, or `let outcome: Result<(), Rc<PlyError>>` where the body may complete - the clauses an `if` chain, `ply_is(error.class, 12) && filter`, the exception going on where none takes it |
+| a function that lets an exception out | `Result<T, Rc<PlyError>>`: `return Err(e)`, `return Ok(v)`, its calls `f(x)?`, inside a `try` body `match f(x) { Ok(value) => value, Err(error) => break 't0 error }`; a public one panics with the class's name, `ply_unhandled(&e)` |
+| `try`/`finally` around a body that always returns and throws nothing | `let value = 'f0: { … break 'f0 v; };`, the `finally`, then `value` |
 | a read-only table | `static NAME: [u32; N] = […];`, read as `NAME[i as usize]`, borrowed as `&NAME` |
 | an array parameter | `&[T]`, or `&mut [T]` where the function or a callee writes it (#460) |
 | an array the function makes | `Vec<T>`: `vec![0; n]` (`usize::try_from(n).expect("IntegerOverflow")` for a signed length), `vec![a, b]`, `Vec::new()`; a temporary one only read is an array `[a, b]` |
@@ -183,6 +186,24 @@ a function capture:
 A closure is `'static`: it borrows nothing, so it may be stored and returned. The object of a method
 (`self`), which a closure would borrow, is refused as a capture.
 
+## Exceptions
+
+A trap - an overflow, a division by zero, an index outside an array - is a panic, as it is wherever
+no handler stands; no exception object is made for it. An exception of a class of the module, thrown
+with `throw`, is a value instead, which the functions between the throw and the handler hand back as a
+`Result`, so a catch clause sees it in safe Rust. The two never meet: a catch clause of a class a trap
+belongs to (`Exception`, `InvalidOperationException`, …) stands only around a body that cannot trap,
+which the backend proves of every statement and call in it, and a throw of a class of the library
+remains a trap.
+
+.NET runs the filters of the handlers before the `finally` blocks between the throw and the handler
+(two passes); a `Result` runs those blocks first. A filter is therefore written only where no `finally`
+lies between - no `try`/`finally` in the body and no call that propagates - and only where it cannot trap,
+since .NET takes an exception in a filter for `false`. A `try` with both catch clauses and a `finally`, a
+`finally` around a body that may throw or complete, a `break` or `continue` out of a `try`, an exception in
+a closure and a public function that lets an exception out and is called inside the module are refused
+with `PLY1560`, which names why.
+
 A trap is a panic whose message is the name of the IR trap - `IntegerOverflow`, `DivideByZero`,
 `ArgumentOutOfRange`, … - in every build mode; the verification reads it back with `RustTraps`
 ([exceptions](../reference/exceptions.md#rust)).
@@ -205,7 +226,8 @@ a global of another type, a record with a floating-point field,
 a method that passes on the object of a hierarchy; an array safe Rust cannot own (written and shared by two variables, or a parameter and a new
 array in one written variable), a struct with a field that is no value. One array passed to a call
 twice where it is written and the callee swaps its parameters is `PLY1566`. Two exported functions
-whose Rust names are the same are `PLY1574`; an exception handler `PLY1560`.
+whose Rust names are the same are `PLY1574`; an exception region outside the form of
+[Exceptions](#exceptions) `PLY1560`, naming why.
 
 ## Lints
 
@@ -229,7 +251,7 @@ No group is ever allowed. Every other lint is avoided by the shape the backend w
 - `RustPrinterLayoutTests`, `RustEmitEdgeTests`, `RustTargetPassTests`, `RustReaderAndAnalysisTests`:
   the printer, the emitter, the target passes, the reader and the liveness analysis on the forms the
   fixtures do not reach, rule by rule.
-- `MemoryEmitTests`, `TypeEmitTests`, `ObjectEmitTests`, `ClosureEmitTests`, `OptionalEmitTests`, `StateEmitTests`, `CollectionEmitTests`, `FieldAliasEmitTests`: arrays, ownership and aliasing, structs, classes, traits, module state, function values, optional values and arrays that may be null, their forms and refusals.
+- `MemoryEmitTests`, `TypeEmitTests`, `ObjectEmitTests`, `ClosureEmitTests`, `OptionalEmitTests`, `StateEmitTests`, `CollectionEmitTests`, `FieldAliasEmitTests`, `ExceptionEmitTests`: arrays, ownership and aliasing, structs, classes, traits, module state, function values, optional values and arrays that may be null, their forms and refusals.
 - `RustDifferentialTests` (layer `rust`): every prototype fixture - all 24 since #460 - is built by the
   pinned toolchain and called on every case of `PrototypeCases`, with overflow checks on and off; every
   outcome, the final contents of every array argument included, equals the C# compiler's and the
@@ -239,7 +261,8 @@ No group is ever allowed. Every other lint is avoided by the shape the backend w
   optional values, a field's array named by a local (classes/Rc4), module state (each sequence of calls in one process, as one load of the class in
   .NET), collections and the LINQ shapes legalization writes as loops (collections/WordFrequency,
   sequences/ByteMedian, and the functions of collections/Collections the backend writes, which a test
-  lists), the floating-point view of bytes - against .NET in both overflow modes.
+  lists), exceptions of the module's classes (exceptions/Classes), the floating-point view of bytes -
+  against .NET in both overflow modes.
 - `RustRoundTripTests` (layer `rust`): every Rust fixture, imported by the Rust frontend in each
   overflow mode, comes back as a crate that is built with overflow checks on and off; every outcome is
   what rustc recorded for the original in the mode of the import.

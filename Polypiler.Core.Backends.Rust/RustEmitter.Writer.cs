@@ -55,6 +55,7 @@ public static partial class RustEmitter {
       this.NameGlobals(module);
       this.Classes(module);
       this.Signatures(module);
+      this.Exceptions(module);
       this.CollectionParameters(module);
       this._arrays = Polypiler.Core.Backends.Rust.Emit.ArrayOwnership.Of(module);
       this._arrayNulls = Polypiler.Core.Backends.Rust.Emit.ArrayNullness.Of(module);
@@ -63,6 +64,7 @@ public static partial class RustEmitter {
       foreach (var constant in module.Constants)
         items.Add(this.Constant(constant));
       items.AddRange(this.Globals(module));
+      items.AddRange(this.ErrorItems());
       var written = module.Functions.Select(function => (Source: function, Written: this.Function(function) with { IsHelper = copied.Contains(function.Name) })).ToList();
       var members = written.Where(pair => this._members.ContainsKey(pair.Source.Name))
         .ToDictionary(pair => pair.Source.Name, pair => this.AsMember(pair.Written, pair.Source, this._members[pair.Source.Name]), StringComparer.Ordinal);
@@ -72,7 +74,7 @@ public static partial class RustEmitter {
         items.AddRange(type switch {
           IrStructType structType => this.Struct(structType),
           IrEnumType enumType => this.EnumItems(enumType),
-          IrClassType classType when !classType.IsLibrary && !this._hierarchy.Contains(classType) => this.Class(classType, members),
+          IrClassType classType when !classType.IsLibrary && !this._hierarchy.Contains(classType) && !IrExceptionClass.IsException(classType) => this.Class(classType, members),
           _ => []
         });
 
@@ -172,6 +174,7 @@ public static partial class RustEmitter {
     private string Type(IrType type)
       => TypeName(type) ?? (type.IsString ? OwnedString
         : type.Declaration is IrStructType or IrEnumType && this._types.TryGetValue(type.Declaration, out var name) ? name
+        : IsError(type) ? ErrorType
         : type.IsObject ? this.ObjectType(type, false)
         : type.IsFunction ? this.FunctionType(type)
         : IsOptionalValue(type) ? $"Option<{this.Type(type.Underlying!)}>"

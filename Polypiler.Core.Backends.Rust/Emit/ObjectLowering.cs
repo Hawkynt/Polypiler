@@ -26,7 +26,7 @@ internal static class ObjectLowering {
 
     var byName = module.Functions.ToDictionary(function => function.Name, StringComparer.Ordinal);
     var makers = new List<IrFunction>();
-    foreach (var type in classes.Where(type => !type.IsAbstract)) {
+    foreach (var type in classes.Where(type => !type.IsAbstract && !IrExceptionClass.IsException(type))) {
       foreach (var constructor in type.Constructors) {
         if (!byName.TryGetValue(constructor.Function, out var function))
           continue;
@@ -51,7 +51,7 @@ internal static class ObjectLowering {
     var body = AliasSpecialization.Rewrite(function.Body, expression => expression switch {
       IrMethodCall { Kind: IrMethodCallKind.Direct or IrMethodCallKind.Base } call
         => new IrCall(call.Method.Function, call.Type, call.Target is null ? call.Arguments : [call.Target, .. call.Arguments]),
-      IrNew creation when creation.Type.ClassType is { IsLibrary: false }
+      IrNew creation when creation.Type.ClassType is { IsLibrary: false } created && !IrExceptionClass.IsException(created)
         => new IrCall(NewPrefix + creation.Constructor.Function, creation.Type, creation.Arguments),
       _ => expression
     });

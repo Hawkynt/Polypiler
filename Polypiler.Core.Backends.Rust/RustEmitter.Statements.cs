@@ -72,6 +72,7 @@ public static partial class RustEmitter {
               null => null,
               var value when declare.Local.Type.IsArray => this.ArrayInitial(declare.Local, value),
               var value when declare.Local.Type.IsString => this.StringValue(value),
+              var value when IsError(declare.Local.Type) => this.ErrorValue(value),
               var value when declare.Local.Type.IsObject => this.ObjectValue(value, this.MayBeNull(declare.Local)),
               var value when declare.Local.Type.IsView => this.ViewSource(value, this.WritesView(declare.Local)),
               var value when declare.Local.Type.IsFunction => this.FunctionValue(value),
@@ -149,8 +150,14 @@ public static partial class RustEmitter {
         case IrContinue:
           into.AddRange(this.Continue());
           return true;
+        case IrReturn { Value: { } thrower } result when this._tries.Count > 0 && IrTree.Nodes(thrower).Any(node => node is IrThrowExpression thrown && IsCatchable(thrown.Exception.Type)):
+          // A value that may throw is bound before the return, which may not hold what leaves (clippy's diverging_sub_expression).
+          var held = new IrLocal("$" + this._labels++ + ":returned", thrower.Type);
+          this._locals[held] = this.Temporary("value");
+          this.Statement(new IrDeclare(held, thrower), into);
+          return this.Statement(result with { Value = new IrLocalRef(held) }, into);
         case IrReturn result:
-          into.Add(new RsExpressionStatement(new RsReturn(result.Value switch {
+          into.Add(new RsExpressionStatement(this.Leaving(result.Value switch {
             null => null,
             { Type.IsArray: true } value => this.ArrayResult(this._function, value),
             { Type.IsString: true } value => this.StringValue(value, true),
@@ -160,16 +167,18 @@ public static partial class RustEmitter {
             var value => this.Expression(value)
           })));
           return true;
+        case IrRethrow:
+          into.Add(new RsExpressionStatement(this._caught.Count == 0 ? this.Refuse("a rethrow outside a catch clause") : this.Escape(this.Cloned(new RsReference(false, new RsPath(this._caught[^1]))))));
+          return true;
         case IrThrow thrown:
           into.Add(new RsExpressionStatement(this.Throw(thrown.Exception)));
           return true;
         case IrYield or IrYieldBreak or IrYieldFrom or IrForEachSequence:
           into.Add(new RsExpressionStatement(this.Refuse(LazySequence)));
           return false;
-        case IrTry:
-          if (this._refused.Add("exception handling"))
-            this._problems.Add(ExceptionRegionDescriptor.At($"exception region in {this._construct} cannot be emitted under the trap policy 'panic': 'exception handling' is not supported by the Rust backend"));
-          return false;
+        case IrTry attempt:
+          this.Try(attempt, into);
+          return into.Count > 0 && Diverges(into[^1]);
         default:
           into.Add(new RsExpressionStatement(this.Refuse(statement.GetType().Name[2..])));
           return false;
@@ -178,7 +187,10 @@ public static partial class RustEmitter {
 
     /// <summary>Whether a statement ends the path it is on: a <c>return</c>, <c>break</c>, <c>continue</c> or a panic.</summary>
     internal static bool Diverges(RsStatement statement)
-      => statement is RsExpressionStatement { Expression: RsReturn or RsBreak or RsContinue or RsMacro { Name: "panic" or "unreachable" } };
+      => statement is RsExpressionStatement { Expression: RsReturn or RsBreak or RsContinue or RsMacro { Name: "panic" or "unreachable" } or RsCall { Callee: RsPath { Name: "ply_unhandled" } } };
+
+    /// <summary>A <c>return</c>: inside the body of a <c>finally</c> the break out of it, in a function that propagates <c>return Ok(v)</c>.</summary>
+    private RsExpression Leaving(RsExpression? value) => this.FinallyReturn(value) ?? this.Returned(value);
 
     /// <summary>
     /// An assignment; where the value is an operator on the variable itself that Rust has a compound
@@ -309,6 +321,9 @@ public static partial class RustEmitter {
 
       // A switch is left through its labelled block; a loop by its label where a switch or a labelled
       // block stands between, since Rust refuses an unlabelled break inside a labelled block (E0695).
+      if (this._tries.Count > 0 && this._breakables.IndexOf(target) < this._tries[^1].Breakables)
+        return this.Refuse("a break out of a try");
+
       var crossed = this._breakables.Count - 1 > this._breakables.IndexOf(target);
       if (target.Kind == BreakableKind.Loop && !crossed)
         return new RsBreak(null, null);
@@ -327,6 +342,9 @@ public static partial class RustEmitter {
         return [new RsExpressionStatement(this.Refuse("continue outside a loop"))];
 
       var target = this._breakables[index];
+      if (this._tries.Count > 0 && index < this._tries[^1].Breakables)
+        return [new RsExpressionStatement(this.Refuse("a continue out of a try"))];
+
       if (target.Kind == BreakableKind.ContinueBlock) {
         target.Used = true;
         return [new RsExpressionStatement(new RsBreak(target.Label, null))];
@@ -583,10 +601,12 @@ public static partial class RustEmitter {
     /// object, so a throw of anything else, and a handler, cannot be written.
     /// </summary>
     private RsExpression Throw(IrExpr exception) {
+      if (IsCatchable(exception.Type))
+        return this.Escape(this.ErrorValue(exception));
       if (exception is IrNew { Type.Declaration: IrClassType type } && TrapOf(type) is { } trap)
         return Panic(trap);
 
-      return this.Refuse("exception handling");
+      return this.Refuse("the throw of an exception that is no new object");
     }
 
     /// <summary>The trap whose class an exception class of the library is; the first one where several share it.</summary>

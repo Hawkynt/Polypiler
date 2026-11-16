@@ -23,7 +23,7 @@ public static partial class RustEmitter {
   /// </summary>
   public static int Precedence(RsExpression expression) => expression switch {
     RsLiteral literal when literal.Text.StartsWith('-') => 13,
-    RsLiteral or RsString or RsPath or RsParenthesized or RsCall or RsMethodCall or RsMacro or RsIndex or RsArray or RsField or RsStructLiteral or RsTuple => 15,
+    RsLiteral or RsString or RsPath or RsParenthesized or RsCall or RsMethodCall or RsMacro or RsIndex or RsArray or RsField or RsStructLiteral or RsTuple or RsTry => 15,
     RsUnary or RsReference => 13,
     RsCast => 12,
     RsBinary binary => RustPrinter.Precedence(binary.Operator),
@@ -117,6 +117,10 @@ public static partial class RustEmitter {
       IrBinary binary => this.Binary(binary),
       IrConvert convert => this.Convert(convert),
       IrConditional choice => this.Conditional(choice),
+      IrCall call when this._throwing.Contains(call.Function)
+        => this.Propagated(this._members.TryGetValue(call.Function, out var thrower) ? this.MemberCall(call, thrower) : new RsCall(new RsPath(this._functions[call.Function]), this.Arguments(call)) { Type = call.Type }),
+      IrNew creation when IsError(creation.Type) => this.ErrorNew(creation),
+      IrFieldLoad load when IsError(load.Target.Type) => this.ErrorField(load),
       IrCall call when this._members.TryGetValue(call.Function, out var member) => this.MemberCall(call, member),
       IrCall call when this._functions.TryGetValue(call.Function, out var callee)
         => new RsCall(new RsPath(callee), this.Arguments(call)) { Type = call.Type },
@@ -395,10 +399,12 @@ public static partial class RustEmitter {
       if (Lazy(choice) is { } lazy)
         return this.Binary(lazy);
 
-      // A choice in the second branch is an else if (clippy's collapsible_else_if).
+      // A choice in the second branch is an else if (clippy's collapsible_else_if); a branch that leaves is a statement of its block.
+      static RsBlock Branch(RsExpression value) => value is RsReturn or RsBreak or RsContinue || value is RsCall { Callee: RsPath { Name: "ply_unhandled" } }
+        ? new RsBlock([new RsExpressionStatement(value)], null) : new RsBlock([], value);
       var otherwise = this.Expression(choice.WhenFalse);
-      return new RsIf(this.Expression(choice.Condition), new RsBlock([], this.Expression(choice.WhenTrue)),
-        otherwise is RsIf nested ? nested : new RsBlockExpression(new RsBlock([], otherwise))) { Type = choice.Type };
+      return new RsIf(this.Expression(choice.Condition), Branch(this.Expression(choice.WhenTrue)),
+        otherwise is RsIf nested ? nested : new RsBlockExpression(Branch(otherwise))) { Type = choice.Type };
     }
 
     /// <summary>A step of a variable as an expression: a block that steps it and yields the old or the new value.</summary>

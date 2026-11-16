@@ -64,7 +64,7 @@ public static partial class RustEmitter {
     /// read or write a field or to call a member that needs no <c>Rc</c>.
     /// </summary>
     private void Classes(IrModule module) {
-      this._classes = [.. module.Types.OfType<IrClassType>().Where(type => !type.IsLibrary)];
+      this._classes = [.. module.Types.OfType<IrClassType>().Where(type => !type.IsLibrary && !IrExceptionClass.IsException(type))];
       this.Hierarchies(module);
       var functions = module.Functions.ToDictionary(function => function.Name, StringComparer.Ordinal);
       foreach (var type in this._classes) {

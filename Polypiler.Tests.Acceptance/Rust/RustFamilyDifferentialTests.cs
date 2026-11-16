@@ -15,7 +15,7 @@ namespace Polypiler.Tests.Acceptance.Rust;
 
 /// <summary>
 /// The fixtures of the prototype's families through the Rust backend (#460, #462): bit operations,
-/// value records, strings, enums, numbers as text, classes, dispatch, generics, function values, optional values, module state, collections, views,
+/// value records, strings, enums, numbers as text, classes, dispatch, generics, function values, optional values, module state, collections, exceptions, views,
 /// floating-point views of bytes. Every fixture of a family that the backend writes is
 /// built by the pinned toolchain and called on the family's cases with overflow checks on and off;
 /// every outcome, the arrays a call was given included, must be what .NET computes of the original
@@ -108,6 +108,9 @@ public sealed class RustFamilyDifferentialTests {
         new PrototypeCall("Fill", [System.Text.Encoding.ASCII.GetBytes(key), new byte[length]]) { Returns = typeof(int) }))],
       call => PrototypeFixture.InvokedOutcome(ClassFixtures.Compiled("Rc4Demo", call.Method), call));
 
+    yield return new("exceptions/Classes", () => ExceptionFixtures.Imported("Classes"), () => [.. ExceptionFixtures.Calls().Where(call => call.File == "Classes").Select(call => call.Call)],
+      call => PrototypeFixture.InvokedOutcome(ExceptionFixtures.Compiled("ClassesDemo", call.Method), call));
+
     yield return new("optional/Find", OptionalFixtures.Imported, () => [.. OptionalFixtures.Calls()],
       call => PrototypeFixture.InvokedOutcome(OptionalFixtures.Compiled(call.Method), call));
 
@@ -149,8 +152,7 @@ public sealed class RustFamilyDifferentialTests {
 
   /// <summary>The fixtures of the families the backend refuses still, each with the construct its refusal names.</summary>
   private static IEnumerable<TestCaseData> Refusals() {
-    yield return new TestCaseData("exceptions/Traps", "'exception handling'");
-    yield return new TestCaseData("exceptions/Classes", "'exception handling'");
+    yield return new TestCaseData("exceptions/Traps", "'a catch of a class a trap belongs to, around code that may trap'");
   }
 
   [TestCaseSource(nameof(Refusals))]

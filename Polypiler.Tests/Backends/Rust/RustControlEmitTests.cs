@@ -196,7 +196,7 @@ public sealed class RustControlEmitTests {
   public void ExceptionRegion_IsRefused() {
     var problems = RustCrates.Check(RustCrates.Import("public static int F(int a, int b) { try { return a / b; } catch (System.DivideByZeroException) { return 0; } }"));
     Assert.That(problems.Select(problem => problem.Code), Does.Contain(RustEmitter.ExceptionRegion));
-    Assert.That(problems.First(problem => problem.Code == RustEmitter.ExceptionRegion).Message, Does.Contain("'exception handling'"));
+    Assert.That(problems.First(problem => problem.Code == RustEmitter.ExceptionRegion).Message, Does.Contain("'a catch of a class a trap belongs to, around code that may trap'"));
   }
 
   [Test]

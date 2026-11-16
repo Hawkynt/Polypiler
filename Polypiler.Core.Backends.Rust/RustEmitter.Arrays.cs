@@ -44,6 +44,8 @@ public static partial class RustEmitter {
       var parameter = function.Parameters[index];
       if (parameter.Type.IsString)
         return BorrowedString;
+      if (IsError(parameter.Type))
+        return ((RsPath)this.Refuse("an exception passed as a value")).Name;
       if (parameter.Type.IsObject)
         return this.ObjectParameterType(parameter);
       if (parameter.Type.IsView)
@@ -63,6 +65,8 @@ public static partial class RustEmitter {
     private string? ResultType(IrFunction function) {
       if (function.ReturnType == IrType.Void)
         return null;
+      if (IsError(function.ReturnType))
+        return ((RsPath)this.Refuse("an exception returned as a value")).Name;
       if (function.ReturnType.IsObject)
         return this.ObjectType(function.ReturnType, this._nullness.ReturnsNull(function.Name));
       if (function.ReturnType.IsCollection)
@@ -83,6 +87,8 @@ public static partial class RustEmitter {
       if (local.Type.IsArray && this.IsFieldAlias(local))
         return null;
 
+      if (IsError(local.Type))
+        return ErrorType;
       if (local.Type.IsObject)
         return this.ObjectType(local.Type, this.MayBeNull(local));
       if (local.Type.IsView)
