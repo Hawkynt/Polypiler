@@ -169,6 +169,18 @@ public static partial class JavaScriptFrontend {
     "a value proven a NaN or an integer, such as parseInt of an empty text of digits, is stored where JSDoc states integers: JavaScript "
     + "keeps the NaN, the imported code traps with 'integer overflow'");
 
+  /// <summary>
+  /// The caveat of a module that stores an exact integer - a sum, a difference, a product of integers,
+  /// <c>Math.min</c> or <c>max</c> of them - where JSDoc states an integer type that may not hold it (#1416):
+  /// JavaScript keeps the value as it is, the translation traps.
+  /// </summary>
+  public const string StatedInteger = "js-stated-integer";
+
+  private static readonly ImportCaveat _statedInteger = new(
+    StatedInteger,
+    "an integer computed with +, -, * or Math.min/max is stored, passed or returned where JSDoc states an integer type: JavaScript "
+    + "keeps a value outside that type as it is, the imported code traps with 'integer overflow'");
+
   private static readonly ImportCaveat _sortOrder = new(
     SortOrder,
     "a sort comparator returns a double: for inputs that make it inconsistent, such as a NaN, ECMA-262 leaves the order to the engine, the translation fixes the one of its stable merge sort");
@@ -358,6 +370,9 @@ public static partial class JavaScriptFrontend {
 
     if (lowering.TrapsNaN)
       caveats.Add(_nanStore);
+
+    if (lowering.TrapsRange)
+      caveats.Add(_statedInteger);
 
     var ordered = models.Where(model => !model.Candidate.IsNested).OrderBy(model => model.Candidate.Anchor.Start).ToList();
     var integers = Signatures(ordered, parameter => parameter.IsIntegerByUse && parameter.Parameter!.Type.IsWord);

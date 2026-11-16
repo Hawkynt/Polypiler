@@ -37,7 +37,7 @@ RotR64	imported
 RotL128n	OpCodes.js(447,24): error PLY1101: parameter 'value' of 'RotL128n' has no supported JSDoc type
 RotR128n	OpCodes.js(462,24): error PLY1101: parameter 'value' of 'RotR128n' has no supported JSDoc type
 RotL128	imported
-RotR128	OpCodes.js(511,37): error PLY1102: 'float64 where int32 is expected' is not supported yet
+RotR128	imported
 Pack16BE	imported
 Unpack16BE	imported
 Pack16LE	imported
@@ -56,7 +56,7 @@ Words32ToBytesBE	imported
 BytesToWords32BE	imported
 GetByte	imported
 SetByte	imported
-Split64	OpCodes.js(738,21): error PLY1103: the result of 'value & 0xFFFFFFFF' has no bounded type
+Split64	OpCodes.js(738,21): error PLY1105: 'low32' holds both number and bigint
 Combine64	imported
 AnsiToBytes	imported
 BytesToAnsi	imported
@@ -97,14 +97,14 @@ GetPooledArray	imported
 ReturnToPool	imported
 TimingSafeAddMod	imported
 TimingSafeSelect	imported
-EncodeMsgLength64LE	OpCodes.js(738,21): error PLY1103: the result of 'value & 0xFFFFFFFF' has no bounded type
-EncodeMsgLength64LE	OpCodes.js(2913,43): error PLY1102: 'float64 where uint32 is expected' is not supported yet
-EncodeMsgLength128BE	OpCodes.js(738,21): error PLY1103: the result of 'value & 0xFFFFFFFF' has no bounded type
-EncodeMsgLength128BE	OpCodes.js(2934,44): error PLY1102: 'float64 where uint32 is expected' is not supported yet
+EncodeMsgLength64LE	OpCodes.js(738,21): error PLY1105: 'low32' holds both number and bigint
+EncodeMsgLength64LE	OpCodes.js(2910,21): error PLY1105: 'split' holds both { high32, low32 } and { high32, low32 }
+EncodeMsgLength128BE	OpCodes.js(738,21): error PLY1105: 'low32' holds both number and bigint
+EncodeMsgLength128BE	OpCodes.js(2927,21): error PLY1105: 'split' holds both { high32, low32 } and { high32, low32 }
 ModSafe	imported
 CreateArray	imported
 ArraySlice	imported
-ConcatArrays	OpCodes.js(2997,22): error PLY1102: 'new Array of a length that is no proven integer, which is number' is not supported yet
+ConcatArrays	imported
 InverseSBoxLookup	imported
 BuildInverseSBox	imported
 SplitNibbles	imported

@@ -26,7 +26,7 @@ public static partial class IrVerifier {
     /// </summary>
     private void Using(IrUsing scope) {
       var resource = scope.Resource;
-      this.Require(function.Locals.Contains(resource), $"local '{resource.Name}' is not among the locals of the function");
+      this.Require(this._locals.Contains(resource), $"local '{resource.Name}' is not among the locals of the function");
       this.Value(scope.Initializer, resource.Type, $"the initializer of the resource '{resource.Name}'");
       var contract = types.Interfaces.FirstOrDefault(type => type.IsDisposable && type.Methods.Contains(scope.Dispose));
       this.Require(contract is not null && resource.Type.IsObject && resource.Type.IsAssignableTo(IrType.Object(contract)),

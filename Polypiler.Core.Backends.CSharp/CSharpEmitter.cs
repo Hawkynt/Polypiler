@@ -768,10 +768,10 @@ public static partial class CSharpEmitter {
       foreach (var constant in this._module.Constants)
         members.Add(this.Constant(constant));
 
+      // The regular expressions come before the variables of the module, whose initializers may test them: static fields start in the order they stand.
+      members.AddRange(this.RegexFields());
       foreach (var global in this._module.Globals.Where(global => !this.IsOwned(global)))
         members.Add(this.Global(global));
-
-      members.AddRange(this.RegexFields());
 
       // The classes are written first: the names of their variables are settled before those of the static class.
       var classes = this.Classes();

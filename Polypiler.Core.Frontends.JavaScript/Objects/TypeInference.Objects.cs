@@ -23,11 +23,7 @@ internal sealed partial class TypeInference {
 
         var value = Binder.Compound(store.Operator) is null ? this.Of(store.Right) : this.Combined(store);
         if (owner.Field(key) is { } field) {
-          // A new Array the store makes, which nothing else holds, is one of the integers the field states where its own fit them (#1413);
-          // one the program grows joins the field as a list all the same.
-          if (IsFresh(store.Right) && value is { Kind: JsKind.Array, IsPlain: true, IsView: false, Element: { Kind: JsKind.Number } made }
-              && field.Variable.Type is { Kind: JsKind.Array, IsView: false, Element: { AdmitsWhole: true } element } && JsType.Join(element, made) == element)
-            value = JsType.ArrayOf(element, true);
+          value = Fresh(field.Variable.Type, store.Right, value);
 
           var origin = value.IsView && Origin(store.Right) is Identifier read && model.Bindings.GetValueOrDefault(read) is Variable { Type.IsView: true } source
             && this.Reach(source, value.Stored(), store.Right);
@@ -52,8 +48,18 @@ internal sealed partial class TypeInference {
     }
   }
 
+  /// <summary>
+  /// A new Array a store makes, which nothing else holds, as one of the integers the place states where
+  /// its own fit them (#1413, #1416); one the program grows joins the place as a list all the same. Any
+  /// other value as it is.
+  /// </summary>
+  private static JsType Fresh(JsType? place, Node made, JsType value)
+    => IsFresh(made) && value is { Kind: JsKind.Array, IsPlain: true, IsView: false, Element: { Kind: JsKind.Number } given } && (given.IsInteger || given.IsWhole)
+      && place is { Kind: JsKind.Array, IsView: false, Element: { AdmitsWhole: true } element } && JsType.Join(element, given) == element
+      ? JsType.ArrayOf(element, true) : value;
+
   /// <summary>Whether an expression makes a new Array: a literal, <c>new Array(…)</c>, or the <c>fill</c> of one.</summary>
-  private static bool IsFresh(Expression made) => made switch {
+  private static bool IsFresh(Node made) => made switch {
     ArrayExpression => true,
     NewExpression { Callee: Identifier { Name: "Array" } } => true,
     CallExpression { Callee: MemberExpression { Computed: false, Object: var filled, Property: Identifier { Name: "fill" } } } => IsFresh(filled),
@@ -158,7 +164,7 @@ internal sealed partial class TypeInference {
   /// <summary>The type of what a call of a function yields, as its result type in the IR says once it has one.</summary>
   private JsType ResultOf(FunctionModel model)
     // A whole double stays one: its range is what the IR type of a double does not say (#1413).
-    => model.Result.IsWhole ? model.Result
+    => model.Result.IsWhole && model.ReturnType == Polypiler.Core.IR.IrType.F64 ? model.Result
     : model.Result.Kind is JsKind.Unknown or JsKind.Array or JsKind.Record or JsKind.Conflict or JsKind.Object or JsKind.Function or JsKind.Sequence || model.Result.Ir is null ? model.Result : JsType.Of(model.ReturnType).AbsentAs(model.Result);
 
 }

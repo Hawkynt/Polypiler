@@ -60,8 +60,16 @@ internal sealed partial class TypeInference(string path, string source, List<Can
     this._models[candidate] = model;
     this._binders[model] = this.BinderOf(model);
     model.Problem = this.ReadSignature(model);
-    if (model.Problem is null)
+    if (model.Problem is null) {
       this._binders[model].Bind();
+      // A local JSDoc states an integer or an array of integers of starts as that place (#1416).
+      foreach (var local in model.Locals.Where(local => local.Spelling is not null))
+        if (JsDoc.Stated(local.Spelling!, this.Named)?.Admitting() is { } stated && (stated.AdmitsWhole || stated.Element is { AdmitsWhole: true })) {
+          local.Stated = stated;
+          local.Type = JsType.Join(local.Type, stated);
+          local.Reason = $"@type {{{local.Spelling}}}";
+        }
+    }
 
     // A generator returns its generator object, of the values it yields; a function without a return
     // returns nothing, which is known before any type is; one that returns a value and can also end
@@ -141,7 +149,8 @@ internal sealed partial class TypeInference(string path, string source, List<Can
         if (IsStatedLong(stated))
           this._statedLongs.Add((field.Variable, stated, false));
         else
-          field.Variable.Type = JsType.Join(field.Variable.Type, stated);
+          // A stated integer takes an exact integer, checked where it is stored (#1416).
+          field.Variable.Type = JsType.Join(field.Variable.Type, stated.Admitting());
 
         field.Variable.Reason ??= $"@type {{{field.Stated}}}";
       }
@@ -292,7 +301,7 @@ internal sealed partial class TypeInference(string path, string source, List<Can
   private bool Apply(FunctionModel model, Flow flow) {
     switch (flow.Kind) {
       case FlowKind.Assign:
-        return this.Reach(flow.Target!, this.Of(flow.Node), flow.Node) | this.Alias(model, flow.Node, flow.Target!.Type);
+        return this.Reach(flow.Target!, Fresh(flow.Target!.Stated, flow.Node, this.Of(flow.Node)), flow.Node) | this.Alias(model, flow.Node, flow.Target!.Type);
       case FlowKind.Grow:
         return this.Grow(flow);
       case FlowKind.FieldGrow:

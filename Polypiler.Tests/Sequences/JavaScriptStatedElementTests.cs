@@ -474,7 +474,7 @@ public sealed class JavaScriptStatedElementTests {
   /// <summary>
   /// Exception: what no proof bounds to a byte stays a double, which the stated place refuses: the remainder
   /// itself, a variable that is assigned, a bound that is no literal or of a fraction, a test that leaves a
-  /// branch nothing, a remainder by 0 or by a computed divisor, a sum of no bound, a product, a test of no
+  /// branch nothing, a remainder by 0 or by a computed divisor, a sum of no bound, a quotient, a test of no
   /// ordering or with the variable on the right.
   /// </summary>
   [TestCase("r")]
@@ -486,7 +486,7 @@ public sealed class JavaScriptStatedElementTests {
   [TestCase("Math.trunc(v) % 0")]
   [TestCase("Math.trunc(v) % v")]
   [TestCase("Math.trunc(v) + 1")]
-  [TestCase("(r < 0 ? r + 256 : r) * 1")]
+  [TestCase("(r < 0 ? r + 256 : r) / 1")]
   [TestCase("r === 0 ? r + 256 : r")]
   [TestCase("0 > r ? r + 256 : r")]
   public void UnboundedWhole_IsRefused(string value)
