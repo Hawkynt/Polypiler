@@ -606,10 +606,10 @@ internal sealed partial class Lowering {
       case JsKind.String:
         var (text, again) = this.Bound(value.Expr);
         return new IrBinary(IrBinaryOp.LogicalAnd, new IrUnary(IrUnaryOp.LogicalNot, new IrIsNull(text)), new IrBinary(IrBinaryOp.NotEqual, Str(IrIntrinsicOp.StrLength, IrType.I32, again), I32(0)));
-      // An object, an array or a function counts as true unless it is null (#1365).
-      case JsKind.Object or JsKind.Array or JsKind.Function when value.Expr.Type.IsNullable:
+      // An object, an array or a function counts as true unless it is null (#1365); a list only where an absent value reaches it (#1403).
+      case JsKind.Object or JsKind.Array or JsKind.Function when value.Expr.Type.IsNullable && !(value.Expr.Type.IsList && !value.Type.IsAbsent):
         return new IrUnary(IrUnaryOp.LogicalNot, new IrIsNull(value.Expr));
-      // A list, a map or a set is never null in the IR: present, it counts as true; read without an effect, it is nothing but that.
+      // A list nothing absent reaches, a map or a set is never null in the IR: present, it counts as true; read without an effect, it is nothing but that.
       case JsKind.Array or JsKind.Map or JsKind.Set when value.Expr.Type.IsCollection && !IrTree.Nodes(value.Expr).Any(part => part is IrCall or IrStep or IrMethodCall or IrNew or IrCollection):
         return new IrConst(IrType.Bool, 1);
       default:
@@ -624,7 +624,7 @@ internal sealed partial class Lowering {
   /// </summary>
   private IrExpr IsArray(Node node) {
     var value = this.Evaluate(node);
-    if (value.Type.Kind == JsKind.Array && value.Type.IsPlain && value.Expr.Type.IsNullable)
+    if (value.Type.Kind == JsKind.Array && value.Type.IsPlain && value.Expr.Type.IsNullable && !(value.Expr.Type.IsList && !value.Type.IsAbsent))
       return new IrUnary(IrUnaryOp.LogicalNot, new IrIsNull(value.Expr));
 
     if (IrTree.Nodes(value.Expr).Any(part => part is IrCall or IrStep or IrMethodCall or IrNew or IrCollection))

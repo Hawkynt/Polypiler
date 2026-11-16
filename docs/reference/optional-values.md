@@ -35,8 +35,8 @@ Related: [repository README](../../README.md) · [classes](classes.md) · [value
 | `IrIsNone(x)` | whether `x` holds none | `x` is optional |
 | `IrUnwrap(x)` | the value, a `MissingValue` trap for none | `x` is optional |
 | `IrCoalesce(x, f)` | `x`'s value, or `f` for none | `x` is optional, `f` of its type or of the type it holds |
-| `IrIsNull(r)` | whether a reference is `null` | `r` is an object, an array, a string or a function value |
-| `IrNull(T)` | `null` | `T` is a class of the module, an array or a string |
+| `IrIsNull(r)` | whether a reference is `null` | `r` is an object, an array, a list (#1403), a string or a function value |
+| `IrNull(T)` | `null` | `T` is a class of the module, an array, a list (#1403) or a string |
 | `IrBind(l, v)` | `l = v` as a value | `l` in scope, not the receiver, `v` of its type |
 
 ## C# frontend
@@ -70,6 +70,7 @@ says; the test for none follows. `double? n = NaN; n == n` is `false`, as .NET c
 | a place both absent values reach that `===` tells apart | - | `PLY1105` |
 | arithmetic on a value both may be | - | `PLY1102` |
 | a string that `null` reaches (#1370): a field set to `null` and later to a string | `str` that holds `null`; `!s` tests `null` and `""`, `s + 'x'` writes `null`, `s \|\| 'x'` is a string | supported |
+| `null` stored where JSDoc states an array without `null` (#1403): `/** @type {uint8[]} */ let r = null`, a field `this.d = null` later given a list | the array or list that may be `null`: the values, not the JSDoc, decide; `!r` and `r === null` test it, `r.length` of `null` traps with `IrTrap.NullReference`, as node throws a TypeError; a list no absent value reaches stays never `null` | supported |
 | `typeof x` of a value of a known kind (#1372) | the constant; of a value an absent value reaches, a test of absence | supported |
 | a string that `undefined` alone reaches (`pop`, `get`, a missing argument), `obj?.[key]`, `f?.()`, an object literal that may be absent | - | `PLY1102` naming it |
 | a string, or `typeof` of a value, that both absent values reach | - | `PLY1105` |
