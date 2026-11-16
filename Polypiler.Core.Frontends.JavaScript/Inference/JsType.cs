@@ -404,9 +404,13 @@ internal sealed record JsType {
       case JsKind.BigInt:
         return first.IsUnbounded || second.IsUnbounded ? UnboundedBigInt : Hull(first, second, _longs) ?? UnboundedBigInt;
       case JsKind.Array:
-        // An array JSDoc states and nothing has decided yet is whatever array the program gives it (#1374).
-        if (first.IsStated != second.IsStated && !first.IsView && !second.IsView)
-          return first.IsStated ? second : first;
+        // An array JSDoc states and nothing has decided yet is whatever array the program gives it (#1374);
+        // one of elements no value has reached yet - new Array(n), [] - takes the stated elements (#1406).
+        if (first.IsStated != second.IsStated && !first.IsView && !second.IsView) {
+          var (stated, given) = first.IsStated ? (first, second) : (second, first);
+          return given.Element!.Kind != JsKind.Unknown ? given
+            : (given.IsGrowable ? ListOf(stated.Element!) : ArrayOf(stated.Element!, true)) with { MayBeNull = given.MayBeNull, MayBeUndefined = given.MayBeUndefined };
+        }
 
         if (first.IsPlain && second.IsPlain)
           return first.IsGrowable || second.IsGrowable ? ListOf(Join(first.Element!, second.Element!)) : ArrayOf(Join(first.Element!, second.Element!), true);

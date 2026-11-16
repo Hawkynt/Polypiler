@@ -50,7 +50,7 @@ internal sealed partial class Lowering(TypeInference types) {
         throw new Refusal(problem);
 
       foreach (var variable in model.Parameters.Concat(model.Locals))
-        this.CheckType(variable.Type, variable.Name, variable.Evidence ?? variable.Declaration);
+        this.CheckType(variable.Type, variable.Name, variable.Evidence ?? variable.Declaration, true);
 
       this.CheckType(model.Result, model.Candidate.Name, model.ResultEvidence ?? model.Candidate.Anchor);
       // A parameter has the type it is called with. Where the body assigns it something else, the body
@@ -99,11 +99,18 @@ internal sealed partial class Lowering(TypeInference types) {
     }
   }
 
-  /// <summary>Refuses a place that values of two kinds reach, and a <c>BigInt</c> that nothing bounds.</summary>
-  private void CheckType(JsType type, string name, Node evidence) {
+  /// <summary>
+  /// Refuses a place that values of two kinds reach, and a <c>BigInt</c> that nothing bounds; for a
+  /// variable also an Array the program stores values of two kinds into.
+  /// </summary>
+  private void CheckType(JsType type, string name, Node evidence, bool variable = false) {
 
     if (type.Kind == JsKind.Conflict)
       throw this.Refuse(evidence, JavaScriptFrontend.MixedKindsDescriptor, $"'{name}' holds both {type.Kinds.First} and {type.Kinds.Second}");
+
+    // An Array the program stores values of two kinds into - new Array(n), then a string and a number (#1406).
+    if (variable && type is { Kind: JsKind.Array, Element.Kind: JsKind.Conflict })
+      throw this.Refuse(evidence, JavaScriptFrontend.MixedKindsDescriptor, $"the elements of '{name}' hold both {type.Element.Kinds.First} and {type.Element.Kinds.Second}");
 
     if (type.Kind == JsKind.BigInt && type.Ir is null)
       throw this.Unbounded(evidence);

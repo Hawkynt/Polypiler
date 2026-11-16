@@ -37,7 +37,7 @@ internal sealed partial class Lowering {
         throw new Refusal(problem);
 
       foreach (var variable in model.Parameters.Concat(model.Locals))
-        this.CheckType(variable.Type, variable.Name, variable.Evidence ?? variable.Declaration);
+        this.CheckType(variable.Type, variable.Name, variable.Evidence ?? variable.Declaration, true);
 
       this.CheckType(model.Result, candidate.Name, model.ResultEvidence ?? candidate.Anchor);
       var entry = new List<IrStmt>();
