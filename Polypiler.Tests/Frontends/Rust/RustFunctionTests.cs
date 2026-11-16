@@ -158,6 +158,9 @@ public sealed class RustFunctionTests {
   public void Macro_PanicsWhenItFails(string statement) {
     var source = $"pub fn f(x: u32) -> u32 {{ {statement} x }}";
     Assert.That(Run(source, "f", 1u), Is.EqualTo(RustFixture.Panic));
+    // Every one throws the class of Rust's explicit panics (docs/reference/exceptions.md, Rust).
+    var thrown = Assert.Throws(Is.InstanceOf<IrException>(), () => IrInterpreter.Call(Module(source), "f", [1u]));
+    Assert.That(((IrException)thrown!).Class.Name, Is.EqualTo("InvalidOperationException"));
   }
 
   [Test]
