@@ -99,14 +99,19 @@ public sealed class JavaScriptDifferentialTests {
     Assert.That(result.Caveats.Select(caveat => caveat.Id), Does.Contain(difference.Caveat));
   }
 
-  /// <summary>Test design 8: the differences cover reads and writes of an empty and a one-element array at -1 and at the length.</summary>
+  /// <summary>
+  /// Test design 8: the differences and the calls the import computes as node does (#1367) together
+  /// cover reads and writes of an empty and a one-element array at -1 and at the length.
+  /// </summary>
   [Test]
   public void Differences_CoverTheEdgesOfAnArray() {
     var edges = JavaScriptCases.Differences().Where(difference => difference.Fixture == "arrays" && difference.Imported == PrototypeFixture.Trap(IrTrap.IndexOutOfRange)).ToList();
     Assert.That(edges.Select(difference => difference.Call.Method).Distinct(),
-      Is.EquivalentTo(new[] { "readByte", "readInt", "readUint", "readCoerced", "writeByte", "writeInt", "writeUint" }));
+      Is.EquivalentTo(new[] { "readByte", "readInt", "readUint", "writeByte", "writeInt", "writeUint" }));
     Assert.That(edges.Select(difference => (((Array)difference.Call.Arguments[0]).Length, (int)difference.Call.Arguments[1])).Distinct(),
       Is.EquivalentTo(new[] { (0, -1), (0, 0), (1, -1), (1, 1) }));
+    var coerced = JavaScriptCases.For("arrays").Where(call => call.Method == "readCoerced" && (int)call.Arguments[1] >= ((Array)call.Arguments[0]).Length || call.Method == "readCoerced" && (int)call.Arguments[1] < 0);
+    Assert.That(coerced.Select(call => (((Array)call.Arguments[0]).Length, (int)call.Arguments[1])), Is.EquivalentTo(new[] { (0, -1), (0, 0), (1, -1), (1, 1) }));
   }
 
   /// <summary>

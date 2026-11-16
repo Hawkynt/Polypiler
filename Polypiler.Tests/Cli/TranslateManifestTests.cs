@@ -117,7 +117,7 @@ public sealed class TranslateManifestTests {
 
   [Test]
   public void TheCaveatsOfAJavaScriptImport_AreRecorded() {
-    var source = this.Source("snippet.js", "function g(d, a) { return ((d[a | 0] / (a | 0)) | 0) + (a << 1); } function f() { return g(new Uint8Array(1), 1); }");
+    var source = this.Source("snippet.js", "function g(d, a) { return (d[a | 0] % (a >>> 0)) + (a << 1); } function f() { return g(new Uint8Array(1), 1); }");
     var (exitCode, _, _) = this.Invoke("translate", source, "--from", "javascript", "--to", "javascript", "--output", this._out, "--export", "f,g", "--typed-arrays", "--profile", "es5", "--module", "cjs");
     Assert.That(exitCode, Is.EqualTo((int)ExitCode.Success));
     var manifest = this.Read();

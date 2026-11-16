@@ -22,9 +22,9 @@ internal sealed record JavaScriptDifference(string Caveat, string Fixture, Proto
 /// The calls the imported JavaScript is compared on. Nothing here says what a call returns: the
 /// expected outcome is whatever <c>node</c> does with the original source.
 /// <para>
-/// No call of a fixture's list leaves an array, divides by zero or steps a variable out of its 32
-/// bits. There JavaScript and the imported code differ on purpose, and <see cref="Differences"/>
-/// states both sides.
+/// A call of a fixture's list leaves an array or divides by zero only where the import does what
+/// JavaScript does there (#1367): a read under a coercion, a quotient under one. Everywhere else
+/// JavaScript and the imported code differ on purpose, and <see cref="Differences"/> states both sides.
 /// </para>
 /// </summary>
 internal static class JavaScriptCases {
@@ -50,7 +50,47 @@ internal static class JavaScriptCases {
   ];
 
   /// <summary>The calls for a fixture whose expected outcomes are recorded in the repository.</summary>
-  public static IReadOnlyList<PrototypeCall> For(string fixture) => fixture switch {
+  public static IReadOnlyList<PrototypeCall> For(string fixture) => [.. Listed(fixture), .. Edges(fixture)];
+
+  /// <summary>
+  /// The calls outside an array and by a divisor of zero, or of -1 under the smallest dividend, that
+  /// the import computes as JavaScript does (#1367); before, they were <see cref="Differences"/>.
+  /// </summary>
+  private static IEnumerable<PrototypeCall> Edges(string fixture) {
+    switch (fixture) {
+      case "arrays":
+        // An array of length 0 and of length 1, read at -1, at its length and, when empty, at 0.
+        foreach (var length in new[] { 0, 1 })
+          foreach (var index in new[] { -1, length })
+            yield return Call("readCoerced", Enumerable.Repeat((byte)9, length).ToArray(), index);
+
+        break;
+      case "operators":
+        yield return Call("divideInt", 1, 0);
+        yield return Call("divideUint", 1u, 0u);
+        yield return Call("divideInt", int.MinValue, -1);
+        yield return Call("divideIntToUint", int.MinValue, -1);
+        break;
+      case "inference/conversions":
+        yield return Call("divideInts", 1, 0);
+        yield return Call("remainderInts", 1, 0);
+        yield return Call("divideUints", 1u, 0u);
+        yield return Call("remainderUints", 1u, 0u);
+        yield return Call("remainderInts", int.MinValue, -1);
+        yield return Call("divideIntsToUint", int.MinValue, -1);
+        yield return Call("divideIntByByte", 1, (byte)0);
+        break;
+      case "inference/arrays":
+        // An index that is no integer of an element: a fraction, past the end, a NaN, beyond 32 bits.
+        foreach (var index in new[] { 1.5, -0.5, 3.0, double.NaN, 4294967296.0 })
+          yield return Call("readAt", new byte[] { 5, 6, 7 }, index);
+
+        break;
+    }
+  }
+
+  /// <summary>The calls of a fixture inside its arrays and with divisors other than zero.</summary>
+  private static IReadOnlyList<PrototypeCall> Listed(string fixture) => fixture switch {
     "adler32" => [
       Call("compute", PrototypeCases.Text("Wikipedia")),
       Call("compute", PrototypeCases.Text("")),
@@ -175,7 +215,6 @@ internal static class JavaScriptCases {
         Add("js-oob-read", "arrays", $"void | {content}", outOfRange, "readByte", bytes, index);
         Add("js-oob-read", "arrays", $"void | {content}", outOfRange, "readInt", ints, index);
         Add("js-oob-read", "arrays", $"void | {content}", outOfRange, "readUint", uints, index);
-        Add("js-oob-read", "arrays", $"0 | {content}", outOfRange, "readCoerced", bytes, index);
         Add("js-oob-read", "arrays", $"void | {content}", outOfRange, "writeByte", bytes, index, 7);
         Add("js-oob-read", "arrays", $"void | {content}", outOfRange, "writeInt", ints, index, 7u);
         Add("js-oob-read", "arrays", $"void | {content}", outOfRange, "writeUint", uints, index, 7);
@@ -186,32 +225,12 @@ internal static class JavaScriptCases {
     // and no index at all in the imported code.
     Add("js-oob-read", "arrays", "void | [5,6,7]", PrototypeFixture.Trap(IrTrap.IntegerOverflow), "readAtSum", new uint[] { 5, 6, 7 }, int.MinValue, int.MinValue + 2);
 
-    // js-div-zero: no quotient, and the one quotient that does not fit.
-    Add("js-div-zero", "operators", "0", PrototypeFixture.Trap(IrTrap.DivideByZero), "divideInt", 1, 0);
-    Add("js-div-zero", "operators", "0", PrototypeFixture.Trap(IrTrap.DivideByZero), "divideUint", 1u, 0u);
-    Add("js-div-zero", "operators", "-2147483648", PrototypeFixture.Trap(IrTrap.IntegerOverflow), "divideInt", int.MinValue, -1);
-    Add("js-div-zero", "operators", "2147483648", PrototypeFixture.Trap(IrTrap.IntegerOverflow), "divideIntToUint", int.MinValue, -1);
-
-    // js-div-zero: the divisions of the inference fixtures, of 32 and of 64 bits; a BigInt division by zero throws in JavaScript.
-    Add("js-div-zero", "inference/conversions", "0", PrototypeFixture.Trap(IrTrap.DivideByZero), "divideInts", 1, 0);
-    Add("js-div-zero", "inference/conversions", "0", PrototypeFixture.Trap(IrTrap.DivideByZero), "remainderInts", 1, 0);
-    Add("js-div-zero", "inference/conversions", "0", PrototypeFixture.Trap(IrTrap.DivideByZero), "divideUints", 1u, 0u);
-    Add("js-div-zero", "inference/conversions", "0", PrototypeFixture.Trap(IrTrap.DivideByZero), "remainderUints", 1u, 0u);
-    Add("js-div-zero", "inference/conversions", "0", PrototypeFixture.Trap(IrTrap.IntegerOverflow), "remainderInts", int.MinValue, -1);
-    Add("js-div-zero", "inference/conversions", "2147483648", PrototypeFixture.Trap(IrTrap.IntegerOverflow), "divideIntsToUint", int.MinValue, -1);
-    Add("js-div-zero", "inference/conversions", "0", PrototypeFixture.Trap(IrTrap.DivideByZero), "divideIntByByte", 1, (byte)0);
+    // js-div-zero: a BigInt division by zero throws in JavaScript, and the one quotient that does not fit wraps.
     Add("js-div-zero", "inference/bigint", "trap: Division by zero", PrototypeFixture.Trap(IrTrap.DivideByZero), "divide", 1UL, 0UL);
     Add("js-div-zero", "inference/bigint", "trap: Division by zero", PrototypeFixture.Trap(IrTrap.DivideByZero), "remainder", 1UL, 0UL);
     Add("js-div-zero", "inference/bigint", "-9223372036854775808", PrototypeFixture.Trap(IrTrap.IntegerOverflow), "divideSigned", long.MinValue, -1L);
     Add("js-div-zero", "inference/bigint", "0", PrototypeFixture.Trap(IrTrap.IntegerOverflow), "remainderSigned", long.MinValue, -1L);
 
-    // js-oob-read: an index that is no integer reads nothing in JavaScript; the imported code drops the
-    // fraction, and traps when what is left is no index at all.
-    Add("js-oob-read", "inference/arrays", "0 | [5,6,7]", "6 | [5,6,7]", "readAt", new byte[] { 5, 6, 7 }, 1.5);
-    Add("js-oob-read", "inference/arrays", "0 | [5,6,7]", "5 | [5,6,7]", "readAt", new byte[] { 5, 6, 7 }, -0.5);
-    Add("js-oob-read", "inference/arrays", "0 | [5,6,7]", outOfRange, "readAt", new byte[] { 5, 6, 7 }, 3.0);
-    Add("js-oob-read", "inference/arrays", "0 | [5,6,7]", PrototypeFixture.Trap(IrTrap.IntegerOverflow), "readAt", new byte[] { 5, 6, 7 }, double.NaN);
-    Add("js-oob-read", "inference/arrays", "0 | [5,6,7]", PrototypeFixture.Trap(IrTrap.IntegerOverflow), "readAt", new byte[] { 5, 6, 7 }, 4294967296.0);
     return differences;
   }
 

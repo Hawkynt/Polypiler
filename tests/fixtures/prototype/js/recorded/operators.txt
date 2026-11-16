@@ -2365,3 +2365,7 @@ chooseTruth(true, false, false) => false
 chooseTruth(true, false, true) => false
 chooseTruth(true, true, false) => true
 chooseTruth(true, true, true) => true
+divideInt(1, 0) => 0
+divideUint(1, 0) => 0
+divideInt(-2147483648, -1) => -2147483648
+divideIntToUint(-2147483648, -1) => 2147483648
