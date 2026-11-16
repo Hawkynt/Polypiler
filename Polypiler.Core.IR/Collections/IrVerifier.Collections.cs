@@ -60,7 +60,7 @@ public static partial class IrVerifier {
 
       var declared = new[] { loop.Element, loop.Value }.OfType<IrLocal>().ToList();
       foreach (var local in declared) {
-        this.Require(function.Locals.Contains(local), $"local '{local.Name}' is not among the locals of the function");
+        this.Require(this._locals.Contains(local), $"local '{local.Name}' is not among the locals of the function");
         this.Require(this._visible.Add(local), $"local '{local.Name}' is declared twice");
       }
 

@@ -31,7 +31,7 @@ public static partial class IrVerifier {
         this.Declared(IrType.Object(clause.Class));
         var local = clause.Local;
         if (local is not null) {
-          this.Require(function.Locals.Contains(local), $"local '{local.Name}' is not among the locals of the function");
+          this.Require(this._locals.Contains(local), $"local '{local.Name}' is not among the locals of the function");
           this.Require(local.Type == IrType.Object(clause.Class), $"the local '{local.Name}' of a catch clause has the type {local.Type}, not that of {clause.Class.Name}");
           this.Require(this._visible.Add(local), $"local '{local.Name}' is declared twice");
         }
