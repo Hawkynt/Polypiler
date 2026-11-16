@@ -203,6 +203,17 @@ public sealed class RustSyntaxTests {
       Assert.That(RustPrinter.Print(RustSyntaxReader.Read(file.Content)), Is.EqualTo(file.Content), file.Path);
   }
 
+  /// <summary>A fixture the round trip leaves out is one the backend refuses, naming every construct with PLY1550; none of them crashes.</summary>
+  [TestCaseSource(nameof(PendingRustFixtures))]
+  public void PendingRustFixture_IsRefusedByName(string fixture, Polypiler.Core.Frontends.Rust.OverflowChecks mode) {
+    var refusals = RustCrates.Check(RustFixture.Import(fixture, mode));
+    Assert.That(refusals, Is.Not.Empty);
+    Assert.That(refusals.Select(diagnostic => diagnostic.Code), Has.All.EqualTo("PLY1550"));
+  }
+
+  private static IEnumerable<TestCaseData> PendingRustFixtures()
+    => RustFixture.BackendPending.SelectMany(fixture => RustFixture.Modes.Select(mode => new TestCaseData(fixture, mode).SetArgDisplayNames(fixture, RustFixture.NameOf(mode))));
+
   [Test]
   public void Precedence_RanksEveryKind() {
     Assert.That(RustEmitter.Precedence(L("-1")), Is.EqualTo(13));

@@ -39,7 +39,7 @@ internal static class RustRun {
   /// <summary>The image type of an IR scalar, or of an array of scalars as a <c>seq</c>.</summary>
   public static ImageType ImageOf(IrType type) => type.Kind switch {
     IrTypeKind.Optional => ImageType.Opt(ImageOf(type.Underlying!)),
-    IrTypeKind.Array => ImageType.Seq(ImageOf(type.Element!)),
+    IrTypeKind.Array or IrTypeKind.Span or IrTypeKind.ReadOnlySpan => ImageType.Seq(ImageOf(type.Element!)),
     IrTypeKind.String => ImageType.Utf16,
     IrTypeKind.Bool => ImageType.Bool,
     IrTypeKind.I8 => ImageType.I8,
@@ -62,7 +62,7 @@ internal static class RustRun {
   public static CallSignature SignatureOf(IrFunction function, Func<int, bool>? takesNull = null)
     => new([.. function.Parameters.Select((parameter, index) => new CallParameter(parameter.Name,
         parameter.Type.IsArray && takesNull?.Invoke(index) == true ? ImageType.Opt(ImageOf(parameter.Type)) : ImageOf(parameter.Type),
-        parameter.Type.IsArray ? ParameterMode.InOut : ParameterMode.In))],
+        parameter.Type.IsSequence ? ParameterMode.InOut : ParameterMode.In))],
       function.ReturnType == IrType.Void ? null : ImageOf(function.ReturnType));
 
   /// <summary>An argument as the little-endian bytes of its image type: an optional one as its presence byte and its value.</summary>
@@ -91,11 +91,11 @@ internal static class RustRun {
     _ => throw new ArgumentException($"{value.GetType()} is no scalar.", nameof(value))
   };
 
-  /// <summary>The values an output image holds: the result, then the contents of every array argument, each as the .NET value of its IR type.</summary>
+  /// <summary>The values an output image holds: the result, then the contents of every array or view argument, each as the .NET value of its IR type.</summary>
   public static (object? Result, object[] Arguments) Values(IrFunction function, CallSignature signature, object[] arguments, byte[] image) {
     var at = 0;
     var result = Present(signature.Result, image, ref at) ? Read(function.ReturnType.Underlying ?? function.ReturnType, image, ref at) : null;
-    var after = arguments.Select((argument, index) => function.Parameters[index].Type.IsArray
+    var after = arguments.Select((argument, index) => function.Parameters[index].Type.IsSequence
       ? Present(signature.Parameters[index].Type, image, ref at) ? Read(function.Parameters[index].Type, image, ref at)! : argument
       : argument).ToArray();
     Assert.That(at, Is.EqualTo(image.Length), "the output image holds more than the result and the arrays");
@@ -122,7 +122,7 @@ internal static class RustRun {
       return new string(units);
     }
 
-    if (type.IsArray) {
+    if (type.IsSequence) {
       var count = BitConverter.ToInt32(image, at);
       at += 4;
       var element = type.Element!;

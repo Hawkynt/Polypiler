@@ -10,7 +10,7 @@ and executes the output is [#468](https://github.com/Hawkynt/Polypiler/issues/46
 Related: [backends](BACKENDS.md) · [pipeline](PIPELINE.md) · [exceptions](../reference/exceptions.md) ·
 [integer operations](../reference/integer-operations.md).
 
-`polypiler translate <file> --from <csharp|javascript> --to rust --output <dir>` writes a Cargo package:
+`polypiler translate <file> --from <csharp|javascript|python|rust> --to rust --output <dir>` writes a Cargo package:
 
 | File | What it holds |
 | --- | --- |
@@ -266,9 +266,10 @@ No group is ever allowed. Every other lint is avoided by the shape the backend w
   sequences/ByteMedian, and the functions of collections/Collections the backend writes, which a test
   lists), exceptions of the module's classes (exceptions/Classes), the floating-point view of bytes -
   against .NET in both overflow modes.
-- `RustRoundTripTests` (layer `rust`): every Rust fixture, imported by the Rust frontend in each
-  overflow mode, comes back as a crate that is built with overflow checks on and off; every outcome is
-  what rustc recorded for the original in the mode of the import.
+- `RustRoundTripTests` (layer `rust`): every Rust fixture the backend writes (ten of fifteen; the
+  others are listed in `RustFixture.BackendPending` and refused by name), imported by the Rust frontend
+  in each overflow mode, comes back as a crate that is built with overflow checks on and off; every
+  outcome is what rustc recorded for the original in the mode of the import.
 - `RustBackendScenarioTests` (layer `rust`): the scenarios of the issues with their hand-checked
   values, clippy with `-D warnings` and `cargo fmt --check` on the crates, the generated tests passing
   and a mutated one failing.
