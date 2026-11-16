@@ -31,6 +31,9 @@ internal enum MemberKind {
 /// <param name="Initializer">The value of a field declaration, which the constructor stores first; <see langword="null"/> for none.</param>
 internal sealed record ClassField(string Key, Variable Variable, Node? Initializer) {
 
+  /// <summary>The type the JSDoc <c>@type</c> in front of the statement that first assigns the field states, as it is spelled; <see langword="null"/> for none.</summary>
+  public string? Stated { get; init; }
+
   /// <summary>Whether the field is private, <c>#name</c>.</summary>
   public bool IsPrivate => this.Key.StartsWith('#');
 
@@ -80,8 +83,22 @@ internal sealed class ClassModel(string name, Node declaration, IrClassType? lib
   /// <summary>The method in the IR of every member but the constructor, once the types are known.</summary>
   public Dictionary<Candidate, IrMethod> Methods { get; } = [];
 
+  /// <summary>
+  /// The constructor a <c>new</c> of the class runs the parameters of: its own, or for a class without
+  /// one the nearest of a class it derives from, which JavaScript's implicit
+  /// <c>constructor(...args) { super(...args); }</c> passes the arguments on to (#1369); <see langword="null"/> where none declares one.
+  /// </summary>
+  public Candidate? Initial => this.Lineage.Select(type => type.Constructor).FirstOrDefault(constructor => constructor is not null);
+
   /// <summary>The constructor in the IR, once the types are known.</summary>
   public IrConstructor? Creator { get; set; }
+
+  /// <summary>
+  /// For the class of the members of a frozen object of records (#1371), the values of each member, in
+  /// the order of the fields; <see langword="null"/> for a class of the file. Its fields are read-only,
+  /// and its constructor takes one parameter per field.
+  /// </summary>
+  public IReadOnlyDictionary<string, IReadOnlyList<Expression>>? Frozen { get; init; }
 
   /// <summary>Why the class cannot be imported whatever its members are, or <see langword="null"/>.</summary>
   public string? Problem { get; set; }

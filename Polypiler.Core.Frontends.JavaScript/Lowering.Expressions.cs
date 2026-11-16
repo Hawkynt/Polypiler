@@ -21,6 +21,19 @@ internal sealed partial class Lowering {
     if (this._substitutes.TryGetValue(node, out var substitute))
       return substitute;
 
+    // The key of a key loop is the constant of the key being written out; a test of it against a literal is decided (#1373).
+    if (this.KeyOf(node) is { } key)
+      return new IrStrConst(key);
+
+    if (this.IncludesKey(node) is { } included)
+      return included;
+
+    if (node is MemberExpression keyedMember && this.KeyedMember(keyedMember) is { } keyed)
+      return keyed;
+
+    if (this.KeysValue(node) is { } keys)
+      return keys;
+
     if (this.StringExpression(node) is { } text)
       return text;
     if (this.NumberTextExpression(node) is { } converted)
@@ -138,6 +151,8 @@ internal sealed partial class Lowering {
         return new IrUnary(IrUnaryOp.LogicalNot, this.Condition(unary.Argument));
       case Operator.Void when unary.Argument is Literal:
         return AbsentValue;
+      case Operator.TypeOf:
+        return this.TypeOf(unary);
       case Operator.BitwiseNot when type.Kind == JsKind.BigInt:
         return new IrUnary(IrUnaryOp.BitNot, this.Big(unary.Argument, coercion, type.Ir ?? throw this.Unbounded(unary)));
       case Operator.BitwiseNot:
@@ -182,8 +197,15 @@ internal sealed partial class Lowering {
       throw this.Unsupported(logical, $"{OperatorText(logical.Operator)} on {left.Describe()} and {right.Describe()}");
     }
 
-    if (Contains(logical.Left, node => node is CallExpression or NewExpression or UpdateExpression or AssignmentExpression))
-      throw this.Unsupported(logical, $"{OperatorText(logical.Operator)} as a value whose left operand has an effect");
+    // A left operand with an effect is evaluated once, into a temporary that is tested and then yielded.
+    if (Contains(logical.Left, node => node is CallExpression or NewExpression or UpdateExpression or AssignmentExpression)) {
+      var evaluated = this.Evaluate(logical.Left);
+      var (once, again) = this.Bound(evaluated.Expr);
+      var test = this.Truth(evaluated with { Expr = once }, logical.Left);
+      var kept = this.To(evaluated with { Expr = again }, type, logical.Left);
+      var other = this.Value(logical.Right, type);
+      return or ? new IrConditional(test, kept, other) : new IrConditional(test, other, kept);
+    }
 
     var condition = this.Condition(logical.Left);
     var first = this.Value(logical.Left, type);
@@ -385,6 +407,8 @@ internal sealed partial class Lowering {
       return integer;
 
     switch (builtin) {
+      case null when this.Concatenated(call) is { } joined:
+        return joined;
       case null when this.ViewMethod(call) is { } view:
         return view;
       case null:
@@ -465,7 +489,7 @@ internal sealed partial class Lowering {
 
     var arguments = new List<IrExpr>();
     for (var index = 0; index < call.Arguments.Count; ++index)
-      arguments.Add(this.Value(call.Arguments[index], target.Parameters[index].Parameter?.Type ?? this.Storable(target.Parameters[index].Entry, call.Arguments[index])));
+      arguments.Add(this.Argument(call.Arguments[index], target.Parameters[index]));
 
     // A parameter no argument is given for is undefined.
     arguments.AddRange(this.Missing(call, target, call.Arguments.Count));
@@ -527,7 +551,12 @@ internal sealed partial class Lowering {
       return new IrBinary(or ? IrBinaryOp.LogicalOr : IrBinaryOp.LogicalAnd, first, this.Within(or ? whenFalse : whenTrue, logical.Right, () => this.Condition(logical.Right)));
     }
 
-    var value = this.Present(this.Evaluate(node), node);
+    return this.Truth(this.Evaluate(node), node);
+  }
+
+  /// <summary>Whether a value that is evaluated already counts as true, by the rules of <see cref="Condition"/>.</summary>
+  private IrExpr Truth(Typed evaluated, Node node) {
+    var value = this.Present(evaluated, node);
     switch (value.Type.Kind) {
       case JsKind.Boolean:
         return value.Expr;
@@ -540,6 +569,12 @@ internal sealed partial class Lowering {
         return new IrBinary(IrBinaryOp.Greater, magnitude, new IrConst(IrType.F64, 0));
       case JsKind.BigInt when value.Type.Ir is { } wide:
         return new IrBinary(IrBinaryOp.NotEqual, Convert(value.Expr, wide), new IrConst(wide, 0));
+      // A string counts as true unless it is empty or, where an absent value reaches it, null (#1370).
+      case JsKind.String when !value.Type.IsAbsent:
+        return new IrBinary(IrBinaryOp.NotEqual, Str(IrIntrinsicOp.StrLength, IrType.I32, value.Expr), I32(0));
+      case JsKind.String:
+        var (text, again) = this.Bound(value.Expr);
+        return new IrBinary(IrBinaryOp.LogicalAnd, new IrUnary(IrUnaryOp.LogicalNot, new IrIsNull(text)), new IrBinary(IrBinaryOp.NotEqual, Str(IrIntrinsicOp.StrLength, IrType.I32, again), I32(0)));
       // An object, an array or a function counts as true unless it is null (#1365).
       case JsKind.Object or JsKind.Array or JsKind.Function when value.Expr.Type.IsNullable:
         return new IrUnary(IrUnaryOp.LogicalNot, new IrIsNull(value.Expr));
@@ -564,8 +599,8 @@ internal sealed partial class Lowering {
     if (IrTree.Nodes(value.Expr).Any(part => part is IrCall or IrStep or IrMethodCall or IrNew or IrCollection))
       throw this.Unsupported(node, "Array.isArray of an operand with an effect");
 
-    // A typed array is no Array, but JSDoc's uint8[] that made it one may have meant an Array: what the program passes decides, which the types do not say.
-    if (value.Type.Kind == JsKind.Array && !value.Type.IsPlain)
+    // A typed array is no Array, but JSDoc's uint8[] that nothing decided may have meant one (#1374).
+    if (value.Type is { Kind: JsKind.Array, IsPlain: false, IsStated: true })
       throw this.Unsupported(node, $"Array.isArray of {value.Type.Describe()}, which JSDoc may have meant as an Array");
 
     return new IrConst(IrType.Bool, value.Type.Kind == JsKind.Array && value.Type.IsPlain ? 1 : 0);
@@ -610,7 +645,25 @@ internal sealed partial class Lowering {
   /// literal and a new <c>Array</c> take the element type of the place they go to, which is the type
   /// the inference found for everything stored into the array.
   /// </summary>
+  /// <summary>
+  /// The value of an argument as the parameter takes it: of its type, and for a parameter the function
+  /// reads only under <c>ToInt32</c> or <c>ToUint32</c> any integer of up to 32 bits wrapped into it,
+  /// which leaves the low 32 bits those coercions see as they are.
+  /// </summary>
+  private IrExpr Argument(Node argument, Variable parameter) {
+    var type = parameter.Parameter?.Type ?? this.Storable(parameter.Entry, argument);
+    if (parameter.IsCoercedOnly && type.IsWord && types.Of(argument) is { IsWord: true, Enum: null } given && !given.Within(type))
+      return new IrConvert(type, this.Expression(argument), IrConversion.Wrap);
+
+    return this.Value(argument, type);
+  }
+
   private IrExpr Value(Node node, IrType type) {
+    // new Array(n).fill(v) where an array of a type is expected is an array of that type (#1385).
+    if (type.IsArray && node is CallExpression { Callee: MemberExpression { Computed: false, Property: Identifier { Name: "fill" }, Object: var filled } } fill
+        && types.Of(filled) is { Kind: JsKind.Array, IsGrowable: false, IsView: false } && !this._substitutes.ContainsKey(node))
+      return this.FillValue(fill, type);
+
     if (type.IsStruct && node is ObjectExpression record && types.Of(record).Kind == JsKind.Record)
       return this.ObjectLiteral(record, type);
 

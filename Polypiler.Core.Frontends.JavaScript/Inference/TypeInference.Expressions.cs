@@ -153,7 +153,9 @@ internal sealed partial class TypeInference {
         }
 
         // Values of two kinds are no value of the IR: the expression has no type, and the lowering says why.
-        var joined = JsType.Join(this.Of(logical.Left), this.Of(logical.Right));
+        // a || b is a only where a counts as true, which an absent value never does (#1370).
+        var left = this.Of(logical.Left);
+        var joined = JsType.Join(logical.Operator == Operator.LogicalOr && left.Kind != JsKind.Null ? left.Present : left, this.Of(logical.Right));
         return joined.Kind == JsKind.Conflict ? JsType.Unknown : joined;
       case BinaryExpression binary:
         return this.Decide(binary.Operator, binary.Left, binary.Right, coercion).Result;
@@ -176,10 +178,20 @@ internal sealed partial class TypeInference {
         // A constant of the library is typed as the literal of its value would be.
         return JavaScriptFloatApi.FindConstant(library) is { } value ? JsType.Literal(value.Value) : JsType.Unknown;
       case MemberExpression { Computed: false, Object: Identifier enumerated, Property: Identifier { Name: var label } } when this._scope!.Bindings.GetValueOrDefault(enumerated) is EnumObject named:
+        // A member of a frozen object of records is an object of its class (#1371).
+        if (named.Record is { Frozen: { } members } record)
+          return members.ContainsKey(label) ? JsType.Object(record) : JsType.Unknown;
+
         // A member of an enum object is the literal of its value, which stays the enum's while only members join it.
         return named.Type?.Member(label) is { } found ? JsType.Member(named.Type, found.Value) : JsType.Unknown;
       case MemberExpression { Computed: false, Property: Identifier { Name: var key } } member when this.Of(member.Object).Shape is { } shape:
         return shape.TypeOf(key) ?? JsType.Unknown;
+      // o[key] of the key of a loop over Object.keys(o) is any of its fields: the type every one of them has (#1373).
+      case MemberExpression { Computed: true, Property: Identifier } keyedMember when this._scope!.Bindings.GetValueOrDefault(keyedMember.Property) is Variable { KeysOf: not null }:
+        var keyedType = this.Of(keyedMember.Object);
+        var fields = KeyLoop.KeysOf(keyedType)?.Select(key => keyedType.Class?.Field(key)?.Variable.Type ?? keyedType.Shape?.TypeOf(key) ?? JsType.Unknown).ToList() ?? [];
+        var any = fields.Count == 0 ? JsType.Unknown : fields.Aggregate(JsType.Join);
+        return any.Kind == JsKind.Conflict ? JsType.Unknown : any;
       case MemberExpression member:
         var array = this.Of(member.Object);
         if (array.Kind != JsKind.Array)
@@ -220,6 +232,8 @@ internal sealed partial class TypeInference {
         return JsType.Boolean;
       case Operator.Void:
         return JsType.UndefinedValue;
+      case Operator.TypeOf:
+        return JsType.String;
       case Operator.BitwiseNot:
         return this.IsBig(unary.Argument, coercion) ? Wide(coercion) ?? JsType.UnboundedBigInt : JsType.I32;
       case Operator.UnaryNegation when unary.Argument is NumericLiteral literal:
@@ -272,6 +286,21 @@ internal sealed partial class TypeInference {
       case null when call.Callee is MemberExpression { Computed: false, Property: Identifier { Name: "subarray" or "slice" } method } member
         && this.Of(member.Object) is { Kind: JsKind.Array, IsPlain: false } source:
         return method.Name == "subarray" ? JsType.ViewOf(source.Element!) : JsType.ArrayOf(source.Element!, false);
+      // fill yields the array it fills: an Array whose length never changes holds the value as well.
+      case null when call.Callee is MemberExpression { Computed: false, Property: Identifier { Name: "fill" } } member
+        && this.Of(member.Object) is { Kind: JsKind.Array, IsGrowable: false, IsView: false } filled && call.Arguments.Count > 0:
+        return filled.IsPlain ? JsType.ArrayOf(JsType.Join(filled.Element!, this.Of(call.Arguments[0])), true) : filled;
+      // The keys of an object, which only its shape gives (#1373).
+      case null when KeyLoop.Keys(call) is not null:
+        return JsType.ArrayOf(JsType.String, true);
+      // The copy of an Array whose length never changes, and the Array of two or more of them joined.
+      case null when call.Callee is MemberExpression { Computed: false, Property: Identifier { Name: "slice" } } member
+        && this.Of(member.Object) is { Kind: JsKind.Array, IsPlain: true, IsGrowable: false, IsView: false } copied:
+        return JsType.ArrayOf(copied.Element!, true);
+      case null when call.Callee is MemberExpression { Computed: false, Property: Identifier { Name: "concat" } } member
+        && this.Of(member.Object) is { Kind: JsKind.Array, IsPlain: true, IsGrowable: false, IsView: false } first:
+        return call.Arguments.Select(argument => this.Of(argument)).Aggregate(first, (joined, next) => joined.Kind == JsKind.Array && next is { Kind: JsKind.Array, IsPlain: true, IsGrowable: false, IsView: false }
+          ? JsType.ArrayOf(JsType.Join(joined.Element!, next.Element!), true) : JsType.Unknown);
       case null when call.Callee is MemberExpression { Computed: false } invoked && this.Of(invoked.Object).Class is { } owner:
         return Binder.KeyOf(invoked) is { } key && owner.Member(MemberKind.Method, key) is { } called ? this.ResultOf(this.ModelOf(called)) : JsType.Unknown;
       case null when this.Names.Callee(call.Callee) is { } callee:
@@ -349,6 +378,9 @@ internal sealed partial class TypeInference {
 
     var (a, b) = (this.Of(left), this.Of(right));
     switch (op) {
+      // The remainder of two integers that are never negative is an integer below the divisor, of the type that holds both (#1375).
+      case Operator.Remainder when a.Low >= 0 && b.Low >= 0 && Unify(a, b, IrType.I32, IrType.U32) is { } unsigned:
+        return new(Plan.IntegerDivide, JsType.Of(unsigned), unsigned);
       case Operator.Addition or Operator.Subtraction or Operator.Multiplication or Operator.Division or Operator.Remainder:
         return a.Kind == JsKind.Number && b.Kind == JsKind.Number ? new(Plan.Float, JsType.F64, IrType.F64) : new(Plan.Invalid, JsType.Unknown);
       case Operator.Exponentiation:

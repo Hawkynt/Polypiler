@@ -95,6 +95,22 @@ internal sealed class Variable(string name, Node declaration, bool isParameter) 
   public bool IsIntegerByUse { get; set; }
 
   /// <summary>
+  /// Whether a parameter JSDoc states an integer of up to 32 bits is read only under <c>ToInt32</c> or
+  /// <c>ToUint32</c>, which see the low 32 bits of whatever integer a call passes: it is the 32-bit
+  /// integer of its signedness, and takes any integer of up to 32 bits wrapped into it.
+  /// </summary>
+  public bool IsCoercedOnly { get; set; }
+
+  /// <summary>For the key of a loop over <c>Object.keys(o)</c>, the object <c>o</c> (#1373); <see langword="null"/> for any other variable.</summary>
+  public Node? KeysOf { get; set; }
+
+  /// <summary>The first <c>Array.isArray</c> of the variable, which a function that requires an <c>Array</c> makes; <see langword="null"/> for none.</summary>
+  public Node? TestedAsArray { get; set; }
+
+  /// <summary>Whether a call of the file has decided which array a parameter JSDoc states as <c>T[]</c> is (#1374).</summary>
+  public bool IsShaped { get; set; }
+
+  /// <summary>
   /// Whether a parameter without a JSDoc type, of a function whose callers are not all known, is used
   /// as an array: its type is then the type of the arrays the file itself passes to it.
   /// </summary>

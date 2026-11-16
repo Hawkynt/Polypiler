@@ -103,9 +103,56 @@ internal sealed partial class Lowering {
     return Str(IrIntrinsicOp.StrConcat, _str, [.. pieces]);
   }
 
+  /// <summary>
+  /// <c>typeof x</c> of a value whose kind the types know (#1372): the constant of that kind, and of a
+  /// value an absent value may reach a test of absence - <c>typeof null</c> is <c>object</c>,
+  /// <c>typeof undefined</c> is <c>undefined</c>. The operand is read for nothing but its kind, so it
+  /// may have no effect; a place both absent values reach cannot be told apart.
+  /// </summary>
+  private IrExpr TypeOf(UnaryExpression unary) {
+    var type = types.Of(unary.Argument);
+    var kind = type.Kind switch {
+      JsKind.Boolean => "boolean",
+      JsKind.Number => "number",
+      JsKind.BigInt => "bigint",
+      JsKind.String => "string",
+      JsKind.Function => "function",
+      JsKind.Undefined => "undefined",
+      JsKind.Array or JsKind.Record or JsKind.Object or JsKind.Map or JsKind.Set or JsKind.Sequence => "object",
+      JsKind.Null => type.MayBeNull && type.MayBeUndefined ? null : type.MayBeNull ? "object" : "undefined",
+      _ => null
+    };
+    if (kind is null && type.Kind is JsKind.Conflict or JsKind.Null)
+      throw this.Refuse(unary, JavaScriptFrontend.MixedKindsDescriptor, $"typeof of '{types.Text(unary.Argument)}', which holds {(type.Kind == JsKind.Conflict ? $"both {type.Kinds.First} and {type.Kinds.Second}" : "both null and undefined")}");
+
+    if (kind is null)
+      throw this.Unsupported(unary, $"typeof of {types.Text(unary.Argument)}, whose kind is not known");
+
+    var value = this.Expression(unary.Argument);
+    if (IrTree.Nodes(value).Any(part => part is IrCall or IrStep or IrMethodCall or IrNew or IrBind or IrCollection))
+      throw this.Unsupported(unary, "typeof of an operand with an effect");
+
+    // Of an object, an array or null alike typeof is object; where an absent value of another spelling reaches the value, a test tells.
+    if (type.Kind == JsKind.Null || !type.IsAbsent)
+      return new IrStrConst(kind);
+
+    if (type.MayBeNull && type.MayBeUndefined)
+      throw this.Refuse(unary, JavaScriptFrontend.MixedKindsDescriptor, $"typeof of '{types.Text(unary.Argument)}', which holds both null and undefined");
+
+    var absent = type.MayBeNull ? "object" : "undefined";
+    if (absent == kind)
+      return new IrStrConst(kind);
+
+    return new IrConditional(value.Type.IsOptional ? new IrIsNone(value) : new IrIsNull(value), new IrStrConst(absent), new IrStrConst(kind));
+  }
+
   /// <summary>A comparison of two strings: equality by code unit, order by the sign of the ordinal comparison (ECMA-262 §7.2.13).</summary>
   private IrExpr StringComparison(Operator op, Node left, Node right) {
     var (first, second) = (this.Expression(left), this.Expression(right));
+    // Two constants, as typeof of a known kind and a literal are, compare when the module is imported (#1372).
+    if (first is IrStrConst { Value: var a } && second is IrStrConst { Value: var b } && op is Operator.Equality or Operator.StrictEquality or Operator.Inequality or Operator.StrictInequality)
+      return new IrConst(IrType.Bool, (a == b) == op is Operator.Equality or Operator.StrictEquality ? 1 : 0);
+
     return op switch {
       Operator.Equality or Operator.StrictEquality => Str(IrIntrinsicOp.StrEquals, IrType.Bool, first, second),
       Operator.Inequality or Operator.StrictInequality => new IrUnary(IrUnaryOp.LogicalNot, Str(IrIntrinsicOp.StrEquals, IrType.Bool, first, second)),

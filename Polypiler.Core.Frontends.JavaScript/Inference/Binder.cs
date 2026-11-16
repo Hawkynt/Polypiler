@@ -15,7 +15,7 @@ namespace Polypiler.Core.Frontends.JavaScript.Inference;
 /// name declared while it is visible is a second declaration.
 /// </para>
 /// </summary>
-internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IReadOnlyDictionary<string, ModuleConstant> constants, string source) {
+internal sealed partial class Binder(FunctionModel model, List<Candidate> candidates, IReadOnlyDictionary<string, ModuleConstant> constants, string source) {
 
   private readonly Dictionary<string, Variable> _scope = [];
   private List<string> _declared = [];
@@ -198,6 +198,8 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
 
   private void Statement(Statement statement) {
     switch (statement) {
+      case ExpressionStatement or ForOfStatement when this.KeyLoop(statement):
+        break;
       case BlockStatement block:
         this.Block(block.Body);
         break;
@@ -395,7 +397,7 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
         foreach (var argument in creation.Arguments)
           this.Expression(argument);
 
-        if (created.Constructor is { } constructor) {
+        if (created.Initial is { } constructor) {
           if (!model.Callees.Contains(constructor))
             model.Callees.Add(constructor);
 
@@ -457,7 +459,7 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
         this.Expression(member.Object);
         // An element or the length is taken; the name of the property is read from the source, whatever kind of name it is.
         // A method with a callback is one of an array as well (#1329).
-        if (member.Object is Identifier array && model.Bindings.GetValueOrDefault(array) is Variable used
+        if (member.Object is Identifier array && model.Bindings.GetValueOrDefault(array) is Variable used && !(member.Computed && this.IsKey(member.Property))
             && (member.Computed || source[member.Property.Start..member.Property.End] == "length" || (member.Property is Identifier { Name: var method } && TypeInference.IsCallbackMethod(method))))
           used.UsedAsArray ??= member;
 
@@ -565,6 +567,11 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
         this.Expression(assignment.Right);
         model.Flows.Add(new Flow(FlowKind.FieldStore, assignment, Source: element.Object));
         break;
+      case MemberExpression { Computed: true } keyed when this.IsKey(keyed.Property):
+        // A store at the key of a key loop is the store into the field of that name, which the lowering checks (#1373).
+        this.Expression(keyed);
+        this.Expression(assignment.Right);
+        break;
       case MemberExpression element:
         this.Expression(element);
         this.Expression(assignment.Right);
@@ -641,6 +648,11 @@ internal sealed class Binder(FunctionModel model, List<Candidate> candidates, IR
     if (call.Callee is MemberExpression { Computed: false, Object: Identifier receiver, Property: Identifier { Name: var name } } access
         && StringMethods.Contains(name) && this._scope.TryGetValue(receiver.Name, out var text))
       text.UsedAsString ??= access;
+
+    // Array.isArray(x) is what a function that requires an Array of x asks (#1374).
+    if (call.Callee is MemberExpression { Computed: false, Object: Identifier { Name: "Array" } holder, Property: Identifier { Name: "isArray" } } && !this._scope.ContainsKey(holder.Name)
+        && call.Arguments is [Identifier tested] && this._scope.TryGetValue(tested.Name, out var array))
+      array.TestedAsArray ??= call;
 
     // Number(s), parseFloat(s) and parseInt(s) parse their first argument, which is text (#1315).
     if (call.Callee is Identifier { Name: "Number" or "parseFloat" or "parseInt" } parser && !this._scope.ContainsKey(parser.Name) && this.Callee(parser) is null

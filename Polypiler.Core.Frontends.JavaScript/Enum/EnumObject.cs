@@ -29,6 +29,14 @@ internal sealed class EnumObject(string name, Node declaration) {
   public string? Problem { get; private init; }
 
   /// <summary>
+  /// For a frozen object whose members are object literals of one shape of strings, numbers and truth
+  /// values - metadata, as the Cipher framework keeps it (#1371) - the class of its members: a read
+  /// of <c>X.K</c> is a new object of it with the values of the member, which nothing can tell from the
+  /// member itself, since it is never written and never compared by identity.
+  /// </summary>
+  public ClassModel? Record { get; private init; }
+
+  /// <summary>
   /// The enum object a declarator declares, or <see langword="null"/> where its value is no object of
   /// numbers: a frozen object literal is an enum or has a problem; a plain object literal whose
   /// properties are all numbers is an enum that is not frozen, which is a problem.
@@ -44,6 +52,9 @@ internal sealed class EnumObject(string name, Node declaration) {
 
     if (value is not CallExpression { Callee: MemberExpression { Computed: false, Object: Identifier { Name: "Object" }, Property: Identifier { Name: "freeze" } }, Arguments: [ObjectExpression literal] })
       return null;
+
+    if (literal.Properties.Count > 0 && literal.Properties.All(property => property is Property { Value: ObjectExpression }))
+      return Frozen(name, declarator, literal, isPublic);
 
     var members = new List<IrEnumMember>();
     foreach (var item in literal.Properties) {
@@ -67,6 +78,70 @@ internal sealed class EnumObject(string name, Node declaration) {
 
     return new EnumObject(name, declarator) { Type = new IrEnumType(name, IrType.I32, members) { IsPublic = isPublic } };
   }
+
+  /// <summary>
+  /// A frozen object of object literals: a class whose read-only fields are the keys of the members,
+  /// in the order the first member names them, each of the type every member's value of it has; a
+  /// member of other keys, a value that is no literal and a key of values of two kinds are problems.
+  /// </summary>
+  private static EnumObject Frozen(string name, Node declarator, ObjectExpression literal, bool isPublic) {
+    EnumObject Refused(string problem) => new(name, declarator) { Problem = problem };
+    var values = new Dictionary<string, IReadOnlyList<Expression>>();
+    List<string>? keys = null;
+    var types = new List<JsType>();
+    var evidence = new List<Node>();
+    foreach (var item in literal.Properties.Cast<Property>()) {
+      if (item is not { Computed: false, Shorthand: false, Method: false, Kind: PropertyKind.Init, Key: Identifier { Name: var key } } || values.ContainsKey(key))
+        return Refused($"a member of the frozen object {name} that is not a name of its own and an object literal");
+
+      var entries = new List<(string Key, Expression Value)>();
+      foreach (var part in ((ObjectExpression)item.Value).Properties) {
+        if (part is not Property { Computed: false, Shorthand: false, Method: false, Kind: PropertyKind.Init, Value: Expression value } property
+            || KeyOf(property.Key) is not { } field || Literal(value) is not { } type)
+          return Refused($"the member {name}.{key}, which is no object literal of strings, numbers and truth values");
+
+        entries.Add((field, value));
+        if (keys is null) {
+          types.Add(type);
+          evidence.Add(value);
+        } else if (keys.IndexOf(field) is var at and >= 0) {
+          types[at] = JsType.Join(types[at], type);
+        }
+      }
+
+      keys ??= [.. entries.Select(entry => entry.Key)];
+      if (!entries.Select(entry => entry.Key).SequenceEqual(keys))
+        return Refused($"the members of the frozen object {name}, which have different keys");
+
+      values[key] = [.. entries.Select(entry => entry.Value)];
+    }
+
+    // The object has a member, so the first one named the keys.
+    var fields = keys!;
+    if (fields.Select((key, index) => (Key: key, Index: index)).FirstOrDefault(entry => types[entry.Index].Kind == JsKind.Conflict) is { Key: { } mixed })
+      return Refused($"the key {mixed} of the members of the frozen object {name}, which holds values of two kinds");
+
+    var owner = new ClassModel(name, declarator) { IsPublic = isPublic, Frozen = values };
+    for (var index = 0; index < fields.Count; ++index)
+      owner.Fields.Add(new ClassField(fields[index], new Variable(ClassModel.IrName(fields[index]), evidence[index], false) { Type = types[index], Evidence = evidence[index] }, null));
+
+    return new EnumObject(name, declarator) { Record = owner };
+  }
+
+  /// <summary>The key of a property: a name or a string.</summary>
+  private static string? KeyOf(Node key) => key switch {
+    Identifier identifier => identifier.Name,
+    StringLiteral text => text.Value,
+    _ => null
+  };
+
+  /// <summary>The type of a literal a frozen record holds: a string, a number or a truth value; <see langword="null"/> for anything else.</summary>
+  private static JsType? Literal(Expression value) => value switch {
+    StringLiteral => JsType.String,
+    BooleanLiteral => JsType.Boolean,
+    _ when Number(value) is { } number => JsType.Literal(number),
+    _ => null
+  };
 
   /// <summary>A numeric literal, negated or not, or <see langword="null"/>.</summary>
   private static double? Number(Node node) => node switch {

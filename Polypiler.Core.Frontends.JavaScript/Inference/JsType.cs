@@ -95,6 +95,25 @@ internal sealed record JsType {
   /// <summary>Whether an array is a JavaScript <c>Array</c>, which stores a value as it is, rather than a typed array, which converts it.</summary>
   public bool IsPlain { get; private init; }
 
+  /// <summary>
+  /// Whether JSDoc states the array as <c>T[]</c> of numbers, which says what its elements are but not
+  /// whether it is an <c>Array</c> or a typed array (#1374): the calls of the file say that, and where
+  /// none passes one, whether the function itself requires an <c>Array</c>.
+  /// </summary>
+  public bool IsStated { get; private init; }
+
+  /// <summary>The array of the elements JSDoc states, of no kind decided yet: a typed array until something decides.</summary>
+  public JsType AsStated() => this with { IsStated = true };
+
+  /// <summary>
+  /// The stated array as the kind of array an argument is: an <c>Array</c> - a list where the argument
+  /// is one - or a typed array, of the stated elements, decided; <see langword="null"/> for an argument that is no array.
+  /// </summary>
+  public JsType? ShapedAs(JsType argument)
+    => argument.Kind != JsKind.Array || argument.IsView ? null
+      : argument.IsGrowable ? ListOf(this.Element!)
+      : argument.IsPlain ? ArrayOf(this.Element!, true) : this with { IsStated = false };
+
   /// <summary>The keys and value types of a record.</summary>
   public RecordShape? Shape { get; private init; }
 
@@ -342,6 +361,9 @@ internal sealed record JsType {
     IrTypeKind.Set => $"Set<{Spell(type.Element!)}>",
     IrTypeKind.Object => type.Declaration!.Name,
     IrTypeKind.Sequence => $"Generator<{Spell(type.Element!)}>",
+    // A stated int|null is an optional value (#1377): its spelling, which a JSDoc reason names, is the one JSDoc writes.
+    IrTypeKind.Optional => Spell(type.Underlying!) + "|null",
+    IrTypeKind.Function => type.Signature!.ToString(),
     _ => Spell(type.Element!) + "[]"
   };
 
@@ -381,6 +403,10 @@ internal sealed record JsType {
       case JsKind.BigInt:
         return first.IsUnbounded || second.IsUnbounded ? UnboundedBigInt : Hull(first, second, _longs) ?? UnboundedBigInt;
       case JsKind.Array:
+        // An array JSDoc states and nothing has decided yet is whatever array the program gives it (#1374).
+        if (first.IsStated != second.IsStated && !first.IsView && !second.IsView)
+          return first.IsStated ? second : first;
+
         if (first.IsPlain && second.IsPlain)
           return first.IsGrowable || second.IsGrowable ? ListOf(Join(first.Element!, second.Element!)) : ArrayOf(Join(first.Element!, second.Element!), true);
 
