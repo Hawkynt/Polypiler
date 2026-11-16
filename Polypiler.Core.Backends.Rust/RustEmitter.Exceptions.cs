@@ -332,15 +332,17 @@ public static partial class RustEmitter {
         : body.Statements.Count == 0 && body.Tail is { } only ? only
         : new RsBlockExpression(body);
       var dispatch = this.Dispatch(attempt.Catches, error);
+      // A clause that takes every exception and reads none leaves the exception unnamed (rustc's unused_variables).
+      var bound = RustSyntaxRewriter.DescendantsAndSelf(dispatch).Any(node => node is RsPath path && path.Name == error) ? error : "_" + error;
       if (!completes) {
-        into.Add(new RsLet(error, false, ErrorType, outcome));
+        into.Add(new RsLet(bound, false, ErrorType, outcome));
         into.AddRange(dispatch.Statements);
         return;
       }
 
       var result = this.Temporary("outcome");
       into.Add(new RsLet(result, false, Fallible(null), outcome));
-      into.Add(new RsExpressionStatement(new RsIf(new RsLetCondition($"Err({error})", new RsPath(result)), dispatch, null)));
+      into.Add(new RsExpressionStatement(new RsIf(new RsLetCondition($"Err({bound})", new RsPath(result)), dispatch, null)));
     }
 
     /// <summary>The catch clauses over an exception bound to a name: an <c>if</c> chain, the exception going on where no clause takes it.</summary>
