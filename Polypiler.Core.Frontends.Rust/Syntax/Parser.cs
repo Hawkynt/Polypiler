@@ -866,6 +866,17 @@ internal sealed class Parser {
     if (this.Accept("!"))
       return new TypeRef("!", at) { Shape = TypeShape.Never };
 
+    // <T as Trait>::Name: the associated type of the type, which the subset finds by its name.
+    if (token.Is("<")) {
+      this.Next();
+      var owner = this.Type();
+      this.Expect("as");
+      this.Type();
+      this.CloseAngle();
+      this.Expect("::");
+      return new TypeRef(owner.Name + "::" + this.Identifier(), at);
+    }
+
     if (token.Is("&") || token.Is("&&")) {
       this.Next();
       string? lifetime = null;

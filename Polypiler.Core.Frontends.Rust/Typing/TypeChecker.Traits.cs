@@ -380,6 +380,11 @@ internal sealed partial class TypeChecker {
       if (template is not null) {
         template.Generics = generics;
         template.ImplGenerics = implGenerics;
+        // A call checks its arguments against the parameters before it knows the type arguments, so only the result may name T::Output.
+        if (template.Parameters.FirstOrDefault(HoldsProjection) is { } projected) {
+          this._report(RustFrontend.UnsupportedTrait, $"parameter of '{item.Name}' of the type {projected}, an associated type of a type parameter", item.At);
+          return null;
+        }
       }
 
       return template;
@@ -403,7 +408,7 @@ internal sealed partial class TypeChecker {
     IReadOnlyList<RType> parameters = template.Receiver is null ? template.Parameters : [template.Receiver, .. template.Parameters];
     this.Arguments(call, [.. parameters.Select(parameter => Substitute(parameter, substitution))], "function");
     this._instantiations.Add((call, template, arguments, false));
-    return Substitute(template.Result, substitution);
+    return this.Projected(Substitute(template.Result, substitution), substitution, call.At);
   }
 
   /// <summary>
@@ -437,7 +442,7 @@ internal sealed partial class TypeChecker {
     this._instantiations.Add((site, template, arguments, isOperator));
     return template with {
       Parameters = [.. template.Parameters.Select(parameter => Substitute(parameter, substitution))],
-      Result = Substitute(template.Result, substitution),
+      Result = this.Projected(Substitute(template.Result, substitution), substitution, site.At),
       Receiver = template.Receiver is null ? null : Substitute(template.Receiver, substitution),
       Generics = []
     };
@@ -550,6 +555,46 @@ internal sealed partial class TypeChecker {
     return true;
   }
 
+  /// <summary>Whether a type holds an associated type of a type parameter, <c>T::Output</c>, which only the call of a template can resolve.</summary>
+  private static bool HoldsProjection(RType type) {
+    var resolved = type.Resolved;
+    return resolved.Kind == RKind.Param && resolved.Name.Contains("::", System.StringComparison.Ordinal)
+      || resolved.Kind is not (RKind.Closure or RKind.Iterator) && ((resolved.Element is { } element && HoldsProjection(element)) || resolved.Elements.Any(HoldsProjection));
+  }
+
+  /// <summary>
+  /// A result type of a template call with its projections resolved: <c>T::Output</c> is the associated
+  /// type of the impl the type argument has, of a number the number (the operators of the primitives
+  /// yield their own type), of an integer or float literal not yet decided the literal's type.
+  /// </summary>
+  private RType Projected(RType type, IReadOnlyDictionary<string, RType> substitution, Span at) {
+    var resolved = type.Resolved;
+    if (resolved.Kind == RKind.Param && resolved.Name.Split("::") is [var parameter, var name] && substitution.TryGetValue(parameter, out var argument)) {
+      var owner = argument.Resolved;
+      if (owner.Kind == RKind.Variable && owner.VariableKind is VariableKind.Integer or VariableKind.Float && name == "Output")
+        return owner;
+
+      if (owner.Kind == RKind.Variable)
+        throw this.Unresolved($"{parameter}::{name}", at);
+
+      var saved = this._typeParameters;
+      this._typeParameters = new Dictionary<string, RType> { [parameter] = owner };
+      try {
+        return this.ParameterType([parameter, name], at) ?? throw this.Invalid($"E0220: associated type `{name}` not found for `{owner}`", at);
+      } finally {
+        this._typeParameters = saved;
+      }
+    }
+
+    return resolved.Kind switch {
+      RKind.Reference => RType.Reference(this.Projected(resolved.Element!, substitution, at), resolved.Mutable),
+      RKind.Option => RType.Option(this.Projected(resolved.Element!, substitution, at)),
+      RKind.Vec => RType.Vec(this.Projected(resolved.Element!, substitution, at)),
+      RKind.Tuple => RType.Tuple([.. resolved.Elements.Select(element => this.Projected(element, substitution, at))]),
+      _ => resolved
+    };
+  }
+
   /// <summary>Whether the <c>Output</c> a bound like <c>Add&lt;Output = T&gt;</c> binds is the type itself, as it is for the operators of the primitives.</summary>
   private static bool OutputIsSelf(TypeRef bound, RType type, IReadOnlyDictionary<string, RType> substitution, TypeChecker checker) {
     var output = bound.Arguments.FirstOrDefault(argument => argument.Binding == "Output");
@@ -614,8 +659,9 @@ internal sealed partial class TypeChecker {
     if (owner is null)
       return null;
 
+    // T::Output in a template: a projection its calls resolve with the type argument (Projected).
     if (owner.Resolved.Kind == RKind.Param)
-      return this.Unsupported(RustFrontend.UnsupportedTrait, $"associated type {string.Join("::", segments)} of a type parameter", at) ?? this.ErrorType();
+      return RType.Param(owner.Resolved.Name + "::" + segments[1]);
 
     if ((this._associatedTypes.TryGetValue(TypeKey(owner), out var types) || GenericKey(owner) is { } generic && this._associatedTypes.TryGetValue(generic, out types))
         && types.TryGetValue(segments[1], out var associated)) {

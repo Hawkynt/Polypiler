@@ -212,7 +212,12 @@ tables keyed by the node, its types resolved with the arguments, its bounds chec
 body checked like any function. Its IR name is the function's name followed by its type arguments
 (`larger_u8`). Bounds may name the crate's traits and `Copy`, `Clone`, `PartialEq`, `Eq`,
 `PartialOrd`, `Ord`, `Default`, `Display`, `Debug`, the operator traits with their `Output` and
-the compound assignment traits; `where` clauses on type parameters join them.
+the compound assignment traits; `where` clauses on type parameters join them. A generic function's
+result may name an associated type of a type parameter, `T::Output` or `<T as Add>::Output`: a call
+resolves it once its arguments are checked - the type of the impl's `type Output`, a number itself
+(the operators of the primitives yield their own type), an integer literal's type still to be
+decided - and the instance resolves it with its type argument. A parameter of that type is refused,
+as a call checks its arguments before it knows the type arguments.
 
 Generic structs are monomorphised the same way. A struct type carries its type arguments, which are
 inference variables until its uses decide them (`Pair { a: 1, b: x }`, `Pair::<u8>::new`), and its
@@ -337,7 +342,7 @@ assignment before its place.
 `tests/fixtures/prototype/rust/` holds `scalars.rs` (every operator, method and cast for every type),
 `control.rs` (the control forms and all twelve range forms over bound pairs and steps),
 `objects.rs` (trait objects), `generics.rs` (generic structs, impls, methods and traits),
-`collect.rs` (`collect` into vectors, maps and sets),
+`collect.rs` (`collect` into vectors, maps and sets), `outputs.rs` (associated types of type parameters),
 `functions.rs` (calls, recursion, `pub`), `memory.rs` (arrays, slices, `Vec`, references,
 copy-in/copy-out), `types.rs` (structs, methods, enums, `Option`, `Result`, `?`), `closures.rs`
 (closures and iterator chains), `edges.rs` (the rarer forms), `strings.rs` (text), `traits.rs`

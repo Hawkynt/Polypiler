@@ -44,6 +44,10 @@ public sealed class RustTraitTests {
   [TestCase("trait W { fn w(&self) -> u8; } impl W for (u8, u8) { fn w(&self) -> u8 { self.0 + self.1 } } pub fn f() -> u8 { (1u8, 2u8).w() }", "3")]
   [TestCase("pub fn f() -> usize { let s = \"ab\"; let t = s.clone(); t.len() }", "2")]
   [TestCase("trait T { #[inline] fn a(&self) -> u8 { 4 } } struct S; impl T for S {} pub fn f() -> u8 { S.a() }", "4")]
+  [TestCase("trait Shape { type Area; fn area(&self) -> Self::Area; } struct S; impl Shape for S { type Area = u32; fn area(&self) -> u32 { 7 } } fn get<T: Shape>(s: &T) -> T::Area { s.area() } pub fn f() -> u32 { get(&S) + 1 }", "8")]
+  [TestCase("fn neg<T: std::ops::Neg>(x: T) -> Option<T::Output> { Some(-x) } pub fn f() -> i8 { neg(5i8).unwrap() + neg(-2).unwrap() as i8 }", "-3")]
+  [TestCase("fn twice<T>(a: T) -> (<T as std::ops::Add>::Output, u8) where T: std::ops::Add + Copy { (a + a, 0) } pub fn f() -> u16 { twice(4u16).0 }", "8")]
+  [TestCase("fn g<T: std::ops::Add<Output = T>>(a: T) -> T::Output { a + a } pub fn f() -> u8 { g(1u8) }", "2")]
   public void Trait_HasTheValueRustGives(string source, string expected) {
     var result = Import(source);
     Assert.That(result.Diagnostics, Is.Empty);
@@ -77,7 +81,6 @@ public sealed class RustTraitTests {
   [TestCase("fn g<T: for<'a> Fn(&'a u8)>(x: T) {} pub fn f() {}", "higher-ranked bound")]
   [TestCase("fn g<T: 'static>(x: T) {} pub fn f() {}", RustFrontend.UnsupportedLifetime)]
   [TestCase("fn g<'a, T>(x: &'a T) {} pub fn f() {}", RustFrontend.UnsupportedLifetime)]
-  [TestCase("fn g<T: std::ops::Add<Output = T>>(a: T) -> T::Output { a + a } pub fn f() -> u8 { g(1u8) }", "associated type T::Output of a type parameter")]
   [TestCase("pub fn f(x: &dyn std::fmt::Debug) {}", RustFrontend.UnsupportedTrait)]
   [TestCase("fn g<T>() -> T { T::nothing() } pub fn f() -> u8 { g::<u8>() }", "E0599: no function or associated item named `nothing`")]
   [TestCase("fn g<T: Copy>(x: T) -> T { x } pub fn f() -> usize { g(String::new()).len() }", "E0277: the trait bound `String: Copy`")]
@@ -108,6 +111,9 @@ public sealed class RustTraitTests {
   [TestCase("trait T where Self: Sized { fn a(&self); } pub fn f() {}", "where clause of a trait")]
   [TestCase("trait T { #[test] fn a(&self) {} } pub fn f() {}", "test")]
   [TestCase("pub fn f() { static mut X: u8 = 0; }", "static mut")]
+  [TestCase("fn g<T: std::ops::Add>(x: T::Output) -> u8 { 1 } pub fn f() -> u8 { 1 }", "parameter of 'g' of the type T::Output, an associated type of a type parameter")]
+  [TestCase("fn g<T: std::ops::Neg>(x: T) -> T::Output { -x } pub fn f() -> i8 { g(None.unwrap()) }", RustFrontend.UnresolvedType)]
+  [TestCase("fn g<T: Copy>(x: T) -> T::Item { x } pub fn f() -> u8 { g(1u8) }", "E0220: associated type `Item` not found for `u8`")]
   public void Trait_IsRefused(string source, string expected) {
     var result = Import(source);
     Assert.That(result.Module, Is.Null);
