@@ -35,6 +35,15 @@ internal sealed partial class Lowering(TypeInference types) {
   /// <summary>Whether a lowered function throws a string out to its caller, which receives an Error of that message instead (#1365).</summary>
   public bool ThrowsText { get; private set; }
 
+  /// <summary>How many blocks the lowering is inside of.</summary>
+  private int _depth;
+
+  /// <summary>The function of the statements the module runs when it is loaded, or <see langword="null"/>.</summary>
+  public Candidate? ModuleInitializer { get; init; }
+
+  /// <summary>Every statement of the body of <see cref="ModuleInitializer"/> as lowered, with the statement of the source it comes from.</summary>
+  public Dictionary<IrStmt, Node> ModuleSites { get; } = new(ReferenceEqualityComparer.Instance);
+
   /// <summary>The constants of the enclosing scope that the lowered functions use.</summary>
   public HashSet<ModuleConstant> Constants { get; } = [];
 
@@ -159,8 +168,20 @@ internal sealed partial class Lowering(TypeInference types) {
     var list = statements.ToList();
     var hoisted = this.Hoisted(list, into);
     var start = into.Count;
-    foreach (var statement in list.Where(statement => statement is not FunctionDeclaration))
-      this.Statement(statement, into);
+    // The statements of the module's initializer are noted with the statement of the source each comes from (#1410).
+    var sites = this._model.Candidate == this.ModuleInitializer && this._depth == 0 ? this.ModuleSites : null;
+    ++this._depth;
+    try {
+      foreach (var statement in list.Where(statement => statement is not FunctionDeclaration)) {
+        var before = into.Count;
+        this.Statement(statement, into);
+        if (sites is not null)
+          foreach (var lowered in into.Skip(before))
+            sites[lowered] = statement;
+      }
+    } finally {
+      --this._depth;
+    }
 
     this.Assign(hoisted, into, start);
     return new IrBlock(into);

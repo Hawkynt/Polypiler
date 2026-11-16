@@ -266,7 +266,7 @@ public static partial class JavaScriptFrontend {
     // The signatures of the function values name the structs of their records, which exist from here on (#1377).
     inference.Sign(models);
     Classes.Declare(classes, inference, diagnostics);
-    var lowering = new Lowering(inference);
+    var lowering = new Lowering(inference) { ModuleInitializer = collector.Initializer };
     // What the module does when it is loaded runs only where its functions have state it could change; otherwise it is not looked at.
     var initializer = collector.Initializer;
     if (initializer is not null && !classes.Any(owner => owner.Statics.Count > 0)
@@ -295,6 +295,7 @@ public static partial class JavaScriptFrontend {
 
     lowered.AddRange(Classes.Define(classes, inference));
     ModuleState.CheckInitializers(state, lowered, lowering, diagnostics);
+    ModuleState.CheckOrder(state, initializer is null ? null : functions.GetValueOrDefault(initializer), lowered, classes.Select(owner => owner.Ir), lowering.ModuleSites, lowering, diagnostics);
     if (diagnostics.Count > 0)
       return Refused(diagnostics);
 

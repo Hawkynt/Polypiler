@@ -56,6 +56,10 @@ internal sealed partial class Lowering {
       ? $"the TypeScript-style enum {named}, an object that maps names to numbers and numbers to names: an enum object is Object.freeze({{ … }})"
       : "a statement at the top level of the module").Diagnostic;
 
+  /// <summary>Refuses a statement the module runs when it is loaded that reads a variable of the module declared after it (#1410).</summary>
+  public Diagnostic ReadEarly(Node statement, string name)
+    => this.Unsupported(statement, $"{name}, read before the module computes it").Diagnostic;
+
   /// <summary>Refuses an initializer that calls a function that reads or writes a variable of the module.</summary>
   public Diagnostic Impure(Node initializer, string function)
     => this.Unsupported(initializer, $"an initializer that calls {function}, which reads or writes a variable of the module").Diagnostic;
