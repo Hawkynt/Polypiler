@@ -8,6 +8,7 @@ using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.Frontends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Tests.Tooling.Corpus;
 using Polypiler.Tooling.Toolchains;
 
 namespace Polypiler.Tests.Sequences;
