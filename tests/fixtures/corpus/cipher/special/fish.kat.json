@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/special/fish.js",
+ "algorithms": [
+  {
+   "name": "FISH Stream Cipher",
+   "vectors": [
+    {
+     "text": "Basic keystream generation",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"74657374"}}
+     ],
+     "input": {"t":"bytes","v":"48656c6c6f20576f726c64"},
+     "expected": {"t":"bytes","v":"ec865add438ba0a2fe556b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Empty input test",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"746573746b6579"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte test",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"6b657931"}}
+     ],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"fe"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,115 @@
+{
+ "schema": 1,
+ "file": "algorithms/mac/ttmac.js",
+ "algorithms": [
+  {
+   "name": "TTMAC",
+   "vectors": [
+    {
+     "text": "TTMAC: Empty message (NESSIE)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00112233445566778899aabbccddeeff01234567"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"2dec8ed4a0fd712ed9fbf2ab466ec2df21215e4a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TTMAC: 'a' (NESSIE)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00112233445566778899aabbccddeeff01234567"}}
+     ],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"5893e3e6e306704dd77ad6e6ed432cde321a7756"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TTMAC: 'abc' (NESSIE)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00112233445566778899aabbccddeeff01234567"}}
+     ],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"70bfd1029797a5c16da5b557a1f0b2779b78497e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TTMAC: 'message digest' (NESSIE)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00112233445566778899aabbccddeeff01234567"}}
+     ],
+     "input": {"t":"bytes","v":"6d65737361676520646967657374"},
+     "expected": {"t":"bytes","v":"8289f4f19ffe4f2af737de4bd71c829d93a972fa"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TTMAC: alphabet, 26 bytes (NESSIE)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00112233445566778899aabbccddeeff01234567"}}
+     ],
+     "input": {"t":"bytes","v":"6162636465666768696a6b6c6d6e6f707172737475767778797a"},
+     "expected": {"t":"bytes","v":"2186ca09c5533198b7371f245273504ca92bae60"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TTMAC: 56 bytes, padding spills into a second block (NESSIE)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00112233445566778899aabbccddeeff01234567"}}
+     ],
+     "input": {"t":"bytes","v":"6162636462636465636465666465666765666768666768696768696a68696a6b696a6b6c6a6b6c6d6b6c6d6e6c6d6e6f6d6e6f706e6f7071"},
+     "expected": {"t":"bytes","v":"8a7bf77aef62a2578497a27c0d6518a429e7c14d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TTMAC: 62 bytes, padding spills into a second block (NESSIE)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00112233445566778899aabbccddeeff01234567"}}
+     ],
+     "input": {"t":"bytes","v":"4142434445464748494a4b4c4d4e4f505152535455565758595a6162636465666768696a6b6c6d6e6f707172737475767778797a30313233343536373839"},
+     "expected": {"t":"bytes","v":"54bac392a886806d169556fcbb6789b54fb364fb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TTMAC: 8 x '1234567890', 80 bytes over two blocks (NESSIE)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00112233445566778899aabbccddeeff01234567"}}
+     ],
+     "input": {"t":"bytes","v":"3132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930"},
+     "expected": {"t":"bytes","v":"0ced2c9f8f0d9d03981ab5c8184bac43dd54c484"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

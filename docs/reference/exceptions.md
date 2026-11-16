@@ -209,7 +209,10 @@ The interpreter tests the clauses in a .NET exception filter, which gives the CL
   than `Error` are refused (`PLY1102`). A thrown value that is not an `Error` is accepted only where
   nothing observes it - a catch without a binding or with one it never reads - and is then the throw
   of an `Error`; where a catch reads it or it can leave the function it is refused with `PLY1107`
-  ("a thrown value that is not an Error reaches {place}, which observes it").
+  ("a thrown value that is not an Error reaches {place}, which observes it"). A string that leaves
+  the function - `throw 'Result() not implemented'` of a base class the Cipher framework leaves to
+  its derived ones (#1365) - is an `Error` whose message is the string, with the caveat
+  **`js-throw-string`**: JavaScript's caller receives the string itself.
 - **Python:** see [Python](#python) under Traps: the exceptions of the frontend and of the backend are
   one table each there.
 

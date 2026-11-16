@@ -1,0 +1,68 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/midori.js",
+ "algorithms": [
+  {
+   "name": "Midori64",
+   "vectors": [
+    {
+     "text": "Midori64 Test Vector #1 (all zeros) - specification Appendix A",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"3c9cceda2bbd449a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Midori64 Test Vector #2 - specification Appendix A",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"687ded3b3c85b3f35b1009863e2a8cbf"}}
+     ],
+     "input": {"t":"bytes","v":"42c20fd3b586879e"},
+     "expected": {"t":"bytes","v":"66bcdc6270d901cd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Midori128",
+   "vectors": [
+    {
+     "text": "Midori128 Test Vector #1 (all zeros) - specification Appendix A",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"c055cbb95996d14902b60574d5e728d6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Midori128 Test Vector #2 - specification Appendix A",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"687ded3b3c85b3f35b1009863e2a8cbf"}}
+     ],
+     "input": {"t":"bytes","v":"51084ce6e73a5ca2ec87d7babc297543"},
+     "expected": {"t":"bytes","v":"1e0ac4fddff71b4c1801b73ee4afc83d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

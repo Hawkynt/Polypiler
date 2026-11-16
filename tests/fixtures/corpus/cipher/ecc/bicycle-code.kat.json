@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/bicycle-code.js",
+ "algorithms": [
+  {
+   "name": "Bicycle Code",
+   "vectors": [
+    {
+     "text": "Bicycle [[6,2,2]] encode logical |00⟩",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0000"},
+     "expected": {"t":"bytes","v":"000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Bicycle [[6,2,2]] encode logical |01⟩",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001"},
+     "expected": {"t":"bytes","v":"000000010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Bicycle [[6,2,2]] encode logical |10⟩",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0100"},
+     "expected": {"t":"bytes","v":"010101000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Bicycle [[6,2,2]] encode logical |11⟩",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0101"},
+     "expected": {"t":"bytes","v":"010101010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

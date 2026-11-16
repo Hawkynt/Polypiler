@@ -1,0 +1,123 @@
+{
+ "schema": 1,
+ "file": "algorithms/modes/lrw.js",
+ "algorithms": [
+  {
+   "name": "LRW",
+   "vectors": [
+    {
+     "text": "LRW-32-AES-1 (AES-128, index 1)",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setKey","args":[{"t":"bytes","v":"4562ac25f828176d4c268414b5680185"}]},
+      {"call":"setTweak","args":[{"t":"bytes","v":"00000000000000000000000000000001"}]},
+      {"call":"setTweakKey","args":[{"t":"bytes","v":"258e2a05e73e9d03ee5a830ccc094c87"}]}
+     ],
+     "input": {"t":"bytes","v":"30313233343536373839414243444546"},
+     "expected": {"t":"bytes","v":"f1b273cd65a3df5fe95d489254634eb8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LRW-32-AES-2 (AES-128, index 2)",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setKey","args":[{"t":"bytes","v":"59704714f557478cd779e80f54887944"}]},
+      {"call":"setTweak","args":[{"t":"bytes","v":"00000000000000000000000000000002"}]},
+      {"call":"setTweakKey","args":[{"t":"bytes","v":"0d48f0b7b15a53ea1caa6b29c2cafbaf"}]}
+     ],
+     "input": {"t":"bytes","v":"30313233343536373839414243444546"},
+     "expected": {"t":"bytes","v":"00c82bae95bbcde5274f0769b260e136"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LRW-32-AES-3 (AES-128, large index)",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setKey","args":[{"t":"bytes","v":"d82a9134b26a565030fe69e2377f9847"}]},
+      {"call":"setTweak","args":[{"t":"bytes","v":"00000000000000000000000200000000"}]},
+      {"call":"setTweakKey","args":[{"t":"bytes","v":"cdf90b160c648fb6b00d0d1bae85871f"}]}
+     ],
+     "input": {"t":"bytes","v":"30313233343536373839414243444546"},
+     "expected": {"t":"bytes","v":"76322183ed8ff182f9596203690e5e01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LRW-32-AES-4 (AES-192, index 1)",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setKey","args":[{"t":"bytes","v":"0f6aeff8d3d2bb152583f73c1f012874cac6bc354d4a6554"}]},
+      {"call":"setTweak","args":[{"t":"bytes","v":"00000000000000000000000000000001"}]},
+      {"call":"setTweakKey","args":[{"t":"bytes","v":"90ae61cf7baebdccade494c54a29ae70"}]}
+     ],
+     "input": {"t":"bytes","v":"30313233343536373839414243444546"},
+     "expected": {"t":"bytes","v":"9c0f152f55a2d8f0d67b8f9e2822bc41"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LRW-32-AES-5 (AES-192, large index)",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setKey","args":[{"t":"bytes","v":"8ad4ee102fbd81fff886ceac93c5adc6a01907c09df7bbdd"}]},
+      {"call":"setTweak","args":[{"t":"bytes","v":"00000000000000000000000200000000"}]},
+      {"call":"setTweakKey","args":[{"t":"bytes","v":"5213b2b7f0ff11d8d608d0cd2eb1176f"}]}
+     ],
+     "input": {"t":"bytes","v":"30313233343536373839414243444546"},
+     "expected": {"t":"bytes","v":"d4276a7f14913d65c860480287e33406"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LRW-32-AES-6 (AES-256, index 1)",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setKey","args":[{"t":"bytes","v":"f8d476ffd646ee6c2384cb1c77d6195dfef1a9f37bbc8d21a79c21f8cb900289"}]},
+      {"call":"setTweak","args":[{"t":"bytes","v":"00000000000000000000000000000001"}]},
+      {"call":"setTweakKey","args":[{"t":"bytes","v":"a845348ec8c5b5f126f50e76fefd1b1e"}]}
+     ],
+     "input": {"t":"bytes","v":"30313233343536373839414243444546"},
+     "expected": {"t":"bytes","v":"bd06b8e1db98899ec498e491cf1c702b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LRW-32-AES-7 (AES-256, large index)",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setKey","args":[{"t":"bytes","v":"fb7615b23d80891dd470980bc79584c8b2fb64ce6097878d17fce45a49e830b7"}]},
+      {"call":"setTweak","args":[{"t":"bytes","v":"00000000000000000000000200000000"}]},
+      {"call":"setTweakKey","args":[{"t":"bytes","v":"6e7817e72d5e12d46064047af12f9e0c"}]}
+     ],
+     "input": {"t":"bytes","v":"30313233343536373839414243444546"},
+     "expected": {"t":"bytes","v":"5b908ec1abdd675f3d698a9553c89ce5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

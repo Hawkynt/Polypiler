@@ -107,7 +107,11 @@ holds an object.
 The fields of a class are those it declares and those its constructor assigns through `this`, in the
 order the source first names them. The type of a field is the join of every value stored into it
 anywhere in the file: a double unless the program proves an integer, as for a variable; `null` joins
-with a reference into that reference. A parameter of a method of an exported class is called from
+with a reference into that reference. A field may hold a string, an object, an array, or an `Array`
+of strings, objects or arrays, which is a list (#1365): `[new Item(t)]` is a list of one element,
+and a `push`, `pop`, `splice` or `length = 0` through the field - of `this` or of another object -
+makes the field a list as it does a variable. An object, an array or a function counts as true
+where it is not `null`; a list, which the IR never holds `null`, as true. A parameter of a method of an exported class is called from
 outside and is a double unless JSDoc states otherwise.
 
 ## C# backend

@@ -1,0 +1,37 @@
+{
+ "schema": 1,
+ "file": "algorithms/modes/ecb.js",
+ "algorithms": [
+  {
+   "name": "ECB",
+   "vectors": [
+    {
+     "text": "AES-128 ECB test vector",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393172a"},
+     "expected": {"t":"bytes","v":"3ad77bb40d7a3660a89ecaf32466ef97"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "AES-128 ECB second block",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]}
+     ],
+     "input": {"t":"bytes","v":"ae2d8a571e03ac9c9eb76fac45af8e51"},
+     "expected": {"t":"bytes","v":"f5d3d58503b9699de785895a96fdbaaf"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

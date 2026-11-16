@@ -1,0 +1,63 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/simon.js",
+ "algorithms": [
+  {
+   "name": "Simon",
+   "vectors": [
+    {
+     "text": "Simon64/128 - Simon and Speck paper Appendix B (byte-serialised)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0001020308090a0b1011121318191a1b"}}
+     ],
+     "input": {"t":"bytes","v":"756e64206c696b65"},
+     "expected": {"t":"bytes","v":"7aa0dfb920fcc844"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Simon64/128 - Crypto++ TestVectors #2",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"435ccae27799f6117c08652eb81e0ebe"}}
+     ],
+     "input": {"t":"bytes","v":"ef4a99d6e0d6992c"},
+     "expected": {"t":"bytes","v":"b172958be0f28647"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Simon64/128 - Crypto++ TestVectors #3",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"6cce23b05650d41237fc83805a76eddc"}}
+     ],
+     "input": {"t":"bytes","v":"6e27377afc08ecf4"},
+     "expected": {"t":"bytes","v":"c889752d52f046e5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Simon64/128 - Crypto++ TestVectors #4",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"c2358c444168bad0ab5067fd536885f1"}}
+     ],
+     "input": {"t":"bytes","v":"547ab26aa85da02d"},
+     "expected": {"t":"bytes","v":"bd99b9583d4c5449"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

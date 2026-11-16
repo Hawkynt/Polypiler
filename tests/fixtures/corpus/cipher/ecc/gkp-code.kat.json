@@ -1,0 +1,166 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/gkp-code.js",
+ "algorithms": [
+  {
+   "name": "GKP Quantum Code",
+   "vectors": [
+    {
+     "text": "Square-lattice GKP: Encode logical |0> qubit",
+     "inverse": false,
+     "steps": [
+      {"set":"logicalState","value":{"t":"number","v":0}},
+      {"set":"gridSize","value":{"t":"number","v":5}},
+      {"set":"latticeSpacing","value":{"t":"number","v":2.507}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"00000000000000000000000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Square-lattice GKP: Encode logical |1> qubit",
+     "inverse": false,
+     "steps": [
+      {"set":"logicalState","value":{"t":"number","v":1}},
+      {"set":"gridSize","value":{"t":"number","v":5}},
+      {"set":"latticeSpacing","value":{"t":"number","v":2.507}}
+     ],
+     "input": {"t":"bytes","v":"01"},
+     "expected": {"t":"bytes","v":"00000000000000000000000000010000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Correct small displacement error in position",
+     "inverse": false,
+     "steps": [
+      {"set":"logicalState","value":{"t":"number","v":0}},
+      {"set":"gridSize","value":{"t":"number","v":5}},
+      {"set":"displacementType","value":{"t":"string","v":"position"}},
+      {"set":"displacementAmount","value":{"t":"number","v":0.5}}
+     ],
+     "input": {"t":"bytes","v":"00010000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"00000000000000000000000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Apply Pauli X gate via position displacement sqrt(pi)",
+     "inverse": false,
+     "steps": [
+      {"set":"logicalState","value":{"t":"number","v":0}},
+      {"set":"gridSize","value":{"t":"number","v":5}},
+      {"set":"gateType","value":{"t":"string","v":"X"}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"00000000000000000000000000010000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Apply Pauli Z gate via momentum displacement sqrt(pi)",
+     "inverse": false,
+     "steps": [
+      {"set":"logicalState","value":{"t":"number","v":0}},
+      {"set":"gridSize","value":{"t":"number","v":5}},
+      {"set":"gateType","value":{"t":"string","v":"Z"}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"00000000000000000000000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Measure position stabilizer eigenvalue (no error)",
+     "inverse": false,
+     "steps": [
+      {"set":"logicalState","value":{"t":"number","v":0}},
+      {"set":"gridSize","value":{"t":"number","v":5}},
+      {"set":"measureStabilizer","value":{"t":"string","v":"position"}},
+      {"set":"alpha","value":{"t":"number","v":3.545}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Detect displacement error via stabilizer violation",
+     "inverse": false,
+     "steps": [
+      {"set":"logicalState","value":{"t":"number","v":0}},
+      {"set":"gridSize","value":{"t":"number","v":5}},
+      {"set":"measureStabilizer","value":{"t":"string","v":"position"}},
+      {"set":"alpha","value":{"t":"number","v":3.545}}
+     ],
+     "input": {"t":"bytes","v":"00010000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Finite-energy GKP state with epsilon damping",
+     "inverse": false,
+     "steps": [
+      {"set":"logicalState","value":{"t":"number","v":0}},
+      {"set":"gridSize","value":{"t":"number","v":5}},
+      {"set":"epsilon","value":{"t":"number","v":0.1}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"00000000000000000000000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Encode-decode round trip for logical |0>",
+     "inverse": false,
+     "steps": [
+      {"set":"logicalState","value":{"t":"number","v":0}},
+      {"set":"gridSize","value":{"t":"number","v":5}},
+      {"set":"roundTrip","value":{"t":"bool","v":true}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Round-trip with small displacement error correction",
+     "inverse": false,
+     "steps": [
+      {"set":"logicalState","value":{"t":"number","v":0}},
+      {"set":"gridSize","value":{"t":"number","v":5}},
+      {"set":"roundTrip","value":{"t":"bool","v":true}},
+      {"set":"injectError","value":{"t":"bool","v":true}},
+      {"set":"displacementAmount","value":{"t":"number","v":0.5}}
+     ],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

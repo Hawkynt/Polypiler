@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/classical/affine.js",
+ "algorithms": [
+  {
+   "name": "Affine Cipher",
+   "vectors": [
+    {
+     "text": "DCode Reference Test",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"352c33"}}
+     ],
+     "input": {"t":"bytes","v":"44434f4445"},
+     "expected": {"t":"bytes","v":"534e565358"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "GeeksforGeeks Example",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"31372c3230"}}
+     ],
+     "input": {"t":"bytes","v":"48454c4c4f"},
+     "expected": {"t":"bytes","v":"4a4b5a5a59"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Identity Transformation",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"312c30"}}
+     ],
+     "input": {"t":"bytes","v":"4142434445464748494a4b4c4d4e4f505152535455565758595a"},
+     "expected": {"t":"bytes","v":"4142434445464748494a4b4c4d4e4f505152535455565758595a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

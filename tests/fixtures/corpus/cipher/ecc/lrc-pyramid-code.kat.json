@@ -1,0 +1,77 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/lrc-pyramid-code.js",
+ "algorithms": [
+  {
+   "name": "LRC Pyramid Code",
+   "vectors": [
+    {
+     "text": "LRC Pyramid (12,2,2) all zeros",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000000000000000000000000"},
+     "expected": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LRC Pyramid (12,2,2) single data block in first local group",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"010000000000000000000000"},
+     "expected": {"t":"bytes","v":"01000000000000000000000001000101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LRC Pyramid (12,2,2) single data block in second local group",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000000000000010000000000"},
+     "expected": {"t":"bytes","v":"00000000000001000000000000010107"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LRC Pyramid (12,2,2) alternating pattern",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"010001000100010001000100"},
+     "expected": {"t":"bytes","v":"01000100010001000100010001010002"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LRC Pyramid (12,2,2) full ones pattern",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"010101010101010101010101"},
+     "expected": {"t":"bytes","v":"0101010101010101010101010000000c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LRC Pyramid (12,2,2) mixed values testing local and global parities",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0503070204060801090b0d0f"},
+     "expected": {"t":"bytes","v":"0503070204060801090b0d0f01090806"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

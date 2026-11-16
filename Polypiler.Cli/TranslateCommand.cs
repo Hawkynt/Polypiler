@@ -434,7 +434,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// code is known to do differently from the original is written as a note; it is no error.
   /// </summary>
   private static (IrModule? Module, int ExitCode, IReadOnlyList<ManifestMessage> Caveats) ImportJavaScript(string file, string source, IReadOnlyDictionary<string, string> options, CliContext context) {
-    var imported = JavaScriptFrontend.Import(file, source, options.TryGetValue(Export, out var names) ? Names(names) : null);
+    var imported = JavaScriptFrontend.Import(file, source, options.TryGetValue(Export, out var names) ? Names(names) : null, Required);
     foreach (var diagnostic in imported.Diagnostics)
       context.Report(diagnostic);
 
@@ -467,6 +467,9 @@ public sealed partial class TranslateCommand : ICliCommand {
     var failure = imported.Diagnostics.Any(diagnostic => diagnostic.Code == PythonFrontend.SyntaxError) ? InvalidSource : UnsupportedConstruct;
     return (imported.Module, failure, [.. imported.Caveats.Select(caveat => new ManifestMessage(caveat.Id, caveat.Description))]);
   }
+
+  /// <summary>The text of a file a JavaScript module requires, or <see langword="null"/> when there is none.</summary>
+  private static string? Required(string file) => File.Exists(file) ? File.ReadAllText(file) : null;
 
   private static string[] Names(string list) => list.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 

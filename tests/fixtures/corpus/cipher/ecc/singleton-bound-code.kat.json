@@ -1,0 +1,66 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/singleton-bound-code.js",
+ "algorithms": [
+  {
+   "name": "Singleton Bound Code (MDS)",
+   "vectors": [
+    {
+     "text": "MDS (6,4) encoding - systematic form with Cauchy parity",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01020304"},
+     "expected": {"t":"bytes","v":"010203041400"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "MDS zero codeword test - demonstrates linearity",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000000"},
+     "expected": {"t":"bytes","v":"000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "MDS maximum value test in GF(256)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"ffffffff"},
+     "expected": {"t":"bytes","v":"ffffffff6161"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "MDS basis vector e_1 - first column of generator",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01000000"},
+     "expected": {"t":"bytes","v":"010000008ef4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "MDS random message - demonstrates general encoding",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"64c83296"},
+     "expected": {"t":"bytes","v":"64c832962db0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

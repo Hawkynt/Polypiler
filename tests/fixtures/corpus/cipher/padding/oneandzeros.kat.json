@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/padding/oneandzeros.js",
+ "algorithms": [
+  {
+   "name": "OneAndZeros",
+   "vectors": [
+    {
+     "text": "OneAndZeros Padding - 3 bytes to 16 bytes",
+     "inverse": false,
+     "steps": [
+      {"set":"blockSize","value":{"t":"number","v":16}}
+     ],
+     "input": {"t":"bytes","v":"ffffff"},
+     "expected": {"t":"bytes","v":"ffffff80000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "OneAndZeros Padding - 4 bytes to 32 bytes",
+     "inverse": false,
+     "steps": [
+      {"set":"blockSize","value":{"t":"number","v":32}}
+     ],
+     "input": {"t":"bytes","v":"ffffffff"},
+     "expected": {"t":"bytes","v":"ffffffff80000000000000000000000000000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "OneAndZeros Padding - 8 bytes to 16 bytes (full block)",
+     "inverse": false,
+     "steps": [
+      {"set":"blockSize","value":{"t":"number","v":8}}
+     ],
+     "input": {"t":"bytes","v":"ffffffffffffffff"},
+     "expected": {"t":"bytes","v":"ffffffffffffffff8000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

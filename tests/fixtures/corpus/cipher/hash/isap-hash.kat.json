@@ -1,0 +1,77 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/isap-hash.js",
+ "algorithms": [
+  {
+   "name": "ISAP Hash",
+   "vectors": [
+    {
+     "text": "ISAP Hash: Empty message (NIST LWC KAT)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"7346bc14f036e87ae03d0997913088f5f68411434b3cf8b54fa796a80d251f91"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ISAP Hash: Single zero byte (NIST LWC KAT)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"8dd446ada58a7740ecf56eb638ef775f7d5c0fd5f0c2bbbdfdec29609d3c43a2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ISAP Hash: Two bytes (NIST LWC KAT)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001"},
+     "expected": {"t":"bytes","v":"f77ca13bf89146d3254f1cfb7eddba8fa1bf162284bb29e7f645545cf9e08424"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ISAP Hash: Four bytes (NIST LWC KAT)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00010203"},
+     "expected": {"t":"bytes","v":"8013eaaa1951580a7bef7d29bac323377e64f279ea73e6881b8aed69855ef764"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ISAP Hash: Eight bytes (NIST LWC KAT)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001020304050607"},
+     "expected": {"t":"bytes","v":"f4c6a44b29915d3d57cf928a18ec6226bb8dd6c1136acd24965f7e7780cd69cf"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ISAP Hash: Sixteen bytes (NIST LWC KAT)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"d4e56c4841e2a0069d4f07e61b2dca94fd6d3f9c0df78393e6e8292921bc841d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

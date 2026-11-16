@@ -1,0 +1,24 @@
+{
+ "schema": 1,
+ "file": "algorithms/crypto/camelliawrap.js",
+ "algorithms": [
+  {
+   "name": "Camellia Key Wrap",
+   "vectors": [
+    {
+     "text": "Bouncy Castle Camellia-128 Wrap Test Vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"00112233445566778899aabbccddeeff"},
+     "expected": {"t":"bytes","v":"635d6ac46eedebd3a7f4a06421a4cbd1746b24795ba2f708"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

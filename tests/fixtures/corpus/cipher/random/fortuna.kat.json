@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/fortuna.js",
+ "algorithms": [
+  {
+   "name": "Fortuna",
+   "vectors": [
+    {
+     "text": "Deterministic test - 64 bytes entropy pattern, generate 32 bytes",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"224a0fa0d0a71441a7190c4b9fdb0d8660905d0f5f390906ca61d2c469f4b886"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Multiple block test - 128 bytes sequential entropy, generate 64 bytes",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":64}},
+      {"set":"seed","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"667dbf72dbf3a8b403512fc0e26ec57f8b3ea2a5bd5efd0cf33b76dcfcf5bdd0f181a1459a23164744c27c2655b296ddabf72282dd08fd7c01375758cacca9ba"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

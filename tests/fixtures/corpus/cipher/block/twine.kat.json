@@ -1,0 +1,37 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/twine.js",
+ "algorithms": [
+  {
+   "name": "TWINE",
+   "vectors": [
+    {
+     "text": "TWINE-80 Test Vector (Table 1, SAC 2012 Paper)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00112233445566778899"}}
+     ],
+     "input": {"t":"bytes","v":"0123456789abcdef"},
+     "expected": {"t":"bytes","v":"7c1f0f80b1df9c28"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TWINE-128 Test Vector (Table 1, SAC 2012 Paper)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00112233445566778899aabbccddeeff"}}
+     ],
+     "input": {"t":"bytes","v":"0123456789abcdef"},
+     "expected": {"t":"bytes","v":"979ff9b379b5a9b8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

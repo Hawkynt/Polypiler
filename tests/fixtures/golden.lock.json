@@ -2122,6 +2122,4676 @@
       "bytes": 75808
     },
     {
+      "path": "tests/fixtures/corpus/cipher/aead/ace.kat.json",
+      "sha256": "bd40457fafa345e4e0515de9853fafe1ef4ce73012466ded4d80739e96c3d146",
+      "bytes": 4428
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/aes-ccm.kat.json",
+      "sha256": "783d49b8319c6bd8457f16c7e394bcbc288042073de8d10f9be6d96ab340b958",
+      "bytes": 2691
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/ascon.kat.json",
+      "sha256": "31c6ed5b3b4a8a360946c6f2765026e611f5b717f5eb240bc610a57d93d2b7b2",
+      "bytes": 5876
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/chacha20-poly1305.kat.json",
+      "sha256": "8b2ae8608f67e29d466fcdc0771b25f0846af7ffb75a51fb6e91ea6af86a215a",
+      "bytes": 2321
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/comet-cham.kat.json",
+      "sha256": "1b3274a54cb21f4c1104f9d287884be02202f7540d50bfd1ec986ac49098d669",
+      "bytes": 4092
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/comet64-cham.kat.json",
+      "sha256": "42330c4f8d33d4e89edf62784689a9f2ab0a87ffd1316f3df960e411bda38bcc",
+      "bytes": 5613
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/comet64-speck.kat.json",
+      "sha256": "57c3cfb8fed5d816fe70659ba23f4cb3c53c7a883a19c6011b48fd8572f1236a",
+      "bytes": 5644
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/deoxys-ii.kat.json",
+      "sha256": "f5e80a421743e064c53cb202b5cb131774f62376534d9b5f1f97aeccfb73079f",
+      "bytes": 9090
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/elephant.kat.json",
+      "sha256": "7f9fce84f652604d12918c42f31165e2f9bf5eb83bb22d3f8f0e901f51944aa5",
+      "bytes": 4446
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/estate-twegift.kat.json",
+      "sha256": "fbfa9d652df35e5e4e443b0b026aa575b35d0fe0fe53f898fafdd4d5f7df2778",
+      "bytes": 3834
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/forkae.kat.json",
+      "sha256": "1478d39dc2c93ca95634c32dc01da765848aabb680d2d2197d253e9fa776ed5b",
+      "bytes": 1732
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/gascon.kat.json",
+      "sha256": "5e3f460e297873954101f5deab2bfb108b287fa4fd7001a5162a2ed9e4c0bb04",
+      "bytes": 5581
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/gift-cofb.kat.json",
+      "sha256": "b83c3f72223796d014403e8d56e75874f672dedcd836679d51753d5143918e11",
+      "bytes": 4174
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/gimli24.kat.json",
+      "sha256": "885211e5f176af7b204f05512bc8c81953856cb165bd6e86a2b375c9d729f02f",
+      "bytes": 7569
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/grain128aead.kat.json",
+      "sha256": "882b79949cc51b65f93465a1ae64d9ecbd1033ae232090c4d33dfc9354dce818",
+      "bytes": 3418
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/hyena.kat.json",
+      "sha256": "216611c14f3098ec4ff4da502cc6a0316b6ac23291661eee4c57060d7ae37540",
+      "bytes": 3301
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/isap.kat.json",
+      "sha256": "6bd4166b0e63c162d200711649839da2944e7c799c417e31ece2eef36a70086b",
+      "bytes": 2901
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/ketje.kat.json",
+      "sha256": "dc07644576a30acfa33f9c3d87661ec61820c285d5e17b8ca55fa77d927874f2",
+      "bytes": 3476
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/keyak.kat.json",
+      "sha256": "d7050a977e019786c55ed6f4d05175490ec793fa358eb3493d07966e76989ed9",
+      "bytes": 4382
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/knot-aead.kat.json",
+      "sha256": "990d509ffb02c8267a1c65ec70c4b5048a5ab054e2dc2bf200f8dc4a75c5c3cd",
+      "bytes": 9126
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/locus-aead.kat.json",
+      "sha256": "95590f7de17f9bf1824862c59c1a27e9f142b089d66e3803ad0b927ccea3e0f7",
+      "bytes": 2854
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/lotus-aead.kat.json",
+      "sha256": "b4c59ca670e1b738558df9970b86e586dac66ab9c8fdbfb5b0b6d9d612b24b30",
+      "bytes": 1728
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/orange.kat.json",
+      "sha256": "17159c862d310ff4681c2148e475f1908c1d143086a7fe5d427882b7ee059a71",
+      "bytes": 4644
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/oribatida.kat.json",
+      "sha256": "e2f468bf3bc9b9d2dc310c2fa4c98dc86fd92b1f326bc0061d88a4d2f1ecb19d",
+      "bytes": 5607
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/paef-forkskinny.kat.json",
+      "sha256": "bdab57c8309214553125208443693e97c7aee6b6cbb69482b6067c9f3cabe7c4",
+      "bytes": 4252
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/photon-beetle.kat.json",
+      "sha256": "098a083e1677cfd20fdd8a868d3ad5563d5332c851d7171163e3c073ed62ac60",
+      "bytes": 5606
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/pyjamask96.kat.json",
+      "sha256": "bc83c7d143eb667b5a160ea339c6882edc57e104859e309a33cb89553c71401b",
+      "bytes": 2741
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/romulus.kat.json",
+      "sha256": "2240811b99f288fd2860ab9feaff6c9160a1f0457b9501592a7cbf2e9ea86653",
+      "bytes": 4238
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/saturnin.kat.json",
+      "sha256": "ef5c81cb235642d9bd804e0ee599f0e371f553ea968f186533737404134a4215",
+      "bytes": 4644
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/skinny-aead.kat.json",
+      "sha256": "6a975ff903b1fc12b57dc3bfc0cf359a815b66074ced82e1e02c2a57332c7be5",
+      "bytes": 4540
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/sparkle.kat.json",
+      "sha256": "73ba1eb55a1fd0e5650763188c27005c0195cfb1a9f63a65aadb95809eb9f81d",
+      "bytes": 12385
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/spix.kat.json",
+      "sha256": "ffb8acc8cc9f69506f0902e238532074b2a531a73eb2cf6c17d126f1d9ebdfca",
+      "bytes": 2201
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/spoc.kat.json",
+      "sha256": "f7263178aa18e8a4d9afd3e1730c7b7f07444ab006e65db60b13c0e1367a0a97",
+      "bytes": 6638
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/spook.kat.json",
+      "sha256": "892fddf2bf1fe266f2dcff6d65b5bc93d472a6425df4fbe7580d9ce6e8709c4d",
+      "bytes": 15102
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/subterranean.kat.json",
+      "sha256": "b69e2bad3a9f8a1e4465ec8438bfce1dc8969a76021005058eedbd7cc7cfcde9",
+      "bytes": 3414
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/sundae-gift.kat.json",
+      "sha256": "83f8d9b2709eebe8597ffa38a6a2b49e9a3b3c9b8d8f9ee2431739b7fc6d6cbb",
+      "bytes": 4745
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/tiaoxin.kat.json",
+      "sha256": "d2be235a76d84515dad70d03ca43603e212b505bbce0afe2bd78d86e03c11dbb",
+      "bytes": 6522
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/tinyjambu.kat.json",
+      "sha256": "7ec0f46cb71980da3bcfc05b255e8c873a282911aee5696c8b92d2f12acf63e0",
+      "bytes": 11600
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/wage.kat.json",
+      "sha256": "643ef92e483b13a35201cda57763cc6e77b1bb464d71a76ce7c0ff09723c8058",
+      "bytes": 4462
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/aead/xoodyak.kat.json",
+      "sha256": "636062259bf86c2e00c835867536a7bb728f6d8368aac9e6f549f7b5000c4ebf",
+      "bytes": 3563
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/bike.kat.json",
+      "sha256": "32d65ef3ab1365770cd1268e5995b6b7561f6e845f049cdac6d4b46e67717a76",
+      "bytes": 75556
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/classic-mceliece.kat.json",
+      "sha256": "d91176e8fb79607ef36eda072df5b8653cfb53e878e7d75f3ea8d76cbcf845b3",
+      "bytes": 198110
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/cross.kat.json",
+      "sha256": "5aafeeea5d65dc8d001c802b82dc62588e6eb2674759ccb9808869234fea641f",
+      "bytes": 802148
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/diffie-hellman.kat.json",
+      "sha256": "405fb7115a962aef6e344d32cf864b067fa36beb6d90b6f43aae7c8054393f4d",
+      "bytes": 14230
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/dilithium.kat.json",
+      "sha256": "7d4830757059937a0f5bb9998e36b887c7e55a434aa994a9dfbe971e97246444",
+      "bytes": 130195
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/dsa.kat.json",
+      "sha256": "fb81734f29d2a9f91a204f0b121cc60b570bcf6eeed657deb11f44dd9a903181",
+      "bytes": 23855
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/ecdsa.kat.json",
+      "sha256": "41a2478dd30a637bdc1172d3b4d7acc74e7cb4f00a921f5d9de16d72c3490d29",
+      "bytes": 9613
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/ed25519.kat.json",
+      "sha256": "c247dd286ef3c352d0ab6754dc915a2dd40e5e0882579b33059188f434450301",
+      "bytes": 2038
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/elgamal.kat.json",
+      "sha256": "b27e304aea88079def8c82579b092ad56c39ebeb395ff86e855d9e871f8d18d2",
+      "bytes": 4200
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/esign.kat.json",
+      "sha256": "47b2cb2d778f6fa997a9148c4d6eac7d84be9a5704d4d11c2b40aa7f130775c9",
+      "bytes": 4177
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/faest.kat.json",
+      "sha256": "30f14b20e9783d52a346e141fc590aa276ceba04370c40e20f15df64caba6043",
+      "bytes": 843781
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/falcon.kat.json",
+      "sha256": "e2b83757bd8be197ec8819ae18303061a73914c5b690398586d99626ad9aacc4",
+      "bytes": 40902
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/frodokem.kat.json",
+      "sha256": "6c3611ea5b3e9989fc50db37e401a1954befca2910c1b1a59740d60f23ab1003",
+      "bytes": 1684
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/hawk.kat.json",
+      "sha256": "5800e04cb05d47a30a70752de8b4871165043c2f2743c1101d7498a0a55eb027",
+      "bytes": 102915
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/hqc.kat.json",
+      "sha256": "442270525b5f5244c5ad25a10a93d8a9d35f821645d7851f4f17dfc6a7b939e8",
+      "bytes": 105601
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/luc.kat.json",
+      "sha256": "1366cc2b3197f825b1f689ddff1a801f75c96e91001e411d7576615a44a110ba",
+      "bytes": 1699
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/lwe-signature.kat.json",
+      "sha256": "a60b2cf9e145ae231d240589043a9ab544420da0bfa79e8f9bdd21c43b294749",
+      "bytes": 8023
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/mayo.kat.json",
+      "sha256": "f248803e284982963231d2f988642916e3c06ca846c87534567a31335c6dfa67",
+      "bytes": 15335
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/ml-dsa.kat.json",
+      "sha256": "b71168d2a1822f18fb8b29bd855a5d5976a42ebfc579e0dfdd650b3bdbdc085d",
+      "bytes": 173687
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/ntru.kat.json",
+      "sha256": "8ba4ba2a0f75f0cbae85ab000d840901ea36794331264b68b9258a75021c5427",
+      "bytes": 74367
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/perk.kat.json",
+      "sha256": "3639a1ee9916da90d95b1220892e5852f556cc5ff96a21a56875a819311b0565",
+      "bytes": 134050
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/rabin-williams.kat.json",
+      "sha256": "266d750a9b7f1efbc9c654c24c61f48054776b976219ead9253373814d87347e",
+      "bytes": 1755
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/rabin.kat.json",
+      "sha256": "ba3189b7c37980de869933c63fd2ba3664a9694051b1d3646a7f0bc00dc2dc6b",
+      "bytes": 1085
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/rainbow.kat.json",
+      "sha256": "15d2720e9ba89ddae26d8ca576205a00f7f7cc39bb5e81f791cd484880a8843a",
+      "bytes": 6866
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/rsa.kat.json",
+      "sha256": "77899ce71b41ca4a1b3bb192e142fa120c6f65e3bc99112bed1d9b9ef23bd1b1",
+      "bytes": 1467
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/schnorr.kat.json",
+      "sha256": "e2e39b47ea7741d0f0c28a5532a487a33c38b3bf165c253a59b83d218863276c",
+      "bytes": 3405
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/sike.kat.json",
+      "sha256": "b5bb96ed9a8fd58c1133ed610c70e12490c8de4ca31874f69918cc9a605761d0",
+      "bytes": 34565
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/slh-dsa.kat.json",
+      "sha256": "8d86ae82906f63cbcfa497a453f27db740130443b7529a80f4763a2c4c2b64e9",
+      "bytes": 135305
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/sphincs-plus.kat.json",
+      "sha256": "df60580f86b4671a90795ceedbe81a803821ca3b17f9ab7eb730ba78e1f18d2e",
+      "bytes": 136043
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/sqisign.kat.json",
+      "sha256": "f797479d48c6d93c738dd36e0d4cf31e666fe99234bb7ca988e611c40332a631",
+      "bytes": 41612
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/asymmetric/x25519.kat.json",
+      "sha256": "36ac114674428d3ac1e7ed33cadff1c361f593cdc0f763d78479143464d147b6",
+      "bytes": 10633
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/3des.kat.json",
+      "sha256": "cf6e463680231027f67bac1136bb95cce1633f580679af080f4991f6fc116130",
+      "bytes": 3345
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/anubis.kat.json",
+      "sha256": "8b14959dd17b84bbcd6fbe38ad6b1c81226a6e65519738c8be1bcdaa4dc010e1",
+      "bytes": 4635
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/aria.kat.json",
+      "sha256": "cc44614e96dce8c56aa5f96d40326d8d9f659b40b7304868cfb41464eae20087",
+      "bytes": 2682
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/baseking.kat.json",
+      "sha256": "d8095a3be67c86e6cac690db95a08fbdfc41f97719ca74c44e7891ead09181f5",
+      "bytes": 1467
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/bassomatic.kat.json",
+      "sha256": "e7b780be0715aaf91295152479d93374e4c4c6d5997fba7c9ad602eceb2ec047",
+      "bytes": 7250
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/blowfish.kat.json",
+      "sha256": "56df6dbc1d35086efa9a4652ec062b6e1ec4efdfedcb67d761e0cb690a4cc8f1",
+      "bytes": 3319
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/camellia.kat.json",
+      "sha256": "0d953be1659e09dcd9e96f76431c1a3c6bb4e99988c399fb4427eda2e308b7f5",
+      "bytes": 2714
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/cascade.kat.json",
+      "sha256": "85e1fe29b916ff54d5dbd1a079cbe24848ef469aa039f1edf5dd14a9313a7571",
+      "bytes": 4541
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/cast.kat.json",
+      "sha256": "26e7ea9175cf064f846e084cff491d8705b73a7de8be6bbf1f080bb7587ffff0",
+      "bytes": 3796
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/cham.kat.json",
+      "sha256": "286ba92752373ad52e95783cf11dde49dc7dead673f94690dc33d32d890927f6",
+      "bytes": 523
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/clefia.kat.json",
+      "sha256": "c186e677aa237ceaa6cb3133a4aa9ac67cfb90884e3c77362526e66110289517",
+      "bytes": 2737
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/crypton.kat.json",
+      "sha256": "49b5350dc67a57f201c3c12a7834c0a707eaf2af530eb2b9723933e92baf7aa0",
+      "bytes": 2721
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-3newde.kat.json",
+      "sha256": "204ae0426fb6a5029f52559c25ba54a0ee9a29e2736018f6a04e62725bfd0bbc",
+      "bytes": 1363
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-anubis256.kat.json",
+      "sha256": "c4b8fb04d4de91e1286a64dd6593ed05c26c4941fa6efd20b69cc520a715ab79",
+      "bytes": 2027
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-anubis320.kat.json",
+      "sha256": "35bd36640bee5584c2718b0c182d3a0f4c79831085fb18eeef630c61e37540ab",
+      "bytes": 2091
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-bbc.kat.json.gz",
+      "sha256": "46aaeb265cf87acde8f9140c64e2533c1c0d4618eb9bd58b1a5111dbf74c6be9",
+      "bytes": 574457
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-bj256.kat.json",
+      "sha256": "6df9e362e3ca5985594abd656ea118b93f4fad01c33719ccd6af3dfef990fcb9",
+      "bytes": 3695
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-breakme.kat.json",
+      "sha256": "3e60b7939ee5618c5c2f99821bdd525e79a7abf9086d707a662c5b182206d109",
+      "bytes": 1416
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-c2.kat.json",
+      "sha256": "6d61ac3ba0263d39eeb76fb2a1d1fbce23adec3c0ffc2e7f10bc167f94df2ec9",
+      "bytes": 1247
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-cartman2x.kat.json",
+      "sha256": "2dfc6fa5b16acff35daf4835817c9c52111e166ca8ee5290cd61461deaf731c7",
+      "bytes": 2093
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-cast256.kat.json",
+      "sha256": "ffa4342846b72751a53763453e91b1a31cbb5b535027516331310d897c81c8c6",
+      "bytes": 2049
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-chaos.kat.json",
+      "sha256": "71dd4f07f3be77248db131075c82422ce258fa6b41953d6bc47dff557690bdb1",
+      "bytes": 2278
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-cobra.kat.json",
+      "sha256": "2132b99610b2ca682dfdf0878e236115c3817bad0cec15ad2ed7c853fc5b314f",
+      "bytes": 1413
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-cobra128576.kat.json",
+      "sha256": "53d0ead6447d988f751408a6e993bffb90b8aa6c5cee5335e91c5e2d244e036b",
+      "bytes": 2824
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-crypton.kat.json",
+      "sha256": "cd4607260a67b8a17ee73ac90ecf66f816ff1d94aedf2d04e55cf791e0dbc699",
+      "bytes": 1535
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-cscipher.kat.json",
+      "sha256": "7dd0bd2cc68b4124f5f90698f606016d2bf30eae7342a3c0c77ebc1d86ad6611",
+      "bytes": 1741
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-curupira1.kat.json",
+      "sha256": "7911efa75fce42bbedff3124b0cb355fb17604ee7a17006a38bcc80a606e32d8",
+      "bytes": 1469
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-curupira2.kat.json",
+      "sha256": "d699d3d0ce9cb29bed62c116cc8c6da6e80113f725c69f608017d68ce0df5e05",
+      "bytes": 1469
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-daginda.kat.json",
+      "sha256": "ba84b395eec6b1415f76babd71c5541aaeb29a9e06d9cc9cf507879a5799d841",
+      "bytes": 1896
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-deal.kat.json",
+      "sha256": "87a65ec599855bac320168259cf7cb901733b7c09779d3a89e1032547550566f",
+      "bytes": 1501
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-desx.kat.json",
+      "sha256": "5561c9ca81421a70885068b272bb33db1a025b0021718adabab0096621b22de8",
+      "bytes": 1306
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-dfc.kat.json",
+      "sha256": "fe0608cf6443d939b5e4a7557a3e25cb90dd0a7df8d86e18af51c3b4848a46bf",
+      "bytes": 1959
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-diamond2.kat.json",
+      "sha256": "2e79c1f06e77f3a2d3e41585a58f53a54d2e14bae92e37cbc80b8dceb5771c87",
+      "bytes": 2863
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-e2.kat.json",
+      "sha256": "8af4b2bc178c5da7d7623e541f20315fcfbcb69a5d4beacd12626c6dc2f7a325",
+      "bytes": 1987
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-eksloki89.kat.json",
+      "sha256": "305f0f347a11440720fb55095ac9d76e5c96ed8ec2d83c945b43ddb9d7c76bf1",
+      "bytes": 1427
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-enrupt.kat.json",
+      "sha256": "b420087b7d2f017a0b7ebbe00181679ee0cf7795b61d3fce20b2084a044958f3",
+      "bytes": 2283
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-fcrypt.kat.json",
+      "sha256": "7912c51e44dfa13a33bae96e463f351a98e158f5e130f22013637a913fd95687",
+      "bytes": 1367
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-fnam2.kat.json",
+      "sha256": "95948cde3d1dd647cf0951ba35454349c8b72d0eec2d5a70cdc78638e49788dc",
+      "bytes": 3744
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-frog.kat.json",
+      "sha256": "5c695112404b0e8479c92482e158c4b826ce0baa5ec10ef5b11d8d55131c225c",
+      "bytes": 2029
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-gost-ede.kat.json",
+      "sha256": "988811ac84e49836f8c96a715ffc729f6b00d5bed02abbe6ebe8cac6e16b0eda",
+      "bytes": 1816
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-gost.kat.json",
+      "sha256": "85158abb7064d2ef88261dfc4a7144334580ac4d08ffe8090d58b8932ae3f537",
+      "bytes": 1410
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-gtea.kat.json",
+      "sha256": "21186b83304d17eeae30bde0deb87d71fa45c5712d5226fcf58847f91a448b3a",
+      "bytes": 1693
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-gtea21.kat.json",
+      "sha256": "33b29a9a4317cfa994f4ec44434e250a9d243c00c453064c10117802ad318a3d",
+      "bytes": 1698
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-gtea21ks.kat.json",
+      "sha256": "440dd250ce04a3368e8be3e895a544e975e6bafd893773edebef63fc5d39b5e8",
+      "bytes": 1714
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-hierocrypt-l1.kat.json",
+      "sha256": "09e182809fdde0a6d14ec7c3362fb0d8f4b86c93b89a696e20afbccf81196763",
+      "bytes": 1350
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-hierocrypt3.kat.json",
+      "sha256": "fa54cfeacdf14fa47346730e8bb62ff07fc982efe87b017a9d0fc3e23c6df1c1",
+      "bytes": 1999
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-hpc.kat.json",
+      "sha256": "496ffe78a2e41eed95e62416d2821590b1870a10c7dbf6a02af234ded09aca95",
+      "bytes": 1880
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-idea.kat.json",
+      "sha256": "71dcaeb8a654735ab2caf14d69fd1239be3bcea29d203c8d675d735ea6413187",
+      "bytes": 1710
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-ideanxt.kat.json",
+      "sha256": "916f80e30f883ada20be7734d5a2c42d333e88506a16fd3d3de2fcb1c9d9f0df",
+      "bytes": 1513
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-iraqi.kat.json",
+      "sha256": "e1611f50ed1a926d4727c7965da57b6dd0c42d6043cbe9aa64dded6c468fe9b8",
+      "bytes": 1619
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-ixchel.kat.json",
+      "sha256": "3daea59025f7d3277a3a2a131969ea182cca2cd3d2c2d3f200aa67c5a6a5bde5",
+      "bytes": 1693
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-kairakan.kat.json",
+      "sha256": "485d34e666fa8a914ea6aaca1bfb90d527b3248794c84b6159c223def77fa31b",
+      "bytes": 1527
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-kameko.kat.json",
+      "sha256": "93c7874c1c7750128c7d12dd9287f81ad28cf54fffb3943cb84dd8e4a1f22024",
+      "bytes": 1603
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-karla.kat.json",
+      "sha256": "c01a6c7903e0405fc34807d1569d6e7457ba15be998e00b827094bc54b832f4c",
+      "bytes": 1334
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-keeloq.kat.json",
+      "sha256": "96abbd3018b29e14496a29dfe25c88bf7c8fbe96aaa8af108f120bd891366628",
+      "bytes": 1242
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-khufu512.kat.json",
+      "sha256": "4cfb4f14cb076d36665ddac1ffc4d908537733e7dc2b1ef2a0c0f2988f6d838e",
+      "bytes": 1773
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-kinebick.kat.json",
+      "sha256": "86d83a9e9e24b755dd8a1ba43f3b0c33c682bdf993b20826778af889c39dc1c2",
+      "bytes": 1703
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-lamecrypt.kat.json",
+      "sha256": "6848f09ef4e36a5bc3a22a29942ef78ef3e6ce25399b4371ad39d207c11a43e2",
+      "bytes": 1714
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-letsief3.kat.json",
+      "sha256": "8631bc24ec821dd11b7f4a541074c2a5a8cb37d81661dbb3fe5e27d34c6a43e4",
+      "bytes": 3131
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-leviathan.kat.json",
+      "sha256": "436ad0dd98516455e4a93011e46cee18d0d8c698cdd645e1797638db69b128c8",
+      "bytes": 1621
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-lja1.kat.json",
+      "sha256": "33a2e6abbdce1d3873ab0f43320c8449dfd69f60061d6a4fb618dcdfe26bb341",
+      "bytes": 5602
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-loki91.kat.json",
+      "sha256": "49993b74da7b93ce5abe3939121581818938a5440e81fb85b50c04bf0b2ff27c",
+      "bytes": 1704
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-loki97.kat.json",
+      "sha256": "5bc5f4163703b1349e0b33160a910dcfebb997c481a52b701d1786b5d91eb3d4",
+      "bytes": 2063
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-lucifer.kat.json",
+      "sha256": "b5d28e856bc10e1c2f891ea1918134712616e7bbaa0f4b521146775c0a4dc459",
+      "bytes": 1416
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-macguffin.kat.json",
+      "sha256": "7171011749cff6e32149e85cdb523dd26fbc2aeb574db0d017b277a212c1eaf2",
+      "bytes": 1309
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-magenta.kat.json",
+      "sha256": "d1e9dc422561c75dcf6cbad5eac77b74d2ade29ddab450caecb1b0fd263a7ad3",
+      "bytes": 1975
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-mars-1248.kat.json",
+      "sha256": "221f58158648be7cd475c895013ea0c239f545c0f51022d0af5c23a8c91b4c42",
+      "bytes": 3020
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-mars-256.kat.json",
+      "sha256": "2335583d4eda6c5bdbc83b26fd86286d2baf35eda39e9e05fa62efacc3f7062e",
+      "bytes": 1965
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-mars-512.kat.json",
+      "sha256": "ff06a9d611d3aff25fe1ddd2c98e3a3a44f23fb9e374357190bb45b0e10bfbdd",
+      "bytes": 2282
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-maskenoza.kat.json",
+      "sha256": "68435054b9200a7ac65b51b59a9d68260ea12981082efb20156ff5e56274946e",
+      "bytes": 1762
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-mbc2.kat.json",
+      "sha256": "5f904a0a0cc0f961e0e9be318ad38ef750b5fec6a6ee45e95f9258e7fd47d44e",
+      "bytes": 1302
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-md4.kat.json",
+      "sha256": "c1e26f2ce03aef45102ec6557d5579178610ca67a2b88a6a01332dd3eda57fd0",
+      "bytes": 1710
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-md5.kat.json",
+      "sha256": "90b866099080988711a3de7b6251fa21c98c549868d25cd165e022379bfb5eaf",
+      "bytes": 1710
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-mdckarn.kat.json",
+      "sha256": "da53a40ad2e008f6dc509360a891562cb5174d20adca44bf3d8523a14a8cbba8",
+      "bytes": 2102
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-mercy.kat.json",
+      "sha256": "e4fd261fb1e1f824b2338677adeef97182cc1499ba2a00fb0a66d36f23dcd323",
+      "bytes": 7450
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-messa.kat.json",
+      "sha256": "e3822f8a75239f40f5617453f203fc6e534eb5d69fc6e1eaa430dddc78246a17",
+      "bytes": 1598
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-misty1.kat.json",
+      "sha256": "c3462c8cb6ca646d5d6b8fae68389438df9c1cf526acb8f7e5d552a60c0b427d",
+      "bytes": 1949
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-mmb.kat.json",
+      "sha256": "5592ec2420fce19def4e992fe45f793abc2c6eb171dd620e0dcca9ee6d8369d9",
+      "bytes": 2006
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-mmb2.kat.json",
+      "sha256": "83928fd18e095248970fe6b3e46a807a2421aaf67c8836e739f75d50fc2c5dba",
+      "bytes": 1401
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-mpj2.kat.json",
+      "sha256": "26a3fc7cf867e1d3cc173a8abee148cda84aa1c9ba2bc44f2938725e911b4388",
+      "bytes": 1437
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-multiswap.kat.json",
+      "sha256": "08d521b1b0ce33ae828382c5dbde4d02ccb3e7e891e5580eb2949005f7401f9c",
+      "bytes": 1549
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-newdes.kat.json",
+      "sha256": "2f563f28fe1c765833d677fcedaa37a428e159adf3ec054a08eba66dd14b4bde",
+      "bytes": 1313
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-newdes96.kat.json",
+      "sha256": "8e938a9948a1d567cde5b2273ecabea4cc632d624cb9e1e372e92b9818baf390",
+      "bytes": 1324
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-newtea.kat.json",
+      "sha256": "f145b1025f013d6caf93eae4a1c1a97f490e10d984a36a1329f6ecdaa5b50003",
+      "bytes": 1415
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-noekeon-indirect.kat.json",
+      "sha256": "1cf5d3c44a9baabce517d6f35c6af6366587c7f2b5293b6eecddfaa96e1b2fe8",
+      "bytes": 1914
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-nsea.kat.json",
+      "sha256": "931aea3340e51d4beffec309ecc66be0d5255e7fadff6975d6fb91a4c2b24528",
+      "bytes": 1521
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-nush.kat.json",
+      "sha256": "b0a81ab01cc8d97b517eeedc7cfcaa6b949eba65aa4fc51174ddba8fbef050bb",
+      "bytes": 2067
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-paranoia.kat.json",
+      "sha256": "1414803c3399a5792e800045a09b3e481c3e42467c0d188ff7026f021ce64aaa",
+      "bytes": 1901
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-pes.kat.json",
+      "sha256": "f00206caff145ff74f13da6e0bf0d1fd7ce7ef633dbb7410d5d45d4888b33233",
+      "bytes": 1362
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-phantom.kat.json",
+      "sha256": "aba006da2e9a135834e14bc2e70679a774f969bd7405929d11f93d1cd09722cb",
+      "bytes": 1534
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-pikachu.kat.json",
+      "sha256": "e0e6dbc790c3a5fab834c7d90f650ae423cb00dd9eada154c009647128f83cb2",
+      "bytes": 1320
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-q128.kat.json",
+      "sha256": "b1a767bd40127b49cb41980a49e2d1a4e21b0a0a6d98d64701f75a9ae2fd8057",
+      "bytes": 1401
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-raiden.kat.json",
+      "sha256": "021d7433b3dd29e4eeebcc597c41684fab1d65481d0a498690f02c5420d236a2",
+      "bytes": 1781
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-raiden32.kat.json",
+      "sha256": "40006593bfa912921ee14ff4181a6e1001fa2c9db1fb16f08cc1044568d85e5b",
+      "bytes": 1835
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-rainbow.kat.json",
+      "sha256": "269fb8ffb2decf5c8730971c7c0b927a3079a2a6589952f72d8da956d3bb2d59",
+      "bytes": 1512
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-rc2.kat.json",
+      "sha256": "e65ae7060532bd42bd3d5034adb1fe93da24217449de3958e2ccd2d52a4fde6d",
+      "bytes": 2034
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-rc5.kat.json",
+      "sha256": "9d87641a1b61206cc5c53daf75a237de116dba9642b806eceb2f5fade6a157d9",
+      "bytes": 1693
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-rc6-512.kat.json",
+      "sha256": "13ed3f8ce8fef6a5afd417214b4dbbcd25092005b4d936745fa2ba5839d0af80",
+      "bytes": 1704
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-redoc2.kat.json",
+      "sha256": "ba9222334a723f98b309f6bb7b11507f8b8bbac3ecb5f0592ce26441e33a8c0d",
+      "bytes": 1365
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-redoc3.kat.json",
+      "sha256": "2ae1d71727f80f4ea0f1507ff81675cfdac81c9a1cd835e47f687ec6899a2614",
+      "bytes": 1863
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-rijndael256.kat.json",
+      "sha256": "10c148d3741d332c880529789b63423bc57a4e57373a934c4771e3d7a6989fa5",
+      "bytes": 2288
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-rtea.kat.json",
+      "sha256": "65c941232b34bf93fab47434c3c90b3e9c356b43b1f68f5717e4513cce18c807",
+      "bytes": 1401
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-safer-sk128.kat.json",
+      "sha256": "d761058d6110e5bb7d3e1b8bd72b31fb385302755239b0d5cec566a618238429",
+      "bytes": 1331
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-saferpp.kat.json",
+      "sha256": "2dd26fb2d2f8da0ec4e51fa6a1d43f10c0264cd411b76e677077d696b8b4b2d0",
+      "bytes": 1512
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-sc2000.kat.json",
+      "sha256": "26ed982f5d30b1053854e8ddff89bca3f613afd964e76096c0faaabf065b1415",
+      "bytes": 1507
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-sc6b.kat.json",
+      "sha256": "c531a8b336b5d10cbee18038a0d7c65a16304855c64eafa90b868cd578760adc",
+      "bytes": 1545
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-seed.kat.json",
+      "sha256": "6915d33cf9f6cc33f4072b5f4535630d5ee86191cd0f2d2cce1d7ce2d09fff6e",
+      "bytes": 1890
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-serpent.kat.json",
+      "sha256": "1a5a60f210590d7eff2d0ff74a2f5ed394bc2022d770515314d6a9574d88c697",
+      "bytes": 2043
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-sha1.kat.json",
+      "sha256": "038e750e677971645fbb0f0b39eccf72df01147490044b6d379ab6b353b0a0cf",
+      "bytes": 1763
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-shark-a.kat.json",
+      "sha256": "118d05155cded8a04edb13a1090826cd5ed38024fbb4cbbbf045ef2aa6e5cd77",
+      "bytes": 1314
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-shark-e.kat.json",
+      "sha256": "f7dc016a22af3f210a23852ac3b37071ff3d7cc7464707f2195bef6e65cb7add",
+      "bytes": 1317
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-shebamik.kat.json",
+      "sha256": "77c7813e05af0cd7a1731bcd6bd7487f4ddc76c47d46824806a92cace2dc9434",
+      "bytes": 1751
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-shogashi.kat.json",
+      "sha256": "6c2cb3452ce42f626431779b9d9ab8c4c95798e959b9519cc0c439c953907621",
+      "bytes": 1709
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-simplicity.kat.json",
+      "sha256": "2b157c5cccd117e8ed494715aaae4232182df34c89f871a05910794773f9926e",
+      "bytes": 1527
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-sinople.kat.json",
+      "sha256": "4c43ace71b1779510f1a822132d3801f3b61dd58139bf001986ed32fd5fb9214",
+      "bytes": 1416
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-snappy.kat.json",
+      "sha256": "2df1e7125836f958b5c38bc8a0376bb5b793020093aaacad133cdeb8f708f9f3",
+      "bytes": 1315
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-sobbikashi.kat.json",
+      "sha256": "526bb7a3ef6944d843ee2e8e71ab7cfca86068897bc476001181a359d8f31826",
+      "bytes": 1719
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-sonjitege.kat.json",
+      "sha256": "8d18dbc379eb28b8087a17a85ac1a4f6216494f81c2cba7fa2774ec412d7240b",
+      "bytes": 1714
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-speed.kat.json",
+      "sha256": "da9be8d233622f3d85e36a1e45ba25250e081f12c74c2eb4a7b5ee8268b9f10f",
+      "bytes": 1502
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-tc18.kat.json",
+      "sha256": "4609fe3aa65930f4ab5f75e32344da2ed5438b57fc0be2290eea3b793995e17f",
+      "bytes": 1415
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-threefish1024.kat.json",
+      "sha256": "c4432be02b34bead9f91e31a2c06a0f26c745b052ad770ba08b46ba1acec15e2",
+      "bytes": 3572
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-threefish512tw.kat.json",
+      "sha256": "91b4ba882bd088221f161d93662c57182bcb746e0036a4d3f4b30dfd0056049d",
+      "bytes": 2446
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-twopes.kat.json",
+      "sha256": "5812cddf3968ba684f4576fc305b646e26048de8d70c795e4d613dc35196e541",
+      "bytes": 1411
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-umchak.kat.json",
+      "sha256": "a8d732b51af38e4a026ea14b32a2397ef76004dab3bdb1ea450911061f5ed807",
+      "bytes": 1603
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-unicorn-a.kat.json",
+      "sha256": "86f2c577b6f02a0ab24007ec4b5e4332f8747b6568606efbad213df71719b7cf",
+      "bytes": 1528
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-unicorn-e.kat.json",
+      "sha256": "d166975f35fb5f5dd11fad3d7130a10819f20e6f6c11e512cc5e29708ee5729f",
+      "bytes": 1330
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-vemokwana.kat.json",
+      "sha256": "328f5baaba109b45a0f1618a4cb6107597da407f15d3ff9ff3df8cb667c83a37",
+      "bytes": 1714
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-vsen.kat.json",
+      "sha256": "b3f0d5759064f72bca1800d8af462754f95116bf73ef269653c25ab121a81df6",
+      "bytes": 1593
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-vsen10.kat.json",
+      "sha256": "dafcf8c5fb740d1653798e1f088da1be11f7ba4b242eecf0db9c000afe13c5c0",
+      "bytes": 1608
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-wabasso.kat.json",
+      "sha256": "7668117d63f50ec7c731170bce94f92a1f7bdd33db476b20294c7c307d14226b",
+      "bytes": 1746
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-webino.kat.json",
+      "sha256": "757cfa57439a39624101128f1f8a7d84413a0694379633ad6f4a056c40f48575",
+      "bytes": 1699
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-wicker98.kat.json",
+      "sha256": "47da34d4521b2b138b501f3f28c71036b6821bf6c09b8213f63ec5185c0a4ae3",
+      "bytes": 2730
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-xtea-tw.kat.json",
+      "sha256": "59ba6742763982de3b5e2bc06e7e8b5381f28b5dfa86ef0192344cea4e4d58c9",
+      "bytes": 1320
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-xtea.kat.json",
+      "sha256": "dd5e38ba97a27966ab543ffbdc7b8d90e71e362d1c62ad2f8fddd3f702b8a689",
+      "bytes": 1305
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-xtea1.kat.json",
+      "sha256": "726998e37e6704ae0e61e48f8c6a9cc00c417c5a64cf90fe98268ca392bb5d73",
+      "bytes": 1311
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-xtea3.kat.json",
+      "sha256": "de1e40e99daeae08456a2612ee09022e6726c9131cda534d963c7ef49c52a133",
+      "bytes": 1503
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-xxtea-tw.kat.json",
+      "sha256": "21dc1f7df6fd4a41a422eda4701c00d34d60e04344df306eddaa9c3402ff159c",
+      "bytes": 1325
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/darkcrypt-xxtea.kat.json",
+      "sha256": "7a4c7a64305d64c4312365db77dac2fad4cc3dc42beb9392c165e39eeec7bc2f",
+      "bytes": 2660
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/deal.kat.json",
+      "sha256": "c434ad6502db799759e6cc611b2a31fe1791d3ce3ddcfbe63d8834192e9d8096",
+      "bytes": 1346
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/des-x.kat.json",
+      "sha256": "3bf241a1a48848e8603933c8d9f265cb943d6df6ca4f9d1b1bc6fdb56dfcac52",
+      "bytes": 2173
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/des.kat.json",
+      "sha256": "4efec87db16038fcd3d9177c327872ab0d344a454ec326e2ff90da3616615a53",
+      "bytes": 1932
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/dfc.kat.json",
+      "sha256": "cac68ce12b8291b4f37a45b5c6b9da52dea151e8c70deab97721c4e1b3e72027",
+      "bytes": 517
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/diamond2.kat.json",
+      "sha256": "8a96830acc30afb2e29d374ed669a2ce2bb2d9c3296bbabeafe499113bccc46f",
+      "bytes": 12172
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/doubleking.kat.json",
+      "sha256": "9c8b63dca37d39dbee5136cbb904a4e4e5743ed27f17b16e0739ab852174c996",
+      "bytes": 1903
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/enrupt.kat.json",
+      "sha256": "84e54b74e807f1b22b7d7c59cf5587c8d4038e754ebc640913cfcf1d055430b7",
+      "bytes": 1354
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/feal-nx.kat.json",
+      "sha256": "175ccef7948dc0990322a79740360907201925f83cb8a898ab03bd7c84bbf1b3",
+      "bytes": 1418
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/feal.kat.json",
+      "sha256": "9e4850a72ea55927fede9685ea14f302955702e4017fbd5ea24bbf2b852c730a",
+      "bytes": 505
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/ff.kat.json",
+      "sha256": "df6f9d664286f6e9b819f7494a4211f79d78b26037d9535d245856e9a741ec4e",
+      "bytes": 16343
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/forkskinny.kat.json",
+      "sha256": "30987badd6dac69578ed6f20ecf28c0edce22e2cb48b0b6b53c22c0b4a20106d",
+      "bytes": 2264
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/frog.kat.json",
+      "sha256": "9d6c593fad6cbd969b813bae65de2daacee6d726c25882099dc8b968c2385ea8",
+      "bytes": 4582
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/gift128.kat.json",
+      "sha256": "85b4e6637bf1e9c2207adf4aea9c1796140385f39b3f312720573843a9fa4144",
+      "bytes": 2283
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/gost.kat.json",
+      "sha256": "9ecc4b552c3db4916d541dbcc6e15877cab0cac4dcbc7a4a1982176332e7064e",
+      "bytes": 2391
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/grand-cru.kat.json",
+      "sha256": "894642c14c1c4cea8146125f29cdc855aee21f683a31725ed425c017b2b17187",
+      "bytes": 1803
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/hierocrypt-l1.kat.json",
+      "sha256": "31bc9d0e68eb1ea087d4e4dc3490c376aa2926036bbd2818965d8e6edb371112",
+      "bytes": 526
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/hierocrypt3.kat.json",
+      "sha256": "7dea1fc6fe3cd3fedb044b1cf70cafc7291695b9551ea6e9210ffaa4eebf2b95",
+      "bytes": 537
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/hight.kat.json",
+      "sha256": "e577080ce9af1f09b4509b9a311612e7c2b0f0077dc3044d03a719d8a01ba16e",
+      "bytes": 1237
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/hpc.kat.json",
+      "sha256": "89551e73f66a862aa846c2038839d84492100a43aa73d71cad3a905e8b9bf04c",
+      "bytes": 2147
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/hurricane.kat.json",
+      "sha256": "5fd69453ebc32cb69cb33cafb372d1e4f6474eec3cc80a638071c14278ff17f2",
+      "bytes": 1662
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/ice.kat.json",
+      "sha256": "d8aec32f51855154c7bb7a5aa7108a44a3f64f280591c4889179bb25dd86b770",
+      "bytes": 1372
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/idea.kat.json",
+      "sha256": "eda795c87a02737ac71f1ac4b4b27fe74c043a983b4a85e971f6350e33792eae",
+      "bytes": 2557
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/kalyna.kat.json",
+      "sha256": "a582e872cc1a37e7269d031174e0ed150e85feaa67367d5963c7856aca1197c8",
+      "bytes": 986
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/kasumi.kat.json",
+      "sha256": "7bc16abc464eabfa31ee4bcd31747473dd182d08779d4ec06f5a1277101e317b",
+      "bytes": 4296
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/keeloq.kat.json",
+      "sha256": "69d64d8942140c8934e1ac9e429095db7311bee55d674b988b43bb50f4aad67d",
+      "bytes": 1180
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/khazad.kat.json",
+      "sha256": "c0974a11a16e9ad6a638fa46218010736ee66a1332b87dbea515fe670cbc26fd",
+      "bytes": 3468
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/khufu.kat.json",
+      "sha256": "d652e33b781c4b7e63cb7b8290decbfdd0d2c3caaa02527865f7c2e41160c077",
+      "bytes": 3705
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/kuznyechik.kat.json",
+      "sha256": "3b3edebf60eaf2c02eda7b7e562ecadd0e0185ec9abd60374db02508bb7cf483",
+      "bytes": 1035
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/lblock.kat.json",
+      "sha256": "f7fda327f9c86d4cea241f5dcb2c9ca3540631f75e33bc556f6557b75034ccb5",
+      "bytes": 900
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/lea.kat.json",
+      "sha256": "0b3400550722cf706fe2725aacf41745c3815c65d0508eeeb873fac0f63efbc1",
+      "bytes": 1383
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/lion.kat.json",
+      "sha256": "3954c58a9b28dfd2da337107edcddf43aff0ba878bea612dc0000e44af58d6f1",
+      "bytes": 758
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/loki.kat.json",
+      "sha256": "5ef6dafd1e4bb26ef00382e3a15a001b7fe898fa0f33df39f94903e5bc6dceec",
+      "bytes": 1761
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/lucifer.kat.json",
+      "sha256": "26699db97b7c2e34ae0425ed035d510628442013424f54f8313cd466d0b8c20a",
+      "bytes": 2636
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/macguffin.kat.json",
+      "sha256": "be8d1496427cd5fbdeb0405947397cb7cca1404ec6bb4ce8c0fa20a46e3dcba0",
+      "bytes": 2161
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/magenta.kat.json",
+      "sha256": "57b3a231a4f5501d6a8c598bb918277931d0da0c3dee0d34d84df54516dd1a6b",
+      "bytes": 4015
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/magma.kat.json",
+      "sha256": "18d1558cd4c8cd366db8a3fe4ae65e50e9f7e63830b56fbaf9443cef9d23bd42",
+      "bytes": 961
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/mantis.kat.json",
+      "sha256": "c1c3ab111f97a14e7bde56b4399feba4bfb1d829acbf9e9ed28d6d54810086aa",
+      "bytes": 585
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/mars.kat.json",
+      "sha256": "3b959e526d8b8e2852bdf05ad6cdd199cff0f52ad9e605162ea1dfce150ca256",
+      "bytes": 4388
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/mercy.kat.json",
+      "sha256": "8adbc6cfd0a5f64c5bdadf7256a841581751505d359da75e1c66101b07995389",
+      "bytes": 7567
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/midori.kat.json",
+      "sha256": "1835600d7caf780ec9ad79e9847eb756e892f99fce65ad3d33d630c4f630d10d",
+      "bytes": 1839
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/misty.kat.json",
+      "sha256": "453aa066c863e5dc0461f1392d914924e44d4f66a3cb9386687ab5c16428c303",
+      "bytes": 3335
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/multi2.kat.json",
+      "sha256": "1ea3f55d9b38c1f5984f3bf37040625c6b9df0790dbcd9bb303efca1034321e4",
+      "bytes": 1086
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/newdes.kat.json",
+      "sha256": "53e9beb0b3e5d84a46f38711a3fda4057b79482c8df8e740466576ebb1ba5f15",
+      "bytes": 1323
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/noekeon.kat.json",
+      "sha256": "3e328cfe5addff9f84955d4b1487f54d9f5e2176517eb76961ccc25f1bb44ada",
+      "bytes": 2704
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/present.kat.json",
+      "sha256": "1368f5c248478e8c24987270494c041b55af1af4bd725551f8d8a872a33af463",
+      "bytes": 3210
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/pride.kat.json",
+      "sha256": "7b811abcfc313d3d53eb73337b4e91b7cef33cf64685ddf84dfae086be9cea88",
+      "bytes": 2069
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/pyjamask128.kat.json",
+      "sha256": "03c3ff6df0bcac5a4fe2f850677dbf6395d0d82ecc96ae8b16d1318b46a931de",
+      "bytes": 573
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/rc.kat.json",
+      "sha256": "c2bbb8b371d3e36d2a9d25615c2a7c6f3f682ec998ca5c0075e7b719dd804482",
+      "bytes": 4905
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/redoc.kat.json",
+      "sha256": "470551676a7b85e59b9de17d56fa8590fd01f77271f59da9c5cdf6ec8df254d5",
+      "bytes": 5449
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/rhx.kat.json",
+      "sha256": "a3158781845430bfe2e25304614581757df1f531b7d67f1aa6733847851ccbb1",
+      "bytes": 1693
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/rijndael.kat.json",
+      "sha256": "15f749ebf477ac048ad055c2da2bff7f9ba9f252585220291092cb7f0317900e",
+      "bytes": 4049
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/safer.kat.json",
+      "sha256": "280d43ec14d86c394dd55b886c4708ca46ea3bfc8a6bb6a28db67f451a182fd8",
+      "bytes": 3445
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/saferp.kat.json",
+      "sha256": "fccef6a5a8e7b524a4ce9a84d3e892bce2c6b8324e54c83eef031b2b8224c0cb",
+      "bytes": 2769
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/sc2000.kat.json",
+      "sha256": "45cee4a8c0a58655ece0121a7ecf2830dc2fb80dca6d94218b94167fe46f8ed4",
+      "bytes": 3272
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/seed.kat.json",
+      "sha256": "3f37a8d151898517f27d8f574a5710d0b892785d2f2c90ac917cc5b6c5a1f86c",
+      "bytes": 2223
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/serpent.kat.json",
+      "sha256": "085beccaf54ba864b4c1ec18d1a480e8c9fc6c8c06171ab5b7117cad7c1bc3c5",
+      "bytes": 2740
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/shacal-1.kat.json",
+      "sha256": "daf4b4284bae8a106c16954b29a7dcb9ad8ccbaabd566ab8aa70f337d0ccc8fb",
+      "bytes": 1839
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/shacal-2.kat.json",
+      "sha256": "1404569c647d5775bbb84ea40ab4b0b7793a46269d6b52c02af21a0ed8de5e18",
+      "bytes": 700
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/shark-cboxes.data.kat.json",
+      "sha256": "69c3afab12f1c128265898563e1f498b56730c01e03b38ab3c27b5829179a4bc",
+      "bytes": 86
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/shark.kat.json",
+      "sha256": "b7271ed09b4dff46f7cf497d72a136557d38414eb28c1ba269efaeea4f464360",
+      "bytes": 2730
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/shx.kat.json",
+      "sha256": "6287eeb3dcf973cc2168e4b6f4a59851611074692ad356bb9e7f5c16543bad43",
+      "bytes": 1069
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/simeck.kat.json",
+      "sha256": "5b273dc7d3ca9d8df3735e6562d19a75a8561d13bbc183670305742a2bec3b28",
+      "bytes": 7286
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/simon.kat.json",
+      "sha256": "e4e3ed7f6fdd815e721a79ec7fd243e4f3e2892082cf82990e8123d8eaf04d67",
+      "bytes": 1667
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/skinny128.kat.json",
+      "sha256": "b32be43348fdc544a3036ef6a91bb94d2e90d5651864d9010c549a2cd50eb495",
+      "bytes": 1456
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/skip32.kat.json",
+      "sha256": "9a44581543eda2563f908626ad6a76dc6530912e0d67e06acf2a431849c337f5",
+      "bytes": 1496
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/skipjack.kat.json",
+      "sha256": "63a111015a9ab4d346dca9dc18adb393b9effc4775a8021fe42758cdf949fdb2",
+      "bytes": 2014
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/sm4.kat.json",
+      "sha256": "895bc7991582edc5061deed8e0fd186fbcbb6e98951dae33be28b7d9845224d0",
+      "bytes": 1317
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/speck.kat.json",
+      "sha256": "9e083db33cafd089d03f243e50372122d6989b1525587bd4abe5ff55ead9638c",
+      "bytes": 1667
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/speed.kat.json",
+      "sha256": "6a148b6d16b0bd744bd7fea4150a9ed3a64a40fd02b742994332e6fcad17e9f7",
+      "bytes": 1769
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/square.kat.json",
+      "sha256": "b758c28b93c2f1ae52e08283a52be22b0cef9781bb9965c05ac0b18b0a14f01b",
+      "bytes": 3751
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/tea.kat.json",
+      "sha256": "b8e468eb479b0ff79fe69d33296ff799c61c7d2489dd6c97478036446be57434",
+      "bytes": 1950
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/threefish.kat.json",
+      "sha256": "68a53f842280c4dc5574a4b8e26bff65984fd5536fd7f6361dede75066c073c5",
+      "bytes": 829
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/thx.kat.json",
+      "sha256": "b3a1c56dffdd878494728cbb4426543ba7fff747f367e2d4784786ab0d625089",
+      "bytes": 1002
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/tnepres.kat.json",
+      "sha256": "3a72b0598731afced04ba97747b109dc46ab7e72137d96dfdbea738629689656",
+      "bytes": 5841
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/twine.kat.json",
+      "sha256": "d4091b773266f063f3cb96b8e4557290eb4d710d06e72ebd4f4425214b7cd553",
+      "bytes": 889
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/twofish.kat.json",
+      "sha256": "cecfc84a4756bad1011cb61f1af4b781e97c34df09f37cc8770d28290f2fcb65",
+      "bytes": 3127
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/unicorn-a.kat.json",
+      "sha256": "541ce7de0db055f812e03b56e38df61907b737f4cf7cc925727736060c9fe375",
+      "bytes": 573
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/xtea.kat.json",
+      "sha256": "7b9acaa60f8c81771cc301e6c4d3f4c1cbd1a97505adf17d72674b3633938916",
+      "bytes": 856
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/block/xxtea.kat.json",
+      "sha256": "224662201cb2abca9e765a84db3eab3f7ad728321062aa5068be5d375926c84a",
+      "bytes": 1249
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/aba-routing.kat.json",
+      "sha256": "1785f60d8d3e0c572925b1e953c37e14b8e5e86586290d44fed8a208693c9d7f",
+      "bytes": 937
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/adler.kat.json",
+      "sha256": "1cf010af75df8e422e9c1cc1b19952c03e50c023ed3fc07a4b469404d34848a9",
+      "bytes": 3111
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/bsd-checksum.kat.json",
+      "sha256": "400392f7de1d15dedd817e86a4e97a79985559d2b09d73d8541b8b61d2dfd926",
+      "bytes": 879
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/check-digit.kat.json",
+      "sha256": "49889b09f0ddcc637a026442b328108688c24ea6b4df38b09037ad5e793748e6",
+      "bytes": 3554
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/complement.kat.json",
+      "sha256": "6feb89bf2cfe018e5232d15db9df084f688c254bc25e364adc73d6f1b9d091bf",
+      "bytes": 2478
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/constant-weight.kat.json",
+      "sha256": "127635ae286a25268e122c112e0115c8c43409f035666bcb2b6e7b62cc801ed3",
+      "bytes": 1720
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/crc.kat.json",
+      "sha256": "a2d1e5f6eb5177a52fecf6baeb994508a6d341c836c9266a69fb3c1379d320f9",
+      "bytes": 16551
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/cusip-checksum.kat.json",
+      "sha256": "f6c110da3e59c3900351fe8a2219fe9f6ab70b48cee87e106770e1ef6ea08382",
+      "bytes": 929
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/damm.kat.json",
+      "sha256": "3b67f1e5387e20367275fd14c4e7940fb8175e3a3a1b8719b6680259cb456e54",
+      "bytes": 857
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/ean13-checksum.kat.json",
+      "sha256": "9cc620ef4d1b69191ba5f6895316c6fcdcccfabe1f5b3dd9fcbe945532b0bc25",
+      "bytes": 925
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/ean8-checksum.kat.json",
+      "sha256": "ef7203fde7246cbf77a9206a3b9219e401781d278dd0c3b1e17812c856022118",
+      "bytes": 890
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/fletcher.kat.json",
+      "sha256": "fb112a3ab86c7f81020b91b9f9206990b43b4cb10c3fb60e8129bf7922051d64",
+      "bytes": 4364
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/gtin-checksum.kat.json",
+      "sha256": "34c86e8d3fb7321ea86031f14d02ee837d098fee43308cecfdde8c0490403f46",
+      "bytes": 948
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/iban-checksum.kat.json",
+      "sha256": "4e849fad0868d1e481ba0d90037e25a7d7daa15f85187ba3d66107ddc71147e7",
+      "bytes": 1003
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/iccid-checksum.kat.json",
+      "sha256": "919770dd9647881573b16e96e2d2045c272acb1c4ebe1f28200bbe365d158382",
+      "bytes": 1006
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/imei-checksum.kat.json",
+      "sha256": "ca76ee7f9a1e9cd3d83d582b6914e97409235585ce908d9b2fe843dccfb6251a",
+      "bytes": 942
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/internet-checksum.kat.json",
+      "sha256": "32c715fe63ca9b46ef9510be13f480516d5c363122701f0958304f5e291a8fcf",
+      "bytes": 1203
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/isbn.kat.json",
+      "sha256": "dfc3cf4ce53a95da6125bde5ffe5de828571e6bd21432f39bd95434cfd12d9a1",
+      "bytes": 1851
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/isin-checksum.kat.json",
+      "sha256": "19c9b680ca893ab6814c6e694b284aef721076ce721b41f3d41182cfa1fb247f",
+      "bytes": 928
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/issn-checksum.kat.json",
+      "sha256": "d2cefb735650be73a367ea6264780788dc4e8a06962ab397cc58c63da1ba5395",
+      "bytes": 943
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/lrc.kat.json",
+      "sha256": "afe962eb2ba3aeeab3561bbe722f50be5a91052a0c1c13456c2e7569bd42aaf6",
+      "bytes": 676
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/luhn.kat.json",
+      "sha256": "9e3b6cada64e9d8ba47bf5a87dce03acd069121e81ba297735572ac3a73ae4eb",
+      "bytes": 966
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/modulo.kat.json",
+      "sha256": "d85976c904407213d70a40803ed6f4fff86633d1221ec3dee676e8a28bd86e80",
+      "bytes": 2529
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/nmea-0183.kat.json",
+      "sha256": "4b71a03c64666c25977de2c4cbcf99e292158bf274cfd4e7a5965d2259a300b6",
+      "bytes": 1107
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/npi-checksum.kat.json",
+      "sha256": "a9d322f520dbf59cf7a3d999a8f792b2a797fa52b54f3ac0eec456f5b876bbc8",
+      "bytes": 933
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/parity.kat.json",
+      "sha256": "aee989e070f4e4ab292f400d5e0fbc82319db382fc24c4c5acb7c368f35ce731",
+      "bytes": 3163
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/planet-checksum.kat.json",
+      "sha256": "5663e078197071ecd68ecf6dbb47e8784a9dbbd916e352b922e2f7610d5dc2e9",
+      "bytes": 934
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/postnet-checksum.kat.json",
+      "sha256": "b4a559010ff7dc6b48dae282a5166fb86efeeaaf68786a99d0ea7561e1376833",
+      "bytes": 885
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/sedol-checksum.kat.json",
+      "sha256": "5ec7ecc95bc5aec5d17a3cf980887f60f0f84f52db486e8797f1bab7fc0d4a64",
+      "bytes": 912
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/sum-checksum.kat.json",
+      "sha256": "9a0c052e43b66866eb2ed0a8174737e724a5f4af9c155ba05bc3e68aa34d6da8",
+      "bytes": 1475
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/sysv-checksum.kat.json",
+      "sha256": "b7d028303c27b5cdb07f0ea866d964dd4fb3ffaa253d73302585323749693957",
+      "bytes": 881
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/unix-sum.kat.json",
+      "sha256": "3598e952a4260d5a3b3970e8035c92bd5b4d90b7fe57d845778ad11fb5ff041d",
+      "bytes": 2316
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/upc-ean.kat.json",
+      "sha256": "b0f075d5c16e0059d0ef1a10feba36d2785376cd8b39f25f3b7ce451a45bd194",
+      "bytes": 906
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/upca-checksum.kat.json",
+      "sha256": "83c6c2925b1b52547deda3dc8d986d3fd17d049f570796dbb051c2b8bb82181d",
+      "bytes": 933
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/verhoeff.kat.json",
+      "sha256": "5cb591ee818a6a535cdf6db88e0fa1beac7db788c92b3d65654b8074631f3de8",
+      "bytes": 943
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/vin-checksum.kat.json",
+      "sha256": "c35438ede4c380f9cd435085e732518aee92492771609d57419b0560aa58ba7d",
+      "bytes": 1014
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/checksum/xor-checksum.kat.json",
+      "sha256": "e73fe13ce20a595940aff05ab3c2f912051b4883eb59dff9bf8fe7b3e01a88a3",
+      "bytes": 876
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/classical/affine.kat.json",
+      "sha256": "edafd6174d7a8caee50484c8f51098104b06e863e4cc23b46614f80b0d35a53c",
+      "bytes": 1201
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/classical/al-kindi-frequency.kat.json",
+      "sha256": "5cbb995629f4fae8994b3eca27d3f4fb7b61e6e7f9504f8a473a044474ccf07e",
+      "bytes": 988
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/classical/autokey.kat.json",
+      "sha256": "b768c89e94382ba091209e59a836707ee78c616dc3021c8a7c363185cdd712ee",
+      "bytes": 1152
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/classical/bazeries.kat.json",
+      "sha256": "59c529e2cc93a1575de24c294f7d29352deb11a9b3f7ab40073a696c4bb31c75",
+      "bytes": 1271
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/classical/beaufort.kat.json",
+      "sha256": "f7d53d1c7fc1868dd58322e5cb9c636630b7fb479d0b7f919a8972d7daf055d3",
+      "bytes": 1218
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/classical/bifid.kat.json",
+      "sha256": "f0ff5f6b189dbea02921630e21b7be9c7a1d10bc4f14af755a3eb143aa8cb356",
+      "bytes": 1857
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/classical/cadaenus.kat.json",
+      "sha256": "a8dfdbdedfb2347d675186a568dd729ce30b22ff11c0bc4afc9ef30bda0781c7",
+      "bytes": 1196
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/classical/caesar.kat.json",
+      "sha256": "dae70c09cbda8afea7d2c434c7fa304df9e7c01b18c8d873c6956ba1c9618669",
+      "bytes": 1881
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/classical/columnar.kat.json",
+      "sha256": "bf413c6155753b480f2a08ef63f119ce29d86bee3879d5be0e29ea30c511cc57",
+      "bytes": 1352
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/classical/enigma.kat.json",
+      "sha256": "f55e040f53dd7096bcebc7171e969121ea76f735fe7d1ccb916b7d6574b22a83",
+      "bytes": 2029
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/classical/foursquare.kat.json",
+      "sha256": "56474bb3816c064550ca18d37838f23b07f4f52d3f115f2f925aae4c3c9fd562",
+      "bytes": 1480
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/classical/gronsfeld.kat.json",
+      "sha256": "bb8fae83dbb4d8c3a8fac4d40bc9919edea9485a2f6696f1b45278d38b9f1ff3",
+      "bytes": 2089
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/classical/hill.kat.json",
+      "sha256": "a5bc4bc43e31aa3da2d0b7472aec5152109c5c524f0c0510229b1defe3503339",
+      "bytes": 1766
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/classical/jefferson-wheel.kat.json",
+      "sha256": "8e0d29e90210472bb13c3a4d8490082e2d24dcb6922cbd2ce94317b9aa9a42d5",
+      "bytes": 955
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/classical/nihilist.kat.json",
+      "sha256": "aa78d502c355d9a8f84844f937f0a518ff87cd85cad9578ac73414f01273bce3",
+      "bytes": 2124
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/classical/phillips.kat.json",
+      "sha256": "361c338a1ba6a0f582b8ccc408659afb7300827750defe28a89b19e2bcbbc302",
+      "bytes": 897
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/classical/pigpen.kat.json",
+      "sha256": "8610ec6069df59d827e4fc922bc03528ce0b2acd78a222cf329173efcabd0fb8",
+      "bytes": 796
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/classical/playfair.kat.json",
+      "sha256": "540e1434dd406d819aea1080d136733c566c5f8a0235664263f4f2de875aa278",
+      "bytes": 1276
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/classical/polybius.kat.json",
+      "sha256": "6d47cbb84ed18965ba36a8a9563793bb5db3c32bb4b7346927dd113b70897b14",
+      "bytes": 1325
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/classical/porta.kat.json",
+      "sha256": "2579e4acfa5e669ef1062378a99977d5acd11888056d5920c65222386cc6a033",
+      "bytes": 1616
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/classical/railfence.kat.json",
+      "sha256": "deac196b2d6c2254745ef5cef204add8d1ffcf736293b27a65036d8ee30633fb",
+      "bytes": 2035
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/classical/scytale.kat.json",
+      "sha256": "b07ec173fe1d4eb3e1ce7c130d843a88767ccc294eb1403726306b45dfa32efd",
+      "bytes": 1095
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/classical/solitaire.kat.json",
+      "sha256": "acf33f611069c7d54851569878f96beca7894ac0f977b0b329e79887ddabbd29",
+      "bytes": 1307
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/classical/trifid.kat.json",
+      "sha256": "cfc170ed0b9769eb81156ecf91011e95f0b6438936e34bd5de2187817f42b4d7",
+      "bytes": 1339
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/classical/twosquare.kat.json",
+      "sha256": "c2f1d72fe23037efe3a0ced0e1364e6895e0a69f1f34a35e18506b076d1e8e5f",
+      "bytes": 1011
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/classical/vigenere.kat.json",
+      "sha256": "6af4586f69991f09c7c9e1e9c3ed5accf76cee76017bf0ac209072040af72110",
+      "bytes": 2222
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/ace-archiver.kat.json",
+      "sha256": "adb3bd178df33983b4d20569770f048f3a603aab341e815bdf740ffb38797edd",
+      "bytes": 1475
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/adaptive-huffman.kat.json",
+      "sha256": "c2e13f4da2a2da52c93515b9eaee453bf41aa82c9cd7e83c98e128c76d744f51",
+      "bytes": 5218
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/ans.kat.json",
+      "sha256": "4e0324145b3edcf167a1f886a3046c7e85970be4264eca6746df8a676d74fdee",
+      "bytes": 5515
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/aplib.kat.json",
+      "sha256": "d8379a3c066155f006a5111314db0904e99490eb9db21f910032af038af93223",
+      "bytes": 3520
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/arithmetic.kat.json",
+      "sha256": "37df403493fb95a2c7a0583d9b1e76c49b32e4b96a4660655a1338377a0cf3f1",
+      "bytes": 7765
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/arj.kat.json",
+      "sha256": "eae21a278b2fefb49b31806b69f6f1b5ddf537d358af5a7f5ad9c51642913384",
+      "bytes": 1381
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/balz.kat.json",
+      "sha256": "ae684c4655deed2e516d7337da29c496a342d87f6e559bebe796bb9f7870df8b",
+      "bytes": 1842
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/bcj-arm-thumb.kat.json",
+      "sha256": "76f86efc2a233fb6c87385559e83381bed193cf88b0b376df202a572853f73d1",
+      "bytes": 698
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/bcj-arm.kat.json",
+      "sha256": "c92fc63a01e00e613341f107be65c774f8fb044f2f2065d1aa74c4b6f6d24719",
+      "bytes": 694
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/bcj-arm64.kat.json",
+      "sha256": "c80a3c7e18b7d19ea13b1e8db835f97577a1e572cd05c240f0ed2ffe280440ab",
+      "bytes": 1023
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/bcj-ia64.kat.json",
+      "sha256": "166143bd3f2f1a49090b61e1dbb2b91cea38c288a855d5950768602d5a5d84a7",
+      "bytes": 795
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/bcj-powerpc.kat.json",
+      "sha256": "98a84b4deda80fb7fc83980356e3641b167bd914c365f9c16f18bcb69c65c4d8",
+      "bytes": 694
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/bcj-riscv.kat.json",
+      "sha256": "46dce98f8d89798dbc908ad4537e7c0fd0e3ffac2b065aa26f4fe0b962e9311b",
+      "bytes": 1775
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/bcj-sparc.kat.json",
+      "sha256": "1acd9e18754411aec436d1aeaf2196787698d6d1c82f543b4bd128f08647f9fb",
+      "bytes": 695
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/bcj-x86.kat.json",
+      "sha256": "d5ffcc74356bc702c1337ee41d5c3a2688726d3fdaae4a187458e535f1c8c427",
+      "bytes": 991
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/bcm.kat.json",
+      "sha256": "eaecb83e5b29d3372386920437a265ba7e816baa209d9a7b10eaced0f2109c39",
+      "bytes": 1956
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/bpe.kat.json",
+      "sha256": "9862cb26b21dca419c4444319a605087deb817dad66ee02554227f4368501d4f",
+      "bytes": 947
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/brieflz.kat.json",
+      "sha256": "5b90f30d3a753f3268578c643833d033a822bbddae889eb40922f7e5ca6523ef",
+      "bytes": 6424
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/brotli-dictionary.data.kat.json",
+      "sha256": "44dec1f64a54cd52239cd22e920a2b16149c65c2d483479e55bf639f4f9fd660",
+      "bytes": 97
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/brotli.kat.json",
+      "sha256": "922c342ee874d51dab6014508b5a53650263c780f216824b4f9c0c6e220cf08c",
+      "bytes": 5988
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/bsc.kat.json",
+      "sha256": "4c401ba9cd8616068da769648b391e803ce0f3bd0a51714f2cad56d29fba9199",
+      "bytes": 1732
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/bwt-advanced.kat.json",
+      "sha256": "e935fc728ff1dde2f223fbbe391f95edf868758d6580add964c67e06d1b10976",
+      "bytes": 3556
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/bwt.kat.json",
+      "sha256": "b2b0df039d0f12b8cbfaae4bb807ae0fc86248f9f5e861d8b2bef08d846db80b",
+      "bytes": 3904
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/bzip2.kat.json.gz",
+      "sha256": "48e58f3da1c41ea40a701b0d4d8469a7405a33e29950efb6cba9aafcc0bd9fab",
+      "bytes": 3822
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/cmix.kat.json",
+      "sha256": "2597e6ba6b01cad0dde8092c73eb8f77e4dfd9ebb7d9b81400c35739c1694fe4",
+      "bytes": 1342
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/crush.kat.json",
+      "sha256": "62225d0b9e54a200df506aa6446b93e5a086d0122f178b39ad129e477f709b55",
+      "bytes": 1814
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/csc.kat.json",
+      "sha256": "a00018f850c1eb494a9a55dabc31123fbf9f9771d555b73e3b988955e4636d74",
+      "bytes": 1372
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/ctw-willems.kat.json",
+      "sha256": "1c141928715127c620e71e931ec9482b32ffe6e0dddb651d70490d6fd2696832",
+      "bytes": 4086
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/ctw.kat.json",
+      "sha256": "355eeea516c27eff8522668aebc561e2350ddfed9ab0622f1ae6f4a5f4065e80",
+      "bytes": 2389
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/deflate-simple.kat.json",
+      "sha256": "e2c9815e694c19a807b06bfbcaeff472189ffd5831fd6d2b9df1bd2ac0f7f13f",
+      "bytes": 5463
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/deflate.kat.json",
+      "sha256": "e05f6dccb81b8c0988f466f7a1f40c4092d48a233fce0be781709a4cbf52f6f0",
+      "bytes": 978
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/deflate64.kat.json",
+      "sha256": "eb722e1b37a81b88127b41e1538504d3ef1b94b5351dc9efa5b1be6fe9d818e7",
+      "bytes": 993
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/delta-filter.kat.json",
+      "sha256": "f68dfd29947b5f13a6f18fed08ca381a10fa915984b1ed020895a9aa98a6e23d",
+      "bytes": 2281
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/delta.kat.json",
+      "sha256": "2584563ff364e11896c7ffec2769a88b3e2d0cf3468148084c6b288e9808fa91",
+      "bytes": 906
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/density.kat.json",
+      "sha256": "caf4d7390817d0a064b372dc006b3800bf5d11526b1a04344cb4b65e4d5aa3d3",
+      "bytes": 2812
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/dmc.kat.json",
+      "sha256": "29a59c94d3a25033b95c8ea2a1632a1dca6a6715fc0962e295309e10e77f72e4",
+      "bytes": 1023
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/dna-compression.kat.json",
+      "sha256": "ebb2cee33e66fb139767e8705e3a92c194984f5cf195e907cb84d31ab0ea94c2",
+      "bytes": 1316
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/doublespace.kat.json",
+      "sha256": "bbcc1edefd2dfe5945cb346e91526b4b6e68953a60c197f55ab1ed9e842b8c9b",
+      "bytes": 3459
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/dpcm.kat.json",
+      "sha256": "9631067de10850be793c9b866d55607f3c1f1f3ea1079474a89da80e66945a13",
+      "bytes": 1179
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/drivespace.kat.json",
+      "sha256": "d565ba6f1db48a934eaae9aeb602135cca5dcd88445cf58f56e5a94ba668b424",
+      "bytes": 3457
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/ds-lz77-doublespace.kat.json",
+      "sha256": "556f84b11211693c61f4fcd0047362101d236920f41a0fabec08918ad4732bb1",
+      "bytes": 3478
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/ds-lz77.kat.json",
+      "sha256": "24be1c1c2d8cde08fa08f22079139527b4ed2f7d04581eb3a593287981b5542e",
+      "bytes": 1227
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/elias-delta.kat.json",
+      "sha256": "a8ca8007d471495a0f6505707f2bf2376fe10993ceef62f8734a6a71cd474cab",
+      "bytes": 701
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/elias-gamma.kat.json",
+      "sha256": "243b2db72123cf8ae9a0238f1d930523c6f2e53eec585c3aa8835185b2075a80",
+      "bytes": 701
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/exp-golomb.kat.json",
+      "sha256": "a97db68da17c1c3fe34e05db500386c13735dd7d3f37498ec1c3017c91c5e4f5",
+      "bytes": 6216
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/fastlz.kat.json",
+      "sha256": "9856bf223da82d4c7e34afa936d2e1b19c993065dde858c56d9e816bc8db50c8",
+      "bytes": 1844
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/fibonacci.kat.json",
+      "sha256": "0267afd7fcdb791ccba01abb2a8a3ebd7bf9f78b4606d5d3113ec1ad293ee0b1",
+      "bytes": 5587
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/fse.kat.json",
+      "sha256": "8e8a92c6900446e34b9b44f1b21b5e1b38ff4b493aebfad8d4ae115d9257cffa",
+      "bytes": 8270
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/golomb-bitstream.kat.json",
+      "sha256": "5700d5e279b0fb8ddc4df425e839a97965806373d03fc585468bb506bdaf9482",
+      "bytes": 1443
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/golomb.kat.json",
+      "sha256": "b5b4b514df348dbaee21a7ca636b3ccebf66a295ecd6c069d176413c48d4fbb3",
+      "bytes": 2835
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/huffman-code-lengths.data.kat.json",
+      "sha256": "5236ff5a16764d235308140d93e42651c453197c04c9095c861160e10156416a",
+      "bytes": 100
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/huffman.kat.json",
+      "sha256": "e8fac4b8b3e6d7d99351051e3b03d037ff3481b15027135650e14da452898cef",
+      "bytes": 1651
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/ibm842.kat.json",
+      "sha256": "60c1e8012d60f51630accd770fbba132404fd7315b83372f7c66c7c62f8322b6",
+      "bytes": 3760
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/implode.kat.json",
+      "sha256": "da4807ab03bdf335ecdd2162bc271c58210913c721c86d9caa3723680b7848ea",
+      "bytes": 3685
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/levenshtein-coding.kat.json",
+      "sha256": "6846ae87bcf913d28510234323e5f9f33c1ac571a7ac49f971061f02394680bc",
+      "bytes": 1263
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lizard.kat.json",
+      "sha256": "e97ef7e4509b9b829365fbdd2b977f39e3bce16d3aa21c46e39d1eab1f69e610",
+      "bytes": 2040
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lz4-frame.kat.json",
+      "sha256": "561a7854b37686b2b4281109bcf589ccf535f35892ded1b7ee827bf8eb31b901",
+      "bytes": 3870
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lz4.kat.json",
+      "sha256": "7942d8803da4e85f5763a97200bd7ac1e63b5bcd0e2052b86963e54f0bc6da83",
+      "bytes": 1992
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lz77-optimal.kat.json",
+      "sha256": "6a4984d608a340d557a80d6a2e76453291009d90ef7cb294aba0541fae5a7686",
+      "bytes": 3727
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lz77.kat.json",
+      "sha256": "ed9c77329d78b3e8ad1004cbc4e91a67d4418fc65bb10f39233272c9de0e621e",
+      "bytes": 1510
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lz78.kat.json",
+      "sha256": "34e4347a28d227f9c7fee0e783e216ba2f0bac33e88611343be9256b71a4be2f",
+      "bytes": 5063
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lzap.kat.json",
+      "sha256": "4bb8635be760ec6ef9fe82e511ad440f5c461f87d315c2df677e24fc61182ee4",
+      "bytes": 4631
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lzav.kat.json",
+      "sha256": "e7c557ea4282504dee6cff352a03d9ac33af711cff16c5f8b17751655690d100",
+      "bytes": 1570
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lzf.kat.json",
+      "sha256": "4a60dedb62d520ff49ef5ed9bb18fee91040aa025343737ba9754d8251c8e5df",
+      "bytes": 5749
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lzfse.kat.json",
+      "sha256": "51fa762371441dbad15cf7caa7c6a69e5484ce0ad8997a346bcea35745ce3dca",
+      "bytes": 8453
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lzfx.kat.json",
+      "sha256": "d050cbe4f625714742106efdd619387ef32328945666f734df921f9bec1138f7",
+      "bytes": 2045
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lzg.kat.json",
+      "sha256": "6d8645524ad8e225dcb3466b57a7aba60651d176c0229de28e4704033c90a6af",
+      "bytes": 5108
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lzh.kat.json",
+      "sha256": "3ed8a3df560db37c2caf84489fc6091256d7750174fd9aeed507b29f8ab25a20",
+      "bytes": 4127
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lzham.kat.json",
+      "sha256": "154fa391ace5a2a041ac02fefdb3769b04780d111e4b93d3b4ead216ffa75f03",
+      "bytes": 4745
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lzjb.kat.json",
+      "sha256": "d43212ab37c965302f33fe194f1b33df469662f857893f5c4180ecb1bd9b5e02",
+      "bytes": 1854
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lzma.kat.json",
+      "sha256": "fb81d4d9d16ac4c0b26ca0080df38c0034f5d35fa232dce9ab71433e190b6e67",
+      "bytes": 3102
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lzmat.kat.json",
+      "sha256": "cecb7e838b2e5e180c7a47816e3541bc2dbb4be8f59d69fde186d3f4e981d18e",
+      "bytes": 4240
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lzms.kat.json",
+      "sha256": "ebd18d8411f4a36245a6d267c5d42d48ea66e8218f33b91b1e95c7c5cbdb61b7",
+      "bytes": 4604
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lzmw.kat.json",
+      "sha256": "f2ad883ca81f17999c92c2d619c6e8a580add4a445995a190253176acbbdee2a",
+      "bytes": 4635
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lzo.kat.json",
+      "sha256": "2dd9e283629bbc41a87cf6529fedeb709a1512d7c2657946ffeba8ad3de09fda",
+      "bytes": 1250
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lzp.kat.json",
+      "sha256": "3bcd59df4257a7413aad6ac15214366ce2eb064840e92ecbddc52c5e2d4f1a94",
+      "bytes": 1524
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lzrle.kat.json",
+      "sha256": "82fbc4c6366f432869c82a9dd7a92c1e7522daf3d9a6d1cf49a4576710806e03",
+      "bytes": 916
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lzrw1.kat.json",
+      "sha256": "ea5675ec1d7b72c5e572fff9f30eb38f8af1fcb1d7a11d71a3eb6fb98fd5c4d9",
+      "bytes": 1386
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lzrw3.kat.json",
+      "sha256": "4fc59f945f88e4aa11c5ad6ebaeb26010150938112bc08e18f5754a1e42ffdcc",
+      "bytes": 4907
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lzs.kat.json",
+      "sha256": "c16e9a67695b9092281ebda00924afeea20965abfbd72dfae4fee1ad3f9f3f21",
+      "bytes": 1209
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lzss.kat.json",
+      "sha256": "973f7efab2667ddf96ed9ef1457a1c1fd1b0fbbdd231cda54707de921bfea9a5",
+      "bytes": 4224
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lzturbo.kat.json",
+      "sha256": "277eb480d824cdf58e7aace80b603f84299ee07a0ea2540cec515549a8046b32",
+      "bytes": 4774
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lzvn.kat.json",
+      "sha256": "7bbf2d7f9d4d509d25669a5702cbe7e27ba93dc09ee79adbdb37de8840dceeb1",
+      "bytes": 4567
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lzw.kat.json",
+      "sha256": "3011c78040173e7bb2719a16532f6d2d144272f295a2bce26c24545d3b092f2b",
+      "bytes": 3057
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lzwl.kat.json",
+      "sha256": "fdb3c299fd39b428077664de0a338e78a46eadca08ad6356caf304b6c6e18b6d",
+      "bytes": 4463
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/lzx.kat.json",
+      "sha256": "32d6271713395240fac1219d730884ec10b23de6fbddaeb462a012684c65e9bb",
+      "bytes": 4719
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/mcm.kat.json",
+      "sha256": "6214c8b5c17c21ac51f2b8e77ddc91ba87779d133fef5522498f0068eae2b3d8",
+      "bytes": 1340
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/ms-lzh.kat.json",
+      "sha256": "f48a51a5e5d6c1cf6e7f17aad476236e0c6f410820c5516cabe4d442127dfa75",
+      "bytes": 4139
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/mtf.kat.json",
+      "sha256": "4edfb217b53fc3013acfa43ba900b3b4afe4707e5a66d9e96aeb88d5f6d7510a",
+      "bytes": 2095
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/neural-compression.kat.json",
+      "sha256": "03d1070a872b7df9ce35ecac61d99581e8defd87959c005a8126e2c7fe0211cc",
+      "bytes": 1190
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/nrv2d.kat.json",
+      "sha256": "f5e2e64879eca16886cfe35b1d50c398170ab480c4f9477ac134c1bc252e8c96",
+      "bytes": 1257
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/nrv2e.kat.json",
+      "sha256": "6e6346e36f9a98e258af7b050cc908e1e0c4c46a12c755ca88ca2ee3f3eab537",
+      "bytes": 1257
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/omega.kat.json",
+      "sha256": "dc331ec0407f0c7e35a8576e16e3ce8e33401e1f8777bfc0de8a134d209c3a05",
+      "bytes": 1985
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/packbits.kat.json",
+      "sha256": "edffeb6952c5938bc0c14fd5c6047e983283f159133189263ced737de1285d2b",
+      "bytes": 2978
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/paq.kat.json",
+      "sha256": "3942af52ee861b4d8d45a00d9585fcd945d49225a8896c1919aca145d3ca8a4c",
+      "bytes": 3377
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/paq8hp.kat.json",
+      "sha256": "891d41d4be690859e246b20e91ce281555e190ac8c2970f4e30ad1a427c47784",
+      "bytes": 1365
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/pithy.kat.json",
+      "sha256": "a2508970db8eb67d9a886ac0f061e6163fb6111d5a1ea2537c6c0f6913070fcd",
+      "bytes": 2928
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/ppm.kat.json",
+      "sha256": "b2162415fcb1087632b549d174a9c2a6a047ec2394c3993d83c815f37bbb66cd",
+      "bytes": 4257
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/ppmd.kat.json",
+      "sha256": "c5cc2adbbf3616705c4c864258fb2425db6fb2425be3e1e44774a7a4214400d3",
+      "bytes": 1408
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/quantum.kat.json",
+      "sha256": "01c38eed458dedd33207d5b778256686b4e30d839fe0b022509366c6d1d9a181",
+      "bytes": 4026
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/quicklz.kat.json",
+      "sha256": "6ed96d10b40de0e650a41239de89161e59f085ec83679de775d47a1c96796c9a",
+      "bytes": 4728
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/range-coding.kat.json",
+      "sha256": "c00fb8a993031d114d97aa5ebb674a5e21475f6940b6aaefd47ff16a3557dcbd",
+      "bytes": 15378
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/rans.kat.json",
+      "sha256": "6ade2b267addddf2c545a08a881008037c6e608c9c87fd51569b2f4654a9c4a6",
+      "bytes": 6121
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/rar.kat.json",
+      "sha256": "40e48a4f38b0d8b46f5188107bfeee505d220d972bfd30f45afa307c7f249ec7",
+      "bytes": 1420
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/rar5.kat.json",
+      "sha256": "e6f4ef860ecccedae260b7586baaed95ac0dfe7014c7de08236ccfcaf6f46fe3",
+      "bytes": 3695
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/reduce.kat.json",
+      "sha256": "8b0a1dddf91a7ed5794c714bf990faca4bf454c570e904e1b3db5183d32b5656",
+      "bytes": 5019
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/repair.kat.json",
+      "sha256": "2952ebe8530df1ded5d56ecaea1fc196bd41dd3c0473c5fb13d2f42ff033b262",
+      "bytes": 1340
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/rle.kat.json",
+      "sha256": "b4f1b8e58962051d2c604ea339f7a257d61bc09371f430ed4befb4c541ad9cd3",
+      "bytes": 963
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/rolz.kat.json",
+      "sha256": "1367b5213e8b93e3bc0b159e00f735164571c84ee5e263f7208c090b3f4771aa",
+      "bytes": 2188
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/rzip.kat.json",
+      "sha256": "4be497a9ee929b839eb5e40e9f018b42d2ef60178c99a0563253094018e5a22a",
+      "bytes": 170437
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/salvador.kat.json",
+      "sha256": "81afec626bb6d645a92f9ac51b23f8421ef426b843e272cdd0824b92256646b2",
+      "bytes": 181663
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/sequitur.kat.json",
+      "sha256": "eea8530dd1ba7933e84e6e8db5274043ff93a82d246a537e2ef4f6e0b86cb81a",
+      "bytes": 4925
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/shannon-fano.kat.json",
+      "sha256": "747fc543c729af8506b3a8c4bd2757936bfe93973ff123b4f5d5a5d89a8e7077",
+      "bytes": 4034
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/shoco.kat.json",
+      "sha256": "0f1a8f00092521b77b76d8884a14522a05b93975a5b6a09f970cef0748e75b38",
+      "bytes": 1314
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/shrink.kat.json",
+      "sha256": "c17fb08e5a05160363faec850105c82ebcf325b8150cf8bf41fc202e024df75d",
+      "bytes": 3613
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/snappy.kat.json",
+      "sha256": "9e546f283d89b20b5d7b05663d20e8323c3e091c3fb3bc717a87fc3348e9ebc2",
+      "bytes": 2893
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/sqx.kat.json",
+      "sha256": "e246bd5ae997cacf35fb4d4716c5673c1bf2c32835c1fad2d20985d68038f614",
+      "bytes": 1432
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/suffix-tree.kat.json",
+      "sha256": "3670a2f3d3b8a11c0af30658bd28683f9c277f2cd2111d37166592ab1d33e2d9",
+      "bytes": 991
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/tans.kat.json",
+      "sha256": "7fdf41f031b1f9573bc2ce418cf6ea5bf9248985d3371b351e478fe807234dae",
+      "bytes": 6445
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/tunstall.kat.json",
+      "sha256": "6bc9e2a88df81d9e26b4915e3e4476373f8ad451fe091a30a0503915c4d496d4",
+      "bytes": 7527
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/ucl.kat.json",
+      "sha256": "3aec9dcc365d1d24fa9571a26c049ddbeba066a299b69858d7542d2406d80292",
+      "bytes": 4307
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/unary.kat.json",
+      "sha256": "6f25e1cd0ba2b476c64167c11621b75fa753024c1de908a1c2a54ad030938f84",
+      "bytes": 28373
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/xpress.kat.json",
+      "sha256": "f33f10e2384fb81a3ac2f8fe16d1e845f474f68f5c79533f8b0083d53760c828",
+      "bytes": 2225
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/xz-lzma2.kat.json",
+      "sha256": "f8f9ec1df8dba5562f58675b01a77c88f9c2931c7cd6029a397b15161a70991e",
+      "bytes": 3051
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/zling.kat.json",
+      "sha256": "92584514dc27195b7aaf903f547f6d3c37051b151e2cf74fa91534b3fceedbbb",
+      "bytes": 4263
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/zopfli.kat.json",
+      "sha256": "be2dff76b5ef6e6813c18b1e52960dd41b11bac6b066d163940455c7737c905a",
+      "bytes": 973
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/zpaq.kat.json",
+      "sha256": "57e6e266bf913f61efdfd0816094465bf2817437ab4a3ce9c2daf135475b8039",
+      "bytes": 5646
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/zstd.kat.json",
+      "sha256": "a4dd5cc93d141f1bcc4ed150b1e3758d70e0933088034d4ff45a8f256dadd409",
+      "bytes": 703296
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/compression/zx0.kat.json",
+      "sha256": "b8c5d229936d73b5adcb2a9719b5402b0493539217be0884edb046d170581c33",
+      "bytes": 181653
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/crypto/aeswrap.kat.json",
+      "sha256": "7a7b11faf1642921d9eb19542a6be446e0f9c0202ccc0f6cc925405f641e1404",
+      "bytes": 2970
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/crypto/aeswrappad.kat.json",
+      "sha256": "af71dfcf56569a72a04bb4f2492df9061c0cfa189c65f1a4a4ed3e7e5ebbda12",
+      "bytes": 1057
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/crypto/ariawrap.kat.json",
+      "sha256": "f2d82df2083f522fc1fadebff781cb86d7487e2f1ef2eb660ef1cc174f752c50",
+      "bytes": 2406
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/crypto/ariawrappad.kat.json",
+      "sha256": "8133c28b764f6c9483fdf995d40b6ab8f7fa0500230607852a539594f1a3a276",
+      "bytes": 1331
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/crypto/camelliawrap.kat.json",
+      "sha256": "894891d285fae1d4ada7dc36625822bd55fa6d4725ba88dd249de021b03e7e57",
+      "bytes": 577
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/crypto/camelliawrappad.kat.json",
+      "sha256": "a4673235cf1b2ee21d525e546e52e32873d12b506560ef1ab21c81bb9ea871ac",
+      "bytes": 1355
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/crypto/cryptoprowrap.kat.json",
+      "sha256": "d43395f60e8c9e3fa00e08d01df755f9131db16ef673cdfd0160f32c057b7ba3",
+      "bytes": 736
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/crypto/desedewrap.kat.json",
+      "sha256": "16ed311947496b5d2c72692a81efa909bec227a37c2bc5a7c8bc120a395f099b",
+      "bytes": 701
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/crypto/gost28147wrap.kat.json",
+      "sha256": "24b780c316293c9e97e7e6f251969b99bd03fb545599f2b0ab77ad4270644289",
+      "bytes": 748
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/crypto/kalynawrap.kat.json",
+      "sha256": "7a0296ce011f66cfed830d1bcdfc6ca9e9cc12575419c95de423a0719dd3b983",
+      "bytes": 2775
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/crypto/rfc3211wrap.kat.json",
+      "sha256": "e84b4a218504c66281c7b15fe167632f4e7ba53d59e5ebbf1125a3c3db88dd33",
+      "bytes": 1439
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/crypto/seedwrap.kat.json",
+      "sha256": "08efc02bdc3ad2bc69522233f7ae60e248c50084439dc13dd1a31e25889b31f1",
+      "bytes": 1426
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/crypto/seedwrappad.kat.json",
+      "sha256": "1ae2b4f996241878301bde4f7afd62cb4286cd93f2d6d8fbf1057e1e718af6f6",
+      "bytes": 1307
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/2d-parity.kat.json",
+      "sha256": "af9b46705acf69197ea422013e630d5b3ebc73ff1eaf1a128edadb325af2c57f",
+      "bytes": 1720
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/alamouti-code.kat.json",
+      "sha256": "f2c477b9f1487b950b5f18976ce0b168316b48c9e9c06f03a9a0d435b65161fb",
+      "bytes": 2438
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/algebraic-geometry-code.kat.json",
+      "sha256": "54c17f589007bd248b2ed2d223865e882d58b8820352e4601695839a34417b56",
+      "bytes": 2392
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/bacon-shor-code.kat.json",
+      "sha256": "cdb035fc6ef4236409cc956aa7dedd72f6009534e1d84616c3fb7561f3e60a41",
+      "bytes": 1043
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/batched-sparse-code.kat.json",
+      "sha256": "6cfb3667d63ee41c1fa508478e0ebbd33485846d1319ab5977c6239cc6166ff1",
+      "bytes": 2218
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/bch-code.kat.json",
+      "sha256": "053be13c749603a4090558f179a731d101cd004c9d237342f3f6f4790893d4c8",
+      "bytes": 919
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/bch.kat.json",
+      "sha256": "5b2f3012aa2c66414f03f0c261649564a877faceb2304c2b0d296bec27d2c5a2",
+      "bytes": 645
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/berger-code.kat.json",
+      "sha256": "a6b014f7412d884e600176251aa0c491670ca3741df88da6f16ac07100a75e17",
+      "bytes": 2532
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/bicycle-code.kat.json",
+      "sha256": "7d5d19378f4801072591427fc59be8f28c9670c6a8fc47f708f8f38f75baa786",
+      "bytes": 1248
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/biorthogonal-code.kat.json",
+      "sha256": "c6f20a8f689ccf12a2be1ae71cf10e7502cbe9d10b7883ef26ac90a18b5f2b77",
+      "bytes": 1255
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/cat-code.kat.json",
+      "sha256": "88aea7b1983322c78c33318fd8cf8de14aba6dfd15b32d790e1271b3a8832163",
+      "bytes": 3490
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/color-code.kat.json",
+      "sha256": "4c06d102b528911c5ff4921edc7c8566eb562731c11598c065b82935efa9c179",
+      "bytes": 704
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/concatenated.kat.json",
+      "sha256": "d71d9b26ad6767431a26ae86904715d5f724cdfbaaedc55d3ab1c69da7e6b955",
+      "bytes": 1010
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/constant-weight-balanced.kat.json",
+      "sha256": "3d3726af93ed774a1e188112530d95e0078c4115d8c0b4d2e8e4506237f79e55",
+      "bytes": 1675
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/convolutional-viterbi.kat.json",
+      "sha256": "eacae6645b22aaaacaffea9d3ce6626cb753658ae0dd6fd778f158ed8595e6d4",
+      "bytes": 1226
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/cortex-code.kat.json",
+      "sha256": "96e382af3713d3375800f42c4aaa3094c2b93989769ecf9acf442c1ed1384774",
+      "bytes": 1079
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/css-quantum-code.kat.json",
+      "sha256": "f998723b9225f9da076cacfa1be2d397e20a044896f37d21e6e41f7b5ef592c6",
+      "bytes": 712
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/dna-storage-code.kat.json",
+      "sha256": "31c85e9872e432675b6e578a3d9d2bd8a00f1130e7b60c15f1b99800bd97f16e",
+      "bytes": 1806
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/dual-hamming.kat.json",
+      "sha256": "69add2edf3351cfa95f3d108463099c324e6b36d83dc9195075cbea1d76632d5",
+      "bytes": 1231
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/even-weight-code.kat.json",
+      "sha256": "1c819060646425943712d25f7ee04e4adb616530430ea90921bba5f71c3510bf",
+      "bytes": 1244
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/expander-code.kat.json",
+      "sha256": "7ed865e06d5d0c8d745cc03b2438775b0d6948472bdd3577237548ea806618e2",
+      "bytes": 1333
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/extended-golay.kat.json",
+      "sha256": "7bb22c6e2a80cfb47ff9cce7e617857c0a6811298d4aa3fd3915f15a8f8f647a",
+      "bytes": 1102
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/extended-self-dual.kat.json",
+      "sha256": "606dc913b574238a35054ed60d17357288f3e590955093c921405c6b004ca752",
+      "bytes": 1282
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/fire-code.kat.json",
+      "sha256": "5c173b4626bfd8a2c8512057cc1e5f298a9c663f704e2755d2315a8364bba6af",
+      "bytes": 933
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/folded-reed-solomon.kat.json",
+      "sha256": "1514cb41b199f91de9cb7195d8a44cb969179ce3fa88aca91d7ea4ee3c4834d8",
+      "bytes": 1708
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/fountain-foundation.data.kat.json",
+      "sha256": "a2e04981127208682b13abce140e6618aa0943a2eaad3e9ad2eedc9d8069f3bd",
+      "bytes": 91
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/gabidulin-code.kat.json",
+      "sha256": "6d79d163f0c6d039f4cabfb3d8548a64e683a993aac191f5f15a1d44aadb8e3a",
+      "bytes": 1842
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/gkp-code.kat.json",
+      "sha256": "a85c6d34124d8699d00f4002ca17e8f5884f7b4bd0efda128cc7586d0ca85ee9",
+      "bytes": 5437
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/golay.kat.json",
+      "sha256": "49401bdf01e11f0f727e91542605afd8c81188376df69fcc9b69dde5e3ade3b6",
+      "bytes": 1126
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/goppa-code.kat.json",
+      "sha256": "7d3ea7de5475ab30effef42865dd3c6d4f18c8d4559f963e2a96a631b16dbdd0",
+      "bytes": 1241
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/hadamard-code.kat.json",
+      "sha256": "2e0c85843bf09dbfcdc1e69695632ce897c4efc0fffc1aaf0ee698430e88ec0d",
+      "bytes": 1217
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/hamming.kat.json",
+      "sha256": "f8aa85f5118c6ed5959fe3bd9d2afe5f515e01fb7e5de90f46ff8ae37705e28e",
+      "bytes": 2509
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/hermitian-code.kat.json",
+      "sha256": "97cf6f2076bfb610bd61635425495046b76c9b736de294666b27a7afc59665d7",
+      "bytes": 1837
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/hsiao-code.kat.json",
+      "sha256": "d3fbe32d859cf1e4e2d9980b7d17d34dc1e24007ff51195689a5deef3197550f",
+      "bytes": 938
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/interleaver.kat.json",
+      "sha256": "2b64d33ca492ce96def53c97eff2db13b161e41e192919ae9e867b9d505b5c70",
+      "bytes": 1367
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/justesen-code.kat.json",
+      "sha256": "eb2be8068919e70f897932797cdd97b8884c62e74a7d6e81cc3bf2606710c1df",
+      "bytes": 1227
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/kerdock-code.kat.json",
+      "sha256": "d98850fb4e0028d3eb15e76e1531a0abdb25d1301d0c43566f758b51488081ca",
+      "bytes": 1527
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/ldpc.kat.json",
+      "sha256": "88cfe7fa04d7f201d78263adecc896a79c6418c0da350906ea7d8fd17645d9d7",
+      "bytes": 660
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/levenshtein-code.kat.json",
+      "sha256": "87b42c187a77e9ce026555bf4402b6c552b565dcd7b03b6c66b6a6a012c7f3f6",
+      "bytes": 1236
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/lexicographic-code.kat.json",
+      "sha256": "12b423b02496ead701bacaca43252569923aaa275bbe501856e3591809fc5d22",
+      "bytes": 1644
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/locally-recoverable-code.kat.json",
+      "sha256": "8c10783d4f1d2d01e66f6bd73e0fdb7aaaeb0851f9d4b7bbf7571b07ced9e031",
+      "bytes": 1284
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/lrc-pyramid-code.kat.json",
+      "sha256": "5e97c382b9bbaedf3ba9f6adcb216b70d6e657fc77bcca7dcb9a975894e5a796",
+      "bytes": 2112
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/lt-codes.kat.json",
+      "sha256": "eddbe574b075f2f4b22a3b81bff9c641e3c8262aeaf4610764136416fd62b5f3",
+      "bytes": 1036
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/luby-transform-enhanced.kat.json",
+      "sha256": "67c32b08d261ddec1ed9448e3e5cbedc36b7e7ee314a35f1a89da6745e49310d",
+      "bytes": 2070
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/multi-edge-ldpc.kat.json",
+      "sha256": "40dfa5055b2409eb988666e52e2bfe3e02b3378f2050ba988f1fdc31ee1562b1",
+      "bytes": 1727
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/nordstrom-robinson.kat.json",
+      "sha256": "ba49f10b87adbccc44f26ce7e38207dd72e9f12dd38df355987ece28bb85f9d9",
+      "bytes": 1349
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/online-code.kat.json",
+      "sha256": "e3f65c21e5fe19ca27412afede4b50bf380581b2839501347c102c3c20218cb3",
+      "bytes": 2191
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/parvaresh-vardy-code.kat.json",
+      "sha256": "c9b43aa538dd4c4d58ec012bfb6ff4dfbbcc62923c1d30e172362a6588fadf14",
+      "bytes": 1350
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/plotkin-code.kat.json",
+      "sha256": "74babd9a3d43afc71cfea380f4018d58833621dcc4ea695d5cd5824c16c45914",
+      "bytes": 4780
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/polar-code.kat.json",
+      "sha256": "3caf0dcff12b82f05ca541379b7d300cf870b4a402d744848857e03a59109131",
+      "bytes": 1560
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/preparata-code.kat.json",
+      "sha256": "0d66b03aff85f69c4fb9979f3c34e7b794db2601e4db7e372e4b1fe954f35094",
+      "bytes": 1320
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/product-code.kat.json",
+      "sha256": "31ed13ef3b0d5e69bccd00fe20fb3dec0c6001cee075fa695564eb84439fee16",
+      "bytes": 1129
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/protograph-ldpc.kat.json",
+      "sha256": "291765e10d3ec587e8567dacea8face19e1d4eac6ea7c3a2384a06fecb23a823",
+      "bytes": 1366
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/quadratic-residue-code.kat.json",
+      "sha256": "19f93ff2a22db85aa7c339125efd5b3240035b2765c69366e81e0229e3069f1b",
+      "bytes": 1213
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/quantum-ldpc.kat.json",
+      "sha256": "550ac8842561767f4fa77757430724d365a58dc7677cf3e86942956f7f67993b",
+      "bytes": 691
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/raptor-codes.kat.json",
+      "sha256": "64fe42550bf8928fd93ede0acf5b7b51e6bda3d96b8bf774e7cc7e70b47f2afd",
+      "bytes": 1430
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/raptor-enhanced.kat.json",
+      "sha256": "c4ac6e1d3bec3d6e85453dda6eddd183b047ee14ed3962afd30f03a7d74ce304",
+      "bytes": 1593
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/raptorq-codes.kat.json",
+      "sha256": "6464125b9d9776072f524da69b659cdf312b3a88ac6046be7522bcce358ba672",
+      "bytes": 1502
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/reed-muller.kat.json",
+      "sha256": "1e024ac560d8530387e41c7ea602dbabaf56487991c55e32720c9f47ec6275d4",
+      "bytes": 933
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/reed-solomon.kat.json",
+      "sha256": "c7915c1a54ed438b1900905a1d2d949f06c306371a49336a1091c90e5bf932f8",
+      "bytes": 955
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/repeat-accumulate-code.kat.json",
+      "sha256": "2a7953142501420a94663cf55351b071f8ffeb3d6886396bffb9cf74ba154949",
+      "bytes": 1539
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/repetition-code.kat.json",
+      "sha256": "dc89adf889bc336b98e1eb606d8da1b1ebc78ce905273388e5b121cb1dd4cc05",
+      "bytes": 1430
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/repetition.kat.json",
+      "sha256": "0e27315f4d83bf90080f943eb135b9df2b32b58eec47bb0c096ce3ec7ff27b00",
+      "bytes": 1514
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/secded.kat.json",
+      "sha256": "356b576cc5c576c22bf6f4caad2a23f0dcbc7a2b3b319ef6aa58e805f714d5bc",
+      "bytes": 1212
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/simplex-code.kat.json",
+      "sha256": "0b2fa4435cde0e9861c1c9e33d20eaa882e2fbf11d29cd150e67953784ef4298",
+      "bytes": 1206
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/single-parity-check.kat.json",
+      "sha256": "be28044fe78d283a774c806220bfba08ba5d140d0659a854affe6d2297288a0e",
+      "bytes": 1195
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/singleton-bound-code.kat.json",
+      "sha256": "b0849265927b1d55bad2263e4073b2e812704f253aa5733f17dfc6b40c62c53b",
+      "bytes": 1606
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/space-time-block-code.kat.json",
+      "sha256": "79a4ebf2d65d38c68b012bcff06a93ae9985bb499347898b9415d87104ed0a72",
+      "bytes": 2958
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/spatially-coupled-ldpc.kat.json",
+      "sha256": "21678993c0ab4a88eead3513316dcd38d1014efe9f30374ea0e7e66f3f9f6acf",
+      "bytes": 1301
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/spinal-code.kat.json",
+      "sha256": "81a999adf0e0f88ec72f6a0ad09c338877984417174041804cadd4dc0e2e4970",
+      "bytes": 1295
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/stabilizer-quantum-code.kat.json",
+      "sha256": "38e72523ea3811b15bfd88c33ebdae5257daab7530f179bc548407e05843c808",
+      "bytes": 972
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/surface-code.kat.json",
+      "sha256": "718f0a06aa7002b146a5449b16d97b790fe9b12047a6dfdf87dc96ce4a6d6190",
+      "bytes": 3257
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/tail-biting-convolutional.kat.json",
+      "sha256": "77c4d7c0827845ec0eaa80de9305e83917c01255b8c60140da2f4f19c4e5e21e",
+      "bytes": 1324
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/ternary-golay.kat.json",
+      "sha256": "f985c7fee82aea77ecb73cef0956e44e2e1647efae448028129c57bcf34a8232",
+      "bytes": 1299
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/tornado-code.kat.json",
+      "sha256": "5d8fae71d943c66919b9f43fe43bb65b56e656cdb5860cc9f5779f3ff7d8218b",
+      "bytes": 2413
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/trellis-coded-modulation.kat.json",
+      "sha256": "ab63f6049d8e480e53e6fe21c2fb55b4155059592c3c4c8b29da69346ffce1e4",
+      "bytes": 1252
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/triple-modular-redundancy.kat.json",
+      "sha256": "5d387c7b97a9fd1798a4a322d99537751c2124812f52ae8b3ced7b582cc76855",
+      "bytes": 1213
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/turbo-code.kat.json",
+      "sha256": "98b20d969f79d9ffcb2a280d14d729382db893635f49d875cf00e232e243c955",
+      "bytes": 1298
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/varshamov-tenengolts.kat.json",
+      "sha256": "308fa901b750c05bfaea2b02f4ed91f977b45ae7a3bce42913a3f514a6686aa2",
+      "bytes": 1667
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/wozencraft-ensemble.kat.json",
+      "sha256": "26d9a002d5e34bdd1bbcca2180cab95a5cbf7e207272d1722a900dbab7284a02",
+      "bytes": 1197
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/ecc/zigzag-code.kat.json",
+      "sha256": "9c90d0f1e1757c7311c43e87ee68f2a655ef204d1c04033d51570ff35ac0244f",
+      "bytes": 2610
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/encoding/atbash.kat.json",
+      "sha256": "4422768b8df12b373568bcdb14faf240bedbb03b913591118b2e014f603fb097",
+      "bytes": 1206
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/encoding/base16.kat.json",
+      "sha256": "9800e41cd4596ccfd8dc739ec38645161e929595cc63f24da99b9f9a257c1ef7",
+      "bytes": 2073
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/encoding/base32.kat.json",
+      "sha256": "0de6f464c8d5de279e18b65f0b351a8ba5b07ba1b7d0447d6167e7adc234dead",
+      "bytes": 2101
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/encoding/base58.kat.json",
+      "sha256": "adc48aea08ea342eabc6e0a3b5e096ff91b143c91c6bba8b3d1ef100e9a8b038",
+      "bytes": 1972
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/encoding/base62.kat.json",
+      "sha256": "b558901aea30dafaa7e1f0769504ee9be7adc8f7dca8d9c6d27342bc2a2bc6f4",
+      "bytes": 1714
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/encoding/base64.kat.json",
+      "sha256": "36b59ee3ace0f6d1f83e6a419ea20887fa8f33774d576e902ed4cbb93c1257c0",
+      "bytes": 2061
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/encoding/base85.kat.json",
+      "sha256": "5f7999a188dae29a96cdf545c62f05548d956677e4169d2098dc59344ca32479",
+      "bytes": 3876
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/encoding/base91.kat.json",
+      "sha256": "b5cbb125cee59667fd5d534a9f894a71a567d08582970cfe75bc4fb61bbbb570",
+      "bytes": 4024
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/encoding/baudot.kat.json",
+      "sha256": "0b36e8038627726a3442b8de8009396480771752b7ec76572cf0571df31ef711",
+      "bytes": 1273
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/encoding/binhex.kat.json",
+      "sha256": "f095f3efcccaea0126263e38c75f9e39697bf9f7a042abecd3add32c86700a43",
+      "bytes": 861
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/encoding/bubblebabble.kat.json",
+      "sha256": "42509d8b5440931c37d98881e884288984302b5ca6ee0458bce82c18b7df83bc",
+      "bytes": 4137
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/encoding/koremutake.kat.json",
+      "sha256": "1f4a70d18aeb47a16c5fd38ba91585da3205c50570839eaff4984a9fcbc795f7",
+      "bytes": 3718
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/encoding/manchester.kat.json",
+      "sha256": "96cfd5241cd1460df0f552dcd6d489c73d555aef4f0a67d54fc030e09771cfac",
+      "bytes": 988
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/encoding/morse.kat.json",
+      "sha256": "7c0cd3095070b814199b40bd931a7ad03936bc37f49e794e13f53a9953e962cf",
+      "bytes": 1784
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/encoding/pem.kat.json",
+      "sha256": "3bb7b9b9f597ec8012913c202adcdc0348d5586292f216fe4e9ccd2589c17f87",
+      "bytes": 888
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/encoding/rot.kat.json",
+      "sha256": "3970634c204256555ec7c6f41873c8081b649a96beedd05e46a2301953bd6aa9",
+      "bytes": 2156
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/encoding/uuencode.kat.json",
+      "sha256": "f7b50d9536a93167b73efc9fc6a0b73038581a644ebf7c386c755b0273ba2673",
+      "bytes": 2792
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/encoding/xxencode.kat.json",
+      "sha256": "0d92f69427e53242ed53fdf344820f659fe1baccce9745b15969d223180030cb",
+      "bytes": 2310
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/encoding/yenc.kat.json",
+      "sha256": "89d76d2abd7c9322f24ab2256533bab10793002e05522a58193ea6bb08ccbb49",
+      "bytes": 910
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/encoding/z85.kat.json",
+      "sha256": "acc6f667be07d05a5259548bff8dd33357f2ecfa7028e6c8ceb632d1bbc7c71a",
+      "bytes": 2451
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/golden.provenance.json",
+      "sha256": "3da10510df0b58e45d1334082457fe4446b4975bcb1bda3a6a528c900f9b6bd9",
+      "bytes": 512
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/ascon-hash.kat.json",
+      "sha256": "6b0fccd8a803f5846b0a32691768dfb5b3ffd6affb1ca1d195ab5cdc80bddfd4",
+      "bytes": 7809
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/blake.kat.json",
+      "sha256": "d31772eb86a952c5a01c77644b084a8fe4d435c8ffc10020bf841b65b51243ff",
+      "bytes": 4836
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/blake2.kat.json",
+      "sha256": "2ad96fd33a9a01b1dad673cbf31669e6a9ac10c5491420eee2fbfd3b3428edaf",
+      "bytes": 11892
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/blake3-enhanced.kat.json",
+      "sha256": "83be37fecd095dcf6807fa6e3f3d23de0e7937e4bc2dff2b716c0bea3b43df20",
+      "bytes": 16777
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/blake3.kat.json",
+      "sha256": "6d44b56f60f99fdc91cffe71db3bcba17fa99b439f154b7bbc587f3ff9ff5871",
+      "bytes": 15065
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/chc.kat.json",
+      "sha256": "9218768ce849697f3a2eb3bae51b21bb40ff854b70f2b5212e843fa141039d38",
+      "bytes": 448
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/cityhash.kat.json",
+      "sha256": "7eb92adfad9252c2f46cd02cfe655aabf8e971473e483a84cd38c613c91ba09e",
+      "bytes": 5452
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/comb4p.kat.json",
+      "sha256": "9094611c5d05b58332ee80751eec0286284971160d7aee2305d881cec0bc741c",
+      "bytes": 900
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/cshake.kat.json",
+      "sha256": "0e17467a97b811277f8d2aa5f1ae0e231d6735453845a2b7985269f530910d68",
+      "bytes": 6264
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/cubehash.kat.json",
+      "sha256": "8354e21c8daa675918cc830966556804360a59118b6d918067befc1ba8f2ca4c",
+      "bytes": 2603
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/darkcrypt-keccak.kat.json",
+      "sha256": "32d9daf2024f4588d6db921210c258f5dc7b5764e0aac91cd84cddccfdfaee9a",
+      "bytes": 3399
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/darkcrypt-md6.kat.json",
+      "sha256": "86f211f577d25d776c7c50c4ce29d2054a83f5a48636c12f1e3cc3ab805ef0b7",
+      "bytes": 3362
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/darkcrypt-skein.kat.json",
+      "sha256": "ef53b3c9c40e7b0f89c423cf15113ebeb42e71b1c52db395aa48a584ae223b6c",
+      "bytes": 3403
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/drygascon-hash.kat.json",
+      "sha256": "d814b8579936bcc9192f35474e6f0b410329f565bbf131ae9429a17f5de86756",
+      "bytes": 4641
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/dstu7564.kat.json",
+      "sha256": "53ff405c2160943683b44f7baf9d42bc0fad624021a1dc4dc28150aded9a2b89",
+      "bytes": 8754
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/echo.kat.json",
+      "sha256": "3e39cb2374cd0e7c5ceef6132e01ab150e240084b650343899004e1f0bd66650",
+      "bytes": 5124
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/esch256.kat.json",
+      "sha256": "a20a075dae31d09f1edf6adb2b9410a6c628aaf9198d9fe7020e1e1316349625",
+      "bytes": 2247
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/esch384.kat.json",
+      "sha256": "43f5ca6a47636afbe24deab5e0daa3010321bfbb8db39bef4e112712d8369a1a",
+      "bytes": 4157
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/fnv.kat.json",
+      "sha256": "90e6f82f5325b6d49952973a1d62162d819ff8711685e5a8d467d98d1bf37c5a",
+      "bytes": 915
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/fugue.kat.json",
+      "sha256": "2d231edbc3bbce7c721f65fdc20e27c1a749f2a054fc7959ef4b5bcc73e0c9e0",
+      "bytes": 3274
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/gimli24-hash.kat.json",
+      "sha256": "413fcdea70412851e2996e3e05a2b99ba32548cca47f41d61ded30b2b18b6559",
+      "bytes": 2145
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/gost3411.kat.json",
+      "sha256": "1baa2d2633434d0896c5373a8fa59deb32b25fda4003ac879ad791568aaef7fb",
+      "bytes": 1728
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/groestl.kat.json",
+      "sha256": "24ed982deae8cde1a260186356dd6e63b5e03dd425e421b360e9b0dec249340c",
+      "bytes": 3580
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/hamsi.kat.json",
+      "sha256": "1792c1ce03d804bf1479a845456105b0fd66b577ec6a4569cee4064757a1aa47",
+      "bytes": 12758
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/haraka.kat.json",
+      "sha256": "caeb2dacd812ce07ee267fcba75f6e4822d811d849d4c3f0e0a939365c7b3282",
+      "bytes": 1011
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/haval.kat.json",
+      "sha256": "510c1dca0573b944b6946080a4c09c3314d43b1f5b747f774344ea7da6890b6a",
+      "bytes": 10787
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/highway-hash.kat.json",
+      "sha256": "4ceb1738822b0b57e6ff4044a690c8e9a02a4a2785f75e61d6c9ae67e915ed70",
+      "bytes": 12324
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/isap-hash.kat.json",
+      "sha256": "34f7145cae4f498fb64148b3ac98aa16d85e3b45f9ae3dc7ba500bd690e425f6",
+      "bytes": 2143
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/jh.kat.json",
+      "sha256": "03c4a96c8fbfdbcad9989a1d62db60740d28bde8237309539cdc864e3bc09db0",
+      "bytes": 14099
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/kangaroo.kat.json.gz",
+      "sha256": "4c162e805bbde85482f385edaab6787299f1e4b1c78da7eff5949a9c51de9372",
+      "bytes": 228847
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/keccak.kat.json",
+      "sha256": "0180773237d7d893f08f1dd1a41b5e027f2eb52c9101c7fd550fa5cbf62284fd",
+      "bytes": 6603
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/knot-hash.kat.json",
+      "sha256": "8b752d9ffd411ce5239f508ae7b1acd3900b90999fc4c6b8f00157b56c55ffcc",
+      "bytes": 14289
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/kupyna.kat.json",
+      "sha256": "8140951ee9880eb12b452ff7ed2bad81caa1d9b3f6df7f761dcd47d683ef5030",
+      "bytes": 6804
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/lsh.kat.json",
+      "sha256": "af8b08eaa1cfcd5530117a4e9d8fb4c45e8e84f97b3d5c86f302186a524de22b",
+      "bytes": 7081
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/luffa.kat.json",
+      "sha256": "1ddf3bc0ae062ead755563baadcb8ebaabd07c66adf55226055a79ba4379463a",
+      "bytes": 6958
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/md.kat.json",
+      "sha256": "f5b47c9bbdcbbf341040d63e0ec63a6b28b94e56c6a3b1919c2d355f1e5bc5aa",
+      "bytes": 4326
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/mdc2.kat.json",
+      "sha256": "3e0fa58843d167d584a724e98e68af068a13fbf9deaf07253e814e01e8638f26",
+      "bytes": 977
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/murmurhash3.kat.json",
+      "sha256": "8125c1d67a45a8229da226d6d9026800315946962655e1abd212d4ebf734400a",
+      "bytes": 922
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/panama.kat.json.gz",
+      "sha256": "cf567c29a0a7b9ce2faf1fe1e46beae9f31a27ec36ac30216fa6dc4f7a0e7e99",
+      "bytes": 5586
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/parallelhash.kat.json",
+      "sha256": "cd29463d790c209d1744de86425ed6c11cac94f4d2a8359dcb42e2299c34839a",
+      "bytes": 5727
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/photon-beetle-hash.kat.json",
+      "sha256": "275d30439d5403669d9fcb7f02bbb4e39492dcbc6a5aa9618d60b8d58a2198d2",
+      "bytes": 2482
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/radiogatun.kat.json",
+      "sha256": "58f4a1edda72c2e2a6154afe15d4621bc20a1e850cd6c7d5432cfd242ca2c100",
+      "bytes": 1230
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/ripemd.kat.json",
+      "sha256": "15437c2ac32e031742d2dda64c63935f7c65a69514d82ab9e788f62ba14af858",
+      "bytes": 8494
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/sha1.kat.json",
+      "sha256": "b6bf3eb39ff94ad5c98d03c26994236cd775cdc7cbe2ab34d399cea7041c9003",
+      "bytes": 1661
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/sha256.kat.json",
+      "sha256": "cd7477b078bbc5564f3c00fbfce0aff446bf64184bde241dfa6e98da222b4880",
+      "bytes": 2218
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/sha3.kat.json",
+      "sha256": "bc651a91bcd1eeecfa05af6a3ea96a88a39f56743f4bffcc1ffc0cdbc2a8f284",
+      "bytes": 5619
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/sha512.kat.json",
+      "sha256": "2a5a124d76b99720453f0a499d291f471a999296a074937249107b3e93ac4789",
+      "bytes": 4753
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/shabal.kat.json",
+      "sha256": "d0083ecd026e5764e8b3b2d467ddf11f988f1c93e0a7bbbe578c1f003f3a931c",
+      "bytes": 14704
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/shake.kat.json",
+      "sha256": "be6d93a1217cf4da4809e2f3e326189ce1e5007451fa60f26d8d6db6c8b653fc",
+      "bytes": 3108
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/siphash.kat.json",
+      "sha256": "9fcc5cb22b6b1e436fe020fba3fe2a4b739b6dd1fdd7b57fb45a233cad4370b9",
+      "bytes": 2877
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/skein.kat.json",
+      "sha256": "56932f654fe458ad0f2d9273e40ddf5d2382eae878d91587293db326c550e98b",
+      "bytes": 3019
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/skinny-hash.kat.json",
+      "sha256": "71f0349f7036804e326cdcdf8656f89966cbb3f6746deb2ab759f81f76b575b2",
+      "bytes": 4216
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/sm3.kat.json",
+      "sha256": "b1aa1b67cfbd6d8ebf7a07a7838fb06c0c28abdab189910069cf524191022887",
+      "bytes": 2299
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/sparkle-hash.kat.json",
+      "sha256": "be188b995620f08d224dcf1af998af95e2b9a1cf9e4a32157c1d6875ce6f8a6d",
+      "bytes": 2543
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/streebog.kat.json",
+      "sha256": "4547e0319310fcc15c4bdd0a7483d339e5b015a6e491fa5e9481483a71389966",
+      "bytes": 8183
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/subterranean-hash.kat.json",
+      "sha256": "b3c43704c8283e3ddcaf3deb81a752b1141b555c28452fdf64fbdd4a6ed98d24",
+      "bytes": 2111
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/tiger.kat.json",
+      "sha256": "2a17501801e1be29bc48975842bb2285f922028c9157e2b02103766974e573e6",
+      "bytes": 5886
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/tuplehash.kat.json",
+      "sha256": "13c8e5385164046ae4dc491c1a56510949927c949749e3a9477e8139b189c65f",
+      "bytes": 7769
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/whirlpool.kat.json",
+      "sha256": "26f6fd926a0f6798b38fa0b23c43c4b3d5c7b706775aaff64f5e1a3936fbf16e",
+      "bytes": 4832
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/xoodyak-hash.kat.json",
+      "sha256": "5870f3069454e5aa4377992c87633b0824b306533bee3cb86f76e87d9b6320e2",
+      "bytes": 3605
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/xxhash.kat.json",
+      "sha256": "90002e56bb1fdee6125c16a7ecbc22174f4188e5ab3d22cdaa404a13e01fb7df",
+      "bytes": 6649
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/xxhash3.kat.json",
+      "sha256": "1ab8cdca1fc076929f5463b2955e8e07e2d8a15164c4bccdfca5d8f6107df7ea",
+      "bytes": 27300
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/hash/xxhash32.kat.json",
+      "sha256": "c6a80c8d20c9137c5205ff2ac41f1d7a0e90a498891c76e986c4ae70856cd682",
+      "bytes": 6057
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/kdf/argon2.kat.json",
+      "sha256": "4bea88e546c30fb95253f823ef238aca1d78eaccc2318c02e5d4735d1893019f",
+      "bytes": 8841
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/kdf/balloon.kat.json",
+      "sha256": "db6a52f61d2006b01f2e278ec8fff92206d50deb9d5af4a5cf0969f6bbff3168",
+      "bytes": 6204
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/kdf/bcrypt-pbkdf.kat.json",
+      "sha256": "8c4eede399a744f9e4653dc98c91b817153d30fbde5b856f0a543cc0ad462c9d",
+      "bytes": 3904
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/kdf/bcrypt.kat.json",
+      "sha256": "7667607e93f6e071cd1a0b7ca41eab7bc08deff5cc9350dc37e6eb5e7da57a4b",
+      "bytes": 7194
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/kdf/concat-kdf.kat.json",
+      "sha256": "8109e23e75bece805201cb039a6f259260d020eba711d5c761e81d4817e33c31",
+      "bytes": 5323
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/kdf/hkdf.kat.json",
+      "sha256": "3ff6efecc0508d613c55bed8283bcdeb842c749e3c3cd57a79c1ff351012f295",
+      "bytes": 2559
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/kdf/kdf1.kat.json",
+      "sha256": "2889b9e021b9a13a1c49a5794f48b49084b75d6b94e852bc283377a8108f985b",
+      "bytes": 6400
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/kdf/kdf2.kat.json",
+      "sha256": "7a64e2557b18f7698a8b176c83aa2cddb3316d61993d785fb137010007813765",
+      "bytes": 1673
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/kdf/pbkdf1.kat.json",
+      "sha256": "467a7ed343d6d7795636dc23b820b77bd5e789b5b1c3b606abaffdb128de6a73",
+      "bytes": 6849
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/kdf/pbkdf2.kat.json",
+      "sha256": "b3b90cd38d2cd6a6076e65b4595aa3e9b796d3ae124b9599922e0ad859d1fbab",
+      "bytes": 5155
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/kdf/scrypt.kat.json",
+      "sha256": "e4eaaf9460ce2a4416be587c1d689caa8805163bb4f5e8b4a4e4c4fbd2935383",
+      "bytes": 2174
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/kdf/sp800-108-counter.kat.json",
+      "sha256": "5fbf6cf6ca3586b4f4ac8ba59c91a460594ecf3aeecf769685c2f2380a85676f",
+      "bytes": 8975
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/kdf/sp800-108-feedback.kat.json",
+      "sha256": "dd10081bcdc4a8f76ec95a9a8ef968c9b6f5c18e709d2f10b8442c0e49904ddc",
+      "bytes": 5355
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/kdf/sp800-108-pipeline.kat.json",
+      "sha256": "844683294081f73ee68bc0ded39a318da83ecefece82c7b4e96dd7f00208e3cb",
+      "bytes": 5195
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/kdf/sp800-56a.kat.json",
+      "sha256": "e06e83d9c28af72450fe1b2c52c229ad2c3fe62296625cc71bd08f1d0dcb1860",
+      "bytes": 9496
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/kdf/sp800-56c.kat.json",
+      "sha256": "fe43453135b2ecb82f05af97858586a6d4425e6fe9c469dfc734f4ab00cce53a",
+      "bytes": 1954
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/kdf/tls-prf.kat.json",
+      "sha256": "67a4bef025b0d813fa05cb474a4b6b04af34ab85864abfea816c78a705515b17",
+      "bytes": 9842
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/kdf/x963kdf.kat.json",
+      "sha256": "5caa565954a530da31d171b1c7d9cbbccc9e391ec05fed2930cd909163a5d6dc",
+      "bytes": 5306
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/mac/blake2bmac.kat.json",
+      "sha256": "e86b7b2fc0c15a182fdf0f15d92f0db39becf4730437a483d0c5ee68e85dc761",
+      "bytes": 6792
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/mac/blake3mac.kat.json",
+      "sha256": "4e97ed0e5e67d3175d8dac9084cb1397d289705c79c49b2426b5a88116f0e0a6",
+      "bytes": 14952
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/mac/cbcmac.kat.json",
+      "sha256": "33464c8a9c9c1f6e8420373da664b2c20a0f55517a5c7efa2048f86685027a54",
+      "bytes": 1995
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/mac/cfbmac.kat.json",
+      "sha256": "0b3d993a9b01a49da4d5af57c686980e1736559973340c667b62146d559a311f",
+      "bytes": 1163
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/mac/cmac.kat.json",
+      "sha256": "abb4f6412566ac3a3f5ca197869d3b3703b125512d1db01be1ff914a25a6fea2",
+      "bytes": 1378
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/mac/dmac.kat.json",
+      "sha256": "6e12ed740dabf89b8027acae37b1498de7ec762af91010a885fdabcca594fb1f",
+      "bytes": 516
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/mac/dstu7624mac.kat.json",
+      "sha256": "5a8b27b857e18f35a2e370e18ffc0103594b1d4fbf1cbd2b348db8efee4250ee",
+      "bytes": 728
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/mac/f9.kat.json",
+      "sha256": "13465f5f9e2e3528d18e1acc8e32221f660ade08b6ab86ff42ce7c9fbb26188d",
+      "bytes": 1069
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/mac/gmac.kat.json",
+      "sha256": "1f0540b33709ff91fa3e0518500723ad1b0a2715bea32bfe1e9805dba53df158",
+      "bytes": 2795
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/mac/gost28147mac.kat.json",
+      "sha256": "545ebd774dd583adcfbbde656c38f8200bf1256e9cc0f1b887a3fc04f9b11da0",
+      "bytes": 586
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/mac/hmac-sha256.kat.json",
+      "sha256": "7f9b5e5751f1f769069b08c49dbf8c4010f39856594b00e748e5b6ee25b2f79d",
+      "bytes": 3776
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/mac/hmac.kat.json",
+      "sha256": "23e5f6f648078b8129682c6800f7b865062c9f5300ac2b9d3f0e6fba2907ab03",
+      "bytes": 1070
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/mac/iso9797alg3.kat.json",
+      "sha256": "a00fe18f9aca845cf997dc4c1fb76d6ac914e0cf91c341f6deb033fbf49386f8",
+      "bytes": 541
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/mac/kmac.kat.json",
+      "sha256": "2ff19df4a69fe1b3f8b75ff523e3abe4ea458d965a75f1d69b886071ae6e276e",
+      "bytes": 6648
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/mac/omac.kat.json",
+      "sha256": "2fbb0a4198725884807805d7f6b35f683456f7aa0d5555cefe32db7943bf9cc0",
+      "bytes": 1383
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/mac/pelican.kat.json",
+      "sha256": "8057e3bbb723963bcfb4c59837fd400263566e05bbcefb4a938b10ceb8212bcd",
+      "bytes": 2195
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/mac/pmac.kat.json",
+      "sha256": "1a44f4e210658bb14478f866487256da0b5ac6392ce710855dee5ddb661da94c",
+      "bytes": 2556
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/mac/poly1305.kat.json",
+      "sha256": "01dd94f7b99a8ce38b42b35351845285a9dcf62bf3be3cdf2845411b64c1025c",
+      "bytes": 629
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/mac/siphash128.kat.json",
+      "sha256": "9005c84899eb5232b65b6c0160820c07443860b189f283aaf0b7ea6d3ec034a5",
+      "bytes": 2968
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/mac/skeinmac512.kat.json",
+      "sha256": "592a1efb56387ff1793087c86ac4a225012d739a274f04638ee5887c7015994a",
+      "bytes": 6281
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/mac/ttmac.kat.json",
+      "sha256": "bf6603231b26c56f63b2709eddce1068b1df4d2c72ce4b55d3065ec7a8560739",
+      "bytes": 3783
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/mac/vmac.kat.json",
+      "sha256": "e9200d7db0a42743d5b893e5e28e03f1828161a894518d5388dbbe1a01eba661",
+      "bytes": 13480
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/mac/vmpcmac.kat.json",
+      "sha256": "0f9911cbbcf10c4f9b54019038488e6b2e08fed9ba6eefb8ff634d140d3bd7bb",
+      "bytes": 1122
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/mac/x919-mac.kat.json",
+      "sha256": "c1a89dd3c066dee2396f2e993f755802014767a3662c172903975b888d4aa417",
+      "bytes": 3824
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/mac/xcbc.kat.json",
+      "sha256": "c99f8998b85e3adc13c79cc27d4561e51199f3b6e13701885b9c3efb382e3a01",
+      "bytes": 2194
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/mac/zuc128mac.kat.json",
+      "sha256": "dd9ae0e63cb1527a949b4f71f348a03416bbce24615af890060e77776eafa824",
+      "bytes": 4134
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/modes/cbc.kat.json",
+      "sha256": "324d76373a7d450c05c18b1163e7c82eede9c82774ee88e34b75f0cb27ca9bca",
+      "bytes": 1463
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/modes/ccm.kat.json",
+      "sha256": "75f045a82ac0262587822e5b15f63e03b2c0f63e661edfb18eb8ed547d77de35",
+      "bytes": 2332
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/modes/cfb.kat.json",
+      "sha256": "76939a1a97cd6489bf9d187c6fedce6903e54e3b18f4373c00ee76e59d5ee23e",
+      "bytes": 1468
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/modes/cmc.kat.json",
+      "sha256": "3a8262ea92ab9136c00b7d8f48fb204373ab44d1c090bff47b124dda4ccdbea8",
+      "bytes": 789
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/modes/ctr.kat.json",
+      "sha256": "51baaeaceee28e28721fc8cf87907caf0dca25625bd067352a1398b0aae42aac",
+      "bytes": 1462
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/modes/cts.kat.json",
+      "sha256": "a3a11f95c24db1d11a681ee8fbfa47766dbead85fadfe2edd2c1c8bc30d4d7ec",
+      "bytes": 4262
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/modes/eax.kat.json",
+      "sha256": "2b2ff8e9d3200ad4542818b6669a2db3bd56e40b829af990675769bfd7c20947",
+      "bytes": 3611
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/modes/ecb.kat.json",
+      "sha256": "20d444ba75030b23d8e1b2ab7ba13eb35b28a627573314b2d49badbe8b534ee1",
+      "bytes": 911
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/modes/ede.kat.json",
+      "sha256": "dc752d50289a3ba990d649509c7fa5837e16501afa79f68224c0bbc351020764",
+      "bytes": 1283
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/modes/eee.kat.json",
+      "sha256": "a900e93d5e2f40e4fa33d256ec4afb4786e669cf4cba2fcdeab2abaf096a3642",
+      "bytes": 1651
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/modes/eme.kat.json",
+      "sha256": "52ac9d9b42aa4b7e8be3bed3eaa15e6b5b199aa8b128a5382248a1201831e724",
+      "bytes": 709
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/modes/f8.kat.json",
+      "sha256": "6c990ea46e0b9f3e83d1d6128e46f535400a97883e2dd66af26b712bc00f82f2",
+      "bytes": 880
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/modes/ffx.kat.json",
+      "sha256": "149019991728cb05bc7d5296a3149aab02311b76aeddc4b7c6721eec48b4999a",
+      "bytes": 3332
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/modes/fpe.kat.json",
+      "sha256": "b5688a6486717aa8a87befccedafe296c2815f73d449d442cd17f719ec5748ad",
+      "bytes": 3341
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/modes/gcm-siv.kat.json",
+      "sha256": "27c985800ea9626c08d90382cd85f21f5e2a441447f75f1a30accede474618f2",
+      "bytes": 6418
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/modes/gcm.kat.json",
+      "sha256": "196307e4ce22045faa787858917f6f3c00434badd3e622d96f123f4e2cc2c0ae",
+      "bytes": 4247
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/modes/ige.kat.json",
+      "sha256": "7cb5fbe34e86205c79713c3382344b19b488f7357f7d569f619993c480b3d392",
+      "bytes": 2653
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/modes/kw.kat.json",
+      "sha256": "7b4c97710938b0a094c512a20027cc91327dd4891051449c6ed4189dac6980f9",
+      "bytes": 3578
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/modes/kwp.kat.json",
+      "sha256": "a03b4e191f7d9498df42e01f0dc9e3bde2ffb4e2c7d04f200841f65f563bd02d",
+      "bytes": 1207
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/modes/lrw.kat.json",
+      "sha256": "c94d80ff87324403c43bc158ed360e96e7eeeaa2dbef3e1b51099bcbbf3818d0",
+      "bytes": 4925
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/modes/ocb.kat.json",
+      "sha256": "2a1729c4dfed93d47ade37ff9b72b3ffb37b24b5860b4867a00ca760ac9b105f",
+      "bytes": 7151
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/modes/ofb.kat.json",
+      "sha256": "410d22795e8fcd80738a626b6952c5552816ce1d8084cd7953255197bc667b68",
+      "bytes": 1462
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/modes/pcbc.kat.json",
+      "sha256": "4f74d442f46341c232ce4a6935092f00204c92b218b5da3ecb831b960fec7981",
+      "bytes": 1345
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/modes/siv.kat.json",
+      "sha256": "cc7bf6db9b15a42a9850ef24a769c07536d2033872cb527ee50bb47b8c505408",
+      "bytes": 1520
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/modes/xex.kat.json",
+      "sha256": "f3917a1d2296064249afb464ff26b655d2a382997420d759356162915e750e13",
+      "bytes": 801
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/modes/xts.kat.json",
+      "sha256": "79e03fa7a22179d5c4c05ee6ebf41b6d4ca33cf28db0b63233617ebddb21c6ca",
+      "bytes": 3819
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/padding/ansi-x923.kat.json",
+      "sha256": "075ab7a4823f16950faee40a0106d84c7861778749d77819aa9d3f2072840bd1",
+      "bytes": 1431
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/padding/bit-padding.kat.json",
+      "sha256": "ee40889d8effc249e870066260fe852f7edad0ebec322ed8f92e6d7a18813f40",
+      "bytes": 1297
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/padding/iso10126.kat.json",
+      "sha256": "ef5028f2fb0d2d38a19db6d2cf64e284d3d76f6348d0d834a7c1acd890cfdb91",
+      "bytes": 613
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/padding/iso7816-4.kat.json",
+      "sha256": "ad79f57c8ff6e658c05d67242fa4dfd5f9f24690440dd121804fdbf280b61f09",
+      "bytes": 1319
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/padding/no-padding.kat.json",
+      "sha256": "7f8bd637503a89c61023e3c19bd4008ff48e0fd987a90391b65edbf129bb9210",
+      "bytes": 959
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/padding/oaep.kat.json",
+      "sha256": "5ebc7b48b2d3cfbba1d32782d4df3351be5c85c1be3aa816ab174bfd9feba9a0",
+      "bytes": 928
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/padding/oneandzeros.kat.json",
+      "sha256": "39f67b99c4bb346af89e834eba632a6816ac176f5bb4bf2b3d801888ac27751b",
+      "bytes": 1286
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/padding/pkcs.kat.json",
+      "sha256": "da76f42c1b2ffd6df4839dd01b7984590202a0ead4b23d9f63859e5e5bd901b6",
+      "bytes": 4350
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/padding/pss.kat.json",
+      "sha256": "e8746eec8ae45bfb3f8e4abcbef92fbd230128e86cd83a5a8c963a15f7d23790",
+      "bytes": 2089
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/padding/random.kat.json",
+      "sha256": "ec2bccddd88be556eb5965e1a950024a7246a889ea4799eb0757c0b1967cea6a",
+      "bytes": 750
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/padding/zero.kat.json",
+      "sha256": "c58625a2e5b5db117ac99aa5e7162906b2f7965c6e70dbb3d8c4b39945737627",
+      "bytes": 1268
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/permutation/simpira-v2.kat.json",
+      "sha256": "46e7f0800ad3bcf2e69688d265355d36e552154c8de8e5cc97937ba2f1482a8a",
+      "bytes": 2671
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/pqc/ml-kem.kat.json",
+      "sha256": "a56b105176abb1fd24d6b5342a45e2b4ab47f4bdcf01486dd72def11311209c3",
+      "bytes": 1148
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/acrng.kat.json",
+      "sha256": "c5f96699c45671fda40cbfda348d8b430cf205341f3d7336e47167717d344c5f",
+      "bytes": 3876
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/ars.kat.json",
+      "sha256": "b2d717bc8f4527496def2b56b6dbfe9308ed7ebb0cc1d0fe3ffc5ce6cb7c7b16",
+      "bytes": 1796
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/biski64.kat.json",
+      "sha256": "c5ff8bd7cce374a6a27061d1c4d22687e4aed43b2f8303d17005671908bdb766",
+      "bytes": 1971
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/blum-micali.kat.json",
+      "sha256": "a91538fe405f11d86570107f077fa84b0092a6f0ad8e9efd9cf027289a27aa68",
+      "bytes": 1639
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/blumblumshub.kat.json",
+      "sha256": "661d609ae3a4f87fe9aa856db316fb14ed67bf04622fdcdac0f70b672dfe9d53",
+      "bytes": 1595
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/chacha.kat.json",
+      "sha256": "7b427bdcca7afc747842be9d891c8aa83c4986e3f65743f0908b6ccc756e9c0c",
+      "bytes": 4833
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/cmwc.kat.json",
+      "sha256": "d7942445965733f48430ce875193d5f9b4f315acee50ad02d6fcc37934c97f49",
+      "bytes": 2597
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/combined-lcg.kat.json",
+      "sha256": "f9b243e04f859f20760cda957a7e9de96e5b9bc3006266283b8c9aebdcabed8a",
+      "bytes": 4966
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/dsfmt.kat.json",
+      "sha256": "be676860f8e6f16fb2f49f884a8de75693f98136c128eac700e004f84019c81c",
+      "bytes": 1990
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/fcsr.kat.json",
+      "sha256": "a388c9ae0959a3a62526e9d991a7c88d90d5bdc6e6e5d7d95b7f7fd3c45dad34",
+      "bytes": 3076
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/fortuna.kat.json",
+      "sha256": "c5482bf9c18fc391a5d7390d5b848ad32aeb198abf385fd29373e883cd30896d",
+      "bytes": 1496
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/gfsr.kat.json",
+      "sha256": "6a7ff622a76d8f138e32b7890acd4c230e90163c88e4fe78a7c567f79dc39fea",
+      "bytes": 2911
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/icg.kat.json",
+      "sha256": "2e109040af1ff78ea0981a2ec67c47d4d5f7abd4d29543f97fd459ac0be95ff1",
+      "bytes": 2051
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/isaac.kat.json",
+      "sha256": "f9694a006cf57e1db0579e0dc1f202d21cbce2d0c720aa865cee93fd10c2df91",
+      "bytes": 12768
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/jsf.kat.json",
+      "sha256": "87f0b273d608bbba0c41b2b5d5ee5cfee162dff4e2573543121fe8ca52993560",
+      "bytes": 2560
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/kiss.kat.json",
+      "sha256": "3f00dcec7e8bee79660c735171ed3b1e42537b7a18056f68cb59f98a2d4cd52c",
+      "bytes": 2682
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/knuth-b.kat.json",
+      "sha256": "0053eee942f708538d8f2feffb09101907acf706d54e48d2875a268522806b65",
+      "bytes": 1492
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/lagged-fibonacci.kat.json",
+      "sha256": "5ee6840cfd1ba9dbf2f8441b829a92d6f77ef92b1240742353c2f473c7578514",
+      "bytes": 3831
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/lcg.kat.json",
+      "sha256": "f46924c22d140e680aa28e5af0f7dac28022dc2b2e5c3004840ff52abcff2a17",
+      "bytes": 2821
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/lehmer.kat.json",
+      "sha256": "5c43140b76f452f6033544a5000fd5ce0d37c328ba83ae58b7ed9f79d9acb15c",
+      "bytes": 2283
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/lehmer128.kat.json",
+      "sha256": "cc2921a0518ffc18a1a672e06478ddec3fd6b97dc8c5bec9d5bacb3bac573a88",
+      "bytes": 2623
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/lehmer64.kat.json",
+      "sha256": "4b721bc5889ba85a889e09b00cf44f293b2435f3173604511d1911dfb1af3cb6",
+      "bytes": 2034
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/lfib4.kat.json",
+      "sha256": "dad50e7241d1dd8a18f1902f39eee631513693e87530c978e309b5d8e9f46e1f",
+      "bytes": 2403
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/lfsr.kat.json",
+      "sha256": "c9d39e92bdc05acbbf2506d0f8d04700009010a7aa3b5124582b677b81aa3ac4",
+      "bytes": 3094
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/lfsr113.kat.json",
+      "sha256": "372781c1ea079947917c4570e19e7d0a7f8e38ce619f0710b96d335c11f24892",
+      "bytes": 2657
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/lfsr258.kat.json",
+      "sha256": "e74ce2fb1fa45afe77dd757cc0aaa22727b650edb66698d4616d8142858bb9f4",
+      "bytes": 3112
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/lfsr88.kat.json",
+      "sha256": "59bd645e84e5f06bfc950c16c4d3264f893a58e72c8b957062e069cd1a0c305e",
+      "bytes": 2575
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/mersenne-twister-64.kat.json",
+      "sha256": "7170a483c340848f23fa326773ac46afd13cd3b757f68582f80c3e0f61702c9e",
+      "bytes": 1689
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/mersenne-twister.kat.json",
+      "sha256": "755482a08541bcbb5318502b20641049e294c319079839e73a21abfc1a9c3569",
+      "bytes": 1524
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/middle-square.kat.json",
+      "sha256": "0ca468a569e672e6085945a156ac23fcd42097592d3f3d54c66dab548cb6a89f",
+      "bytes": 2106
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/mixmax.kat.json",
+      "sha256": "361043f6c17b9aff5d22116afc13dc67a0e66c471cef3026adfe9b9fa661aadc",
+      "bytes": 2527
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/mlcg.kat.json",
+      "sha256": "8bdcf11fae7434a1099a38eeac632405753ddc591b67b99101c96035ada46e56",
+      "bytes": 2538
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/mrg32k3a.kat.json",
+      "sha256": "bd3028aa6398c36230d47d27b73397db713cbb6a01a1296fde6d6d8cbbd12efb",
+      "bytes": 1422
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/msws.kat.json",
+      "sha256": "f075937180df40c6ece30bc85db492c55a4e29db56a5f8269cc8925e0999315e",
+      "bytes": 1487
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/mulberry32.kat.json",
+      "sha256": "a19c23fcc0f21dbd2437dc38b7af6c0a216c8b900e87743be2d9d5519ab64f96",
+      "bytes": 2372
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/mwc.kat.json",
+      "sha256": "bfd2f8d066ed8c093c9dbdce63ff7491ea9b6a12460d2ffd198d6699633c729d",
+      "bytes": 2974
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/mwc256.kat.json",
+      "sha256": "4b1b8abcdeb6dd73c3951effa90f7cdd0e5a59e8069bddffc7b1e7faaaf8a0bf",
+      "bytes": 2342
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/mwc64x.kat.json",
+      "sha256": "1f4b78a3db7b58ca8b9b1f378fc8772c70dd1df102f1986306766a932486cafd",
+      "bytes": 2478
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/pcg-rxs-m-xs.kat.json",
+      "sha256": "f54abb114e50b5ee5d2a201cbab89cd1a60bd200215ae8ebf3badc1926fcea7c",
+      "bytes": 1419
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/pcg-xsh-rs.kat.json",
+      "sha256": "fe0070299c8917deda192364f3b34527dd403a5da8bfb550620a134cc8b8bee8",
+      "bytes": 1179
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/pcg-xsl-rr.kat.json",
+      "sha256": "3bb7980901d33872cf6927569e6801e6af1381847e2f209aeabe4e0ee2738340",
+      "bytes": 731
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/pcg.kat.json",
+      "sha256": "acfea0df254e166fd9ed4ee4daaa9b5de09d330a5b4330fe89aa6e56473695db",
+      "bytes": 705
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/pcg64-dxsm.kat.json",
+      "sha256": "2225293e64e46764626f82a8d2829903c30003672565f6e4c66011ea4fc6b6ca",
+      "bytes": 725
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/philox.kat.json",
+      "sha256": "6e83be78dbbb3bc9e09d42c77f79fc5a5b3fd46e330954be5173fbb3ca9daf5d",
+      "bytes": 2547
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/ran0.kat.json",
+      "sha256": "a68de60a855a0d1639b9678d652d9174ee678696fe6ddd59fed61259c072870f",
+      "bytes": 2402
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/ran1.kat.json",
+      "sha256": "0ef78e765604448661ec940aaebb16c745925ef5f3ba4d3341ca44b2c9324b07",
+      "bytes": 1894
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/ran2.kat.json",
+      "sha256": "f89d3282c86e44443c653dd931272624d9844acc6d7681940d2ec44c19a49578",
+      "bytes": 2145
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/ran3.kat.json",
+      "sha256": "587fbc23d3c52b5f0ac7263a70e5204493364500754e656a38f7ffcb0bf0fa00",
+      "bytes": 1894
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/ranlux.kat.json",
+      "sha256": "51fef837bf05e98963924ee6b305d5620caf9713d3f771df39891b11f5ee25f1",
+      "bytes": 2037
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/ranlux24.kat.json",
+      "sha256": "8a19e1192a4176aaa45f84d457963fdcfb8b710ff89acab0695e5897a247e470",
+      "bytes": 1814
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/ranlux48.kat.json",
+      "sha256": "f3b0e0ec5275ef9231eed25cb1a0cfb5764c18f3e628757e92aa37435312f0da",
+      "bytes": 2030
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/ranshi.kat.json",
+      "sha256": "93a4db4fd645fff3388a1f5e0dac551038172da3aba53d042c3739d5781a23f9",
+      "bytes": 2551
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/romu.kat.json",
+      "sha256": "baa82a7932609fa14627bfc8719aa8124211800a1b2069251064d6fa00fdcbae",
+      "bytes": 2031
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/romuduo.kat.json",
+      "sha256": "500c4bb1ac1af8f5fdd27ec071e30f3f6cf84390233a45efb75ec27323f710d4",
+      "bytes": 1995
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/romumono.kat.json",
+      "sha256": "70b9afac49bb9df8583ef7f3deab3d5895fbe3cf79612bdd4ffd68a04789c984",
+      "bytes": 1969
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/romuquad.kat.json",
+      "sha256": "986dcefddd0234c3aae81fb286f6221b1d79c324b8ccf60c14e6810dde1d0fb1",
+      "bytes": 2071
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/self-shrinking-generator.kat.json",
+      "sha256": "1eb8100b42ece94788c1c0189dca07a8ce62fa529860402f54d0416870c1e523",
+      "bytes": 2514
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/sfc.kat.json",
+      "sha256": "8179ffc3f15de84f9124b9a68296168754274a1c4113ff20c669b97d4f49a617",
+      "bytes": 2651
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/sfc64.kat.json",
+      "sha256": "7fff0c042d8e8168a73287acd38ab5a4dad4e6ccc6078330799deb8b8752221e",
+      "bytes": 4072
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/sfmt.kat.json",
+      "sha256": "99f53e62cdedc6ab13e112bfffa2ed7491e9e534d417cf2b9466d5196c770479",
+      "bytes": 1141
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/shioi128.kat.json",
+      "sha256": "f114c5662773d30b234a75ccc63daba48650279320543fa23a6f3a51c907c6ef",
+      "bytes": 1961
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/shishua.kat.json",
+      "sha256": "65d6b21d06cfa888700d65514bd95f81c0190511f6939a8db51b0c7aaebbb121",
+      "bytes": 2986
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/splitmix32.kat.json",
+      "sha256": "569a33eb0e1f1393890da0cc217088e48767c8a01f142f46fe82c921b8b0db40",
+      "bytes": 2372
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/splitmix64.kat.json",
+      "sha256": "cbf7f1f9f94b4c7c80686ef4ebc0f97457c93befbca0f852f7c9438b1d07ff75",
+      "bytes": 2564
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/squares.kat.json",
+      "sha256": "2078102b7a6d4ef145df844a55036f60c2805aa2fa41d9dfd4ddbf321d3202b1",
+      "bytes": 2764
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/swb.kat.json",
+      "sha256": "25f4b9a36da2b6d73ec74ccb2938c6ea19d2ee51eab8d7c804cd5ec3bd902b1b",
+      "bytes": 2564
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/tea-prng.kat.json",
+      "sha256": "3dcab0bff7b4f33e71672e0a9393c8024dac7074a1b0ceab210e27d4d53101e4",
+      "bytes": 2304
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/threefry.kat.json",
+      "sha256": "2204d3f8e045390408abdba490c3f3d6c23a50b0222c81deb025b07806d4daf4",
+      "bytes": 1667
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/tinymt.kat.json",
+      "sha256": "787e1909a029f7551af7875e4c753d6277029e71b7181771345b54766d9670b2",
+      "bytes": 1697
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/well.kat.json",
+      "sha256": "53b9a310a5a7780c395aba828934201bda0febbdef2a03e912ef28ecf3cd0704",
+      "bytes": 1965
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/wichmann-hill.kat.json",
+      "sha256": "4a257f72eaa5be9758e18b4cd7b4371608f6cf98bb8c444fe5d6955e13c70792",
+      "bytes": 2611
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/wyrand.kat.json",
+      "sha256": "3142365919803d12a27f4e1c8a4317a4d427a7d7bfd5e14071bc55477ea149a6",
+      "bytes": 2510
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/xor4096.kat.json",
+      "sha256": "e3d81c76f24ec752ad1fdbd9be310badcd082efd347b798d69a6e29a8322902a",
+      "bytes": 2500
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/xoroshiro128plus.kat.json",
+      "sha256": "e6f920597d7625ba310c0fd8bff507beec0e12226312c4a8ee4f8d9e1874dcb9",
+      "bytes": 1963
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/xoroshiro128plusplus.kat.json",
+      "sha256": "29e3a86a356cac8fc69a8878367d62e47307d03754181f86b8d9c68b25b610f4",
+      "bytes": 1970
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/xoroshiro128starstar.kat.json",
+      "sha256": "181de7dec667f88a04d66e8e343069cff91d943c908f5f6643ca59a9902aa0e1",
+      "bytes": 1970
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/xoroshiro256plusplus.kat.json",
+      "sha256": "b4f3e58bb0b8839c30bcab977c9dd54ee968c12196a3743c3306c5c84140e0ae",
+      "bytes": 2431
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/xoroshiro256starstar.kat.json",
+      "sha256": "7a0dd9b4568e37f5aac38f2fad716d3560ecfcc4b4d1084c3d7a790df1982251",
+      "bytes": 1970
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/xorshift-plus.kat.json",
+      "sha256": "33dd35b8d89447a39462a2061d72c134d63fc37d13bcc0c789e343c1a4c86580",
+      "bytes": 2572
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/xorshift-star.kat.json",
+      "sha256": "c17773b5e76615e8b6c26266b385d90f2e7a38bdca097c53f09c7bb8d15052b4",
+      "bytes": 3105
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/xorshift.kat.json",
+      "sha256": "2723a89493790b8f11db4529eb4c7d8c35b1bac6e4d47f47c032c43c7a05bd78",
+      "bytes": 2647
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/xorshift1024star.kat.json",
+      "sha256": "c259ce34078b4889854f79d38d95e0abec7cc0c4377cb78efe42bf337bc5326b",
+      "bytes": 2946
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/xorshift32.kat.json",
+      "sha256": "840130927beabf42c71ab45e6dc73f89a73719bf1250d30b7a3697b5305c1e1b",
+      "bytes": 2796
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/xorshift64.kat.json",
+      "sha256": "a52be1d8ce943dc942f635a30bcab81fe796f695ef8a0e50d22c1663cdc5c1b0",
+      "bytes": 2582
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/xorwow.kat.json",
+      "sha256": "8bd0127583d3ebc998bd5165370b91c86f3956c314c0c45b55b2e6d4f9f331a4",
+      "bytes": 1903
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/xoshiro-plusplus.kat.json",
+      "sha256": "d94a94bd299e33a0494a8ad2a14dcea793bcb3c29b850f52c87e6758aca127fc",
+      "bytes": 3264
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/xoshiro128starstar.kat.json",
+      "sha256": "405af8bb65834ed7f3e71068877222a48d44aa53113a136ef7798d2aa4755b51",
+      "bytes": 1844
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/xoshiro256plus.kat.json",
+      "sha256": "bb25987179d1ca988ac1f5721dc5699686d14b528b7cb3f8fa845ef9001515e0",
+      "bytes": 1504
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/xoshiro256starstar.kat.json",
+      "sha256": "f165c468f3bc5ec73a1da4e1cd058a19c37196208d6216a9125867d7ed1168a8",
+      "bytes": 1511
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/xxhash32.kat.json",
+      "sha256": "d53e7ffb4311bf3942c901772bafde00f7342e5095afa7738ae960a7315940ac",
+      "bytes": 2330
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/random/yarrow.kat.json",
+      "sha256": "194bca2f0f7d561d3e7bc23ecf365645dfe3e2edc600fa9b3c83bc9b6d059336",
+      "bytes": 581
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/special/3way.kat.json",
+      "sha256": "1db9418a6ace664125b0874fc45a8225902654b57e2657c04a09e523bbfcb871",
+      "bytes": 921
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/special/aes-siv.kat.json",
+      "sha256": "eed8b52012c73290afcc197ad25a0e9fdcb87ae146d1b55b8a74b85e06258567",
+      "bytes": 1122
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/special/fiat-shamir.kat.json",
+      "sha256": "05b00d9a5218e7916a55a65727b058cc56522dbc8b5623c98fe690c6c5ba3e74",
+      "bytes": 523
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/special/fish.kat.json",
+      "sha256": "b93daae18e62def66c4610913e3fce9be5a4205459a2d6e8bd83fce93cb1bc23",
+      "bytes": 1107
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/special/gimli.kat.json",
+      "sha256": "a09a85e4919d297ef0c502f46eb69424a0f2076ae42afee6abcb42a51fd03fa5",
+      "bytes": 1035
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/special/hotp.kat.json",
+      "sha256": "64ceef7fae9a82f0b1d728408bb4f540e30a64acf70dddc0465295c4e263383b",
+      "bytes": 2555
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/special/rc2wrap.kat.json",
+      "sha256": "73bbbec3328802fe1437ad7eab23a65987eebb968b46c7787bf80992dbd9e534",
+      "bytes": 791
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/special/shamir-secret-sharing.kat.json",
+      "sha256": "cfd71240f813633769bf762a8edaee5147cf6ee9a5e9b917e26c9bfdeeaa4ab1",
+      "bytes": 1064
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/special/time-lock-puzzle.kat.json",
+      "sha256": "4b381d09459ef795c0590dc04ad3f6677b7b130958b6a98de2545189d4167764",
+      "bytes": 505
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/special/totp.kat.json",
+      "sha256": "f2f65dac137db6b71540fc409cef34a94bcf7c2ff379851e69c397b3bf425f6b",
+      "bytes": 3351
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/special/xchacha20-poly1305.kat.json",
+      "sha256": "00cef268e241c97053895fb9a5f4d641220e949bd0acb9ae9222a5b32f3c8a74",
+      "bytes": 1807
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/a5.kat.json",
+      "sha256": "357aa111c1fcf52007d3da10183fd63fb3495f2db8dbc3d303a5c9dcfd4550c7",
+      "bytes": 2159
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/achterbahn.kat.json",
+      "sha256": "2d6fb1b17b90692ccd6f4fd53c953a3a37430f768058e768daeacaafa8a19ad4",
+      "bytes": 1965
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/acorn.kat.json",
+      "sha256": "c209626b0a77f02a392e9235ba91f3d4beb9f526b232fd0fb3783a8b006560ec",
+      "bytes": 1685
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/aegis-128.kat.json",
+      "sha256": "7cd3d7185b34bdb565f0b144b91b3f631f741c3fc168d02f701f7c1fdbc643f8",
+      "bytes": 1183
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/aes-gcm-siv.kat.json",
+      "sha256": "70194f2593cdcd2014a9087ad4bd0fcc1a98dda7ff7b0d1b267814de607fb51b",
+      "bytes": 490
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/beth-piper.kat.json",
+      "sha256": "53a0561a17ed2978961692725b483f1fa295d7ba75d956276dc5055fa6925099",
+      "bytes": 550
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/caracachs.kat.json",
+      "sha256": "7a8b548f2d19ccc29d7d35681c3b33e9045acdb8bd6a385d79cd4900b6659bbf",
+      "bytes": 2905
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/chacha20.kat.json",
+      "sha256": "7d3f3ce3028075e4437b42c9f26856ca5e8759672fc060428049d718b8f7f3b5",
+      "bytes": 1861
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/crypto1.kat.json",
+      "sha256": "7246c29fcab22250e98280e2055f9ba49e751411d028a86ddcfdbd8c5cc6d88c",
+      "bytes": 470
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-a5.kat.json",
+      "sha256": "61c39c30f2478cf8a8069899dbf228a079a3844e51451c8735b65f422564b0f4",
+      "bytes": 1600
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-chacha8.kat.json",
+      "sha256": "8b7aa7ea0147e77cb2e4a3bf2ed62efd2785ef372fb8532a4c7aad5cb7a7027b",
+      "bytes": 2559
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-cryptmt3.kat.json",
+      "sha256": "067dd75883ba0ffde8016c9b10d1d95a58e78fdad11ffbe74f0581fafddddb0f",
+      "bytes": 2989
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-decim.kat.json",
+      "sha256": "24659b4c422daa92c55f18e92396bd85b08657c1c99b65369b868796ae28c21f",
+      "bytes": 2525
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-dicing.kat.json",
+      "sha256": "f83ceb57d7af32e36aceecd35121d95a38d04eb7d18e2a5024a303bed830ab76",
+      "bytes": 2709
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-dragon.kat.json",
+      "sha256": "c6c420af208c8201de648b4f28e4a2333cabccf1a2801798d01dda98a4fdb0d2",
+      "bytes": 3942
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-edon80.kat.json",
+      "sha256": "592409472d16e6eefbdb66512cb939d35dc38a12e2634045120340499788779d",
+      "bytes": 2418
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-ffcsr.kat.json",
+      "sha256": "211d14656f79600ab950a2492d8a55cdff4a849d56c68961b19b0d9477aebda7",
+      "bytes": 2486
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-fubuki.kat.json",
+      "sha256": "9d5a9b1c443762f790ca77126dfbb6927717225bfc8e7f598c5de8ed02cd2303",
+      "bytes": 3185
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-hermes.kat.json",
+      "sha256": "a62bf675a1548a396c10362193be741440974c6803b6132be04581d07a015798",
+      "bytes": 2490
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-isaac.kat.json",
+      "sha256": "682c72a609360ca6c40ddc5748fa965ff51c39e766f8a7a09c8796dd452c2fa1",
+      "bytes": 5697
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-konton.kat.json",
+      "sha256": "486270dfe4761f570db2b008a6b4cac0695b333769469a225204274cb50a2650",
+      "bytes": 1840
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-lex2.kat.json",
+      "sha256": "aadc027b18de7bb779e8419fbcd6bdf389643bd62e35dd97a158e3f4883024d3",
+      "bytes": 2517
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-lili.kat.json",
+      "sha256": "ec16c950a56fb538df3dadf9c8325d9ef71c79d8a64bb6cbf725fb0c6a4eed5d",
+      "bytes": 1644
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-lili2.kat.json",
+      "sha256": "63a7592cc58b67ecbad644724a8b5450a118ca2a69f5bffa7802c4572dc5ae6b",
+      "bytes": 2344
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-mdc.kat.json",
+      "sha256": "3bdc5d11e85eb8befbfae81cb61f8bcdc1476c472d68ff0c515b8119f343a62d",
+      "bytes": 2759
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-mickey.kat.json",
+      "sha256": "d5c735ea17ee7c3ffe7bf48a1ae66792bb42ed1f3f6a6f3e64bc4cc3e0b48f87",
+      "bytes": 2535
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-mir.kat.json",
+      "sha256": "3b0dd5695f779f30068c81a2f733caaaa43cd8bd59d04f009cf1390cf2247ac8",
+      "bytes": 2233
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-moustique.kat.json",
+      "sha256": "5e07232fc8d168f644331f47893b05deb6386a4eefac6a76312868095b3194c7",
+      "bytes": 3632
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-nls2.kat.json",
+      "sha256": "4f9d5af3fa1e95d86db4db50636e06ff53f738558b8df2f56174800a7afcde44",
+      "bytes": 2506
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-panama.kat.json",
+      "sha256": "27fe165b57ffd702f44d793ed529e3c84555304c3134e164d554bf38df3f1caf",
+      "bytes": 2663
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-pike.kat.json",
+      "sha256": "9c4b0fc93a64aa2799da0db04c4a1e1b7822f0ff6c185c8fcbad0bda6476e301",
+      "bytes": 1802
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-pomaranch.kat.json",
+      "sha256": "c28a3d21a527948ff5d9c0ef4239bdb6056cbe1775161fe31966bc243dc0c277",
+      "bytes": 2502
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-py.kat.json",
+      "sha256": "a6dc128f1545d144def388aa9b6dab88605c1634d9cd4d9c58ce8b0d968cf583",
+      "bytes": 2006
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-py6.kat.json",
+      "sha256": "d3b296b02457f94cce053900d300bdf056db1e8bbb9e1322434a0ca8d1b2f66d",
+      "bytes": 1882
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-pypy.kat.json",
+      "sha256": "b34c4f661fbdbbd114be268d7f31648ebaf7b87208b57c878a57c455f2e14695",
+      "bytes": 2142
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-qcypher.kat.json",
+      "sha256": "0d02ca4357a0ec88575b0ae6faf122b485cf6455e04f435ff3f1d2ee59197beb",
+      "bytes": 2368
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-rabbit.kat.json",
+      "sha256": "aabdc8106a7c1d086e1e38d7baf76e5e8913d9f9987f4808ea6662ce707beecd",
+      "bytes": 2987
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-rc4drop.kat.json",
+      "sha256": "06005018b85768d03d9e42dec7bea42a56fcf85ed732d522da8d0ca68b668c84",
+      "bytes": 2135
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-scop.kat.json",
+      "sha256": "8ca187ac5bddd316e6490859e904a5bd0494e9b6112b8ebef337c2a0bc907049",
+      "bytes": 1819
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-seal2.kat.json",
+      "sha256": "7ce6d47c92166c4cc6bd1666b1abcaf0022062b2e02c710de2e6009dc9c56c28",
+      "bytes": 2590
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-sfinks.kat.json",
+      "sha256": "1de1c14bc8b0af8b248d556f0674012c25fa5002a9712dd2fa0b43f46cf7b12a",
+      "bytes": 2444
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-shannon.kat.json",
+      "sha256": "047826916ccb3580e224b395546ed9b61c45e53ba02539cc27b2093a40ed75ff",
+      "bytes": 2621
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-sn3.kat.json",
+      "sha256": "8a7ca15c7d0bb33acbc629c80d6c372956c4859e3943f9a6b67f5469d74058cc",
+      "bytes": 4615
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-snow2.kat.json",
+      "sha256": "3a94b03258df6399c1ce55ed4994f89f0ca2733808815dd92e98bc362c6b7fdd",
+      "bytes": 2610
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-sosemanuk.kat.json",
+      "sha256": "9250a4d24518dc854c9a04461b0b076aca32b557301505782dbca0d8f05dc9cc",
+      "bytes": 2612
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-sss.kat.json",
+      "sha256": "1c68ba4d60d7efdf4be17891c7101951d11c777772694d88939a7076d81b6494",
+      "bytes": 2504
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-tpy.kat.json",
+      "sha256": "212a51569cd7cf357f90227053e1dbad3f5ebd6f0ed659acec1d4e1f283b8647",
+      "bytes": 2138
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-tpy6.kat.json",
+      "sha256": "2731bf7e932420e87fcff35ef4336e34c158227d8fc4f2aa7c04de33b98937f6",
+      "bytes": 2014
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-tpypy.kat.json",
+      "sha256": "5cea5763d59caffaefd00276c45e360487e8eca239af174a31ec6e9c67562b34",
+      "bytes": 2146
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-trivium.kat.json",
+      "sha256": "215113e103bcbfc7e2276ec90ee8efea15a32d4b4569717fe64bc807075d7bf7",
+      "bytes": 2449
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-turing.kat.json",
+      "sha256": "05bd826dab28a2f119fae7fee4a0aa51f515343ea4aaf043b9e07b099971f737",
+      "bytes": 2610
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-wake.kat.json",
+      "sha256": "845ac95b89f241d07c32ba99ee8ae64f016c588d744cf952845d7a83480e15d5",
+      "bytes": 1640
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-wg.kat.json",
+      "sha256": "7574c954b4a880066c831116ec6814bb6021feac7faad4b5b928507a2968a509",
+      "bytes": 2510
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-yamb.kat.json",
+      "sha256": "8148d87a522973011ebfb67fb0b8353657948779da8f3ad24bc28f274d7cefd3",
+      "bytes": 2808
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/darkcrypt-zkcrypt3.kat.json",
+      "sha256": "7cb75aa5a91061272dbf003799ee7a3fab8ef8880c0cfc5760be93ce9000760e",
+      "bytes": 1854
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/dragon.kat.json",
+      "sha256": "d06c50a649ea1958c0dfc67fb989334b63c0e344eadb5ca437799e6ad3a2c07c",
+      "bytes": 936
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/e0.kat.json",
+      "sha256": "a37273755f73542fd11e4bfd7a2b04885cb4c4255e8b4b2ca57dfe7ab199eaa6",
+      "bytes": 521
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/e2.kat.json",
+      "sha256": "7531ee6afbdcd1c95a4ed12a46b470106a2a87b28b9e5cf9ed7dc9afbc4ff9fd",
+      "bytes": 734
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/f-fcsr.kat.json",
+      "sha256": "90777232ee4a84dc98aa7be9a5eda190beb9a0f6ec5c353496673c2ee02db867",
+      "bytes": 1051
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/geffe.kat.json",
+      "sha256": "af9080aeb5921652006c084f5cdea45feca15e934a563d0a9eff4b544773bb5a",
+      "bytes": 1077
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/grain.kat.json",
+      "sha256": "40901d555fd0ee459c4b798d4b0545dfd2c0e666cec2a491b9226c9d45cebee2",
+      "bytes": 3226
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/hc.kat.json",
+      "sha256": "b0d1dc5919f6e54073007b1493e66a859d5b371082ee01fc2f22769d60fb5ad8",
+      "bytes": 3714
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/leviathan.kat.json",
+      "sha256": "7c4346ba892d66eb85ec24264b9dd230f989734c9a7a3779f344cfa1f73fa88b",
+      "bytes": 1225
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/mickey.kat.json",
+      "sha256": "0be97fb8f3d8794b9e80e624a0e8a9f6d8ca6a4e3030e2bde31584b1b75dd827",
+      "bytes": 945
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/miller.kat.json",
+      "sha256": "89e58dcb77ad9cd205cc793d721c106c36422d7e837bb1b179a1f3f43c9e1e9a",
+      "bytes": 505
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/morus.kat.json",
+      "sha256": "b9b855c2948112fbe6771ec9c3df7434e6970522797e00762372ffcbf66dae2c",
+      "bytes": 1059
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/mugi.kat.json",
+      "sha256": "bd53b58cf39e9ce35891aa8dafe54f1ec118bd136136883a47d36204d4525f20",
+      "bytes": 747
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/norx.kat.json",
+      "sha256": "316ccebfc9607e54cdddc1298e68301c51549c99fc7a8014b04b5363ec90060f",
+      "bytes": 2064
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/phelix-simple.kat.json",
+      "sha256": "0a54f1748389a08f7e0cef85489b7332a2c3c6f75cb0150c52dddf5e001afd05",
+      "bytes": 2083
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/pike.kat.json",
+      "sha256": "308e251efd0debb235fd0e3f3df633f7a08a3619b3388ab25c3b5af3e4c0caec",
+      "bytes": 2052
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/pomaranch.kat.json",
+      "sha256": "48c02607e21e9b1deb9f2fa092ffe1fa16b4b70245539e9d1d4473334e0f2e84",
+      "bytes": 1890
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/rabbit.kat.json",
+      "sha256": "7cdeff70d2cfaaf921debe285153ca5d4763c5ba57f5933b088a0c04110a2483",
+      "bytes": 3740
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/rc4.kat.json",
+      "sha256": "fba0f4c69631cc0775cba1658247bb8f4906ed306bf4b40b64fa3b8565532ef6",
+      "bytes": 1258
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/rule30.kat.json",
+      "sha256": "c5976bf489718ef826d055d8bc529f02433cb4887331397e5e0783d3ddc648cd",
+      "bytes": 830
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/salsa20.kat.json",
+      "sha256": "8590af259423276bd3adf241022fe4cbc10da9f20fcd9c4d66ad988a2678b19f",
+      "bytes": 1135
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/seal.kat.json",
+      "sha256": "0dad0aa5f2c5b2c4d2f956227fd9ee85a42985c00e74a57dbebabb260f877abb",
+      "bytes": 10247
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/shrinking-generator.kat.json",
+      "sha256": "65283fcc9931f4c7e367c037d49a3b746f1332bb2f447707ac127a4726bc9fa6",
+      "bytes": 1404
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/snow3g.kat.json",
+      "sha256": "52b4512bd91eec09e073c13121a0b8b1195b3b067f35c9255341a99283918ec4",
+      "bytes": 1952
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/sober128.kat.json",
+      "sha256": "d714cc4209cc88f662f6c1729ab968d52107b3be3d89c8858879676f83e0a614",
+      "bytes": 2973
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/sosemanuk.kat.json",
+      "sha256": "81dec1eb8118e4bb3626c2674068033c8f6088ecb6352cb14503ba3c46a0e297",
+      "bytes": 591
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/spritz.kat.json",
+      "sha256": "d7128a174247d44b96a03428b3cd411ca823523a9a8839e9159131dd80003029",
+      "bytes": 518
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/trivium.kat.json",
+      "sha256": "c034d524217f7ab37c9606cef34581b6d6b47571dd2d13cb0c5f14c9b5c58d17",
+      "bytes": 1469
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/tsc-4.kat.json",
+      "sha256": "b1e398c886432c629ecf9fc6ac2a31151b1d3310aa1a65c730ce1157d5818315",
+      "bytes": 1088
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/vest.kat.json",
+      "sha256": "1061fff50c7b1ea47d5bb84b3074e89ee4e563ce390c0df5ae60bd7c85932ab9",
+      "bytes": 15506
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/vmpc.kat.json",
+      "sha256": "705b9930cb25823940136da1134a40712af5372d9c790a7199b53edec894d509",
+      "bytes": 4854
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/vmpcksa3.kat.json",
+      "sha256": "c223fed7ce6f548a73e788b2b25a2211af9d59f33a72420c9d059325fc45ab8e",
+      "bytes": 9325
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/wake.kat.json",
+      "sha256": "09b28d5c0bda4749f0b9c1f1ad283e61c1962aae08d8c5d9eee6a0efb3cb8003",
+      "bytes": 2213
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/xchacha20.kat.json",
+      "sha256": "2011312fb3cc882abe8452c20435b27834f3dbc531b26b12cdcb89808ca043bd",
+      "bytes": 4719
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/xsalsa20.kat.json",
+      "sha256": "6b6e45642cfe696b2c41de1b5bc70b0f091b3e73eb7e1666b5b3980c5d38e684",
+      "bytes": 4928
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/zuc.kat.json",
+      "sha256": "dfd4e6fa72f30cfd8df0d99395d23abc9fb387bd86d977e4ff788dd829dbb0b9",
+      "bytes": 1504
+    },
+    {
+      "path": "tests/fixtures/corpus/cipher/stream/zuc256.kat.json",
+      "sha256": "8a0fcabeea439132aeff3b5960fdfdbf95f04ad1de1dcb2373bee9c34ad47b86",
+      "bytes": 1595
+    },
+    {
       "path": "tests/fixtures/prototype/js/recorded/adler32.txt",
       "sha256": "0b06b7203ec0c3e339e9e5698376add358f77ab70ef3ede33446a744c30e1717",
       "bytes": 5010

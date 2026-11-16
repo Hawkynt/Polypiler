@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/product-code.js",
+ "algorithms": [
+  {
+   "name": "Product Code",
+   "vectors": [
+    {
+     "text": "Product code 4x4 matrix test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01000100000100010101000000000101"},
+     "expected": {"t":"bytes","v":"01000100000001000100010100000000000101000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Product code all zeros",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"00000000000000000000000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Product code identity matrix",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01000000000100000000010000000001"},
+     "expected": {"t":"bytes","v":"01000000010001000001000001000100000001010101010100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

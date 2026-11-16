@@ -144,8 +144,22 @@ public sealed class IrObjectTests {
     valued.Functions[0] = valued.Functions[0] with { ReturnType = IrType.I32 };
     Refused(valued, "the constructor 'K.ctor' returns a value");
 
+    // A class that is no record holds a string, an array and a collection (#1365); a record does not, and nothing holds what no collection holds.
+    foreach (var (type, record, refused) in new[] {
+      (IrType.String, false, false), (IrType.List(IrType.String), false, false), (IrType.Array(IrType.String), false, false),
+      (IrType.String, true, true), (IrType.List(IrType.Span(IrType.I32)), false, true)
+    }) {
+      var holder = new IrClassType("H") { IsRecord = record };
+      holder.Define([new IrField("f", type, false)]);
+      holder.DefineMembers([], [], [], []);
+      var problems = Problems(new IrModule("M", []) { Types = [holder] });
+      Assert.That(problems.Any(problem => problem.Contains("the field 'f' has the type")), Is.EqualTo(refused), $"{type} in a {(record ? "record" : "class")}");
+    }
+
     var objectGlobal = new Built();
-    Assert.That(Problems(objectGlobal.Module() with { Globals = [new IrGlobal("g", objectGlobal.Object, null)] }), Has.Some.Contains("a global of the type K"));
+    // A global holds an object (#1365): what the initializer of the module puts there.
+    Assert.That(Problems(objectGlobal.Module() with { Globals = [new IrGlobal("g", objectGlobal.Object, null)] }), Has.None.Contains("a global of the type K"));
+    Assert.That(Problems(objectGlobal.Module() with { Globals = [new IrGlobal("g", IrType.Span(IrType.I32), null)] }), Has.Some.Contains("a global of the type"));
   }
 
   /// <summary>Test design 9: a null receiver traps on a field read, a field write, a method call and an array field without an array.</summary>

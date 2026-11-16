@@ -1,0 +1,76 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/des.js",
+ "algorithms": [
+  {
+   "name": "DES",
+   "vectors": [
+    {
+     "text": "FIPS 46-3 Weak Key Test Vector #1",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0101010101010101"}}
+     ],
+     "input": {"t":"bytes","v":"8000000000000000"},
+     "expected": {"t":"bytes","v":"95f8a5e5dd31d900"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "FIPS 46-3 Weak Key Test Vector #2",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0101010101010101"}}
+     ],
+     "input": {"t":"bytes","v":"4000000000000000"},
+     "expected": {"t":"bytes","v":"dd7f121ca5015619"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "FIPS 46-3 Single Bit Key Test",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"8001010101010101"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"95a8d72813daa94d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DES Standard Test Pattern - Handbook of Applied Cryptography",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0123456789abcdef"}}
+     ],
+     "input": {"t":"bytes","v":"4e6f772069732074"},
+     "expected": {"t":"bytes","v":"3fa40e8a984d4815"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DES Educational Test Vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"133457799bbcdff1"}}
+     ],
+     "input": {"t":"bytes","v":"0123456789abcdef"},
+     "expected": {"t":"bytes","v":"85e813540f0ab405"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

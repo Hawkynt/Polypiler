@@ -1,0 +1,66 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/darkcrypt-rabbit.js",
+ "algorithms": [
+  {
+   "name": "Rabbit (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "DarkCrypt Rablib -- sequential key/IV, 128 zero bytes",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"iv","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"a8f7e69b6940a78d136a5c154a157952a6e4235859e30220ea686436bb38ef539c2940556b09ecd7fea2b0ac8307f1696265a3d644281c39c9cd5e1e2f9be4d00d482cb85a874aa55197d99f877c9d91a1489eac8571e85bb7cd2a2d8ff4c183b91f57377310fde711b6ecd2a8e98887e1b3bcfbc0c29134e109c3b92dac44cd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Rablib -- sequential key/IV, incrementing 64-byte input",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"iv","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"a8f6e4986d45a18a1b63561e4618775db6f5314b4df61437f2717e2da725f14cbc0862764f2ccaf0d68b9a87af2adf46525491e5701d2a0ef1f4642513a6daef"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "eSTREAM Rabbit Set 6, vector#3 - stream[0..63], exercises IV setup",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0f62b5085bae0154a7fa4da0f34699ec"}},
+      {"set":"iv","value":{"t":"bytes","v":"288ff65dc42b92f9"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"613cb0ba96aff6cacf2a459a102a7f78ca985cf8fdd1474018758e36ae9923f519d13d718daf8d7c0c109b79d5749439b7efa4c4c9c8d29dc5b3888314a6816f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Crypto++ / eSTREAM reference rabbit.txt - all-zero key, no IV setup",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"02f74a1c26456bf5ecd6a536f05457b1a78ac689476c697b390c9cc515d8e888"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

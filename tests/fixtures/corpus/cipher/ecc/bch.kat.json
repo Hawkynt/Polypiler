@@ -1,0 +1,33 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/bch.js",
+ "algorithms": [
+  {
+   "name": "BCH",
+   "vectors": [
+    {
+     "text": "BCH Error-free data test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000000"},
+     "expected": {"t":"bytes","v":"0000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "BCH Pattern data test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01010101"},
+     "expected": {"t":"bytes","v":"0101010100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

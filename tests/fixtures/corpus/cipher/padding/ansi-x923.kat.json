@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/padding/ansi-x923.js",
+ "algorithms": [
+  {
+   "name": "ANSI X9.23",
+   "vectors": [
+    {
+     "text": "ANSI X9.23 padding with 17 bytes needed",
+     "inverse": false,
+     "steps": [
+      {"set":"blockSize","value":{"t":"number","v":32}}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96e93d7e11739317"},
+     "expected": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393170000000000000000000000000000000011"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ANSI X9.23 padding with 18 bytes needed",
+     "inverse": false,
+     "steps": [
+      {"set":"blockSize","value":{"t":"number","v":32}}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393"},
+     "expected": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393000000000000000000000000000000000012"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ANSI X9.23 padding with 59 bytes needed",
+     "inverse": false,
+     "steps": [
+      {"set":"blockSize","value":{"t":"number","v":64}}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e"},
+     "expected": {"t":"bytes","v":"6bc1bee22e000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

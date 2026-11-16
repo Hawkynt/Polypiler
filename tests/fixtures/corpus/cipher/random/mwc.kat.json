@@ -1,0 +1,96 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/mwc.js",
+ "algorithms": [
+  {
+   "name": "Multiply-with-Carry (MWC)",
+   "vectors": [
+    {
+     "text": "Seed 1, multiplier 0xFFFFDA61: first 10 outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"multiplier","value":{"t":"number","v":4294957665}},
+      {"set":"seed","value":{"t":"bytes","v":"01000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"61daffffc1588705e3af1b01f54ae9548eb8608c48182a2a3527b9462b0f807a1b7afeae653fcc02"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 12345: first 10 outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"39300000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"99cfe9f83123c79b95ba2470c2a0ffa59cc723647902ed47beb29376e57d5b4916578ead732e5deb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 0xDEADBEEF: first 10 outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"efbeadde"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"8fde7d9564b855d47bce9950cb93f6898ea017fd524115ee6e0f730b04a36330443a0197ab973439"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 999999999: first 16 outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":64}},
+      {"set":"seed","value":{"t":"bytes","v":"ffc99a3b"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"9fafaa9b7bb235e159f784f81b14e04e0f6f709833e3fd60fbdce9a80d4ecdaa15691ee7e8e7b9b906b622aee3e0db8d722011cb3c2b88f4567c3e3ce35fc081"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Value 0xDEADBEEF with carry 0x12345678: first 8 outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"efbeadde78563412"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0735b2a7dcab54f5be92440bcded870cc43d799d393b4db83821f2fb5b661d3e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Fixed point: value 2^32 - 1 with carry a - 1 (largest carry) repeats",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":16}},
+      {"set":"seed","value":{"t":"bytes","v":"ffffffff60daffff"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"ffffffffffffffffffffffffffffffff"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -795,6 +795,10 @@ public static partial class CSharpEmitter {
       members.AddRange(this.CollectionClasses());
       members.AddRange(this.ForeignMembers());
 
+      // The initializer of the module runs when the class is first used, after its fields have their values (#1365).
+      if (this._module.Initializer is { } initializer)
+        members.Add(new CsConstructor(["static"], this._class, [], new CsBlock([new CsExpressionStatement(new CsInvocation(new CsName(this._members[initializer]), []))])));
+
       // The delegate types are known once everything that names one is written.
       members.InsertRange(0, this.Delegates());
 

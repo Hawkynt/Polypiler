@@ -1,0 +1,59 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/blum-micali.js",
+ "algorithms": [
+  {
+   "name": "Blum-Micali",
+   "vectors": [
+    {
+     "text": "Small parameters: p=23, g=5 (primitive root), seed=3",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":2}},
+      {"set":"p","value":{"t":"bigint","v":"23"}},
+      {"set":"g","value":{"t":"bigint","v":"5"}},
+      {"set":"seed","value":{"t":"bytes","v":"03"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"1390"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Medium parameters: p=47, g=5, seed=7",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":4}},
+      {"set":"p","value":{"t":"bigint","v":"47"}},
+      {"set":"g","value":{"t":"bigint","v":"5"}},
+      {"set":"seed","value":{"t":"bytes","v":"07"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"38e38e38"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Default C# parameters: p=6364136223846793005, g=2147483647, seed=42",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":8}},
+      {"set":"p","value":{"t":"bigint","v":"6364136223846793005"}},
+      {"set":"g","value":{"t":"bigint","v":"2147483647"}},
+      {"set":"seed","value":{"t":"bytes","v":"2a"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"a72d9f96f3d03622"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

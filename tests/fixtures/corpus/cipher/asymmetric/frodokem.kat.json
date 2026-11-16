@@ -1,0 +1,53 @@
+{
+ "schema": 1,
+ "file": "algorithms/asymmetric/frodokem.js",
+ "algorithms": [
+  {
+   "name": "FrodoKEM",
+   "vectors": [
+    {
+     "text": "FrodoKEM-640 round-trip under the parameter set named 640",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"363430"}}
+     ],
+     "input": {"t":"bytes","v":"01020304050607080910111213141516"},
+     "expected": {"t":"bytes","v":"01020304050607080910111213141516"},
+     "node": {
+      "outcome": "failed",
+      "output": {"t":"bytes","v":"1000000004040c1424344c6484bec6ea394d85c1"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "FrodoKEM-976 round-trip under the parameter set named 976",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"393736"}}
+     ],
+     "input": {"t":"bytes","v":"deadbeefcafebabe0123456789abcdef"},
+     "expected": {"t":"bytes","v":"deadbeefcafebabe0123456789abcdef"},
+     "node": {
+      "outcome": "failed",
+      "output": {"t":"bytes","v":"100000007909135d092e53bf21603ff24d5cf297"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "FrodoKEM-1344 round-trip under the parameter set named 1344",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"31333434"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"},
+     "node": {
+      "outcome": "failed",
+      "output": {"t":"bytes","v":"200000008a88829caab8c2e40b29537dabd914528a8882bcaad8c2e40b29739dabf93472"},
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

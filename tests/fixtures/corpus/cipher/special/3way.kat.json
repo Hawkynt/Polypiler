@@ -1,0 +1,37 @@
+{
+ "schema": 1,
+ "file": "algorithms/special/3way.js",
+ "algorithms": [
+  {
+   "name": "3-Way",
+   "vectors": [
+    {
+     "text": "3-Way Educational Test - All Zeros (Forward Only)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"000000000000000000000000"},
+     "expected": {"t":"bytes","v":"ffffffffffffffff00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "3-Way Educational Test - Pattern (Forward Only)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0123456789abcdef01234567"}}
+     ],
+     "input": {"t":"bytes","v":"fedcba9876543210fedcba98"},
+     "expected": {"t":"bytes","v":"18941cd4404040401cd05894"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,153 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/parity.js",
+ "algorithms": [
+  {
+   "name": "Even-Parity",
+   "vectors": [
+    {
+     "text": "Empty data",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 0xFF",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"ff"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 0x0F",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0f"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 0x07",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"07"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Odd-Parity",
+   "vectors": [
+    {
+     "text": "Empty data",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 0xFF",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"ff"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 0x0F",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0f"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 0x07",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"07"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Longitudinal-Parity",
+   "vectors": [
+    {
+     "text": "Empty data",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Bytes 0xAA, 0x55",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"aa55"},
+     "expected": {"t":"bytes","v":"ff"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Bytes 0x12, 0x34, 0x56",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"123456"},
+     "expected": {"t":"bytes","v":"70"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Four bytes of 0xFF",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"ffffffff"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

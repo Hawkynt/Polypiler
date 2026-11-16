@@ -1,0 +1,33 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/ldpc.js",
+ "algorithms": [
+  {
+   "name": "LDPC",
+   "vectors": [
+    {
+     "text": "LDPC basic encoding test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000000"},
+     "expected": {"t":"bytes","v":"00000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LDPC pattern encoding test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01000100"},
+     "expected": {"t":"bytes","v":"01000100000100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,82 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/lehmer.js",
+ "algorithms": [
+  {
+   "name": "Lehmer RNG (Park-Miller)",
+   "vectors": [
+    {
+     "text": "Park-Miller 1988: First 10 values from seed=1",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"00000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"000041a710d63af160b7acd93ab50c2a4431b7821c06dac806058ed856e509fe56f32f4377a4044d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Park-Miller 1988 canonical test: 10,000th iteration from seed=1 = 1043618065",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":4}},
+      {"set":"count","value":{"t":"number","v":10000}},
+      {"set":"seed","value":{"t":"bytes","v":"00000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"3e345911"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Park-Miller: Seed=123456789, first 5 values",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"075bcd15"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"1bf521797a689d456a2d5bcb47e5a2e23528c84e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Park-Miller: Seed=2147483646 (max seed), first value",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":4}},
+      {"set":"seed","value":{"t":"bytes","v":"7ffffffe"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"7fffbe58"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Park-Miller: Seed=16807 (a), first value",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":4}},
+      {"set":"seed","value":{"t":"bytes","v":"000041a7"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"10d63af1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

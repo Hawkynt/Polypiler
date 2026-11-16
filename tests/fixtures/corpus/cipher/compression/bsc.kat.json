@@ -1,0 +1,66 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/bsc.js",
+ "algorithms": [
+  {
+   "name": "BSC (Block Sorting Compression)",
+   "vectors": [
+    {
+     "text": "Empty data test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"01000000000000000040fffc00"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Classic banana example",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"62616e616e61"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"0600000003000000006e0060a21033800000"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Mixed alphanumeric data",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"2b00000008000000006b796d5f5751d19137d67bb77b307801f19df11026c6528bc71e563e2849dcc35a4da7f17fb8bd51d200"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repetitive text compression",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263616263616263616263616263616263"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"12000000000000000062fffc000001d759f88001548d2f0800000000"},
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

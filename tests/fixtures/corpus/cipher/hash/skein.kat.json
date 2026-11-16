@@ -1,0 +1,77 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/skein.js",
+ "algorithms": [
+  {
+   "name": "Skein",
+   "vectors": [
+    {
+     "text": "Skein-512-512 empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"bc5b4c50925519c290cc634277ae3d6257212395cba733bbad37a4af0fa06af41fca7903d06564fea7a2d3730dbdb80c1f85562dfcc070334ea4d1d9e72cba7a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Skein-512-512 single byte 0xFB",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"fb"},
+     "expected": {"t":"bytes","v":"c49e03d50b4b2cc46bd3b7ef7014c8a45b016399fd1714467b7596c86de98240e35bf7f9772b7d65465cd4cffab14e6bc154c54fc67b8bc340abf08eff572b9e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Skein-512-512 32-byte message",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"fbd17c26b61a82e12e125f0d459b96c91ab4837dff22b39b78439430cdfc5dc8"},
+     "expected": {"t":"bytes","v":"abefb179d52f68f86941acbbe014cc67ec66ad78b7ba9508eb1400ee2cbdb06f9fe7c2a260a0272d0d80e8ef5e8737c0c6a5f1c02ceb00fb2746f664b85fcef5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Skein-512-512 48-byte message (block boundary - 16)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"fbd17c26b61a82e12e125f0d459b96c91ab4837dff22b39b78439430cdfc5dc878bb393a1a5f79bef30995a85a129233"},
+     "expected": {"t":"bytes","v":"5c5b7956f9d973c0989aa40a71aa9c48a65af2757590e9a758343c7e23ea2df4057ce0b49f9514987feff97f648e1dd065926e2c371a0211ca977c213f14149f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Skein-512-512 64-byte message (exactly one UBI block)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"fbd17c26b61a82e12e125f0d459b96c91ab4837dff22b39b78439430cdfc5dc878bb393a1a5f79bef30995a85a12923339ba8ab7d8fc6dc5fec6f4ed22c122bb"},
+     "expected": {"t":"bytes","v":"02d01535c2df280fde92146df054b0609273c73056c93b94b82f5e7dcc5be6979978c4be24331caa85d892d2e710c6c9b4904cd056a53547b866bee097c0fb17"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Skein-512-512 128-byte message (exactly two UBI blocks)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"fbd17c26b61a82e12e125f0d459b96c91ab4837dff22b39b78439430cdfc5dc878bb393a1a5f79bef30995a85a12923339ba8ab7d8fc6dc5fec6f4ed22c122bbe7eb61981892966de5cef576f71fc7a80d14dab2d0c03940b95b9fb3a727c66a6e1ff0dc311b9aa21a3054484802154c1826c2a27a0914152aeb76f1168d4410"},
+     "expected": {"t":"bytes","v":"1a0d5abf4432e7c612d658f8dcfa35b0d1ab68b8d6bd4dd115c23cc57b5c5bcdde9bff0ece4208596e499f211bc07594d0cb6f3c12b0e110174b2a9b4b2cb6a9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/lzrw1.js",
+ "algorithms": [
+  {
+   "name": "LZRW1",
+   "vectors": [
+    {
+     "text": "No repetition - all literals",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41424344"},
+     "expected": {"t":"bytes","v":"04000000000041424344"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "High repetition - 16 identical characters",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41414141414141414141414141414141"},
+     "expected": {"t":"bytes","v":"10000000000241c000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Pattern repetition - ABC repeated 4 times",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414243414243414243414243"},
+     "expected": {"t":"bytes","v":"0c00000000084142436002"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Real text compression - English phrase",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"54686520717569636b2062726f776e20666f78"},
+     "expected": {"t":"bytes","v":"13000000000054686520717569636b2062726f776e200000666f78"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

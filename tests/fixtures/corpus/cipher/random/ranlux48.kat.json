@@ -1,0 +1,70 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/ranlux48.js",
+ "algorithms": [
+  {
+   "name": "RANLUX48",
+   "vectors": [
+    {
+     "text": "RANLUX48 with default seed 19780503, first 5 outputs (OEIS A221562)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":30}},
+      {"set":"seed","value":{"t":"bytes","v":"97d32d01"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"2c7be5fc5515dff2d90c0c1afa090149cafb070b4b391e77bce7833bb94c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RANLUX48 default seed, outputs 6-10 (OEIS A221562)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":30}},
+      {"set":"skipBytes","value":{"t":"number","v":30}},
+      {"set":"seed","value":{"t":"bytes","v":"97d32d01"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"e1c334e74fbd22d580d867419b9834038fdc244b4dd2dfe9271d96c95532"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RANLUX48 default seed, 10000th value (LLVM libc++ test)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":6}},
+      {"set":"skipBytes","value":{"t":"number","v":59994}},
+      {"set":"seed","value":{"t":"bytes","v":"97d32d01"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"35ca5b0c98e2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RANLUX48 default seed, values 11-12 (OEIS A221562)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":12}},
+      {"set":"skipBytes","value":{"t":"number","v":60}},
+      {"set":"seed","value":{"t":"bytes","v":"97d32d01"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"f533f47cfcfeecc7ec43f0f4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

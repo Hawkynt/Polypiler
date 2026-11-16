@@ -1,0 +1,99 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/alamouti-code.js",
+ "algorithms": [
+  {
+   "name": "Alamouti Space-Time Block Code",
+   "vectors": [
+    {
+     "text": "Alamouti encoding: [1, 0] -> [1, 0; 0, 1]",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00010000"},
+     "expected": {"t":"bytes","v":"0001000000000001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Alamouti encoding: [0, 1] -> [0, 1; -1, 0]",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000001"},
+     "expected": {"t":"bytes","v":"00000001ffff0000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Alamouti encoding: [1, 1] -> [1, 1; -1, 1]",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00010001"},
+     "expected": {"t":"bytes","v":"00010001ffff0001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Alamouti encoding: [-1, 1] -> [-1, 1; -1, -1]",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"ffff0001"},
+     "expected": {"t":"bytes","v":"ffff0001ffffffff"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Alamouti encoding: [2, -2] -> [2, -2; 2, 2]",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0002fffe"},
+     "expected": {"t":"bytes","v":"0002fffe00020002"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Alamouti encoding: [0, 0] -> [0, 0; 0, 0]",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000000"},
+     "expected": {"t":"bytes","v":"0000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "IEEE 802.11n pattern: [3, 4]",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00030004"},
+     "expected": {"t":"bytes","v":"00030004fffc0003"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "3GPP LTE pattern: [-2, 3]",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"fffe0003"},
+     "expected": {"t":"bytes","v":"fffe0003fffdfffe"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

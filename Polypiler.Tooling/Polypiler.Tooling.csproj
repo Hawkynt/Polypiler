@@ -24,6 +24,8 @@
     <EmbeddedResource Include="..\spec\schemas\meta.schema.json" LogicalName="meta.schema.json" Link="Spec\meta.schema.json" />
     <EmbeddedResource Include="..\spec\schemas\ci-layer.schema.json" LogicalName="ci-layer.schema.json" Link="Ci\ci-layer.schema.json" />
     <EmbeddedResource Include="..\spec\schemas\adapter-audit.schema.json" LogicalName="adapter-audit.schema.json" Link="Catalog\AdapterAudit\adapter-audit.schema.json" />
+    <!-- The test project cipher kat writes around a translation to C#. -->
+    <EmbeddedResource Include="Cipher\Templates\*.txt" LogicalName="Cipher.%(Filename)%(Extension)" WithCulture="false" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,148 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/drygascon-hash.js",
+ "algorithms": [
+  {
+   "name": "DryGASCON128-HASH",
+   "vectors": [
+    {
+     "text": "DryGASCON128-HASH: Empty message (Count=1)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"1edc77386e20a37c721d6e77adabb9c4830f199f5ed25284a13c1d84b9fc257a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DryGASCON128-HASH: Single byte 0x00 (Count=2)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"1bec89506e75d725bf93bccfdd6ec81df05ca281cf5201e3ee0865a7063763ee"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DryGASCON128-HASH: Two bytes (Count=3)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001"},
+     "expected": {"t":"bytes","v":"0fe4ed67ea1ff705e94e6d8af07197728c1fc2d7d5accecb8d08cf39ae4d208d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DryGASCON128-HASH: Four bytes (Count=5)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00010203"},
+     "expected": {"t":"bytes","v":"591a2858b4e3b0b99bc116e18b44b55d711f2a8e83fae677ced46db03e031b73"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DryGASCON128-HASH: Eight bytes (Count=9)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001020304050607"},
+     "expected": {"t":"bytes","v":"cde2dee0235345cbfa51ec2ce57435718ec0133ec2756e035fa404c1ce511e24"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DryGASCON128-HASH: 16 bytes (Count=17)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"572821d80d943e153cbb8c4556c3ad8cf20d77edad7998e8cd46f590d8d13eeb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "DryGASCON256-HASH",
+   "vectors": [
+    {
+     "text": "DryGASCON256-HASH: Empty message (Count=1)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"6896590a319fde1f3b18ebae1df1e5e8fb0756a878ee9e2165b085ff3aed6805f8f73d5714c75960a6a8095dae5ef9c00d3f055490d4cf45d4a26b37fd7b5441"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DryGASCON256-HASH: Single byte 0x00 (Count=2)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"dab16b97c37160586b647b0dca689794365480324e539cd63f87b119b0c46668dcde5163a170e06da9361b05f7ce7645ef68bdc99b3b813b8b1583c5c62d4e4a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DryGASCON256-HASH: Two bytes (Count=3)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001"},
+     "expected": {"t":"bytes","v":"d1982bc43d8c42dcd94c1c7e9611951374dc8bf5e6fc407e8a8dc423f4f0f45909a4aeaa1000b35a8081862e797508807e8763f611aef1d3c06ecaedb5229980"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DryGASCON256-HASH: Four bytes (Count=5)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00010203"},
+     "expected": {"t":"bytes","v":"3c4c288299fd3986fb213b945addb70f26edea09fa4291cf42467355da09fdd7e69a7b306636dac078ee81643a19f5126ea71dbc4032be2320b8382119238d5b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DryGASCON256-HASH: Eight bytes (Count=9)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001020304050607"},
+     "expected": {"t":"bytes","v":"ac99fd9156d4c6fc613a85cbbfd283fc7214792b3e786e34b33d368020f79bf6ffc2c29fa86eaf1286506f30adb3481b3830e115ae72f155c3045dd8a27894d1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DryGASCON256-HASH: 16 bytes (Count=17)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"e743de651072ae1a078d201373bc383ffae607545308d268ac663b0b680fee8bd0d053ea40a55c5dd2aee281c1cbffa79152acc9bd5705f3fb4daf415458ca12"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

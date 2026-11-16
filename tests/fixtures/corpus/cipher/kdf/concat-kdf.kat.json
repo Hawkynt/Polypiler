@@ -1,0 +1,109 @@
+{
+ "schema": 1,
+ "file": "algorithms/kdf/concat-kdf.js",
+ "algorithms": [
+  {
+   "name": "Concat KDF (Hash)",
+   "vectors": [
+    {
+     "text": "ConcatKDFHash SHA-256 Test Vector",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":16}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-256"}},
+      {"set":"otherinfo","value":{"t":"bytes","v":"a1b2c3d4e53728157e634612c12d6d5223e204aeea4341565369647bd184bcd246f72971f292badaa2fe4124612cba"}}
+     ],
+     "input": {"t":"bytes","v":"52169af5c485dcc2321eb8d26d5efa21fb9b93c98e38412ee2484cf14f0d0d23"},
+     "expected": {"t":"bytes","v":"1c3bc9e7c4547c5191c0d478cccaed55"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SP 800-56A single-step KDF, SHA-256, 33 byte output",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":33}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-256"}},
+      {"set":"otherinfo","value":{"t":"bytes","v":"ea0e5d80a76bb5063148cc997b76da2d895bc3e4dff37c48579cc4e580f1fda3"}}
+     ],
+     "input": {"t":"bytes","v":"7ce80e8b0480cde01fec587fe7045a8e"},
+     "expected": {"t":"bytes","v":"9e04ddba94c2c36f8e9b1b6f9b0f4d70a20cf1122dd94ab5724d192ed1939d924d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SP 800-56A single-step KDF, SHA-256, 48 byte output",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":48}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-256"}},
+      {"set":"otherinfo","value":{"t":"bytes","v":"2d14c1c1989469a6676196410b62af1a98d05de226b22213fa731a814ade2f5c"}}
+     ],
+     "input": {"t":"bytes","v":"8d1c9b4d7cc7f6122cb68e43b146bd32de9f5e09143118b29db51705f25d6c81890132f81df3dc53a7950d0803107306289fa88e907c2e53ec13eca20f972b38b84c5c1847f0bcb2ee4a9b64eb48348b73256e61ce2a2cfcdb71f7db70bffcc101f8a7f1fee5f9d377e81ff9ec79b7fb25c849d7b9dd125107717ec8fd93105762b1ac629ff6df99"},
+     "expected": {"t":"bytes","v":"95352c138eb9b23735bd68cb242889970846dccbd9775bcad068528e8008a3baf1ed2047525eaa29c99cd6e0e634eb30"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Concat KDF (HMAC)",
+   "vectors": [
+    {
+     "text": "ConcatKDFHMAC SHA-512 Test Vector",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"}},
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-512"}},
+      {"set":"otherinfo","value":{"t":"bytes","v":"a1b2c3d4e55e600be5f367e0e8a465f4bf2704db00c9325c9fbd216d12b49160b2ae5157650f43415653696421e68e"}}
+     ],
+     "input": {"t":"bytes","v":"013951627c1dea63ea2d7702dd24e963eef5faac6b4af7e4b831cde499dff1ce45f6179f741c728aa733583b024092088f0af7fce1d045edbc5790931e8d5ca79c73"},
+     "expected": {"t":"bytes","v":"64ce901db10d558661f10b6836a122a7605323ce2f39bf27eaaac8b34cf89f2f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SP 800-56A single-step KDF, HMAC-SHA-512, 33 byte output",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"c767f6d57c1f68860197e6634b7d82c4"}},
+      {"set":"outputSize","value":{"t":"number","v":33}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-512"}},
+      {"set":"otherinfo","value":{"t":"bytes","v":"5f5194b32f19c2800fba4b056f2f55b7eb0687520d38ecb7d42951f8ffd769b7"}}
+     ],
+     "input": {"t":"bytes","v":"e74ea408acd848ab616e9891f35050533002c16915bce2e84749e24ffbfb175d0ad4e8d10a093faaacaf5a37f3985c538b38fd3765cc106d58147fb9f896758d"},
+     "expected": {"t":"bytes","v":"2cafccdfe04660b80fde08cfb5e80a7cef9e0b4c5d0bc34551cca98c4e85c9fc60"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SP 800-56A single-step KDF, HMAC-SHA-512, 50 byte output",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"c767f6d57c1f68860197e6634b7d82c4"}},
+      {"set":"outputSize","value":{"t":"number","v":50}},
+      {"set":"hashFunction","value":{"t":"string","v":"SHA-512"}},
+      {"set":"otherinfo","value":{"t":"bytes","v":"e0bc94fac3f6b34ef8002f0ea7ec0b6aacd17fbda64c92c34dd1e2703b6b3742"}}
+     ],
+     "input": {"t":"bytes","v":"3f4d4ca74c46aea4fcbd8b5bb752a86d3651a82efd76d17078fcea9ff258264c0b65cb14637317f99b977b6e97f9298c686a7c983020f608d6f0d6d17950b339f522979d4c19547dd62b9bc20da97a4b0a5d7c4f51eac08ba978f0243ae92401b6eb4a83519431bdd7e9c3147ff2a76bfcf252ba13465c8467b1dc4f52c253b7affab32d389ce01c801cc1662a9bd59cb710334676475ea2613d95f289f243d0d195a96b49f94e4b5380742b6496d8b7d062d6246bb616ba779f213fc1d87aceb5b0e385a50565db"},
+     "expected": {"t":"bytes","v":"d105b8e5d103fa30a5666863ffcf335e1150722ae34fddcb133395b94e4815f32e1a6b3e8d65166346667fab04f9f43e92cb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

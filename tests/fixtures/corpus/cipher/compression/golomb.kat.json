@@ -1,0 +1,110 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/golomb.js",
+ "algorithms": [
+  {
+   "name": "Golomb",
+   "vectors": [
+    {
+     "text": "Empty input",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"0100000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Golomb parameter auto-selects m=1 for input=0",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"010100000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Golomb parameter auto-selects m=2 for input=3",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"03"},
+     "expected": {"t":"bytes","v":"0201000000a0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Sequential integers 0-4",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001020304"},
+     "expected": {"t":"bytes","v":"01050000005bbc"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Geometric distribution pattern",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0000010002010003"},
+     "expected": {"t":"bytes","v":"0108000000269c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Powers of 2 sequence",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01020408"},
+     "expected": {"t":"bytes","v":"03040000004eb6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repetitive run (10 bytes) - auto-selected M tracks the mean, keeping the code compact",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61616161616161616161"},
+     "expected": {"t":"bytes","v":"430a0000009e9e9e9e9e9e9e9e9e9e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Alternating pattern (16 bytes) - two distinct byte values",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61626162616261626162616261626162"},
+     "expected": {"t":"bytes","v":"44100000009d9e9d9e9d9e9d9e9d9e9d9e9d9e9d9e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Binary/random sample (16 bytes) - non-geometric distribution stress test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4080c000000040808000000000000000"},
+     "expected": {"t":"bytes","v":"1e10000000c6f2bf3800063795e50000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

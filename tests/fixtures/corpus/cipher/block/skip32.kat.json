@@ -1,0 +1,63 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/skip32.js",
+ "algorithms": [
+  {
+   "name": "Skip32",
+   "vectors": [
+    {
+     "text": "DarkCrypt SKIP32 vector 1/zero",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000"},
+     "expected": {"t":"bytes","v":"b8e4fea5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt SKIP32 vector 2/incr",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00010203040506070809"}}
+     ],
+     "input": {"t":"bytes","v":"00010203"},
+     "expected": {"t":"bytes","v":"0af04ffa"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt SKIP32 vector 3/incr2",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0102030405060708090a"}}
+     ],
+     "input": {"t":"bytes","v":"10111213"},
+     "expected": {"t":"bytes","v":"a4b9eea6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "node-skip32 test vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"9b21960e1acf245f1493"}}
+     ],
+     "input": {"t":"bytes","v":"00000001"},
+     "expected": {"t":"bytes","v":"22e9ffa6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

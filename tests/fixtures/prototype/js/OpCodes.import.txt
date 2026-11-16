@@ -82,7 +82,7 @@ SubMod	imported
 MulMod	imported
 GF256Mul	imported
 SBoxLookup	imported
-MatrixMultiply4x4	OpCodes.js(2650,33): error PLY1101: parameter 'matrix' of 'MatrixMultiply4x4' has no supported JSDoc type
+MatrixMultiply4x4	imported
 FeistelRound	OpCodes.js(2667,51): error PLY1101: parameter 'fFunction' of 'FeistelRound' has no supported JSDoc type
 LFSRStep	OpCodes.js(2684,41): error PLY1102: 'int32 where uint32 is expected' is not supported yet
 PopCount	imported
@@ -105,7 +105,7 @@ EncodeMsgLength128BE	OpCodes.js(2934,44): error PLY1102: 'float64 where uint32 i
 ModSafe	imported
 CreateArray	imported
 ArraySlice	imported
-ConcatArrays	OpCodes.js(2990,28): error PLY1101: parameter 'arrays' of 'ConcatArrays' has no supported JSDoc type
+ConcatArrays	OpCodes.js(2997,22): error PLY1102: 'new Array of a length that is no proven integer, which is number' is not supported yet
 InverseSBoxLookup	imported
 BuildInverseSBox	imported
 SplitNibbles	imported
@@ -123,15 +123,15 @@ GFMulGeneric	imported
 CreateUint32ArrayFromHex	OpCodes.js(3236,14): error PLY1102: 'a call of /^[0-9A-Fa-f]+$/.test' is not supported yet
 CreateByteArrayFromHex	OpCodes.js(2380,11): error PLY1102: 'typeof' is not supported yet
 CreateByteArrayFromHex	OpCodes.js(3259,14): error PLY1102: 'a call of /^[0-9A-Fa-f]+$/.test' is not supported yet
-CreateUint64ArrayFromHex	OpCodes.js(3286,14): error PLY1102: 'a call of /^[0-9A-Fa-f]+$/.test' is not supported yet
+CreateUint64ArrayFromHex	OpCodes.js(3278,22): error PLY1102: 'float64[] where uint32[] list is expected' is not supported yet
 Mul32	imported
 MulHi32	imported
 Add32	imported
 Sub32	imported
 CreateBitStream	OpCodes.js(3387,14): error PLY1102: 'new OpCodes._BitStream' is not supported yet
 _BitStream	OpCodes.js(3399,7): error PLY1102: 'this.buffer' is not supported yet
-GHashMul	OpCodes.js(3817,12): error PLY1102: 'uint8[] as a condition' is not supported yet
-GCMIncrement	OpCodes.js(3859,12): error PLY1102: 'uint8[] as a condition' is not supported yet
+GHashMul	OpCodes.js(3822,40): error PLY1102: 'fill on a plain Array' is not supported yet
+GCMIncrement	imported
 Add64_HL	imported
 Add3L64	imported
 Add3H64	OpCodes.js(3911,14): error PLY1103: the result of '(ah + bh + ch + ((lowSum / 0x100000000) | 0)) | 0' has no bounded type

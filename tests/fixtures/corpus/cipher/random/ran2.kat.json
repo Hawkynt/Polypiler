@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/ran2.js",
+ "algorithms": [
+  {
+   "name": "Ran2 (Numerical Recipes)",
+   "vectors": [
+    {
+     "text": "Seed=-1 (initializes to 1) - First 10 double values",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":80}},
+      {"set":"seed","value":{"t":"bytes","v":"01"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"b6f1203fae43d23f7f8944440537d03f1fc0e3bb8dedb73f1c39ae78ce78e33f319bf29ad1e8ec3f5f33a66e5f12c93f3eeface507a1dd3faa46f475760cee3fff36d0199b48c03f9554ad7d9d9eda3f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed=-12345 - First 10 double values",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":80}},
+      {"set":"seed","value":{"t":"bytes","v":"3039"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"badb7eba23da9b3fe93f0bec0e2fae3ff64a547e0d9dce3fb1bf8e980eef983fff588c73f56fbd3ffc6d260f1570e63f457e15f89053e33fde9aae964961db3f609a3f0f7f17e83fa0f7e414a531da3f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed=-123456789 - First 10 double values",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":80}},
+      {"set":"seed","value":{"t":"bytes","v":"075bcd15"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"8f9ee4ec1528d13f4990dfaf42eaea3f19cb792883d2db3f14885e8e6fa3d53fb8027ff3df5bad3fb6823a24134fe73fbb22f6ceb581c03f5f44f0f46600d83f552134d1d19fe13f06c43e5d542ed03f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed=-1 - First value only (initialization test)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":8}},
+      {"set":"seed","value":{"t":"bytes","v":"01"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"b6f1203fae43d23f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,41 @@
+{
+ "schema": 1,
+ "file": "algorithms/modes/pcbc.js",
+ "algorithms": [
+  {
+   "name": "PCBC",
+   "vectors": [
+    {
+     "text": "PCBC test - single block (AES-128)",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}]}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393172a"},
+     "expected": {"t":"bytes","v":"7649abac8119b246cee98e9b12e9197d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "PCBC test - multiple blocks (AES-128)",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}]}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e51"},
+     "expected": {"t":"bytes","v":"7649abac8119b246cee98e9b12e9197d9e8baff12ad5270a0d1eef93d7037994"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

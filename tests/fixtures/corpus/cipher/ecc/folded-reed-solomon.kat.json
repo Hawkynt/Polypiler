@@ -1,0 +1,66 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/folded-reed-solomon.js",
+ "algorithms": [
+  {
+   "name": "Folded Reed-Solomon",
+   "vectors": [
+    {
+     "text": "Folded RS [8,4] zero data round-trip",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"00000000000000000000000000000000"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Folded RS [8,4] sequential data round-trip",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0102030405060708"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"01020304050607082544afa8c9028623"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Folded RS [8,4] max value data round-trip",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"fffefdfc80402010"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"fffefdfc80402010cbf26760c6fda752"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Folded RS [8,4] repeated pattern round-trip",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"2a2a2a2a63636363"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"2a2a2a2a63636363f8ca96660dd4716a"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Folded RS [8,4] alternating pattern round-trip",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01ff02fe03fd04fc"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"01ff02fe03fd04fc0fdf265dc6781a0b"},
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

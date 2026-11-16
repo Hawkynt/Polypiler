@@ -1,0 +1,53 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/darkcrypt-sfinks.js",
+ "algorithms": [
+  {
+   "name": "Sfinks (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "DarkCrypt Sfinks — keystream from incrementing key, zero IV, zero input",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00010203040506070809"}},
+      {"set":"iv","value":{"t":"bytes","v":"00000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"46abc6a2d7d2274c636a99ae3b093b9ca2cb1f269e4c791d7d32a5fd0fef52b1524a3d21bff9d679a535bef58224720ab2542a300dd38de025c6c512d5a42a362166054304ce4335a200d74a367ce047a0be15da8a0190d722e2fe2340ebc7ca41a9931f28e84f46618adad93c3e7a5c748a0167b2d3ed1eab61443ca3d33a65"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Sfinks — incrementing key/plaintext, zero IV",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00010203040506070809"}},
+      {"set":"iv","value":{"t":"bytes","v":"00000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"46aac4a1d3d7214b6b6393a537043593b2da0d358a596f0a652bbfe613f24cae726b1f029bdcf05e8d1c94deae095c258265180339e6bbd71dffff29e9991409"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Sfinks — non-zero key and IV, 48-byte message (verified against the DarkCrypt implementation)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0b30557a9fc4e90e3358"}},
+      {"set":"iv","value":{"t":"bytes","v":"073c71a6db10457aafe4"}}
+     ],
+     "input": {"t":"bytes","v":"03203d5a7794b1ceeb0825425f7c99b6d3f00d2a4764819ebbd8f5122f4c6986a3c0ddfa1734516e8ba8c5e2ff1c3956"},
+     "expected": {"t":"bytes","v":"a2edc639a765c3aef0e1d119dddaa46913c0369c6511247017a16f405bdfee53a942fd6889309f14ba261965975d0838"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

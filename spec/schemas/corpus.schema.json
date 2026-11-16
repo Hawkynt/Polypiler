@@ -37,9 +37,10 @@
       "properties": {
         "id": { "type": "string", "pattern": "^[a-z0-9]+(\\.[a-z0-9-]+)+$" },
         "repository": { "$ref": "#/$defs/text", "description": "The name of a declared repository." },
+        "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$", "description": "Optional: the commit the fixture's files come from when it is not the pin of its repository; a full commit hash." },
         "path": { "$ref": "#/$defs/path" },
         "export": { "$ref": "#/$defs/text" },
-        "dependencies": { "type": "array", "items": { "$ref": "#/$defs/path" } },
+        "dependencies": { "type": "array", "items": { "$ref": "#/$defs/path" }, "description": "Files of the same commit; one with '*' or '?' is a pattern ('**' a run of whole segments) that names every file of the commit it matches, at least one." },
         "run": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/text" }, "description": "argv template; '{file}' stands for the fixture's local path." },
         "vectors": {
           "type": "object",

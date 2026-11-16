@@ -1,0 +1,76 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/des-x.js",
+ "algorithms": [
+  {
+   "name": "DES-X",
+   "vectors": [
+    {
+     "text": "DES-X all-zero key and block (degenerates to the DES all-zero known answer)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"8ca64de9c1b123a7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "OpenSSL DES_xcbc_encrypt known answer, block 1",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"f1e0d3c2b5a497860123456789abcdeffedcba9876543210"}}
+     ],
+     "input": {"t":"bytes","v":"c9ea8fac45660330"},
+     "expected": {"t":"bytes","v":"846b2914851e9a29"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "OpenSSL DES_xcbc_encrypt known answer, block 2",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"f1e0d3c2b5a497860123456789abcdeffedcba9876543210"}}
+     ],
+     "input": {"t":"bytes","v":"ca045e34ec6dba5d"},
+     "expected": {"t":"bytes","v":"54732f8aa0a611c1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "OpenSSL DES_xcbc_encrypt known answer, block 3",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"f1e0d3c2b5a497860123456789abcdeffedcba9876543210"}}
+     ],
+     "input": {"t":"bytes","v":"3c160ffec9cb74e1"},
+     "expected": {"t":"bytes","v":"15cdc2d7951b1053"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "OpenSSL DES_xcbc_encrypt known answer, block 4",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"f1e0d3c2b5a497860123456789abcdeffedcba9876543210"}}
+     ],
+     "input": {"t":"bytes","v":"73a2b0f7951b1053"},
+     "expected": {"t":"bytes","v":"a63c5e03b21aa3c4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

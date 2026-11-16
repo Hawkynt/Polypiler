@@ -1,0 +1,24 @@
+{
+ "schema": 1,
+ "file": "algorithms/special/fiat-shamir.js",
+ "algorithms": [
+  {
+   "name": "Fiat-Shamir Protocol",
+   "vectors": [
+    {
+     "text": "Educational Fiat-Shamir proof verification with deterministic parameters",
+     "inverse": false,
+     "steps": [
+      {"set":"timeSteps","value":{"t":"number","v":10000}}
+     ],
+     "input": {"t":"bytes","v":"74657374"},
+     "expected": {"t":"bytes","v":"74657374"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,63 @@
+{
+ "schema": 1,
+ "file": "algorithms/classical/enigma.js",
+ "algorithms": [
+  {
+   "name": "Enigma Machine",
+   "vectors": [
+    {
+     "text": "Wikipedia canonical check - rotors I II III left to right, wide B reflector, ring settings A, start AAA, typing AAAAA gives BDZGO",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"414141313233"}}
+     ],
+     "input": {"t":"bytes","v":"4141414141"},
+     "expected": {"t":"bytes","v":"42445a474f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "The same check carried on to 25 letters, which crosses the right rotor's turnover at V and so exercises the middle rotor stepping",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"414141313233"}}
+     ],
+     "input": {"t":"bytes","v":"41414141414141414141414141414141414141414141414141"},
+     "expected": {"t":"bytes","v":"42445a474f5743584c544b5342544d43444c50424d55514f46"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Reciprocity - the machine is its own inverse, so the 25-letter ciphertext returns 25 A's on the same setting",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"414141313233"}}
+     ],
+     "input": {"t":"bytes","v":"42445a474f5743584c544b5342544d43444c50424d55514f46"},
+     "expected": {"t":"bytes","v":"41414141414141414141414141414141414141414141414141"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Start position ABC. No published source carries this value; it is here to cover a non-zero start position",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"414243313233"}}
+     ],
+     "input": {"t":"bytes","v":"48454c4c4f574f524c44"},
+     "expected": {"t":"bytes","v":"524f4d554c4c42494242"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

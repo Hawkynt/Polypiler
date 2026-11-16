@@ -104,7 +104,7 @@ public sealed class JavaScriptListImportTests {
   [TestCase("export function f() { const a = []; a.push(new Map()); const m = a.pop(); return 0; }", "the value of pop of a list of Map<float64, float64>")]
   [TestCase("class K { constructor() { this.v = 1; } } export function f() { const a = []; a.push(new K()); const b = [...a]; b.push(new K()); return b.length; }", "of which the IR has no array")]
   [TestCase("export function f() { const b = [...\"ab\"]; b.push(\"c\"); return b.length; }", "a spread of string")]
-  [TestCase("class K { constructor() { this.v = 1; } } export function f() { const a = [new K()]; a.push(new K()); return a.length; }", "a literal of a list of K")]
+  [TestCase("class K { constructor() { this.v = 1; } } export function f() { const a = [new K(), , new K()]; a.push(new K()); return a.length; }", "a hole or a spread in a literal of a list of K")]
   [TestCase("export function f() { const a = [1]; a.length += 1; return 0; }", "a length other than 0")]
   [TestCase("export function f() { const a = [1]; a.push(2); a[0] ||= 3; return a[0]; }", "a[0] ||= 3")]
   public void Construct_IsRefused(string source, string named)

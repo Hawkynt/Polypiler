@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/shrinking-generator.js",
+ "algorithms": [
+  {
+   "name": "Shrinking Generator",
+   "vectors": [
+    {
+     "text": "Shrinking Generator - Zero key test vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000001"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"0023f77c58e03cf399e9e63b6981cb3b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Shrinking Generator - Pattern key test vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0123456789abcdef0123456789abcdef"}}
+     ],
+     "input": {"t":"bytes","v":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+     "expected": {"t":"bytes","v":"fdfd69daf7ac95f9ef7c03500d464010"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Shrinking Generator - Full key test vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"fedcba9876543210fedcba9876543210"}}
+     ],
+     "input": {"t":"bytes","v":"ffffffffffffffffffffffffffffffff"},
+     "expected": {"t":"bytes","v":"49839f0a11c8cb4613becb4e92c6c6d1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

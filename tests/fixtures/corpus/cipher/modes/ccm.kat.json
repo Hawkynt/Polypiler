@@ -1,0 +1,62 @@
+{
+ "schema": 1,
+ "file": "algorithms/modes/ccm.js",
+ "algorithms": [
+  {
+   "name": "CCM",
+   "vectors": [
+    {
+     "text": "RFC 3610 Vector #1 (M=8, L=2)",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"00000003020100a0a1a2a3a4a5"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"00000003020100a0a1a2a3a4a5"}]},
+      {"call":"setAAD","args":[{"t":"bytes","v":"0001020304050607"}]},
+      {"call":"setTagSize","args":[{"t":"number","v":8}]}
+     ],
+     "input": {"t":"bytes","v":"08090a0b0c0d0e0f101112131415161718191a1b1c1d1e"},
+     "expected": {"t":"bytes","v":"588c979a61c663d2f066d0c2c0f989806d5f6b61dac38417e8d12cfdf926e0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 3610 Vector #7 (M=10, L=2)",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"00000009080706a0a1a2a3a4a5"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"00000009080706a0a1a2a3a4a5"}]},
+      {"call":"setAAD","args":[{"t":"bytes","v":"0001020304050607"}]},
+      {"call":"setTagSize","args":[{"t":"number","v":10}]}
+     ],
+     "input": {"t":"bytes","v":"08090a0b0c0d0e0f101112131415161718191a1b1c1d1e"},
+     "expected": {"t":"bytes","v":"0135d1b2c95f41d5d1d4fec185d166b8094e999dfed96c048c56602c97acbb7490"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 3610 Vector #13 (M=8, L=2)",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"00412b4ea9cdbe3c9696766cfa"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"00412b4ea9cdbe3c9696766cfa"}]},
+      {"call":"setAAD","args":[{"t":"bytes","v":"0be1a88bace018b1"}]},
+      {"call":"setTagSize","args":[{"t":"number","v":8}]}
+     ],
+     "input": {"t":"bytes","v":"08e8cf97d820ea258460e96ad9cf5289054d895ceac47c"},
+     "expected": {"t":"bytes","v":"4cb97f86a2a4689a877947ab8091ef5386a6ffbdd080f8e78cf7cb0cddd7b3"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

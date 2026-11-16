@@ -1,0 +1,75 @@
+{
+ "schema": 1,
+ "file": "algorithms/aead/aes-ccm.js",
+ "algorithms": [
+  {
+   "name": "AES-CCM",
+   "vectors": [
+    {
+     "text": "RFC 3610 Packet Vector #1 (L=2, M=8)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"c0c1c2c3c4c5c6c7c8c9cacbcccdcecf"}},
+      {"set":"nonce","value":{"t":"bytes","v":"00000003020100a0a1a2a3a4a5"}},
+      {"set":"aad","value":{"t":"bytes","v":"0001020304050607"}},
+      {"set":"tagSize","value":{"t":"number","v":8}}
+     ],
+     "input": {"t":"bytes","v":"08090a0b0c0d0e0f101112131415161718191a1b1c1d1e"},
+     "expected": {"t":"bytes","v":"588c979a61c663d2f066d0c2c0f989806d5f6b61dac38417e8d12cfdf926e0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 3610 Packet Vector #2 (L=2, M=8)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"c0c1c2c3c4c5c6c7c8c9cacbcccdcecf"}},
+      {"set":"nonce","value":{"t":"bytes","v":"00000004030201a0a1a2a3a4a5"}},
+      {"set":"aad","value":{"t":"bytes","v":"0001020304050607"}},
+      {"set":"tagSize","value":{"t":"number","v":8}}
+     ],
+     "input": {"t":"bytes","v":"08090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"72c91a36e135f8cf291ca894085c87e3cc15c439c9e43a3ba091d56e10400916"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SP 800-38C Appendix C Example 1 (L=8, M=4)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"404142434445464748494a4b4c4d4e4f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"10111213141516"}},
+      {"set":"aad","value":{"t":"bytes","v":"0001020304050607"}},
+      {"set":"tagSize","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"20212223"},
+     "expected": {"t":"bytes","v":"7162015b4dac255d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SP 800-38C Appendix C Example 3 (L=4, M=8)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"404142434445464748494a4b4c4d4e4f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"101112131415161718191a1b"}},
+      {"set":"aad","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f10111213"}},
+      {"set":"tagSize","value":{"t":"number","v":8}}
+     ],
+     "input": {"t":"bytes","v":"202122232425262728292a2b2c2d2e2f3031323334353637"},
+     "expected": {"t":"bytes","v":"e3b201a9f5b71a7a9b1ceaeccd97e70b6176aad9a4428aa5484392fbc1b09951"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

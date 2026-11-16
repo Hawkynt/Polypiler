@@ -1,0 +1,25 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/mantis.js",
+ "algorithms": [
+  {
+   "name": "MANTIS",
+   "vectors": [
+    {
+     "text": "MANTIS-7 Test Vector - specification Appendix B.2",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"92f09952c625e3e9d7a060f714c0292b"}},
+      {"set":"tweak","value":{"t":"bytes","v":"ba912e6f1055fed2"}}
+     ],
+     "input": {"t":"bytes","v":"60e43457311936fd"},
+     "expected": {"t":"bytes","v":"308e8a07f168f517"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

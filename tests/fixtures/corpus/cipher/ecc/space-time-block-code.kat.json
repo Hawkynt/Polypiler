@@ -1,0 +1,115 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/space-time-block-code.js",
+ "algorithms": [
+  {
+   "name": "Space-Time Block Code",
+   "vectors": [
+    {
+     "text": "2x2 Alamouti STBC: [1, 2] -> Orthogonal matrix",
+     "inverse": false,
+     "steps": [
+      {"set":"config","value":{"t":"object","v":"Object"}}
+     ],
+     "input": {"t":"bytes","v":"00010002"},
+     "expected": {"t":"bytes","v":"00010002fffe0001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "2x2 Alamouti STBC: [3, -1] -> Orthogonal matrix",
+     "inverse": false,
+     "steps": [
+      {"set":"config","value":{"t":"object","v":"Object"}}
+     ],
+     "input": {"t":"bytes","v":"0003ffff"},
+     "expected": {"t":"bytes","v":"0003ffff00010003"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "2x2 Alamouti STBC: [0, 0] -> Zero matrix",
+     "inverse": false,
+     "steps": [
+      {"set":"config","value":{"t":"object","v":"Object"}}
+     ],
+     "input": {"t":"bytes","v":"00000000"},
+     "expected": {"t":"bytes","v":"0000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "IEEE 802.11n STBC pattern: [5, 7]",
+     "inverse": false,
+     "steps": [
+      {"set":"config","value":{"t":"object","v":"Object"}}
+     ],
+     "input": {"t":"bytes","v":"00050007"},
+     "expected": {"t":"bytes","v":"00050007fff90005"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "3GPP LTE STTD pattern: [-3, 4]",
+     "inverse": false,
+     "steps": [
+      {"set":"config","value":{"t":"object","v":"Object"}}
+     ],
+     "input": {"t":"bytes","v":"fffd0004"},
+     "expected": {"t":"bytes","v":"fffd0004fffcfffd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Large symbols: [127, -128]",
+     "inverse": false,
+     "steps": [
+      {"set":"config","value":{"t":"object","v":"Object"}}
+     ],
+     "input": {"t":"bytes","v":"007fff80"},
+     "expected": {"t":"bytes","v":"007fff800080007f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Multiple symbol blocks: [1, 2, 3, 4]",
+     "inverse": false,
+     "steps": [
+      {"set":"config","value":{"t":"object","v":"Object"}}
+     ],
+     "input": {"t":"bytes","v":"0001000200030004"},
+     "expected": {"t":"bytes","v":"00010002fffe000100030004fffc0003"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Orthogonality test: [1, 1]",
+     "inverse": false,
+     "steps": [
+      {"set":"config","value":{"t":"object","v":"Object"}}
+     ],
+     "input": {"t":"bytes","v":"00010001"},
+     "expected": {"t":"bytes","v":"00010001ffff0001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

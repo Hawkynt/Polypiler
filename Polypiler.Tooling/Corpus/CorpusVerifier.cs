@@ -20,8 +20,8 @@ public static class CorpusVerifier {
       var repository = manifest.Repository(entry.Repository);
       if (repository is null)
         problems.Add(CorpusDiagnostics.Manifest($"lock entry '{entry.Location}' names undeclared repository '{entry.Repository}'"));
-      else if (repository.Commit != entry.Commit)
-        problems.Add(CorpusDiagnostics.Manifest($"lock entry '{entry.Location}' is not at the pin {repository.Commit}"));
+      else if (repository.Commit != entry.Commit && manifest.Fixtures.All(fixture => fixture.Repository != entry.Repository || fixture.Commit != entry.Commit))
+        problems.Add(CorpusDiagnostics.Manifest($"lock entry '{entry.Location}' is not at the pin {repository.Commit} nor at the commit of a fixture"));
       else if (VerifyFile(root, entry) is { } mismatch)
         problems.Add(mismatch);
     }

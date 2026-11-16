@@ -1,0 +1,102 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/sc2000.js",
+ "algorithms": [
+  {
+   "name": "SC2000",
+   "vectors": [
+    {
+     "text": "CRYPTREC specification appendix A — 128-bit zero key and plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"fae4baa3bb72c4c060b9a4a5c4b2ab32"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NESSIE submission testvectors128.txt — single key bit set",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"80000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"3fcb3bc9dbe00a8bf28d69d7f67102a7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NESSIE submission testvectors128.txt — single plaintext bit set",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"80000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"b75cd863b9cb21c7cebd9e1014bf774f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NESSIE submission testvectors128.txt — repeating 0x01 key and plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"01010101010101010101010101010101"}}
+     ],
+     "input": {"t":"bytes","v":"01010101010101010101010101010101"},
+     "expected": {"t":"bytes","v":"ee5c548ea5ef353b896a780e324be38d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NESSIE submission testvectors128.txt — repeating 0x09 key and plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"09090909090909090909090909090909"}}
+     ],
+     "input": {"t":"bytes","v":"09090909090909090909090909090909"},
+     "expected": {"t":"bytes","v":"8839d41b099a817ef8f9ffe6b88455ce"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NESSIE submission testvectors192.txt — 192-bit zero key and plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"6c2bab231cb641ed3ac8d4b0ea69ee3b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NESSIE submission testvectors256.txt — 256-bit zero key and plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"6c2bab231cb641ed3ac8d4b0ea69ee3b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

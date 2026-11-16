@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/npi-checksum.js",
+ "algorithms": [
+  {
+   "name": "NPI",
+   "vectors": [
+    {
+     "text": "Example NPI 1234567893",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"313233343536373839"},
+     "expected": {"t":"bytes","v":"03"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "CMS Registry NPI 1993999998",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"313939333939393939"},
+     "expected": {"t":"bytes","v":"08"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Type 2 Organization NPI",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"323334353637383930"},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

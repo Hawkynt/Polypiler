@@ -1,0 +1,81 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/sfc.js",
+ "algorithms": [
+  {
+   "name": "SFC32",
+   "vectors": [
+    {
+     "text": "Seed (1,2,3,4): First 5 outputs (20 bytes) - verified against SFC32 reference implementation",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"00000001000000020000000300000004"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0000000700000022036000600b421d78cc849c75"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed (0,0,0,1): First 10 outputs - minimal seed with counter=1",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"00000000000000000000000000000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"00000001000000020000000c0120001f0360b48399e14d9bd9c4e5de3f6d95a659390fb3004b9efb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed (0x9E3779B9, 0x243F6A88, 0xB7E15162, 12): Standard test seed - first 8 outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"9e3779b9243f6a88b7e151620000000c"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"c276e44d9b1951bcdc0d8dd95fdf01a49ee74639d956e0048959f5a3a65a8e9d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed (12345, 67890, 11111, 1): Common test values - first 12 outputs (discard first 12 per PractRand)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":48}},
+      {"set":"seed","value":{"t":"bytes","v":"000030390001093200002b670000000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0001396c00029057d3ec8b58733481ed214324f016ed3820ff9157416940350bdb7782ec49733921410d3859a992c3af"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed (1,1,1,1): Identical seed values - first 6 outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":24}},
+      {"set":"seed","value":{"t":"bytes","v":"00000001000000010000000100000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"000000030000000c012000270480b48b9b0201e26ce50a5b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

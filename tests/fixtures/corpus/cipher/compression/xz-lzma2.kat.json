@@ -1,0 +1,88 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/xz-lzma2.js",
+ "algorithms": [
+  {
+   "name": "XZ/LZMA2",
+   "vectors": [
+    {
+     "text": "Empty input",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"fd377a585a0000016922de36000000001cdf44219042990d010000000001595a"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single character round-trip",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"fd377a585a0000016922de3602c0050121010000f05dfb9f01000041000000008b9ed9d300011501a96334609042990d010000000001595a"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Short text with literals round-trip",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"48656c6c6f"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"fd377a585a0000016922de3602c00905210100004b3bb91d01000448656c6c6f000000008289d1f700011905bce8eccb9042990d010000000001595a"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repeated pattern round-trip",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41414141414141414141"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"fd377a585a0000016922de3602c00e0a21010000229cec8201000941414141414141414141000000cfd08e4700011e0aea6312149042990d010000000001595a"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repeating sequence round-trip",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414243414243414243"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"fd377a585a0000016922de3602c00d09210100005c94d84301000841424341424341424300000000f756ef0200011d09936136a69042990d010000000001595a"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Natural text round-trip",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"48656c6c6f20576f726c6421205468697320697320612074657374206f66204c5a4d413220636f6d7072657373696f6e2e"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"fd377a585a0000016922de3602c0353121010000dbe2a03a01003048656c6c6f20576f726c6421205468697320697320612074657374206f66204c5a4d413220636f6d7072657373696f6e2e00000000b4770c2200014531510e56fc9042990d010000000001595a"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Pangram text round-trip",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"fd377a585a0000016922de3602c02f2b21010000054cbdb201002a54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67000039a34f4100013f2b5766e4d49042990d010000000001595a"},
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

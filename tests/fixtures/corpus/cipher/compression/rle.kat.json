@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/rle.js",
+ "algorithms": [
+  {
+   "name": "RLE",
+   "vectors": [
+    {
+     "text": "Simple repeated pattern - AAABBBCCC",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414141424242434343"},
+     "expected": {"t":"bytes","v":"034103420343"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Mixed run lengths",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4141414141424243"},
+     "expected": {"t":"bytes","v":"054102420143"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "No repeated characters",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414243444546"},
+     "expected": {"t":"bytes","v":"014101420143014401450146"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

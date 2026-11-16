@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/classical/porta.js",
+ "algorithms": [
+  {
+   "name": "Porta Cipher",
+   "vectors": [
+    {
+     "text": "Practical Cryptography worked example - DEFENDTHEEASTWALLOFTHECASTLE under FORTIFICATION",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"464f5254494649434154494f4e"}}
+     ],
+     "input": {"t":"bytes","v":"444546454e445448454541535457414c4c4f46544845434153544c45"},
+     "expected": {"t":"bytes","v":"53594e4e4a534356524e524c41485554554b5543565259524c414e59"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Reciprocity - the same worked example run again on its own ciphertext returns the plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"464f5254494649434154494f4e"}}
+     ],
+     "input": {"t":"bytes","v":"53594e4e4a534356524e524c41485554554b5543565259524c414e59"},
+     "expected": {"t":"bytes","v":"444546454e445448454541535457414c4c4f46544845434153544c45"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "First row of the published tableau read straight off - key letter A pairs A-M with N-Z",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"41"}}
+     ],
+     "input": {"t":"bytes","v":"4142434445464748494a4b4c4d4e4f505152535455565758595a"},
+     "expected": {"t":"bytes","v":"4e4f505152535455565758595a4142434445464748494a4b4c4d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

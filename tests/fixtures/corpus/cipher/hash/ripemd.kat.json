@@ -1,0 +1,279 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/ripemd.js",
+ "algorithms": [
+  {
+   "name": "RIPEMD-128",
+   "vectors": [
+    {
+     "text": "Empty string test vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"cdf26213a150dc3ecb610f18f6b38b46"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single character 'a' test vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"86be7afa339d0fc7cfc785e72f578d33"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String 'abc' test vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"c14a12199c66e4ba84636b0f69144c77"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String 'message digest' test vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6d65737361676520646967657374"},
+     "expected": {"t":"bytes","v":"9e327b3d6e523062afc1132d7df9d1b8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Lowercase alphabet test vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6162636465666768696a6b6c6d6e6f707172737475767778797a"},
+     "expected": {"t":"bytes","v":"fd2aa607f71dc8f510714922b371834e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repeated pattern test vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6162636462636465636465666465666765666768666768696768696a68696a6b696a6b6c6a6b6c6d6b6c6d6e6c6d6e6f6d6e6f706e6f7071"},
+     "expected": {"t":"bytes","v":"a1aa0689d0fafa2ddc22e88b49133a06"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Alphanumeric test vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4142434445464748494a4b4c4d4e4f505152535455565758595a6162636465666768696a6b6c6d6e6f707172737475767778797a30313233343536373839"},
+     "expected": {"t":"bytes","v":"d1e959eb179c911faea4624c60c5c702"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repeated digits test vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930"},
+     "expected": {"t":"bytes","v":"3f45ef194732c2dbb2c4a2c769795fa3"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "RIPEMD-160",
+   "vectors": [
+    {
+     "text": "RIPEMD-160 empty string - Official OpenSSL test vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"9c1185a5c5e9fc54612808977ee8f548b2258d31"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RIPEMD-160 single character 'a' - Official OpenSSL test vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"0bdc9d2d256b3ee9daae347be6f4dc835a467ffe"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RIPEMD-160 string 'abc' - Official OpenSSL test vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"8eb208f7e05d987a9b044a8e98c6b087f15a0bfc"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RIPEMD-160 'message digest' - Official OpenSSL test vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6d65737361676520646967657374"},
+     "expected": {"t":"bytes","v":"5d0689ef49d2fae572b881b123a85ffa21595f36"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RIPEMD-160 lowercase alphabet - Official OpenSSL test vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6162636465666768696a6b6c6d6e6f707172737475767778797a"},
+     "expected": {"t":"bytes","v":"f71c27109c692c1b56bbdceb5b9d2865b3708dbc"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RIPEMD-160 repeated pattern string - Official OpenSSL test vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6162636462636465636465666465666765666768666768696768696a68696a6b696a6b6c6a6b6c6d6b6c6d6e6c6d6e6f6d6e6f706e6f7071"},
+     "expected": {"t":"bytes","v":"12a053384a9c0c88e405a06c27dcf49ada62eb2b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RIPEMD-160 alphanumeric string - Official OpenSSL test vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4142434445464748494a4b4c4d4e4f505152535455565758595a6162636465666768696a6b6c6d6e6f707172737475767778797a30313233343536373839"},
+     "expected": {"t":"bytes","v":"b0e20b6e3116640286ed3a87a5713079b21f5189"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RIPEMD-160 repeated digits (80 chars) - Official OpenSSL test vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930313233343536373839303132333435363738393031323334353637383930"},
+     "expected": {"t":"bytes","v":"9b752e45573d4b39f4dbd3323cab82bf63326bfb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "RIPEMD-256",
+   "vectors": [
+    {
+     "text": "Empty string test vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"02ba4c4e5f8ecd1877fc52d64d30e37a2d9774fb1e5d026380ae0168e3c5522d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single character 'a' test vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"f9333e45d857f5d90a91bab70a1eba0cfb1be4b0783c9acfcd883a9134692925"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String 'abc' test vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"afbd6e228b9d8cbbcef5ca2d03e6dba10ac0bc7dcbe4680e1e42d2e975459b65"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "RIPEMD-320",
+   "vectors": [
+    {
+     "text": "Empty string test vector (Bouncy Castle)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"22d65d5661536cdc75c1fdf5c6de7b41b9f27325ebc61e8557177d705a0ec880151c3a32a00899b8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single character 'a' test vector (Bouncy Castle)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"ce78850638f92658a5a585097579926dda667a5716562cfcf6fbe77f63542f99b04705d6970dff5d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String 'abc' test vector (Bouncy Castle)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"de4c01b3054f8930a79d09ae738e92301e5a17085beffdc1b8d116713e74f82fa942d64cdbc4682d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Alphabet test vector (Bouncy Castle)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6162636465666768696a6b6c6d6e6f707172737475767778797a"},
+     "expected": {"t":"bytes","v":"cabdb1810b92470a2093aa6bce05952c28348cf43ff60841975166bb40ed234004b8824463e6b009"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

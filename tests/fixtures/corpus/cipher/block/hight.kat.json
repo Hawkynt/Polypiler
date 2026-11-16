@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/hight.js",
+ "algorithms": [
+  {
+   "name": "HIGHT",
+   "vectors": [
+    {
+     "text": "Crypto++ HIGHT Test Vector #1",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"88e34f8f081779f1e9f394370ad40589"}}
+     ],
+     "input": {"t":"bytes","v":"d76d0d18327ec562"},
+     "expected": {"t":"bytes","v":"e4bc2e312277e4dd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Crypto++ HIGHT Test Vector #2",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"2923be84e16cd6ae529049f1f1bbe9eb"}}
+     ],
+     "input": {"t":"bytes","v":"b3a6db3c870c3e99"},
+     "expected": {"t":"bytes","v":"23cad1a3cddf7eab"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Crypto++ HIGHT Test Vector #3",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"245e0d1c06b747deb3124dc843bb8ba6"}}
+     ],
+     "input": {"t":"bytes","v":"1f035a7d0938251f"},
+     "expected": {"t":"bytes","v":"52bd91bb26f8ed99"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -273,8 +273,11 @@ public sealed class IrModuleFormatTests {
     writer.Write(false);
   }
 
-  /// <summary>What ends a module without foreign functions (#1332): their count, 0.</summary>
-  internal static void NoForeignFunctions(BinaryWriter writer) => writer.Write7BitEncodedInt(0);
+  /// <summary>What ends a module without foreign functions (#1332) and without an initializer (#1365): their count, 0, and false.</summary>
+  internal static void NoForeignFunctions(BinaryWriter writer) {
+    writer.Write7BitEncodedInt(0);
+    writer.Write(false);
+  }
 
   /// <summary>A body of one expression statement whose expression the action writes.</summary>
   internal static byte[] Expression(Action<BinaryWriter> expression) => Function(writer => {

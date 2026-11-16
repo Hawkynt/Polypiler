@@ -1,0 +1,53 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/darkcrypt-mdc.js",
+ "algorithms": [
+  {
+   "name": "MDC (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "DarkCrypt Mdc — keystream from incrementing key, zero IV, zero plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"}},
+      {"set":"iv","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"d8723082565e48ae1ba2f1c65dc9eec76653665ec3b4baaa7e6e2f715c5b7cbd350d6b46727bac680a5d7b4057f7a99436c287dc4ea8e7ea3e92a788cb83bb36638ac1c7f59bfa4ffcf2670c9cf35aa165deec679a6634e7177dfb362a2918ddd574757fdff6d6a8af3007e0880fa164ada591fcfa93d703eda08d46e37625ef"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Mdc — incrementing key, zero IV, incrementing plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"}},
+      {"set":"iv","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"d8733281525b4ea913abfbcd51c4e0c8af56081da8ca49a9c4ddf02943cb2d5ce6a6614297a26457b330575f96b463e50eb5e014e1d7f0b163e66b92d1a7b61e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Mdc — non-zero key and IV, 48-byte message (verified against the DarkCrypt implementation)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0b30557a9fc4e90e33587da2c7ec11365b80a5caef14395e83a8cdf2173c6186abd0f51a3f6489aed3f81d42678cb1d6fb20456a8fb4d9fe23486d92b7dc0126"}},
+      {"set":"iv","value":{"t":"bytes","v":"073c71a6db10457a"}}
+     ],
+     "input": {"t":"bytes","v":"03203d5a7794b1ceeb0825425f7c99b6d3f00d2a4764819ebbd8f5122f4c6986a3c0ddfa1734516e8ba8c5e2ff1c3956"},
+     "expected": {"t":"bytes","v":"2e2a484944b2d56b05f06612af14366ec204d3aafb9589503bc220568a31d7a0308d6fdc092ea54491472ba728129680"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

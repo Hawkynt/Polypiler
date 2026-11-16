@@ -1,0 +1,89 @@
+{
+ "schema": 1,
+ "file": "algorithms/mac/x919-mac.js",
+ "algorithms": [
+  {
+   "name": "X9.19-MAC",
+   "vectors": [
+    {
+     "text": "Botan X9.19-MAC Test Vector #1",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0123456789abcdef"}}
+     ],
+     "input": {"t":"bytes","v":"31311c3931383237333634351c1c35383134333237361c1c3b313233343536373839303132333435363d3939313231303030303f1c30303031323530301c393738363533343132343837363932331c"},
+     "expected": {"t":"bytes","v":"c156f1b8cdbfb451"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan X9.19-MAC Test Vector #2",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0123456789abcdef"}}
+     ],
+     "input": {"t":"bytes","v":"35383134333237361c3b313233343536373839303132333435363d1c30303031323530301c393738363533343132343837363932331c"},
+     "expected": {"t":"bytes","v":"ab4884061a159618"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan X9.19-MAC Test Vector #3 (3DES key)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0123456789abcdeffedcba9876543210"}}
+     ],
+     "input": {"t":"bytes","v":"31311c3931383237333634351c1c35383134333237361c1c3b313233343536373839303132333435363d3939313231303030303f1c30303031323530301c393738363533343132343837363932331c"},
+     "expected": {"t":"bytes","v":"c209ccb78ee1b606"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan X9.19-MAC Test Vector #4",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"4061610d85685db0f4d9f1c8fe15a123"}}
+     ],
+     "input": {"t":"bytes","v":"3330303030323031393543555354303120202020552020202020202020202020202020202020202054303253454154504152594742324c54535435534f414131393935303232373133333934343030303020202020202020202020202020333030303031304139354558413030303030333144"},
+     "expected": {"t":"bytes","v":"dbe9eb0fa03838d2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan X9.19-MAC Test Vector #5 (Long message)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"bb296726f91480cdc432ab3067536eab"}}
+     ],
+     "input": {"t":"bytes","v":"e7ef0ec901ccc8e5e44579a25aae7fb82fa475acd95f2de313c5c2b7bca63ba395496c9615347cfa7af59cd4a31c8dd3c0027f9961ad7c75723e2c2ee467d279b13e10c6738cc0ed815dc125794ef8395177d2b2244e27978d53c571bb97eb6cd6fb324987f3360850f72dc9462502979dd449c1227158afc41e217fb50ceb8b071ed48e110a966102c42a48e92cdf860028482299a0d25ebef3dd74ffc9ff06e7d494f8de2a59e0ee8328d8af075eaf30a6d1c947a3270596057995ce799bb54d2fad2b5a060c48893420383c7fe76c25b8356c5c5d72f262eb88306423e5b15392ddad98e9f521"},
+     "expected": {"t":"bytes","v":"83c4b075af24ab7c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan X9.19-MAC Test Vector #6 (Long message)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"214b48ab97e144f1005831c8c97b8ef0"}}
+     ],
+     "input": {"t":"bytes","v":"12916051c77047c9efd1e3a43d0086d9899aa28818bccc5d8b5a0a848682f8981359e9dac931a4b902875d3f87e318107dbb98967765f302bffd8645807fde93d8c76ea1f8125afb99b83a209b5331190ec9af852ea287eea00d33208c11b364d92106d13360cccc1807edb45a1ecd68e77ced161e7404be8137de0e49927222b378f3e7d9c0b3f1c7a0a521be7289a6ee76bc0deac0cb6bf7aa79403cec62ef6456d63d168a2fdd2ad4fee947878f35fd4b42e70b0e5202b8cc43f4b8a5e31cfbba5a114489ee6e5dec57a473e6da70311c573c2aaa3fe2"},
+     "expected": {"t":"bytes","v":"31174049f029eb36"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

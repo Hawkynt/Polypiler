@@ -1,0 +1,120 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/misty.js",
+ "algorithms": [
+  {
+   "name": "MISTY1",
+   "vectors": [
+    {
+     "text": "RFC 2994 Appendix A - first 64-bit block",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00112233445566778899aabbccddeeff"}}
+     ],
+     "input": {"t":"bytes","v":"0123456789abcdef"},
+     "expected": {"t":"bytes","v":"8b1da5f56ab3d07c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 2994 Appendix A - second 64-bit block",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00112233445566778899aabbccddeeff"}}
+     ],
+     "input": {"t":"bytes","v":"fedcba9876543210"},
+     "expected": {"t":"bytes","v":"04b68240b13be95d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 2994 Appendix A - 128-bit plaintext in ECB mode",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00112233445566778899aabbccddeeff"}}
+     ],
+     "input": {"t":"bytes","v":"0123456789abcdeffedcba9876543210"},
+     "expected": {"t":"bytes","v":"8b1da5f56ab3d07c04b68240b13be95d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NESSIE submission testvectors.txt - set 1, vector 0",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"80000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"b5eda7d64fcd2a02"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NESSIE submission testvectors.txt - single low key bit",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000001"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"2049aa1be3546aed"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NESSIE submission testvectors.txt - repeating 0x6c",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c"}}
+     ],
+     "input": {"t":"bytes","v":"6c6c6c6c6c6c6c6c"},
+     "expected": {"t":"bytes","v":"a0cc24a85b11e9cd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NESSIE submission testvectors.txt - all ones",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"ffffffffffffffffffffffffffffffff"}}
+     ],
+     "input": {"t":"bytes","v":"ffffffffffffffff"},
+     "expected": {"t":"bytes","v":"651f3092afa551d0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "MISTY2",
+   "vectors": [
+    {
+     "text": "MISTY2 regression vector (no published KAT exists for MISTY2)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00112233445566778899aabbccddeeff"}}
+     ],
+     "input": {"t":"bytes","v":"0123456789abcdef"},
+     "expected": {"t":"bytes","v":"1232eb29d12cf745"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

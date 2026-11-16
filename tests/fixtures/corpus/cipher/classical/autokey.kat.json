@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/classical/autokey.js",
+ "algorithms": [
+  {
+   "name": "Autokey Cipher",
+   "vectors": [
+    {
+     "text": "Classic Autokey Example",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"4c454d4f4e"}}
+     ],
+     "input": {"t":"bytes","v":"41545441434b41544441574e"},
+     "expected": {"t":"bytes","v":"4c58464f504b544d4443474e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Educational Test Vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"4b4559"}}
+     ],
+     "input": {"t":"bytes","v":"48454c4c4f"},
+     "expected": {"t":"bytes","v":"52494a5353"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DCode Reference",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"4155544f4b4559"}}
+     ],
+     "input": {"t":"bytes","v":"44434f4445"},
+     "expected": {"t":"bytes","v":"445748524f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

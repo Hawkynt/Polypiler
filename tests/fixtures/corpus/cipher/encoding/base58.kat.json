@@ -1,0 +1,88 @@
+{
+ "schema": 1,
+ "file": "algorithms/encoding/base58.js",
+ "algorithms": [
+  {
+   "name": "Base58",
+   "vectors": [
+    {
+     "text": "Base58 empty string test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base58 single character test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"66"},
+     "expected": {"t":"bytes","v":"326d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base58 two character test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"666f"},
+     "expected": {"t":"bytes","v":"386f38"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base58 three character test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"666f6f"},
+     "expected": {"t":"bytes","v":"62516270"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base58 four character test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"666f6f62"},
+     "expected": {"t":"bytes","v":"336373416739"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base58 five character test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"666f6f6261"},
+     "expected": {"t":"bytes","v":"435a4a52686d7a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Base58 six character test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"666f6f626172"},
+     "expected": {"t":"bytes","v":"74315a763279615a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

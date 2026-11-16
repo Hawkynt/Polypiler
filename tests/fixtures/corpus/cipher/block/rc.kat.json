@@ -1,0 +1,171 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/rc.js",
+ "algorithms": [
+  {
+   "name": "RC2",
+   "vectors": [
+    {
+     "text": "RFC 2268 Test Vector #1: 8-byte all-zero key, 63-bit effective",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000"}},
+      {"set":"effectiveBits","value":{"t":"number","v":63}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"ebb773f993278eff"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 2268 Test Vector #2: 8-byte all-ones key, 64-bit effective",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"ffffffffffffffff"}},
+      {"set":"effectiveBits","value":{"t":"number","v":64}}
+     ],
+     "input": {"t":"bytes","v":"ffffffffffffffff"},
+     "expected": {"t":"bytes","v":"278b27e42e2f0d49"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 2268 Test Vector #3: pattern key and plaintext, 64-bit effective",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"3000000000000000"}},
+      {"set":"effectiveBits","value":{"t":"number","v":64}}
+     ],
+     "input": {"t":"bytes","v":"1000000000000001"},
+     "expected": {"t":"bytes","v":"30649edf9be7d2c2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 2268 Test Vector #4: 1-byte key, 64-bit effective",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"88"}},
+      {"set":"effectiveBits","value":{"t":"number","v":64}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"61a8a244adacccf0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 2268 Test Vector #5: 7-byte key, 64-bit effective",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"88bca90e90875a"}},
+      {"set":"effectiveBits","value":{"t":"number","v":64}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"6ccf4308974c267f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 2268 Test Vector #6: 16-byte key, 64-bit effective",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"88bca90e90875a7f0f79c384627bafb2"}},
+      {"set":"effectiveBits","value":{"t":"number","v":64}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"1a807d272bbe5db1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 2268 Test Vector #7: 16-byte key, 128-bit effective",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"88bca90e90875a7f0f79c384627bafb2"}},
+      {"set":"effectiveBits","value":{"t":"number","v":128}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"2269552ab0f85ca6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "RC5",
+   "vectors": [
+    {
+     "text": "RC5-32/12/16 zero key, zero plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"21a5dbee154b8f6d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RC5-32/12/16 pattern key and plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0102030405060708090a0b0c0d0e0f10"}}
+     ],
+     "input": {"t":"bytes","v":"0123456789abcdef"},
+     "expected": {"t":"bytes","v":"b734213608254d2f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RC5-32/12/16 all ones key and plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"ffffffffffffffffffffffffffffffff"}}
+     ],
+     "input": {"t":"bytes","v":"ffffffffffffffff"},
+     "expected": {"t":"bytes","v":"778769e9be0167b7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "RC6",
+   "vectors": [
+    {
+     "text": "IETF test vector - RC6-32/20/16 (128-bit key)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"3a96f9c7f6755cfe46f00e3dcd5d2a3c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

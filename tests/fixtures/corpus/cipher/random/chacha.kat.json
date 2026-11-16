@@ -1,0 +1,150 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/chacha.js",
+ "algorithms": [
+  {
+   "name": "ChaCha8 (PRNG)",
+   "vectors": [
+    {
+     "text": "ChaCha8 zero key and nonce (32-byte key): First 16 bytes",
+     "inverse": false,
+     "steps": [
+      {"set":"nonce","value":{"t":"bytes","v":"0000000000000000"}},
+      {"set":"outputSize","value":{"t":"number","v":16}},
+      {"set":"counter","value":{"t":"bytes","v":"0000000000000000"}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"3e00ef2f895f40d67f5bb8e81f09a5a1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ChaCha8 zero key and nonce (32-byte key): First 64 bytes",
+     "inverse": false,
+     "steps": [
+      {"set":"nonce","value":{"t":"bytes","v":"0000000000000000"}},
+      {"set":"outputSize","value":{"t":"number","v":64}},
+      {"set":"counter","value":{"t":"bytes","v":"0000000000000000"}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"3e00ef2f895f40d67f5bb8e81f09a5a12c840ec3ce9a7f3b181be188ef711a1e984ce172b9216f419f445367456d5619314a42a3da86b001387bfdb80e0cfe42"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "ChaCha12 (PRNG)",
+   "vectors": [
+    {
+     "text": "ChaCha12 zero key and nonce (32-byte key): First 16 bytes",
+     "inverse": false,
+     "steps": [
+      {"set":"nonce","value":{"t":"bytes","v":"0000000000000000"}},
+      {"set":"outputSize","value":{"t":"number","v":16}},
+      {"set":"counter","value":{"t":"bytes","v":"0000000000000000"}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"9bf49a6a0755f953811fce125f2683d5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "ChaCha20 (PRNG)",
+   "vectors": [
+    {
+     "text": "ChaCha20 zero key and nonce (32-byte key): First 16 bytes",
+     "inverse": false,
+     "steps": [
+      {"set":"nonce","value":{"t":"bytes","v":"0000000000000000"}},
+      {"set":"outputSize","value":{"t":"number","v":16}},
+      {"set":"counter","value":{"t":"bytes","v":"0000000000000000"}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"76b8e0ada0f13d90405d6ae55386bd28"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Tyche",
+   "vectors": [
+    {
+     "text": "Tyche with seed 0, stream 0: First 16 bytes",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":16}},
+      {"set":"streamIndex","value":{"t":"bytes","v":"00000000"}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"dbdcae836fde31bf714be8aba4b974ff"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Tyche with seed 1, stream 0: First 16 bytes",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":16}},
+      {"set":"streamIndex","value":{"t":"bytes","v":"00000000"}},
+      {"set":"seed","value":{"t":"bytes","v":"0100000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"abbf5598b056862844653ebd5aa86b9c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Tyche with seed 12345, stream 0: First 16 bytes",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":16}},
+      {"set":"streamIndex","value":{"t":"bytes","v":"00000000"}},
+      {"set":"seed","value":{"t":"bytes","v":"3930000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"d7d0722e34863050d14334a5877d014c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Tyche with seed 0xDEADBEEF, stream 1: First 16 bytes",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":16}},
+      {"set":"streamIndex","value":{"t":"bytes","v":"01000000"}},
+      {"set":"seed","value":{"t":"bytes","v":"efbeadde00000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"8e24dfdb18a1d74d5bdf1e9d5b5585fc"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/golay.js",
+ "algorithms": [
+  {
+   "name": "Golay",
+   "vectors": [
+    {
+     "text": "All zeros test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0000"},
+     "expected": {"t":"bytes","v":"000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single bit pattern",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001"},
+     "expected": {"t":"bytes","v":"000c75"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "All data bits set",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0fff"},
+     "expected": {"t":"bytes","v":"7fffff"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Alternating bit pattern",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0aaa"},
+     "expected": {"t":"bytes","v":"555179"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

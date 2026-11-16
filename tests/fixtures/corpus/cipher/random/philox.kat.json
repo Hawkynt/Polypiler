@@ -1,0 +1,81 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/philox.js",
+ "algorithms": [
+  {
+   "name": "Philox4x32-10",
+   "vectors": [
+    {
+     "text": "Philox4x32-10: Counter=0, Key=0 - Random123 kat_vectors",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000"}},
+      {"set":"outputSize","value":{"t":"number","v":16}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"d5e827668dc569e14cac57bcd8db009b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Philox4x32-10: Counter=0xFFFFFFFF (all), Key=0xFFFFFFFF (all) - Random123 kat_vectors",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"ffffffffffffffff"}},
+      {"set":"outputSize","value":{"t":"number","v":16}}
+     ],
+     "input": {"t":"bytes","v":"ffffffffffffffffffffffffffffffff"},
+     "expected": {"t":"bytes","v":"6d278f400e3bc841c6c70ba2fd51546d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Philox4x32-10: Counter=π digits, Key=π digits - Random123 kat_vectors",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"223809a4d0319f29"}},
+      {"set":"outputSize","value":{"t":"number","v":16}}
+     ],
+     "input": {"t":"bytes","v":"886a3f24d308a3852e8a191344737003"},
+     "expected": {"t":"bytes","v":"09fe6cd1ebccfd9420e40150a16e1224"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Philox4x32-10: Counter=(1,0,0,0), Key=(0,0) - Counter variation",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000"}},
+      {"set":"outputSize","value":{"t":"number","v":16}}
+     ],
+     "input": {"t":"bytes","v":"01000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"a4cce4f8db00b25ceb74a5b167ff7e09"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Philox4x32-10: Counter=(0,0,0,0), Key=(1,0) - Key variation",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0100000000000000"}},
+      {"set":"outputSize","value":{"t":"number","v":16}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"7006e8e3bc0e0ae5c022f29527aa15b6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

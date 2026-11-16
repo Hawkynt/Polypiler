@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/constant-weight-balanced.js",
+ "algorithms": [
+  {
+   "name": "Balanced Constant Weight Code",
+   "vectors": [
+    {
+     "text": "CW (5,2) weight-2 pattern 11000",
+     "inverse": false,
+     "steps": [
+      {"set":"n","value":{"t":"number","v":5}},
+      {"set":"w","value":{"t":"number","v":2}}
+     ],
+     "input": {"t":"bytes","v":"0101000000"},
+     "expected": {"t":"bytes","v":"0101000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "CW (5,2) weight-2 pattern 10100",
+     "inverse": false,
+     "steps": [
+      {"set":"n","value":{"t":"number","v":5}},
+      {"set":"w","value":{"t":"number","v":2}}
+     ],
+     "input": {"t":"bytes","v":"0100010000"},
+     "expected": {"t":"bytes","v":"0100010000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "CW (6,3) weight-3 pattern 111000",
+     "inverse": false,
+     "steps": [
+      {"set":"n","value":{"t":"number","v":6}},
+      {"set":"w","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"010101000000"},
+     "expected": {"t":"bytes","v":"010101000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "CW (6,3) weight-3 pattern 101010",
+     "inverse": false,
+     "steps": [
+      {"set":"n","value":{"t":"number","v":6}},
+      {"set":"w","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"010001000100"},
+     "expected": {"t":"bytes","v":"010001000100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

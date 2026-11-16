@@ -1,0 +1,53 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/msws.js",
+ "algorithms": [
+  {
+   "name": "Middle Square Weyl Sequence",
+   "vectors": [
+    {
+     "text": "Seed 0: First output - C# reference implementation",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":8}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"fffffffeb5ad4ece"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 1: First 5 outputs (40 bytes) - C# reference implementation",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"fffffff8b5ad4ece7a742cd0c5a00d5a193d8a560760f364c9207c7c8f3cc60e71e0d56832c88399"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 2: First 3 outputs - Additional verification",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":24}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000002"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"ffffffeeb5ad4ece7032769fde65216fe7dd025969677be9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

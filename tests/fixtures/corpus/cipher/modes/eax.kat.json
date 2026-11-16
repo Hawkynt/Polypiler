@@ -1,0 +1,96 @@
+{
+ "schema": 1,
+ "file": "algorithms/modes/eax.js",
+ "algorithms": [
+  {
+   "name": "EAX",
+   "vectors": [
+    {
+     "text": "Crypto++ Test Vector #1 - Empty plaintext",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"set":"key","value":{"t":"bytes","v":"233952dee4d5ed5f9b9c6d6ff80ff478"}},
+      {"call":"setNonce","args":[{"t":"bytes","v":"62ec67f9c3a4a407fcb2a8c49031a8b3"}]},
+      {"call":"setAAD","args":[{"t":"bytes","v":"6bfb914fd07eae6b"}]},
+      {"call":"setTagSize","args":[{"t":"number","v":16}]}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"e037830e8389f27b025a2d6527e79d01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Crypto++ Test Vector #2 - 2-byte plaintext",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"set":"key","value":{"t":"bytes","v":"91945d3f4dcbee0bf45ef52255f095a4"}},
+      {"call":"setNonce","args":[{"t":"bytes","v":"becaf043b0a23d843194ba972c66debd"}]},
+      {"call":"setAAD","args":[{"t":"bytes","v":"fa3bfd4806eb53fa"}]},
+      {"call":"setTagSize","args":[{"t":"number","v":16}]}
+     ],
+     "input": {"t":"bytes","v":"f7fb"},
+     "expected": {"t":"bytes","v":"19dd5c4c9331049d0bdab0277408f67967e5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Crypto++ Test Vector #3 - 5-byte plaintext",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"set":"key","value":{"t":"bytes","v":"01f74ad64077f2e704c0f60ada3dd523"}},
+      {"call":"setNonce","args":[{"t":"bytes","v":"70c3db4f0d26368400a10ed05d2bff5e"}]},
+      {"call":"setAAD","args":[{"t":"bytes","v":"234a3463c1264ac6"}]},
+      {"call":"setTagSize","args":[{"t":"number","v":16}]}
+     ],
+     "input": {"t":"bytes","v":"1a47cb4933"},
+     "expected": {"t":"bytes","v":"d851d5bae03a59f238a23e39199dc9266626c40f80"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Crypto++ Test Vector #4 - 5-byte plaintext",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"set":"key","value":{"t":"bytes","v":"d07cf6cbb7f313bdde66b727afd3c5e8"}},
+      {"call":"setNonce","args":[{"t":"bytes","v":"8408dfff3c1a2b1292dc199e46b7d617"}]},
+      {"call":"setAAD","args":[{"t":"bytes","v":"33cce2eabff5a79d"}]},
+      {"call":"setTagSize","args":[{"t":"number","v":16}]}
+     ],
+     "input": {"t":"bytes","v":"481c9e39b1"},
+     "expected": {"t":"bytes","v":"632a9d131ad4c168a4225d8e1ff755939974a7bede"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Crypto++ Test Vector #5 - 6-byte plaintext",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"set":"key","value":{"t":"bytes","v":"35b6d0580005bbc12b0587124557d2c2"}},
+      {"call":"setNonce","args":[{"t":"bytes","v":"fdb6b06676eedc5c61d74276e1f8e816"}]},
+      {"call":"setAAD","args":[{"t":"bytes","v":"aeb96eaebe2970e9"}]},
+      {"call":"setTagSize","args":[{"t":"number","v":16}]}
+     ],
+     "input": {"t":"bytes","v":"40d0c07da5e4"},
+     "expected": {"t":"bytes","v":"071dfe16c675cb0677e536f73afe6a14b74ee49844dd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

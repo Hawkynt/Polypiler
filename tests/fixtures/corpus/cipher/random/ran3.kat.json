@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/ran3.js",
+ "algorithms": [
+  {
+   "name": "Ran3 (Numerical Recipes)",
+   "vectors": [
+    {
+     "text": "Seed=-1 (initializes to 1) - First 10 float values",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"01"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"41b1983e0d12373f2441073d42d85f3ff7c0083fa3af213f871a643f4add833ea47f6e3f3cf38d3e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed=-12345 - First 10 float values",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"3039"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"b8505c3f42eb6c3f280cd63e614b943e16a9113e8d33e63e78717c3e90125e3efba5103f3fe0cc3e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed=-123456789 - First 10 float values",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"075bcd15"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"10b75f3e1c666b3f43147c3d28e1153f78fe873ec4cea13edb7bdc3d673b2d3f6cf8563e8c64503f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed=-1 - First value only (initialization test)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":4}},
+      {"set":"seed","value":{"t":"bytes","v":"01"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"41b1983e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

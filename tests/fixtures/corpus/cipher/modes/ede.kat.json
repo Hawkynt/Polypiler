@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "file": "algorithms/modes/ede.js",
+ "algorithms": [
+  {
+   "name": "EDE",
+   "vectors": [
+    {
+     "text": "NIST TDES_ECB - three-key TDEA (EDE3), two blocks",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"DESInstance"}]},
+      {"set":"key","value":{"t":"bytes","v":"0123456789abcdef23456789abcdef01456789abcdef0123"}}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e51"},
+     "expected": {"t":"bytes","v":"714772f339841d34267fcc4bd2949cc3ee11c22a576a303876183f99c0b6de87"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST TDES_ECB - two-key TDEA (EDE2, K3 = K1), two blocks",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"DESInstance"}]},
+      {"set":"key","value":{"t":"bytes","v":"0123456789abcdef23456789abcdef010123456789abcdef"}}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e51"},
+     "expected": {"t":"bytes","v":"06ede3d82884090aff322c19f0518486730576972a666e58b6c88cf107340d3d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

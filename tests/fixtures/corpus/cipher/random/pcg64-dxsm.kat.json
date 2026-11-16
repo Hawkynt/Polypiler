@@ -1,0 +1,25 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/pcg64-dxsm.js",
+ "algorithms": [
+  {
+   "name": "PCG64-DXSM",
+   "vectors": [
+    {
+     "text": "PCG64-DXSM state=0, inc=1: first 10 x 64-bit outputs (NumPy verified)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":80}},
+      {"set":"seed","value":{"t":"bytes","v":"00000000000000010000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0000000000000000000000000000000000000000000000005238ea76d1f0df4a1a3c4747022e48a4340b0228e6afc05681bb52f8baaa203a0fd17a4a4b0a1ce355fe9ec2c245a242a2f6d5a82a0704f9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

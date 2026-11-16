@@ -1,0 +1,53 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/darkcrypt-snow2.js",
+ "algorithms": [
+  {
+   "name": "SNOW 2.0 (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "DarkCrypt Snow2 — keystream from incrementing key, zero IV, zero input",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"set":"iv","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"7aa40e9615aed53d3a69c1ddc2912a1a86dafe5c0432ac08956837bd05ab20091989294a98d23cf63531e62ae1873175524a2f14ce103ae166ab132c435767efe875062bddf190d760d4c635ffaffd360f399c3c4f2df769d1590f74f034917aa0db223318e74778f9181a8e0c893c6159191db89f5ffd40293fbc8cba6a39b1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Snow2 — incrementing key/plaintext, zero IV",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"set":"iv","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"7aa50c9511abd33a3260cbd6ce9c241596cbec4f1027ba1f8d712da619b63e1639a80b69bcf71ad11d18cc01cdaa1f5a627b1d27fa250cd65e9229177f6a59d0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Snow2 — non-zero key and IV, 48-byte message (verified against the DarkCrypt implementation)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0b30557a9fc4e90e33587da2c7ec11365b80a5caef14395e83a8cdf2173c6186"}},
+      {"set":"iv","value":{"t":"bytes","v":"073c71a6db10457aafe4194e83b8ed22"}}
+     ],
+     "input": {"t":"bytes","v":"03203d5a7794b1ceeb0825425f7c99b6d3f00d2a4764819ebbd8f5122f4c6986a3c0ddfa1734516e8ba8c5e2ff1c3956"},
+     "expected": {"t":"bytes","v":"4bae18bd936344c514bd42c47fb027c524a979c348414905825829ac086d21cb16652c119bcd87e34cfb34b408db9343"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

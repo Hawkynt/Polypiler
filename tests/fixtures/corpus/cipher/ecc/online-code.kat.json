@@ -1,0 +1,75 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/online-code.js",
+ "algorithms": [
+  {
+   "name": "Online Code",
+   "vectors": [
+    {
+     "text": "Online Code encoding with k=8, ε=0.25, q=3",
+     "inverse": false,
+     "steps": [
+      {"set":"k","value":{"t":"number","v":8}},
+      {"set":"epsilon","value":{"t":"number","v":0.25}},
+      {"set":"q","value":{"t":"number","v":3}},
+      {"set":"seed","value":{"t":"number","v":42}}
+     ],
+     "input": {"t":"bytes","v":"48656c6c6f212121"},
+     "expected": {"t":"bytes","v":"48656c6c6f2121212465"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Online Code encoding with k=8, ε=0.25, q=3",
+     "inverse": false,
+     "steps": [
+      {"set":"k","value":{"t":"number","v":8}},
+      {"set":"epsilon","value":{"t":"number","v":0.25}},
+      {"set":"q","value":{"t":"number","v":3}},
+      {"set":"seed","value":{"t":"number","v":12345}}
+     ],
+     "input": {"t":"bytes","v":"0102030405060708"},
+     "expected": {"t":"bytes","v":"01020304050607080c05"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Online Code encoding with k=8, ε=0.25, q=3",
+     "inverse": false,
+     "steps": [
+      {"set":"k","value":{"t":"number","v":8}},
+      {"set":"epsilon","value":{"t":"number","v":0.25}},
+      {"set":"q","value":{"t":"number","v":3}},
+      {"set":"seed","value":{"t":"number","v":98765}}
+     ],
+     "input": {"t":"bytes","v":"aabbccddeeff0011"},
+     "expected": {"t":"bytes","v":"aabbccddeeff00115500"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Online Code encoding with k=8, ε=0.25, q=3",
+     "inverse": false,
+     "steps": [
+      {"set":"k","value":{"t":"number","v":8}},
+      {"set":"epsilon","value":{"t":"number","v":0.25}},
+      {"set":"q","value":{"t":"number","v":3}},
+      {"set":"seed","value":{"t":"number","v":54321}}
+     ],
+     "input": {"t":"bytes","v":"ffffffff00000000"},
+     "expected": {"t":"bytes","v":"ffffffff00000000ff00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

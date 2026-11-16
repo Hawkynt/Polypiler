@@ -1,0 +1,80 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/lcg.js",
+ "algorithms": [
+  {
+   "name": "LCG (Linear Congruential Generator)",
+   "vectors": [
+    {
+     "text": "MINSTD (Park-Miller) a=16807, c=0, m=2^31-1, seed=1 - First 10 values",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"multiplier","value":{"t":"bytes","v":"000041a7"}},
+      {"set":"increment","value":{"t":"bytes","v":"00000000"}},
+      {"set":"modulo","value":{"t":"bytes","v":"7fffffff"}},
+      {"set":"seed","value":{"t":"bytes","v":"00000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"000041a710d63af160b7acd93ab50c2a4431b7821c06dac806058ed856e509fe56f32f4377a4044d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "MINSTD (Park-Miller) - 10,000th value should be 1043618065",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":4}},
+      {"set":"multiplier","value":{"t":"bytes","v":"000041a7"}},
+      {"set":"increment","value":{"t":"bytes","v":"00000000"}},
+      {"set":"modulo","value":{"t":"bytes","v":"7fffffff"}},
+      {"set":"count","value":{"t":"number","v":10000}},
+      {"set":"seed","value":{"t":"bytes","v":"00000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"3e345911"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Numerical Recipes a=1664525, c=1013904223, m=2^32, seed=1 - First 10 values",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"multiplier","value":{"t":"bytes","v":"0019660d"}},
+      {"set":"increment","value":{"t":"bytes","v":"3c6ef35f"}},
+      {"set":"modulo","value":{"t":"bytes","v":"0100000000"}},
+      {"set":"seed","value":{"t":"bytes","v":"00000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"3c88596c5e8885db8116017eb4733ac50cf06d605e98c13fc656dd928e625fc90438e694a3a5a0e3"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ANSI C (glibc) a=1103515245, c=12345, m=2^31, seed=1 - First 8 values",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"multiplier","value":{"t":"bytes","v":"41c64e6d"}},
+      {"set":"increment","value":{"t":"bytes","v":"00003039"}},
+      {"set":"modulo","value":{"t":"bytes","v":"80000000"}},
+      {"set":"seed","value":{"t":"bytes","v":"00000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"41c67ea6167eb0e72781e494446b9b3d794bdf3215fb748359e2b6001cfbae39"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}
