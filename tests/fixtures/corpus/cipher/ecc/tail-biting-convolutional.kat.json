@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/tail-biting-convolutional.js",
+ "algorithms": [
+  {
+   "name": "Tail-Biting Convolutional Code",
+   "vectors": [
+    {
+     "text": "Tail-biting K=3 all zeros (state 00->00)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000000"},
+     "expected": {"t":"bytes","v":"0000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Tail-biting K=3 pattern 1100 (state 00->00)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01010000"},
+     "expected": {"t":"bytes","v":"0101000100010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Tail-biting K=3 pattern 0110 (state 10->10)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00010100"},
+     "expected": {"t":"bytes","v":"0101010100010001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Tail-biting K=3 pattern 1001 (state 01->01)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01000001"},
+     "expected": {"t":"bytes","v":"0001000101010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

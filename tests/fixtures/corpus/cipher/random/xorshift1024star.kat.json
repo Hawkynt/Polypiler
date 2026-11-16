@@ -1,0 +1,95 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/xorshift1024star.js",
+ "algorithms": [
+  {
+   "name": "Xorshift1024*",
+   "vectors": [
+    {
+     "text": "Seed=1: First four 64-bit outputs from xorshift1024* (official reference)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"0100000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"ebec18c6c320b75ff0c3e55baa47687a9fda494782f91f6578beb9d0157ed311"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed=0: First four 64-bit outputs (zero seed initialization)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"d66fb9683583763f7e3e02cd0d1b704985bbd386166f265f7da6a5f93a72f14d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed=12345: First four 64-bit outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"3930000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"f0eb9cd17d61a08e9a889e3235eae19970744689e4cf1fda4b9d595ecb44b440"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed=0xDEADBEEF: First four 64-bit outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"efbeadde00000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"3fae770327913ba438267944642a8ba9c7c06767d60c319e99cad00ed5565195"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed=1000000: First six 64-bit outputs (large seed test)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":48}},
+      {"set":"seed","value":{"t":"bytes","v":"40420f0000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"e7438768d321bb87a6ae572109ee23880f85c9c0cd4bde5c0603680e40371b26d201f4cf7f0e9e870a034214cfa6af09"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed=0xFFFFFFFFFFFFFFFF: Maximum seed value test",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"ffffffffffffffff"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"ff8b751a747b5b338dff602bc75ead46e4dc5b1ab29c51f528f5a435034c4f00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

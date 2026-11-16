@@ -7,12 +7,12 @@ the page then describes what the code does rather than what is planned. The fami
 "Loop transformations" on are borrowed from PB-Compiler; the [catalog](pb-compiler-catalog.md)
 maps every one of its optimization documents to the page here that covers it.
 
-**25 of 292 implemented** - as prototypes in the pass pipeline of `translate` (#1307), among the passes over the legalized module that optimise the helpers (#1353), in legalization (#1358) and among the target passes of the backends (#1336), proven by exhaustive and random testing; their full target states stay open.
+**29 of 294 implemented** - as prototypes in the pass pipeline of `translate` (#1307), among the passes over the legalized module that optimise the helpers (#1353), specialise functions for the lambdas passed to them (#1360) and evaluate, merge and remove calls by the effect summaries of their functions (#1361), in legalization (#1358) and among the target passes of the backends (#1336), proven by exhaustive and random testing; their full target states stay open.
 
 ## General passes
 
 - [x] [O0001](O0001-constant-folding.md) — Fold operations on constants and integer neutral/absorbing elements (P1)
-- [ ] [O0002](O0002-partial-evaluation.md) — Evaluate pure calls with constant arguments at compile time (P1)
+- [x] [O0002](O0002-partial-evaluation.md) — Evaluate pure calls with constant arguments at compile time (P1)
 - [x] [O0003](O0003-sccp.md) — Sparse conditional constant propagation (P1)
 - [ ] [O0004](O0004-global-value-numbering.md) — Global value numbering and common-subexpression elimination (P1)
 - [x] [O0005](O0005-dead-code-elimination.md) — Remove instructions whose results and effects are unobservable (P1)
@@ -46,7 +46,7 @@ maps every one of its optimization documents to the page here that covers it.
 
 - [ ] [O0060](O0060-js-numeric-specialization.md) — Specialize JavaScript Number arithmetic to typed integer and float operations (P2)
 - [ ] [O0061](O0061-js-array-specialization.md) — Specialize JavaScript arrays and typed arrays to typed sequences (P2)
-- [ ] [O0062](O0062-python-int-specialization.md) — Specialize Python arbitrary-precision int to fixed-width integers or keep it exact (P3)
+- [x] [O0062](O0062-python-int-specialization.md) — Specialize Python arbitrary-precision int to fixed-width integers or keep it exact (P3)
 - [ ] [O0063](O0063-python-protocol-specialization.md) — Resolve Python protocols, attributes, slices and iterators statically where proven (P3)
 - [ ] [O0064](O0064-perl-context-resolution.md) — Resolve Perl scalar, list and void context explicitly (P3)
 - [ ] [O0065](O0065-perl-scalar-specialization.md) — Specialize Perl scalars: undef, numeric/string duality, references and tied variables (P3)
@@ -281,6 +281,8 @@ maps every one of its optimization documents to the page here that covers it.
 - [ ] [O0394](O0394-semantic-function-merging.md) — Merge functions that differ in one constant or call target into one body with an extra parameter (P3)
 - [ ] [O0395](O0395-speculative-devirtualization.md) — Version an indirect call into a guarded direct call to a statically likely target with the indirect call as fallback (P3)
 - [ ] [O0396](O0396-task-graph-extraction.md) — Run calls proven independent by their effect summaries concurrently (P5)
+- [x] [O0463](O0463-lambda-specialisation.md) — Specialise a function for the lambdas passed to it: lift the non-escaping ones, bind them, inline and clean up (P2)
+- [x] [O0464](O0464-call-merging.md) — Merge identical calls of pure and read-only functions in one expression where nothing between writes what they read (P2)
 
 ## Vectorization refinements
 

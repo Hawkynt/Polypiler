@@ -54,7 +54,28 @@ internal sealed class GeneratedCSharp {
   /// <summary>What the compiler of a profile said about a text, by the text, the profile and the language version, during this run.</summary>
   private static readonly ConcurrentDictionary<(string Source, string Profile, string LanguageVersion), Lazy<IReadOnlyList<string>>> _complaints = new();
 
-  private static byte[] Build(string source, bool checkOverflow, bool fullyOptimized) {
+  /// <summary>
+  /// Compiles a source the tests wrote - an oracle, not a generated file - against the libraries of the
+  /// runtime it may use, <c>System.Linq</c> among them, with overflow checking off, once per text.
+  /// </summary>
+  /// <param name="source">The C# source.</param>
+  /// <returns>The build.</returns>
+  /// <exception cref="InvalidOperationException">The compiler reported an error or a warning.</exception>
+  public static GeneratedCSharp CompileSource(string source) {
+    var image = _sources.GetOrAdd(source, key => new(() => Build(key, false, false, _libraries.Value))).Value;
+    return new GeneratedCSharp(Assembly.Load(image).GetExportedTypes().Single(type => type is { IsAbstract: true, IsSealed: true }));
+  }
+
+  private static readonly ConcurrentDictionary<string, Lazy<byte[]>> _sources = new();
+
+  /// <summary>The assemblies of the runtime a source of the tests may use: the core library, the facade it is reached through, and LINQ and the collections.</summary>
+  private static readonly Lazy<MetadataReference[]> _libraries = new(() => [
+    .. ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator)
+      .Where(path => Path.GetFileName(path) is "System.Runtime.dll" or "System.Linq.dll" or "System.Collections.dll")
+      .Select(path => MetadataReference.CreateFromFile(path))
+  ]);
+
+  private static byte[] Build(string source, bool checkOverflow, bool fullyOptimized, IReadOnlyList<MetadataReference>? libraries = null) {
     var tree = CSharpSyntaxTree.ParseText(source);
     if (fullyOptimized) {
       var root = tree.GetRoot();
@@ -69,7 +90,9 @@ internal sealed class GeneratedCSharp {
     var compilation = CSharpCompilation.Create(
       "Generated" + Guid.NewGuid().ToString("N"),
       [tree],
-      [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
+      // The base library, and the arbitrary-precision integer with the facade its signatures name.
+      [MetadataReference.CreateFromFile(typeof(object).Assembly.Location), MetadataReference.CreateFromFile(typeof(System.Numerics.BigInteger).Assembly.Location),
+        MetadataReference.CreateFromFile(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(typeof(object).Assembly.Location)!, "System.Runtime.dll")), .. libraries ?? []],
       new CSharpCompilationOptions(
         OutputKind.DynamicallyLinkedLibrary,
         optimizationLevel: OptimizationLevel.Release,

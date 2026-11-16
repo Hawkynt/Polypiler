@@ -3,7 +3,8 @@
 Polypiler itself, the compiler, is licensed under LGPL-3.0-or-later (see [LICENSE](LICENSE)).
 
 A translation copies code of Polypiler's own into the files it generates: the helper functions of
-the backends (`Polypiler.Core.Backends.CSharp/Helpers`, `Polypiler.Core.Backends.JavaScript/Helpers`)
+the backends (`Polypiler.Core.Backends.CSharp/Helpers`, `Polypiler.Core.Backends.JavaScript/Helpers`,
+`Polypiler.Core.Backends.Python/Helpers`)
 and the portable floating-point implementations (`Polypiler.Core.IR/Float/Operations`). That code,
 wherever it appears in a generated output, is released under the MIT licence below, so a translated
 program keeps the licence of its source. The compiler is not relicensed by this grant.

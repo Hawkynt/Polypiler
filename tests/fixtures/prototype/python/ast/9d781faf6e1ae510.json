@@ -1,0 +1,1 @@
+{"source":"def g(x: int) -\u003E int:\n    return (x\n","dump":{"format":1,"error":{"type":"SyntaxError","msg":"\u0027(\u0027 was never closed","line":2,"col":12}}}

@@ -108,11 +108,12 @@ public sealed class DocumentationSteps {
     Assert.That(this._linkErrors, Is.Empty);
   }
 
-  /// <summary>The README and the eight architecture guides.</summary>
-  [Given("^README.md and all eight architecture guides$")]
-  public void ReadmeAndGuides() {
+  /// <summary>The README and the architecture guides: the eight of the design and one per frontend or backend of a language added since.</summary>
+  [Given("^README.md and all (\\w+) architecture guides$")]
+  public void ReadmeAndGuides(string count) {
     this._documents = [.. ArchitecturePaths()];
-    Assert.That(this._documents.Count(path => Path.GetDirectoryName(path)!.EndsWith("architecture", StringComparison.Ordinal)), Is.EqualTo(8));
+    var expected = System.Array.IndexOf(["eight", "nine", "ten", "eleven", "twelve"], count) + 8;
+    Assert.That(this._documents.Count(path => Path.GetDirectoryName(path)!.EndsWith("architecture", StringComparison.Ordinal)), Is.EqualTo(expected));
     Assert.That(this._documents, Does.Contain(Path.Combine(Root, "README.md")));
   }
 

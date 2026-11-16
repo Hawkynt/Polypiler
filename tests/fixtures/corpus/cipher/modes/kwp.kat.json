@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "file": "algorithms/modes/kwp.js",
+ "algorithms": [
+  {
+   "name": "KWP",
+   "vectors": [
+    {
+     "text": "RFC 5649 6 - wrap 20 octets of key data with a 192-bit KEK",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setKEK","args":[{"t":"bytes","v":"5840df6e29b02af1ab493b705bf16ea1ae8338f4dcc176a8"}]}
+     ],
+     "input": {"t":"bytes","v":"c37b7e6492584340bed12207808941155068f738"},
+     "expected": {"t":"bytes","v":"138bdeaa9b8fa7fc61f97742e72248ee5ae6ae5360d1ae6a5f54f373fa543b6a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 5649 6 - wrap 7 octets of key data with a 192-bit KEK",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setKEK","args":[{"t":"bytes","v":"5840df6e29b02af1ab493b705bf16ea1ae8338f4dcc176a8"}]}
+     ],
+     "input": {"t":"bytes","v":"466f7250617369"},
+     "expected": {"t":"bytes","v":"afbeb0f07dfbf5419200f2ccb50bb24f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

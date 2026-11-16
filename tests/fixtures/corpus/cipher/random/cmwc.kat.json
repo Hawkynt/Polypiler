@@ -1,0 +1,81 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/cmwc.js",
+ "algorithms": [
+  {
+   "name": "CMWC (Complementary Multiply-with-Carry)",
+   "vectors": [
+    {
+     "text": "Seed 0: First 5 outputs (40 bytes) - verified against C# reference",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"8b912eacca47b64c238592b521f4679e5aa031f54b2dde8ceaa62edfe6338250f333513179fbd3ec"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 1: First 5 outputs (40 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"c108910a0e5eb78a710077017762a45017f2258dea636a1960cde049597dfdfe76dfd35b7206acfd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 42: First 5 outputs (40 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"000000000000002a"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"8211488f4151822e08142692d53eebf43ed2ac69afb32196b7937d066ece679cf68f0e03de311c72"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 1234567: First 8 outputs (64 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":64}},
+      {"set":"seed","value":{"t":"bytes","v":"000000000012d687"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"3e8eecf519743031bedf18e3222799cdeb8f9b725b43854f8a91e2002dedf10b9eae5ee7c03cad416a6574def1b8840fe939516b2f6a4f743d4da6c4c5b8eb73"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 987654321: First 8 outputs (64 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":64}},
+      {"set":"seed","value":{"t":"bytes","v":"000000003ade68b1"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"1ac7b2559be4d603ea2c816307a5144aa700d67e836ecb7604e9a7352e91d21205c4820e5877a6d359613d5949c1e7de07b44a075e6ceb68c305ea20312d2bca"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

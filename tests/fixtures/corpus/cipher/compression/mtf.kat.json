@@ -1,0 +1,88 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/mtf.js",
+ "algorithms": [
+  {
+   "name": "Move-to-Front (MTF)",
+   "vectors": [
+    {
+     "text": "Empty input",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single character - position 65 in initial alphabet",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"41"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repeated character - second occurrence becomes 0",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4141"},
+     "expected": {"t":"bytes","v":"4100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Two different characters - both at original positions",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4142"},
+     "expected": {"t":"bytes","v":"4142"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Pattern ABA - A moves to front after first occurrence",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414241"},
+     "expected": {"t":"bytes","v":"414201"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ABACA pattern - shows MTF ordering dynamics",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4142414341"},
+     "expected": {"t":"bytes","v":"4142014301"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Classic banana example - demonstrates compression potential",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"62616e616e61"},
+     "expected": {"t":"bytes","v":"62626e010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

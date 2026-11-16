@@ -79,6 +79,22 @@ public sealed class IrFunctionTests {
     Assert.That(Run(module, "F", 2), Is.EqualTo(10));
   }
 
+  /// <summary>F(4) = 13: a closure that assigns a variable of its function by a binding expression captures it, and the function sees the write.</summary>
+  [Test]
+  public void Closure_CapturesTheVariableItBinds() {
+    var x = new IrLocal("x", IrType.I32);
+    var y = new IrLocal("y", IrType.I32);
+    var g = new IrLocal("g", _ints);
+    var bind = IrLambda.Of([], IrType.I32, [], new IrBlock([new IrReturn(new IrBind(y, Add(R(x), I(1))))]));
+    Assert.That(bind.Captures, Is.EqualTo(new[] { y, x }));
+    var module = new IrModule("M", [F("F", IrType.I32, [x], [y, g],
+      new IrDeclare(y, I(0)),
+      new IrDeclare(g, bind),
+      new IrExprStmt(new IrInvoke(IrType.I32, R(g), [])),
+      new IrReturn(Add(R(y), new IrBinary(IrBinaryOp.Multiply, R(x), I(2)))))]);
+    Assert.That(Run(module, "F", 4), Is.EqualTo(13));
+  }
+
   /// <summary>
   /// Three closures made in three passes of a loop over i, each returning i: 9 when the loop shares
   /// its variable (a C# for), 3 when every pass has its own (a JavaScript for-let) - also when the body

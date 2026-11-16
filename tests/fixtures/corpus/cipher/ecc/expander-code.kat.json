@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/expander-code.js",
+ "algorithms": [
+  {
+   "name": "Expander Code",
+   "vectors": [
+    {
+     "text": "Expander code (12,6) all-zero codeword",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000000000000"},
+     "expected": {"t":"bytes","v":"000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Expander code (12,6) single bit position 0",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"010000000000"},
+     "expected": {"t":"bytes","v":"010000010100000100010000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Expander code (12,6) single bit position 1",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000100000000"},
+     "expected": {"t":"bytes","v":"000100010001010000000100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Expander code (12,6) two bits pattern",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"010100000000"},
+     "expected": {"t":"bytes","v":"010100000101010100010100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

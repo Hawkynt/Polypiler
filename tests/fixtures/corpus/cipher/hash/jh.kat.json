@@ -1,0 +1,334 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/jh.js",
+ "algorithms": [
+  {
+   "name": "JH-224",
+   "vectors": [
+    {
+     "text": "NIST SHA-3 KAT Len=0 - empty message, one combined padding block",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"2c99df889b019309051c60fecc2bd285a774940e43175b76b2626630"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SHA-3 KAT Len=8 - one byte",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"cc"},
+     "expected": {"t":"bytes","v":"f79c791ac9b9d80ec934312d6b26748481198e3ca78ebb01b2c9ca51"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SHA-3 KAT Len=504 - 63 bytes, one under the block size",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"f57c64006d9ea761892e145c99df1b24640883da79d9ed5262859dcda8c3c32e05b03d984f1ab4a230242ab6b78d368dc5aaa1e6d3498d53371e84b0c1d4ba"},
+     "expected": {"t":"bytes","v":"2cb2a73729a62f69d9af8252189c1dce8c02286314db64ac6111e3d7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SHA-3 KAT Len=512 - 64 bytes, exactly the block size",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"e926ae8b0af6e53176dbffcc2a6b88c6bd765f939d3d178a9bde9ef3aa131c61e31c1e42cdfaf4b4dcde579a37e150efbef5555b4c1cb40439d835a724e2fae7"},
+     "expected": {"t":"bytes","v":"982a5d2aa039f9c7d5cff3cc8a34c3a0b205892e7c5b09ed68f2cc84"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SHA-3 KAT Len=520 - 65 bytes, one over the block size",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"16e8b3d8f988e9bb04de9c96f2627811c973ce4a5296b4772ca3eefeb80a652bdf21f50df79f32db23f9f73d393b2d57d9a0297f7a2f2e79cfda39fa393df1ac00"},
+     "expected": {"t":"bytes","v":"b6261dd52e1bc8869aa8658a310a888840cc9433b46b3e959002b672"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SHA-3 KAT Len=1016 - 127 bytes, one under two blocks",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"a62fc595b4096e6336e53fcdfc8d1cc175d71dac9d750a6133d23199eaac288207944cea6b16d27631915b4619f743da2e30a0c00bbdb1bbb35ab852ef3b9aec6b0a8dcc6e9e1abaa3ad62ac0a6c5de765de2c3711b769e3fde44a74016fff82ac46fa8f1797d3b2a726b696e3dea5530439acee3a45c2a51bc32dd055650b"},
+     "expected": {"t":"bytes","v":"99311ca7952d3970a3435f9d246ab4f6e720a27e5647b8cdbcc54c01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SHA-3 KAT Len=1024 - 128 bytes, an exact multiple of the block size",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"2b6db7ced8665ebe9deb080295218426bdaa7c6da9add2088932cdffbaa1c14129bccdd70f369efb149285858d2b1d155d14de2fdb680a8b027284055182a0cae275234cc9c92863c1b4ab66f304cf0621cd54565f5bff461d3b461bd40df28198e3732501b4860eadd503d26d6e69338f4e0456e9e9baf3d827ae685fb1d817"},
+     "expected": {"t":"bytes","v":"5e3c00c2c0e126a2e6327aa30db4c3f66052c74cf10cac9c380f5d56"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "JH-256",
+   "vectors": [
+    {
+     "text": "NIST SHA-3 KAT Len=0 - empty message, one combined padding block",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"46e64619c18bb0a92a5e87185a47eef83ca747b8fcc8e1412921357e326df434"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SHA-3 KAT Len=8 - one byte",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"cc"},
+     "expected": {"t":"bytes","v":"7b1191f13a2667830142541bfc5918543d2a434c7692e70c3e5e9bbdddb7f581"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SHA-3 KAT Len=504 - 63 bytes, one under the block size",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"f57c64006d9ea761892e145c99df1b24640883da79d9ed5262859dcda8c3c32e05b03d984f1ab4a230242ab6b78d368dc5aaa1e6d3498d53371e84b0c1d4ba"},
+     "expected": {"t":"bytes","v":"98f236f14420fa4d6d7187d429f446b28a82c359e7d0ff59d0efc983bb224ad9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SHA-3 KAT Len=512 - 64 bytes, exactly the block size",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"e926ae8b0af6e53176dbffcc2a6b88c6bd765f939d3d178a9bde9ef3aa131c61e31c1e42cdfaf4b4dcde579a37e150efbef5555b4c1cb40439d835a724e2fae7"},
+     "expected": {"t":"bytes","v":"9d35c0cc1880a36ebb6cb33b732c0c2adb4a418b4bf0df9173b539263653e90b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SHA-3 KAT Len=520 - 65 bytes, one over the block size",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"16e8b3d8f988e9bb04de9c96f2627811c973ce4a5296b4772ca3eefeb80a652bdf21f50df79f32db23f9f73d393b2d57d9a0297f7a2f2e79cfda39fa393df1ac00"},
+     "expected": {"t":"bytes","v":"334f80e3a32b128528267a1541821dda9ea69199ce506f6e88dcbf35ebb80f4e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SHA-3 KAT Len=1016 - 127 bytes, one under two blocks",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"a62fc595b4096e6336e53fcdfc8d1cc175d71dac9d750a6133d23199eaac288207944cea6b16d27631915b4619f743da2e30a0c00bbdb1bbb35ab852ef3b9aec6b0a8dcc6e9e1abaa3ad62ac0a6c5de765de2c3711b769e3fde44a74016fff82ac46fa8f1797d3b2a726b696e3dea5530439acee3a45c2a51bc32dd055650b"},
+     "expected": {"t":"bytes","v":"7ff3cf7b9a468cfb581a5bd21cc68ff0c3ef3fcfe2a63bd68e9b3934e0ffd488"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SHA-3 KAT Len=1024 - 128 bytes, an exact multiple of the block size",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"2b6db7ced8665ebe9deb080295218426bdaa7c6da9add2088932cdffbaa1c14129bccdd70f369efb149285858d2b1d155d14de2fdb680a8b027284055182a0cae275234cc9c92863c1b4ab66f304cf0621cd54565f5bff461d3b461bd40df28198e3732501b4860eadd503d26d6e69338f4e0456e9e9baf3d827ae685fb1d817"},
+     "expected": {"t":"bytes","v":"43b7d01d93213874b2ac0792bed8c137e865ba5fa87b20a3151a984f4af267a6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "JH-384",
+   "vectors": [
+    {
+     "text": "NIST SHA-3 KAT Len=0 - empty message, one combined padding block",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"2fe5f71b1b3290d3c017fb3c1a4d02a5cbeb03a0476481e25082434a881994b0ff99e078d2c16b105ad069b569315328"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SHA-3 KAT Len=8 - one byte",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"cc"},
+     "expected": {"t":"bytes","v":"ccfa3732089cb4d49af04daa865cb2376bfa264e527b5eb8486cd09b3fb9a8019140a1ca9df7539efbb3a3118d8e0584"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SHA-3 KAT Len=504 - 63 bytes, one under the block size",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"f57c64006d9ea761892e145c99df1b24640883da79d9ed5262859dcda8c3c32e05b03d984f1ab4a230242ab6b78d368dc5aaa1e6d3498d53371e84b0c1d4ba"},
+     "expected": {"t":"bytes","v":"93125f2f4036ac69f2bdd5be4b87c299fc535ae6422d61fed98b618eeeecd0f002a6a307e2b110de59eb2bfeb26e74f0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SHA-3 KAT Len=512 - 64 bytes, exactly the block size",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"e926ae8b0af6e53176dbffcc2a6b88c6bd765f939d3d178a9bde9ef3aa131c61e31c1e42cdfaf4b4dcde579a37e150efbef5555b4c1cb40439d835a724e2fae7"},
+     "expected": {"t":"bytes","v":"b605535f1860879c2e7356c762967bc67d6f80a68a85194daf0057e3adf3baffd3b07ca1bf3bd6c4b76f3cafc901ce6b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SHA-3 KAT Len=520 - 65 bytes, one over the block size",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"16e8b3d8f988e9bb04de9c96f2627811c973ce4a5296b4772ca3eefeb80a652bdf21f50df79f32db23f9f73d393b2d57d9a0297f7a2f2e79cfda39fa393df1ac00"},
+     "expected": {"t":"bytes","v":"bcbab04b2a71f872e7719311172da75b86cd2ebb5aafe19aa51b43f6c20ab2e7d1e1dccb67e3ccb88788e1ad75a00479"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SHA-3 KAT Len=1016 - 127 bytes, one under two blocks",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"a62fc595b4096e6336e53fcdfc8d1cc175d71dac9d750a6133d23199eaac288207944cea6b16d27631915b4619f743da2e30a0c00bbdb1bbb35ab852ef3b9aec6b0a8dcc6e9e1abaa3ad62ac0a6c5de765de2c3711b769e3fde44a74016fff82ac46fa8f1797d3b2a726b696e3dea5530439acee3a45c2a51bc32dd055650b"},
+     "expected": {"t":"bytes","v":"37fbb48174496057ae36cfd2323f11aaea4aea2072e7692e23b435cefb9681c36d656b5ded64f44837661dc053de3454"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SHA-3 KAT Len=1024 - 128 bytes, an exact multiple of the block size",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"2b6db7ced8665ebe9deb080295218426bdaa7c6da9add2088932cdffbaa1c14129bccdd70f369efb149285858d2b1d155d14de2fdb680a8b027284055182a0cae275234cc9c92863c1b4ab66f304cf0621cd54565f5bff461d3b461bd40df28198e3732501b4860eadd503d26d6e69338f4e0456e9e9baf3d827ae685fb1d817"},
+     "expected": {"t":"bytes","v":"fef557b18a29160fd3bc78cc0cc66c5613b0f2d463c231bc23a03bdb15674197a293104d7a86544f8216d8066b84d8b5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "JH-512",
+   "vectors": [
+    {
+     "text": "NIST SHA-3 KAT Len=0 - empty message, one combined padding block",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"90ecf2f76f9d2c8017d979ad5ab96b87d58fc8fc4b83060f3f900774faa2c8fabe69c5f4ff1ec2b61d6b316941cedee117fb04b1f4c5bc1b919ae841c50eec4f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SHA-3 KAT Len=8 - one byte",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"cc"},
+     "expected": {"t":"bytes","v":"277c93806945992a7f10102f28471af2783fe32003b3f63320810e74f1bc233bf8669ab4b922db9ef13fcdcd4d31193b731eedde98fc87c129c04a4a1071f66f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SHA-3 KAT Len=504 - 63 bytes, one under the block size",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"f57c64006d9ea761892e145c99df1b24640883da79d9ed5262859dcda8c3c32e05b03d984f1ab4a230242ab6b78d368dc5aaa1e6d3498d53371e84b0c1d4ba"},
+     "expected": {"t":"bytes","v":"197514abfb2c85c94566b72beeb9b95f6a4fb2d19306579f1e64241c4751b3df09a04dc77d7cb19d38baba36d23d73438a7c92bcbace65fad3586f9b7621205a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SHA-3 KAT Len=512 - 64 bytes, exactly the block size",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"e926ae8b0af6e53176dbffcc2a6b88c6bd765f939d3d178a9bde9ef3aa131c61e31c1e42cdfaf4b4dcde579a37e150efbef5555b4c1cb40439d835a724e2fae7"},
+     "expected": {"t":"bytes","v":"d1dbacb16c6a88bea992cd34f92d1375f05215037cf989e155d324d6d1e4204320cf18c1ad6bf11019cdd112bac3c7cb73e41a94254b8c5af3db8245318ffc70"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SHA-3 KAT Len=520 - 65 bytes, one over the block size",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"16e8b3d8f988e9bb04de9c96f2627811c973ce4a5296b4772ca3eefeb80a652bdf21f50df79f32db23f9f73d393b2d57d9a0297f7a2f2e79cfda39fa393df1ac00"},
+     "expected": {"t":"bytes","v":"726a9b558ee790de5f0f9b7f6a06c163c1f2352f2a5a61e4316e5a17174be886d9b0d0e194cc05eca1708e4e1f42749ac279ccf42d97a86b917141357bce8db3"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SHA-3 KAT Len=1016 - 127 bytes, one under two blocks",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"a62fc595b4096e6336e53fcdfc8d1cc175d71dac9d750a6133d23199eaac288207944cea6b16d27631915b4619f743da2e30a0c00bbdb1bbb35ab852ef3b9aec6b0a8dcc6e9e1abaa3ad62ac0a6c5de765de2c3711b769e3fde44a74016fff82ac46fa8f1797d3b2a726b696e3dea5530439acee3a45c2a51bc32dd055650b"},
+     "expected": {"t":"bytes","v":"72c91078e9237b996f7ddc0936a4e69ba28c37fff2d11061601cf04915ff5dec31e530a3aefa09141fc9061b3baf2fb2ee7a841d5350b16dbe63ed50897fa2f7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SHA-3 KAT Len=1024 - 128 bytes, an exact multiple of the block size",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"2b6db7ced8665ebe9deb080295218426bdaa7c6da9add2088932cdffbaa1c14129bccdd70f369efb149285858d2b1d155d14de2fdb680a8b027284055182a0cae275234cc9c92863c1b4ab66f304cf0621cd54565f5bff461d3b461bd40df28198e3732501b4860eadd503d26d6e69338f4e0456e9e9baf3d827ae685fb1d817"},
+     "expected": {"t":"bytes","v":"9ec6669f30f482a65d93fe7811923b6bdf3a1bde032502e0b1a064c9d893c03507576fc4fbc745d458c1402ba76f7d4c4539c4dfed7c058596fa270416865162"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

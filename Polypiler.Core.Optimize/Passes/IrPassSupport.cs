@@ -152,7 +152,7 @@ internal static class IrPassSupport {
   }
 
   /// <summary>A value as the interpreter gives it back across its boundary, as a constant of its type.</summary>
-  private static IrConst Constant(IrType type, object value) => new(type, value switch {
+  internal static IrConst Constant(IrType type, object value) => new(type, value switch {
     bool truth => truth ? 1 : 0,
     ulong word => unchecked((long)word),
     _ => Convert.ToInt64(value, System.Globalization.CultureInfo.InvariantCulture)

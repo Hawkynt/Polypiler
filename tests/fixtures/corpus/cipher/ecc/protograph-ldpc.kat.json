@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/protograph-ldpc.js",
+ "algorithms": [
+  {
+   "name": "Protograph LDPC Code",
+   "vectors": [
+    {
+     "text": "Protograph LDPC all-zero codeword (N=4)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Protograph LDPC round-trip test 1",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0100010001000100"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"01000100010001000001000100010001"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Protograph LDPC round-trip test 2",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001000100010001"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"00010001000100010100010001000100"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Protograph LDPC round-trip test 3",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0101000001010000"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"01010000010100000100000101000001"},
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

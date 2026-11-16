@@ -1,0 +1,63 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/kerdock-code.js",
+ "algorithms": [
+  {
+   "name": "Kerdock Code",
+   "vectors": [
+    {
+     "text": "Kerdock [16,6] all zeros",
+     "inverse": false,
+     "steps": [
+      {"set":"m","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"000000000000"},
+     "expected": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Kerdock [16,6] pattern 100000",
+     "inverse": false,
+     "steps": [
+      {"set":"m","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"010000000000"},
+     "expected": {"t":"bytes","v":"00010001000100010001000100010001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Kerdock [16,6] pattern 010000",
+     "inverse": false,
+     "steps": [
+      {"set":"m","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"000100000000"},
+     "expected": {"t":"bytes","v":"00000101000001010000010100000101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Kerdock [16,6] pattern 001000",
+     "inverse": false,
+     "steps": [
+      {"set":"m","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"000001000000"},
+     "expected": {"t":"bytes","v":"00000000010101010000000001010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

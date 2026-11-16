@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/even-weight-code.js",
+ "algorithms": [
+  {
+   "name": "Even Weight Code",
+   "vectors": [
+    {
+     "text": "Even Weight (6,5) all zeros",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0000000000"},
+     "expected": {"t":"bytes","v":"000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Even Weight (6,5) pattern 10000",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0100000000"},
+     "expected": {"t":"bytes","v":"010000000001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Even Weight (6,5) pattern 11000",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0101000000"},
+     "expected": {"t":"bytes","v":"010100000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Even Weight (6,5) pattern 10101",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0100010001"},
+     "expected": {"t":"bytes","v":"010001000101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,53 @@
+{
+ "schema": 1,
+ "file": "algorithms/modes/eee.js",
+ "algorithms": [
+  {
+   "name": "EEE",
+   "vectors": [
+    {
+     "text": "EEE round-trip test - 3-key mode with DES (8-byte block)",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"DESInstance"}]},
+      {"set":"key","value":{"t":"bytes","v":"0123456789abcdef23456789abcdef01456789abcdef0123"}}
+     ],
+     "input": {"t":"bytes","v":"0123456789abcdef"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"738677a86d39d279"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "EEE round-trip test - 3-key mode with DES (16-byte input)",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"DESInstance"}]},
+      {"set":"key","value":{"t":"bytes","v":"0123456789abcdef23456789abcdef01456789abcdef0123"}}
+     ],
+     "input": {"t":"bytes","v":"54686520717569636b2062726f776e20"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"3dc010d3dc19faa7c3f4683ad32c6b5b"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "EEE round-trip test - 3-key mode with DES (alternate keys)",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"DESInstance"}]},
+      {"set":"key","value":{"t":"bytes","v":"abcdef0123456789bcdef01234567890cdef012345678901"}}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393172a"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"77ddc58a496c3de9750e5ada11b18ec2"},
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

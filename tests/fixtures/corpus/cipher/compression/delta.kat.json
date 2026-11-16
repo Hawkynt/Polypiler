@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/delta.js",
+ "algorithms": [
+  {
+   "name": "Delta + RLE",
+   "vectors": [
+    {
+     "text": "Empty data test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"41"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Incrementing sequence - ideal for delta compression",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0a0c0e10"},
+     "expected": {"t":"bytes","v":"0aff0302"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

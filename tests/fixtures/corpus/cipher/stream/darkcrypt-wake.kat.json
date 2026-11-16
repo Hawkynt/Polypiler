@@ -1,0 +1,37 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/darkcrypt-wake.js",
+ "algorithms": [
+  {
+   "name": "WAKE (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "DarkCrypt Wake — keystream from incrementing key, zero input",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"0c0d0e0fadce43a5bd2e485c632d8608d6695564b103608d49b8c481e7a9d85966147da4967a7d9b18978fbf3935674798116f610e7f0bd118355b7a0167a3b1737e20e2aeaffc47f2f082e4396e023e119c52e454e50e9dc9e311f0c91a88bb07efb68dc574f32ad06b7c3ec545539b3e9fd0da3015901b8c5102d72dd203ae"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Wake — incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"0c0c0c0c9995d326fda1a6bbe95a897635a9235a80fcce412c604bee1f002bb397b0726ba90e21f0d735c8b9eae292d16e917dee685ce2d93d1d11c50e8f5683"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

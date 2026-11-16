@@ -1,0 +1,191 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/fletcher.js",
+ "algorithms": [
+  {
+   "name": "Fletcher-8",
+   "vectors": [
+    {
+     "text": "Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 'a'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"77"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String 'abc'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"19"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Fletcher-16",
+   "vectors": [
+    {
+     "text": "Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"0000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 'a'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"6161"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String 'abcde'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6162636465"},
+     "expected": {"t":"bytes","v":"c8f0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Fletcher-32",
+   "vectors": [
+    {
+     "text": "Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 'a'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61"},
+     "expected": {"t":"bytes","v":"00610061"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String 'abcde' - published test vector, odd length so the last word is zero-padded",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6162636465"},
+     "expected": {"t":"bytes","v":"f04fc729"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String 'abcdef' - published test vector, exact multiple of the 16-bit word",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263646566"},
+     "expected": {"t":"bytes","v":"56502d2a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String 'abcdefgh' - published test vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6162636465666768"},
+     "expected": {"t":"bytes","v":"ebe19591"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Fletcher-64",
+   "vectors": [
+    {
+     "text": "Empty string",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"0000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String 'abcde' - published test vector, last 32-bit word zero-padded",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6162636465"},
+     "expected": {"t":"bytes","v":"c8c6c527646362c6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String 'abcdef' - published test vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263646566"},
+     "expected": {"t":"bytes","v":"c8c72b276463c8c6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "String 'abcdefgh' - published test vector, exact multiple of the 32-bit word",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6162636465666768"},
+     "expected": {"t":"bytes","v":"312e2b28cccac8c6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

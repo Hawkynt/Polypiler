@@ -2,6 +2,8 @@
 
 <!-- status: planned -->
 > **Status: planned.** Not implemented yet — tracked in [#508](https://github.com/Hawkynt/Polypiler/issues/508). Once implemented it is switched off with `--disable-opt O0012`.
+>
+> The effect summaries of the functions (`IrEffects`, [#1361](https://github.com/Hawkynt/Polypiler/issues/1361)) are ready for it: a call of a pure function that cannot trap and ends may be hoisted like arithmetic, and one of a read-only function where nothing in the loop writes what it reads (`WritesWhatIsRead`). [O0464](O0464-call-merging.md) already merges such calls within one expression.
 
 ## What it does
 

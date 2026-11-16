@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/classical/polybius.js",
+ "algorithms": [
+  {
+   "name": "Polybius Square",
+   "vectors": [
+    {
+     "text": "Plain A-Z square, row then column, both 1-indexed. The Wikipedia article works a different message, so it carries no value for this input",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":"48454c4c4f"},
+     "expected": {"t":"bytes","v":"3233203135203331203331203334"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Ancient Greek example",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":"504f4c5942495553"},
+     "expected": {"t":"bytes","v":"3335203334203331203534203132203234203435203433"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "I/J equivalence test (J->I conversion)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":"49555354494345"},
+     "expected": {"t":"bytes","v":"3234203435203433203434203234203133203135"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

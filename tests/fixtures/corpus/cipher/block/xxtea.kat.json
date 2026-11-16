@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/xxtea.js",
+ "algorithms": [
+  {
+   "name": "XXTEA",
+   "vectors": [
+    {
+     "text": "XXTEA 8-byte block - all zeros",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"ab043705808c5d57"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "XXTEA 8-byte block - mixed key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0102040810204080fffefcf8f0e0c080"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"d1e78be2c746728a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "XXTEA 8-byte block - all ones plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"9e3779b99b9773e9b979379e6b695156"}}
+     ],
+     "input": {"t":"bytes","v":"ffffffffffffffff"},
+     "expected": {"t":"bytes","v":"67ed0ea8e8973fc5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

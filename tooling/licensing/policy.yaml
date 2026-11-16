@@ -64,6 +64,10 @@ overrides:
     licence: MIT
     reason: helper code emitted into generated outputs, released under MIT (LICENSE-OUTPUT.md)
     reviewer: Hawkynt
+  - glob: Polypiler.Core.Backends.Python/Helpers/**
+    licence: MIT
+    reason: helper code emitted into generated outputs, released under MIT (LICENSE-OUTPUT.md)
+    reviewer: Hawkynt
   - glob: Polypiler.Core.IR/Float/Operations/**
     licence: MIT
     reason: portable floating-point implementations emitted into generated outputs, released under MIT (LICENSE-OUTPUT.md)

@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/ace-archiver.js",
+ "algorithms": [
+  {
+   "name": "ACE (WinAce)",
+   "vectors": [
+    {
+     "text": "Empty input - length header only",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 'A' - one literal plus end-of-block",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"0100000080090080000000000000b30da5fe00202000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repeated byte run - one literal then a single long match",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61616161616161616161616161616161"},
+     "expected": {"t":"bytes","v":"1000000081090010000000000000b60a13fe4080008080043000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Periodic text - three literals then a match carrying extra length bits",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6162636162636162636162636162636162636162"},
+     "expected": {"t":"bytes","v":"1400000080090011000000000000b70ae0cf0cf000066e0000480009"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,81 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/splitmix64.js",
+ "algorithms": [
+  {
+   "name": "SplitMix64",
+   "vectors": [
+    {
+     "text": "Seed 0: First 8 outputs (verified against reference C implementation)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":64}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"e220a8397b1dcdaf6e789e6aa1b965f406c45d188009454ff88bb8a8724c81ec1b39896a51a8749b53cb9f0c747ea2ea2c829abe1f4532e1c584133ac916ab3c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 1: First 5 outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"910a2dec89025cc1beeb8da1658eec67f893a2eefb32555e71c18690ee42c90b71bb54d8d101b5b9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 42: First 5 outputs (commonly used test seed)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"000000000000002a"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"bdd732262feb6e9528efe333b266f10347526757130f9f52581ce1ff0e4ae39409bc585a244823f2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 1234567: First 5 outputs (Rosetta Code test vector)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"000000000012d687"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"599ed017fb08fc852c73f08458540fa5883ebce5a3f27c773fbef740e9177b3fe3b8346708cb5ecd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 987654321: First 5 outputs (Rosetta Code test vector)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"000000003ade68b1"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"b0de530201a9d17ce0b60b3994b35aa2e048f39adc9ee4a0867287110e89eb48bfb28d8c1560f051"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

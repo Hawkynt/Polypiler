@@ -1,0 +1,43 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/raptor-codes.js",
+ "algorithms": [
+  {
+   "name": "Raptor",
+   "vectors": [
+    {
+     "text": "Raptor encoding test with 8 source symbols",
+     "inverse": false,
+     "steps": [
+      {"set":"k","value":{"t":"number","v":8}},
+      {"set":"preCodeRate","value":{"t":"number","v":0.95}},
+      {"set":"targetOverhead","value":{"t":"number","v":0.05}},
+      {"set":"seed","value":{"t":"number","v":42}}
+     ],
+     "input": {"t":"bytes","v":"48656c6c6f20576f"},
+     "expected": {"t":"bytes","v":"48656c6c6f20576f03"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Raptor encoding test with 64 source symbols",
+     "inverse": false,
+     "steps": [
+      {"set":"k","value":{"t":"number","v":64}},
+      {"set":"preCodeRate","value":{"t":"number","v":0.9}},
+      {"set":"targetOverhead","value":{"t":"number","v":0.1}},
+      {"set":"seed","value":{"t":"number","v":314159}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f333e1e191e110701"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

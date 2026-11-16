@@ -8,7 +8,8 @@ namespace Polypiler.Core.Optimize.Passes;
 
 /// <summary>
 /// O0006, inlining (prototype): a call of a function legalization copied in from the libraries - a
-/// helper or a portable floating-point implementation - becomes the body of the function where the
+/// helper or a portable floating-point implementation - or of one specialisation (O0463) made - a
+/// lifted lambda or a copy bound to function values - becomes the body of the function where the
 /// body is no larger than <see cref="Small"/>, or no larger than <see cref="Budget"/> where the call
 /// has a constant argument to specialise the copy with or is the only call of the function in the
 /// module - a larger body copied to many places costs more than the call -, never calls itself, directly or through others, and
@@ -42,11 +43,12 @@ public sealed class O0006Inlining : IIrPass {
     ArgumentNullException.ThrowIfNull(scope);
     ArgumentNullException.ThrowIfNull(applied);
     var library = module.Implementations.ToDictionary(pair => pair.Function, pair => pair.Implementation, StringComparer.Ordinal);
-    if (library.Count == 0)
+    var made = Made(module);
+    if (library.Count == 0 && made.Count == 0)
       return module;
 
     var byName = module.Functions.ToDictionary(function => function.Name, StringComparer.Ordinal);
-    var candidates = library.Keys
+    var candidates = library.Keys.Concat(made)
       .Where(name => byName.TryGetValue(name, out var function) && Inlinable(function, byName))
       .ToDictionary(name => name, name => byName[name], StringComparer.Ordinal);
     if (candidates.Count == 0)
@@ -68,7 +70,7 @@ public sealed class O0006Inlining : IIrPass {
         return function;
 
       changed = true;
-      inlined.AddRange(run.Inlined.Select(name => library[name]));
+      inlined.AddRange(run.Inlined.Where(library.ContainsKey).Select(name => library[name]));
       return result;
     }).ToList();
     if (!changed)
@@ -77,9 +79,14 @@ public sealed class O0006Inlining : IIrPass {
     return module with { Functions = functions, Inlined = [.. module.Inlined.Concat(inlined).Distinct(StringComparer.Ordinal)] };
   }
 
+  /// <summary>The functions specialisation (O0463) made of the program's own code: the lifted lambdas and the copies bound to them.</summary>
+  internal static HashSet<string> Made(IrModule module)
+    => new(module.Clones.Select(clone => clone.Function).Concat(module.ScopeFunctions.Where(function => function.IsLifted).Select(function => function.Name)), StringComparer.Ordinal);
+
   /// <summary>Whether a function may be inlined: within the budget, no lambda, no call of itself through any chain of calls, and a single way out.</summary>
   private static bool Inlinable(IrFunction function, Dictionary<string, IrFunction> functions)
-    => IrPassSupport.Size(function.Body) <= Budget
+    // An async function is awaited where it is called: its body is no expression of the caller's (#1330).
+    => !function.IsAsync && IrPassSupport.Size(function.Body) <= Budget
       && !IrPassSupport.Nodes(function.Body).Any(node => node is IrLambda)
       && !Reaches(function.Name, function, functions)
       && Exit(function.Body.Statements, function.ReturnType == IrType.Void ? null : new IrLocal("$result", function.ReturnType)) is not null;

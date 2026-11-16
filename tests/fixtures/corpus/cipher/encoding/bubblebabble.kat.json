@@ -1,0 +1,77 @@
+{
+ "schema": 1,
+ "file": "algorithms/encoding/bubblebabble.js",
+ "algorithms": [
+  {
+   "name": "BubbleBabble Encoding",
+   "vectors": [
+    {
+     "text": "BubbleBabble empty data test (spec section 5)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"7865786178"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "BubbleBabble '1234567890' test (spec section 5)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"31323334353637383930"},
+     "expected": {"t":"bytes","v":"78657365662d6469736f662d67797475662d6b61746f662d6d6f7669662d6261787578"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "BubbleBabble 'Pineapple' test (spec section 5)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"50696e656170706c65"},
+     "expected": {"t":"bytes","v":"786967616b2d6e7972796b2d68756d696c2d626f73656b2d736f6e6178"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte encoding test - BubbleBabble",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"7869626578"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Even-length two-byte test with 0x00/0xFF - exercises the even-K capstone-tuple path",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00ff"},
+     "expected": {"t":"bytes","v":"786562617a2d7a69786578"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "All 256 byte values regression test (128 full tuples) - exercises the checksum chain and every consonant/vowel index",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff"},
+     "expected": {"t":"bytes","v":"78656261622d6361626f622d66796365622d68756375622d6c6f646f622d6e696461622d72656679622d74616669622d7a796761632d6375676f632d666f6869632d68696879632d6c656b75632d6e616b65632d72796c79632d74756c69632d7a6f6d65642d63696d75642d66656e6f642d68616e61642d6c797075642d6e757065642d726f7261642d7469726f642d7a657369662d63617379662d6679746f662d68757461662d6c6f7679662d6e697669662d72657a65662d74617a75662d7a616269672d63796279672d66756375672d686f6365672d6c696461672d6e65646f672d72616665672d74796675672d7a75676f682d636f6761682d66696879682d68656869682d6c616b61682d6e796b6f682d72756c69682d746f6c79682d7a696d756b2d63656d656b2d66616e796b2d68796e696b2d6c7570656b2d6e6f70756b2d7269726f6b2d746572616b2d7a6173756c2d637973656c2d667574616c2d686f746f6c2d6c6976696c2d6e6576796c2d72617a6f6c2d74797a616c2d7a7962796d2d637562696d2d666f63656d2d686963756d2d6c6564696d2d6e6164796d2d727966756d2d747566656d2d7a6f67616e2d6369676f6e2d666568656e2d686168756e2d6c796b6f6e2d6e756b616e2d726f6c796e2d74696c696e2d7a656d61702d63616d6f702d66796e69702d68756e79702d6c6f7075702d6e697065702d72657279702d74617269702d7a797365722d63757375722d666f746f722d68697461722d6c657675722d6e617665722d72797a61722d74757a6f722d7a756269732d636f6279732d6669636f732d68656361732d6c616479732d6e796469732d72756665732d746f6675732d7a696769742d63656779742d66616875742d68796865742d6c756b61742d6e6f6b6f742d72696c65742d74656c75742d7a616d6f762d63796d61762d66756e79762d686f6e69762d6c697061762d6e65706f762d72617269762d74797279762d7a7573757a2d636f73657a2d666974797a2d686574697a2d6c6176657a2d6e7976757a2d72757a6f7a2d746f7a617a2d7a79787578"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "file": "algorithms/crypto/kalynawrap.js",
+ "algorithms": [
+  {
+   "name": "Kalyna Key Wrap",
+   "vectors": [
+    {
+     "text": "DSTU 7624 KW Test 1 (128-bit block)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"blockSize","value":{"t":"number","v":128}}
+     ],
+     "input": {"t":"bytes","v":"101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"1dc91dc6e52575f6dbed25adda95a1b6ad3e15056e489738972c199fb9ee2913"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DSTU 7624 KW Test 2 (128-bit block, 48 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"blockSize","value":{"t":"number","v":128}}
+     ],
+     "input": {"t":"bytes","v":"101112131415161718191a1b1c1d1e1f20219000000000000000800000000000"},
+     "expected": {"t":"bytes","v":"0ea983d6ce48484d51462c32cc61672210fcc44196abe635baf878fdb83e1a63114128585d49db355c5819fd38039169"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DSTU 7624 KW Test 3 (128-bit block, 256-bit key)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"set":"blockSize","value":{"t":"number","v":128}}
+     ],
+     "input": {"t":"bytes","v":"202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f"},
+     "expected": {"t":"bytes","v":"2d09a7c18e6a5a0816331ec27cea596903f77ec8d63f3bdb73299de7fd9f4558e05992b0b24b39e02ea496368e0841cc1e3fa44556a3048c5a6e9e335717d17d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DSTU 7624 KW Round-trip test (256-bit block)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}},
+      {"set":"blockSize","value":{"t":"number","v":256}}
+     ],
+     "input": {"t":"bytes","v":"202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"daa3a49c9b0abd0375b59ba3a4db7e8f96bbf7533c85d52c40fdc3dfbbd23bdf0c75e83a138cc9be7e87e4e6424994e5556d4834678f2ea4053f28a15ba3811defca54717b600a0879bae7517266a401648fe758fc661c786a9e822738d8ca9aa7f58113d3a060242d48fd3f8f772e222d592de9a9ce63ee9bab0a32328ce596"},
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

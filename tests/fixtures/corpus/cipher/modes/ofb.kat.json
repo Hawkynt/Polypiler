@@ -1,0 +1,41 @@
+{
+ "schema": 1,
+ "file": "algorithms/modes/ofb.js",
+ "algorithms": [
+  {
+   "name": "OFB",
+   "vectors": [
+    {
+     "text": "NIST SP 800-38A OFB test vector",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}]}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393172a"},
+     "expected": {"t":"bytes","v":"3b3fd92eb72dad20333449f8e83cfb4a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST SP 800-38A OFB multi-block",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}]}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710"},
+     "expected": {"t":"bytes","v":"3b3fd92eb72dad20333449f8e83cfb4a7789508d16918f03f53c52dac54ed8259740051e9c5fecf64344f7a82260edcc304c6528f659c77866a510d9c1d6ae5e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

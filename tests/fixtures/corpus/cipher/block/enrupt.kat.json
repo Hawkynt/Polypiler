@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/enrupt.js",
+ "algorithms": [
+  {
+   "name": "EnRUPT",
+   "vectors": [
+    {
+     "text": "EnRUPT 8-byte block - all zeros (matches XXTEA for minimal block)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"ab043705808c5d57"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "EnRUPT 16-byte block - demonstrates different round count",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0102040810204080fffefcf8f0e0c080"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"38b678919f2828418fe77d7d40c4c2ed"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "EnRUPT 8-byte block - mixed key for verification",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0102040810204080fffefcf8f0e0c080"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"a20a9e9c22f12184"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

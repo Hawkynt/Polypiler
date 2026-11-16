@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/zopfli.js",
+ "algorithms": [
+  {
+   "name": "Zopfli",
+   "vectors": [
+    {
+     "text": "Zopfli RFC 1951 round-trip - hello",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"68656c6c6f"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"cb48cdc9c90700"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Zopfli RFC 1951 round-trip - AAAA",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41414141"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"73040200"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Zopfli RFC 1951 round-trip - ABCABCABC",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414243414243414243"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"737472862000"},
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

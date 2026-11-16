@@ -1,0 +1,168 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/tuplehash.js",
+ "algorithms": [
+  {
+   "name": "TupleHash128",
+   "vectors": [
+    {
+     "text": "TupleHash128: (000102, 101112131415), empty S, 32 bytes (NIST)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"customization","value":{"t":"bytes","v":""}},
+      {"set":"tuples","value":{"t":"array","v":[{"t":"bytes","v":"000102"},{"t":"bytes","v":"101112131415"}]}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"c5d8786c1afb9b82111ab34b65b2c0048fa64e6d48e263264ce1707d3ffc8ed1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TupleHash128: (000102, 101112131415), S='My Tuple App', 32 bytes (NIST)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"customization","value":{"t":"bytes","v":"4d79205475706c6520417070"}},
+      {"set":"tuples","value":{"t":"array","v":[{"t":"bytes","v":"000102"},{"t":"bytes","v":"101112131415"}]}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"75cdb20ff4db1154e841d758e24160c54bae86eb8c13e7f5f40eb35588e96dfb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TupleHash128: (000102, 101112131415, 202122232425262728), S='My Tuple App', 32 bytes (NIST)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"customization","value":{"t":"bytes","v":"4d79205475706c6520417070"}},
+      {"set":"tuples","value":{"t":"array","v":[{"t":"bytes","v":"000102"},{"t":"bytes","v":"101112131415"},{"t":"bytes","v":"202122232425262728"}]}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"e60f202c89a2631eda8d4c588ca5fd07f39e5151998deccf973adb3804bb6e84"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TupleHash128: NIST ACVP tg2/tc179 - empty element at position 3 of 7",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":37}},
+      {"set":"customization","value":{"t":"bytes","v":"4a774c6a"}},
+      {"set":"tuples","value":{"t":"array","v":[{"t":"bytes","v":"cc25d160f2"},{"t":"bytes","v":"370c1c66d507d6e314e98526c74d5271a014ecf395"},{"t":"bytes","v":""},{"t":"bytes","v":"37a8df27cec8d92a895eb7d2533d47c2c076d842c31fcc"},{"t":"bytes","v":"acdcdb"},{"t":"bytes","v":"c7d228d4c89419b4f91dea6f9e"},{"t":"bytes","v":"92fb"}]}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"51ab471ee4b86fda531a588a61aa832a9d0b4e8e7e982852e4defc7862ae8af6ff01fc3a18"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TupleHash128: NIST ACVP tg1/tc48 - XOF mode, leading empty element",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":49}},
+      {"set":"xofMode","value":{"t":"bool","v":true}},
+      {"set":"customization","value":{"t":"bytes","v":"636a5e4a5246372a73556c5a662020286b6676274a4b39287b35793b6e5b7744695329256b73702d68647d357d405021434c36"}},
+      {"set":"tuples","value":{"t":"array","v":[{"t":"bytes","v":""},{"t":"bytes","v":"ec03dc6f8cd75c68f1d013e48e7f8a84713054009501cccbc430340c7d3a3b6e30bb3ab1753f3eb5bbac320644092aae6b37203b111da326b451aeca8d181424d758edb92ef5bb926b651e3828811d73fac124925e13c71e7468a631d1a91bdae55a87617c256f90ca7f4ed83b178f5b838073a8f2fa7f5fb96ade9e868611ba"}]}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"c0b00600a2148e4f8b2ed37a50381dacf7d8317901dc608d431ea3d50cc0d5a449893f7efcc9df9ee8d7fe249e99862ce7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "TupleHash256",
+   "vectors": [
+    {
+     "text": "TupleHash256: (000102, 101112131415), empty S, 64 bytes (NIST)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":64}},
+      {"set":"customization","value":{"t":"bytes","v":""}},
+      {"set":"tuples","value":{"t":"array","v":[{"t":"bytes","v":"000102"},{"t":"bytes","v":"101112131415"}]}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"cfb7058caca5e668f81a12a20a2195ce97a925f1dba3e7449a56f82201ec607311ac2696b1ab5ea2352df1423bde7bd4bb78c9aed1a853c78672f9eb23bbe194"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TupleHash256: (000102, 101112131415), S='My Tuple App', 64 bytes (NIST)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":64}},
+      {"set":"customization","value":{"t":"bytes","v":"4d79205475706c6520417070"}},
+      {"set":"tuples","value":{"t":"array","v":[{"t":"bytes","v":"000102"},{"t":"bytes","v":"101112131415"}]}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"147c2191d5ed7efd98dbd96d7ab5a11692576f5fe2a5065f3e33de6bba9f3aa1c4e9a068a289c61c95aab30aee1e410b0b607de3620e24a4e3bf9852a1d4367e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TupleHash256: (000102, 101112131415, 202122232425262728), S='My Tuple App', 64 bytes (NIST)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":64}},
+      {"set":"customization","value":{"t":"bytes","v":"4d79205475706c6520417070"}},
+      {"set":"tuples","value":{"t":"array","v":[{"t":"bytes","v":"000102"},{"t":"bytes","v":"101112131415"},{"t":"bytes","v":"202122232425262728"}]}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"45000be63f9b6bfd89f54717670f69a9bc763591a4f05c50d68891a744bcc6e7d6d5b5e82c018da999ed35b0bb49c9678e526abd8e85c13ed254021db9e790ce"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TupleHash256: NIST ACVP tg2/tc120 - leading empty element, empty S",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":38}},
+      {"set":"customization","value":{"t":"bytes","v":""}},
+      {"set":"tuples","value":{"t":"array","v":[{"t":"bytes","v":""},{"t":"bytes","v":"aeba5da424057417633d62e58cf8194f444b1349f4c1a031067f243b4e5f269a7262635be94fbe88701a284a693cd99599ea46a591b738111647f3e28ee4318b87cc22658eb3398bf0a5002dd2b679fa61b32080eaad6695c8f10e22daae2d7047fb00e3363b48ba6a3152f84c0003246ace91bb55798787af59a0d76da4bc43"}]}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"6eb8e712b3cdafdfce02d786a0eec4305cab4f2aa10611743fef8b5192822fdd4d74468873d4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TupleHash256: NIST ACVP tg1/tc82 - XOF mode, leading empty element",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"xofMode","value":{"t":"bool","v":true}},
+      {"set":"customization","value":{"t":"bytes","v":"2857675f733f30636144776b6b2e6e43735876616269662d5b757d486460322b3257575b2f29794c7529796c5a7c33775577693e705d793e715a237d41677e21326c59345532346a5f49"}},
+      {"set":"tuples","value":{"t":"array","v":[{"t":"bytes","v":""},{"t":"bytes","v":"c391c9868b8c6de496bcdc49ea37bce42196cbd5211847ac1a7b065ef2fb9332ad3feab54789746dbc98859f4a5e43d6817c54288fdc68ae47111000f9297c1c5c27a72e0e3e6176be5bb18ac68ebe2a7b00886e17ef5a556ef8f3a8ff33c86d224b2d0988bfd70aeb6c17e932d6a73aba1033c2979f67893030eee5484ce3d6"}]}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0cded52b4886a6eeb886e57e1fa4b055060f33bc5a68d3fd45f06692a52073bb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

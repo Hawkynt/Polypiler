@@ -1,0 +1,146 @@
+{
+ "schema": 1,
+ "file": "algorithms/aead/tiaoxin.js",
+ "algorithms": [
+  {
+   "name": "Tiaoxin-346",
+   "vectors": [
+    {
+     "text": "GMU CAESAR-HW KAT Msg 1 (empty message, empty associated data)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"55565758595a5b5c5d5e5f6061626364"}},
+      {"set":"nonce","value":{"t":"bytes","v":"b0b1b2b3b4b5b6b7b8b9babbbcbdbebf"}},
+      {"set":"associatedData","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"545b6287d143acbf33daaa2d5ccb873e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "GMU CAESAR-HW KAT Msg 3 (empty message, 1-byte associated data)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"55565758595a5b5c5d5e5f6061626364"}},
+      {"set":"nonce","value":{"t":"bytes","v":"b0b1b2b3b4b5b6b7b8b9babbbcbdbebf"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"a0"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"4bc1849c85e902f65224933cd6125fc1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "GMU CAESAR-HW KAT Msg 5 (1-byte message, empty associated data)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"55565758595a5b5c5d5e5f6061626364"}},
+      {"set":"nonce","value":{"t":"bytes","v":"b0b1b2b3b4b5b6b7b8b9babbbcbdbebf"}},
+      {"set":"associatedData","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":"ff"},
+     "expected": {"t":"bytes","v":"d7b9f3b2a47b6742c58c5f5f26ef7cd03f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "GMU CAESAR-HW KAT Msg 7 (1-byte message, 1-byte associated data)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"55565758595a5b5c5d5e5f6061626364"}},
+      {"set":"nonce","value":{"t":"bytes","v":"b0b1b2b3b4b5b6b7b8b9babbbcbdbebf"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"a0"}}
+     ],
+     "input": {"t":"bytes","v":"ff"},
+     "expected": {"t":"bytes","v":"6d8a5dc084aaedaaa02a9e1ac1b01358f0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "GMU CAESAR-HW KAT Msg 9 (32-byte message and associated data, one full block each)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"55565758595a5b5c5d5e5f6061626364"}},
+      {"set":"nonce","value":{"t":"bytes","v":"b0b1b2b3b4b5b6b7b8b9babbbcbdbebf"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"a0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebf"}}
+     ],
+     "input": {"t":"bytes","v":"ff000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e"},
+     "expected": {"t":"bytes","v":"0c5b778e763aca8126ff3d98b7ccb94f7769171a48987fb3fb99b92078dbbef6a210f4c82b0447ef3658af76ab95cbe4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "GMU CAESAR-HW KAT Msg 11 (31-byte message and associated data, short final block)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"55565758595a5b5c5d5e5f6061626364"}},
+      {"set":"nonce","value":{"t":"bytes","v":"b0b1b2b3b4b5b6b7b8b9babbbcbdbebf"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"a0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbe"}}
+     ],
+     "input": {"t":"bytes","v":"ff000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d"},
+     "expected": {"t":"bytes","v":"386f2be6763aca8126ff3d98b7ccb94f7769171a48987fb3fb99b92078dbbef167fc2f34eff54580c613a9bc4c713a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "GMU CAESAR-HW KAT Msg 13 (33-byte message and associated data, one byte into a second block)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"55565758595a5b5c5d5e5f6061626364"}},
+      {"set":"nonce","value":{"t":"bytes","v":"b0b1b2b3b4b5b6b7b8b9babbbcbdbebf"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"a0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0"}}
+     ],
+     "input": {"t":"bytes","v":"ff000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"2f585296ff34d59a11d1198c26e7915550ab52448079c91d46cccfe447cbec7b7843737fba1ae66d79a9e3fcc191ffb80b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "GMU CAESAR-HW KAT Msg 21 (128-byte message, 52-byte associated data)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"51fcc64d3726f9f74ab70e62cd59c740"}},
+      {"set":"nonce","value":{"t":"bytes","v":"a2cd65e40ed8fb93daff1dc45a12a945"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"11cf345b2643021b701ceac02bce1ea121325b8798dc017094387b764b82e67cd32a98554289f0bd30f6a6a87edb7ba4b11db2f5"}}
+     ],
+     "input": {"t":"bytes","v":"ce576f8a005cb3367d831209ffc6905e816bf94a589189fb7d0cee78efd815a2b03b0179d0d4bdc6881bda1bc22fa580ad78c25a2404a381d43a1ba2a8d70bbc3f582404fe4082638de999b8f665a538573eacd1856c1d1e598ada322fbd9bdb590baf23223e0ed17d08e62098f78fd9"},
+     "expected": {"t":"bytes","v":"66fc0642a34e76e2a70f4a3d3ea4a52c9a3d97124579a577924f8cc12d1859eb01e035c018b5d8ace80fdd7d061727cbb8addf9c98a10ad5f19398c5eb43393fd31a8bdcc912ab7916187be381191da5da1677209af50e878141b699ab618df3a89b24fb9e9ab8beb33368a88917f30c852a22ddb263859456968b1822ca4996"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "GMU CAESAR-HW KAT Msg 24 (1-byte message, 111-byte associated data)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0a673f78117ba9397650acced8b5907b"}},
+      {"set":"nonce","value":{"t":"bytes","v":"cb7977680d4cc7236ecf52f29a987ff1"}},
+      {"set":"associatedData","value":{"t":"bytes","v":"814d6a9274d508db708000a961a391ffeb25d9c65507084bc383cc4b81429d08532769c8c6bf2c84e7c7040679119d8f1dd1257c8604712c51b28b9fe6d3a426f4a938b3e474bc7817b56af98e180432fa835e5f469112220910487262b575729744b11fa2d823ffa2fe0f17e08a95"}}
+     ],
+     "input": {"t":"bytes","v":"9d"},
+     "expected": {"t":"bytes","v":"b57b2e6bd87b95aec1d3d8277c9d69cb06"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

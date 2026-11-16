@@ -1,0 +1,99 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/ppm.js",
+ "algorithms": [
+  {
+   "name": "PPM (Prediction by Partial Matching)",
+   "vectors": [
+    {
+     "text": "Empty input - only the 5-byte header (order 3, zero length)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"0300000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 0x41 - no context exists, so it is coded in the uniform order -1 model",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"03010000004140"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Two identical bytes - the second escapes the order-1 and order-0 contexts, then costs one bit at order -1",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4141"},
+     "expected": {"t":"bytes","v":"03020000004120"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Alternating two-byte pattern - the order-2 contexts turn deterministic almost immediately",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41424142414241424142414241424142"},
+     "expected": {"t":"bytes","v":"031000000041a0a090"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Long repetitive run - 64 copies of 0x61 cost a fraction of a bit each",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161"},
+     "expected": {"t":"bytes","v":"0340000000610040"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "English text with a repeated sentence - the second copy is nearly free",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"74686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e20"},
+     "expected": {"t":"bytes","v":"035a00000074b48df0b3d1cb7eedfab1dd59c3cd5e412caa40daae22b0623d8562a01614b461adf95dcdc03520b7975380000071d0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Pseudo-random binary sample - every byte escapes down to the order -1 model",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"f3ccbfab9d8fe554efb09bd0b0f5ba948035b768414265947a6b83c1414fe53a"},
+     "expected": {"t":"bytes","v":"0320000000f3e6d6c69214c6b021d228a4cca116071313901bfcd274ad71170df0e246cdbae06a18"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "All 256 byte values 0x00..0xFF - every byte is new, so each costs the full order -1 price",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebfc0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1f2f3f4f5f6f7f8f9fafbfcfdfeff"},
+     "expected": {"t":"bytes","v":"030001000000804060504844322518904aa6d42a8582e98ad2703c205169752ad58edc7a4426156c16d3e23946bc6d3fa555ecf7b49ac1a9009c5fbae4568e08c5837e396ae89560bf295b31ebe7f55b9e75ad26cb8d62c530e298b1acb936bcf3a6b6058524deaa8365cf3e30e6df18f4306d6b0927a66d6c9ff76af6984a07cfa179583c251100f367ded7d2cecccccdd0d4dae2edfb0b1f375477a1d4105ab525b05d3647a163a69a779e87d485ddffeff456e6bbf9d8b113e6afcb78c340137df245fff98902ae3b4a64ca3716854b444d368ceec1ee87b48247dbea55ba542abd3d9e08219758cd98082cf1c78d2d6ee4f666d89800"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

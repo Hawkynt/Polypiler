@@ -1,0 +1,99 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/snappy.js",
+ "algorithms": [
+  {
+   "name": "Snappy",
+   "vectors": [
+    {
+     "text": "Empty input - edge case",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 'A' - literal tag 0x00, length 1",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"010041"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Two bytes 'AB' - literal tag, length 2",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4142"},
+     "expected": {"t":"bytes","v":"02044142"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Three bytes 'abc' - literal tag, length 3",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"0308616263"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repeated pattern 'AAAAAAAA' - literal + copy1 encoding",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4141414141414141"},
+     "expected": {"t":"bytes","v":"0800410d01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Pattern 'abcabcabc' - literal + copy1 with offset 3",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263616263616263"},
+     "expected": {"t":"bytes","v":"09086162630903"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Short text 'blah blah blah' - copy1 encoding",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"626c616820626c616820626c6168"},
+     "expected": {"t":"bytes","v":"0e10626c6168201505"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Text sample with real copy matches - 'the quick brown fox...' x4",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"74686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e20"},
+     "expected": {"t":"bytes","v":"b4017874686520717569636b2062726f776e20666f78206a756d7073206f76657220011f206c617a7920646f672e050efe2d00fe2d0008672e20"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

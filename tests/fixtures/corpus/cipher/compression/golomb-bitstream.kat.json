@@ -1,0 +1,66 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/golomb-bitstream.js",
+ "algorithms": [
+  {
+   "name": "Golomb-BitStream",
+   "vectors": [
+    {
+     "text": "Empty input",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Rice coding k=2, input=0",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"020100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Rice coding k=2, sequence 0,1,2",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102"},
+     "expected": {"t":"bytes","v":"020318"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "FLAC residual pattern",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000100020100"},
+     "expected": {"t":"bytes","v":"02070488"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Rice coding k=2, powers of 2",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"04080c10"},
+     "expected": {"t":"bytes","v":"0204cf3f3fc0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

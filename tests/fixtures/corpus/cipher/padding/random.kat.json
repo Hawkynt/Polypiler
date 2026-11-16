@@ -1,0 +1,26 @@
+{
+ "schema": 1,
+ "file": "algorithms/padding/random.js",
+ "algorithms": [
+  {
+   "name": "Random Padding",
+   "vectors": [
+    {
+     "text": "Self-computed regression vector - deterministic (zero-byte) padding example, real random padding output varies",
+     "inverse": false,
+     "steps": [
+      {"set":"isDeterministic","value":{"t":"bool","v":true}},
+      {"set":"blockSize","value":{"t":"number","v":32}},
+      {"set":"originalLength","value":{"t":"number","v":15}}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96e93d7e11739317"},
+     "expected": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393170000000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

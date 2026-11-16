@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/tinymt.js",
+ "algorithms": [
+  {
+   "name": "TinyMT (Tiny Mersenne Twister)",
+   "vectors": [
+    {
+     "text": "TinyMT32 with seed 1 (RFC 8682 test vector, first 10 outputs)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"01000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"25d6b697e1e2863ab10573ddb0f14e8e15550ad6f651b7e33631077e8bdfe582a8b3e6a5edde912d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TinyMT32 with seed 1 (RFC 8682 extended test, outputs 11-20)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"skipBytes","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"01000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"d3235626bbdd9f6c3e838b34be20c2fa681bf5db87a626c1d2be21ae633a85edb0faecf30b96a202"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TinyMT32 with seed 1 (RFC 8682 extended test, outputs 21-30)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"skipBytes","value":{"t":"number","v":80}},
+      {"set":"seed","value":{"t":"bytes","v":"01000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"cf0a6f8223b05ead288b586d71e8fce0b36601b4d67153f2fe51e54965248cf0d4ed60cbd366f320"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

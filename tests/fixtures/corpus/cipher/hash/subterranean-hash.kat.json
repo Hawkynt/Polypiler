@@ -1,0 +1,77 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/subterranean-hash.js",
+ "algorithms": [
+  {
+   "name": "Subterranean-Hash",
+   "vectors": [
+    {
+     "text": "NIST LWC KAT - Empty message",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"4de2b673c183d1031bbba5fb63cc15270daafbbe1f77fa7fbeaf1d17cf694feb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT - Single zero byte",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"91e6735eb598b7fad5ea99eea59dc9524c1bdd1ff864108cb5011c28e6572afb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT - Two bytes (00 01)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001"},
+     "expected": {"t":"bytes","v":"7e59e39b3addce9632836d7ea47bbdf28b37566ff7307ba5f235737d8d71d908"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT - Three bytes (00 01 02)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102"},
+     "expected": {"t":"bytes","v":"5dc635642f27a2bfc259373e58894fb4220aab502dc7e5d79b95a657c098f0d4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT - Four bytes (00 01 02 03)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00010203"},
+     "expected": {"t":"bytes","v":"b6f84fcc1c4cf0af391136baa0b9eca326840e8602773354f3d4d63ecc711a48"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST LWC KAT - 16 bytes",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"e5dc937f458a9cf4064473e20c3f9ac0970ed71852af636ade8b48c5c1af4717"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -54,6 +54,9 @@ internal sealed class Variable(string name, Node declaration, bool isParameter) 
   /// <summary>The type JSDoc states for a parameter, or <see langword="null"/>.</summary>
   public JsType? Declared { get; set; }
 
+  /// <summary>The literal a parameter takes when a call leaves it out, <c>f(a = 1)</c>, or <see langword="null"/> (#1365).</summary>
+  public Expression? Default { get; init; }
+
   /// <summary>The type of every value that reaches the variable.</summary>
   public JsType Type { get; set; } = JsType.Unknown;
 
@@ -168,6 +171,12 @@ internal enum FlowKind {
   /// <c>for…of</c> destructures into a variable (#1328).
   /// </summary>
   Entry,
+
+  /// <summary>
+  /// A <see cref="Grow"/> of the array a field holds - <c>o.items.push(x)</c>, <c>this.buffer.length = 0</c>
+  /// - whose class the type of the object says; <see cref="Flow.Source"/> is the member that names the field (#1365).
+  /// </summary>
+  FieldGrow,
 
   /// <summary>The node is a call of a function value, whose arguments reach the parameters of every function the value may be.</summary>
   Invoke,

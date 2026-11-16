@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/romuquad.js",
+ "algorithms": [
+  {
+   "name": "RomuQuad",
+   "vectors": [
+    {
+     "text": "Seed (1,1,1,1): First four 64-bit outputs from RomuQuad",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"0100000000000000010000000000000001000000000000000100000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0100000000000000c5f404e83338ad744630db0ad65e973e06fc27105e6ee70d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed (0,0,0,1): First four 64-bit outputs from RomuQuad",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000100000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0000000000000000ffffffffffffffff3a0bfb17ccc7528bffc329dd5dd93536"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed via SplitMix64(0): First four 64-bit outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"afcd1d7b39a820e2a411b89013d70589b48f0a530c9e51d416317aa5131f4cda"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed via SplitMix64(1): First four 64-bit outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"0100000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"c15c0289ec2d0a9177c8d58103712aa2ada40f24ac878918caf84e08292c94a3"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

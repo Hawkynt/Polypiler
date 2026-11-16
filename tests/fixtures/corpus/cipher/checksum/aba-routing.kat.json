@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/aba-routing.js",
+ "algorithms": [
+  {
+   "name": "ABA-Routing",
+   "vectors": [
+    {
+     "text": "JP Morgan Chase (021000021)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3032313030303032"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Routing number 026000013",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3032363030303031"},
+     "expected": {"t":"bytes","v":"03"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Routing number 121000028",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3132313030303032"},
+     "expected": {"t":"bytes","v":"08"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

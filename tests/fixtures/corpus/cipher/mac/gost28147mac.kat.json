@@ -1,0 +1,24 @@
+{
+ "schema": 1,
+ "file": "algorithms/mac/gost28147mac.js",
+ "algorithms": [
+  {
+   "name": "GOST 28147-89 MAC",
+   "vectors": [
+    {
+     "text": "Bouncy Castle test vector 1 (E-A S-box)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"6d145dc993f4019e104280df6fcd8cd8e01e101e4c113d7ec4f469ce6dcd9e49"}}
+     ],
+     "input": {"t":"bytes","v":"7768617420646f2079612077616e7420666f72206e6f7468696e673f"},
+     "expected": {"t":"bytes","v":"93468a46"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

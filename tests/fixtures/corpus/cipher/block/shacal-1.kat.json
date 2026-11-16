@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/shacal-1.js",
+ "algorithms": [
+  {
+   "name": "SHACAL-1",
+   "vectors": [
+    {
+     "text": "SHA-1 IV as plaintext, pad(\"\") as key - from the published SHA-1(\"\") digest",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"80000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"67452301efcdab8998badcfe10325476c3d2e1f0"},
+     "expected": {"t":"bytes","v":"72f480ed6e9d9f84999ae2f1852dc41aec052519"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SHA-1 IV as plaintext, pad(\"abc\") as key - from the published SHA-1(\"abc\") digest",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"61626380000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000018"}}
+     ],
+     "input": {"t":"bytes","v":"67452301efcdab8998badcfe10325476c3d2e1f0"},
+     "expected": {"t":"bytes","v":"42541b355738d5e121834873681e6df6d8fdf6ad"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SHA-1 IV as plaintext, pad(\"message digest\") as key - from the published SHA-1 digest",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"6d657373616765206469676573748000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000070"}}
+     ],
+     "input": {"t":"bytes","v":"67452301efcdab8998badcfe10325476c3d2e1f0"},
+     "expected": {"t":"bytes","v":"59dd2fcdeabe3d10b4a4c32bfa14cea65943c8f3"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

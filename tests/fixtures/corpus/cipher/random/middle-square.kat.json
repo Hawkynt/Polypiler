@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/middle-square.js",
+ "algorithms": [
+  {
+   "name": "Middle Square Method",
+   "vectors": [
+    {
+     "text": "Middle Square: seed=5772156649 (von Neumann's example, 10-digit number from 1951 paper)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"00000001580c1ee9"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"ce6093a7418fc1a9f04b87d30da6de35c9f9f5810000000000000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Middle Square: seed=1 (minimal seed, demonstrates rapid degeneration to zero)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"01"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"00000000000000000000000000000000000000010000000000000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Middle Square: seed=12345 (short cycle demonstration)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"00003039"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0000000000528a47d24d034ba27d5fd6fb9e52810000000000000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Middle Square: seed=675248 (historical 6-digit example from literature)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"000a4db0"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0000006a50c8d6d1ecb41ac6a5b7c1f794a5b306dbc8c93e65fb09ab90a5fee0daf7da3cbbbc1925"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

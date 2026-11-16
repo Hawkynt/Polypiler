@@ -1,0 +1,77 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/bcm.js",
+ "algorithms": [
+  {
+   "name": "BCM (Block Context Mixing)",
+   "vectors": [
+    {
+     "text": "Empty data test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"01000000000000004180"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Simple repeated pattern",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414141424242434343"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"0900000000000000439d686e3d48"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Classic banana example",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"62616e616e61"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"06000000030000006e8e6a5558"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Mixed alphanumeric data",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"2b000000080000006ba7d6dcb8e6c0c9dabceab8a16022d268be09cbf33fdceec5665672692b21347d"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repetitive text compression",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263616263616263616263616263616263"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"1200000000000000639aaaec3b4188"},
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

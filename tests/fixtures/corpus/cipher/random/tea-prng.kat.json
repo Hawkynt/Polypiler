@@ -1,0 +1,81 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/tea-prng.js",
+ "algorithms": [
+  {
+   "name": "TEA-PRNG",
+   "vectors": [
+    {
+     "text": "TEA-PRNG with all-zero seed, counter=0 - First block",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":8}},
+      {"set":"seed","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"41ea3a0a94baa940"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TEA-PRNG with all-zero seed - First 16 bytes (2 blocks)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":16}},
+      {"set":"seed","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"41ea3a0a94baa940414091a7a27f9c32"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TEA-PRNG with all-ones seed - First block",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":8}},
+      {"set":"seed","value":{"t":"bytes","v":"ffffffffffffffffffffffffffffffff"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"b94a017dde3f22cb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TEA-PRNG with sequential seed - First 24 bytes (3 blocks)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":24}},
+      {"set":"seed","value":{"t":"bytes","v":"0123456789abcdeffedcba9876543210"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"f257f7402d578cee9000e53c6e76457247665aec5ccf9639"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "TEA-PRNG with ASCII seed - First block",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":8}},
+      {"set":"seed","value":{"t":"bytes","v":"59454c4c4f57205355424d4152494e45"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"aa3dc1152c9e1c64"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/constant-weight.js",
+ "algorithms": [
+  {
+   "name": "Constant Weight Code",
+   "vectors": [
+    {
+     "text": "3-of-5 codeword with weight 3 (0 1 0 1 1)",
+     "inverse": false,
+     "steps": [
+      {"set":"weight","value":{"t":"number","v":3}},
+      {"set":"length","value":{"t":"number","v":5}}
+     ],
+     "input": {"t":"bytes","v":"0001000101"},
+     "expected": {"t":"bytes","v":"0001000101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "3-of-5 codeword with weight 3 (1 1 1 0 0)",
+     "inverse": false,
+     "steps": [
+      {"set":"weight","value":{"t":"number","v":3}},
+      {"set":"length","value":{"t":"number","v":5}}
+     ],
+     "input": {"t":"bytes","v":"0101010000"},
+     "expected": {"t":"bytes","v":"0101010000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "2-of-4 codeword with weight 2 (1 0 1 0)",
+     "inverse": false,
+     "steps": [
+      {"set":"weight","value":{"t":"number","v":2}},
+      {"set":"length","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"01000100"},
+     "expected": {"t":"bytes","v":"01000100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "2-of-4 codeword with weight 2 (0 1 0 1)",
+     "inverse": false,
+     "steps": [
+      {"set":"weight","value":{"t":"number","v":2}},
+      {"set":"length","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"00010001"},
+     "expected": {"t":"bytes","v":"00010001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

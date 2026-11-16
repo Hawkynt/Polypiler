@@ -65,7 +65,8 @@ internal sealed partial class TypeInference(string path, string source, List<Can
     if (candidate.Function.Generator)
       (model.Result, model.ResultEvidence) = (JsType.SequenceOf(JsType.Unknown), candidate.Anchor);
     else if (!model.Flows.Exists(flow => flow.Kind == FlowKind.Return))
-      model.Result = JsType.Undefined;
+      // A body that never ends but by throwing - the method a base class leaves to its derived ones - says nothing about the result (#1365).
+      model.Result = candidate.Function.Body is FunctionBody never && !Completes.MayComplete(never.Body) ? JsType.Unknown : JsType.Undefined;
     else if (model.Problem is null && candidate.Function.Body is FunctionBody block && Completes.MayComplete(block.Body))
       model.Result = JsType.UndefinedValue;
 
@@ -80,8 +81,8 @@ internal sealed partial class TypeInference(string path, string source, List<Can
     if (candidate.Problem is not null)
       return Unsupported(candidate.Anchor, candidate.Problem);
 
-    if (function.Async)
-      return Unsupported(candidate.Anchor, function.Generator ? "an async generator" : "an async function");
+    if (this.AsyncProblem(candidate) is { } asynchronous)
+      return asynchronous;
 
     if (function.Generator && this.GeneratorProblem(candidate) is { } generator)
       return generator;
@@ -89,9 +90,11 @@ internal sealed partial class TypeInference(string path, string source, List<Can
     if (candidate.Name.Contains('$'))
       return Unsupported(candidate.Anchor, $"the name {candidate.Name}");
 
-    foreach (var parameter in function.Params) {
+    foreach (var declared in function.Params) {
+      // A default that is a literal is what a call that leaves the parameter out passes (#1365).
+      var (parameter, defaultValue) = declared is AssignmentPattern { Left: Identifier left, Right: var right } && IsLiteral(right) ? ((Node)left, (Expression?)right) : (declared, null);
       if (parameter is not Identifier { Name: var name })
-        return Unsupported(parameter, parameter is RestElement ? "a rest parameter" : parameter is AssignmentPattern ? "a default parameter value" : "a destructured parameter");
+        return Unsupported(declared, declared is RestElement ? "a rest parameter" : declared is AssignmentPattern ? "a default parameter value that is no literal" : "a destructured parameter");
 
       if (name.Contains('$'))
         return Unsupported(parameter, $"the name {name}");
@@ -99,11 +102,11 @@ internal sealed partial class TypeInference(string path, string source, List<Can
       if (model.Parameters.Exists(earlier => earlier.Name == name))
         return Unsupported(parameter, $"a second parameter named {name}");
 
-      var (stated, type) = JsDoc.ParameterType(candidate.Documentation, name);
+      var (stated, type) = JsDoc.ParameterType(candidate.Documentation, name, key => this.Classes.GetValueOrDefault(key) is { IsLibrary: false } owner ? owner : null);
       if (stated && type is null)
         return this.Diagnose(parameter, JavaScriptFrontend.MissingTypeDescriptor, $"parameter '{name}' of '{candidate.Name}' has no supported JSDoc type");
 
-      var variable = new Variable(name, parameter, true) { Declared = type is null ? null : JsType.Of(type) };
+      var variable = new Variable(name, parameter, true) { Declared = type, Default = defaultValue };
       model.Parameters.Add(variable);
       model.Bindings[parameter] = variable;
     }
@@ -111,6 +114,10 @@ internal sealed partial class TypeInference(string path, string source, List<Can
     model.DeclaredResult = JsDoc.ResultType(candidate.Documentation);
     return null;
   }
+
+  /// <summary>Whether an expression is a literal: a number, a string, a truth value or <c>null</c>, negated or not.</summary>
+  private static bool IsLiteral(Expression expression)
+    => expression is NumericLiteral or StringLiteral or BooleanLiteral or NullLiteral or UnaryExpression { Operator: Acornima.Operator.UnaryNegation, Argument: NumericLiteral };
 
   /// <summary>
   /// Infers the types of the given functions and of every function they call. Afterwards the types
@@ -175,6 +182,20 @@ internal sealed partial class TypeInference(string path, string source, List<Can
   /// does one that is used as an array: a double it cannot be, and what array it is only a call says.
   /// </summary>
   private void Seed(FunctionModel model, Variable parameter, bool external) {
+    // A parameter with a default holds that literal too; without JSDoc an exported one is of its kind (a number a double).
+    if (parameter.Default is { } given) {
+      var literal = given switch {
+        NumericLiteral number => JsType.Literal(number.Value),
+        UnaryExpression { Argument: NumericLiteral negated } => JsType.Literal(-negated.Value),
+        StringLiteral => JsType.String,
+        BooleanLiteral => JsType.Boolean,
+        _ => JsType.Null
+      };
+      parameter.Type = parameter.Entry = parameter.Declared is { } stated ? stated : external ? (literal.Kind == JsKind.Number ? JsType.F64 : literal) : literal;
+      parameter.Evidence = parameter.EntryEvidence = given;
+      return;
+    }
+
     if (parameter.Declared is { } declared) {
       parameter.Type = parameter.Entry = declared;
       parameter.Reason = $"@param {{{JsType.Spell(declared.Ir!)}}}";
@@ -220,6 +241,9 @@ internal sealed partial class TypeInference(string path, string source, List<Can
         return this.Reach(flow.Target!, this.Of(flow.Node), flow.Node) | this.Alias(model, flow.Node, flow.Target!.Type);
       case FlowKind.Grow:
         return this.Grow(flow);
+      case FlowKind.FieldGrow:
+        var member = (MemberExpression)flow.Source!;
+        return this.Of(member.Object).Class?.Field(Binder.KeyOf(member)!) is { } grown && this.Grow(flow with { Kind = FlowKind.Grow, Target = grown.Variable });
       case FlowKind.Entry:
         return this.Entry(flow);
       case FlowKind.Compound:

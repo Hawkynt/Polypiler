@@ -1,0 +1,147 @@
+{
+ "schema": 1,
+ "file": "algorithms/modes/gcm-siv.js",
+ "algorithms": [
+  {
+   "name": "GCM-SIV",
+   "vectors": [
+    {
+     "text": "RFC 8452 C.1 AEAD_AES_128_GCM_SIV - 8-byte plaintext, no AAD",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"set":"key","value":{"t":"bytes","v":"01000000000000000000000000000000"}},
+      {"call":"setNonce","args":[{"t":"bytes","v":"030000000000000000000000"}]},
+      {"call":"setAAD","args":[{"t":"bytes","v":""}]},
+      {"call":"setTagSize","args":[{"t":"number","v":16}]}
+     ],
+     "input": {"t":"bytes","v":"0100000000000000"},
+     "expected": {"t":"bytes","v":"b5d839330ac7b786578782fff6013b815b287c22493a364c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 8452 C.1 AEAD_AES_128_GCM_SIV - one block, no AAD",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"set":"key","value":{"t":"bytes","v":"01000000000000000000000000000000"}},
+      {"call":"setNonce","args":[{"t":"bytes","v":"030000000000000000000000"}]},
+      {"call":"setAAD","args":[{"t":"bytes","v":""}]},
+      {"call":"setTagSize","args":[{"t":"number","v":16}]}
+     ],
+     "input": {"t":"bytes","v":"01000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"743f7c8077ab25f8624e2e948579cf77303aaf90f6fe21199c6068577437a0c4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 8452 C.1 AEAD_AES_128_GCM_SIV - one block with 1-byte AAD",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"set":"key","value":{"t":"bytes","v":"01000000000000000000000000000000"}},
+      {"call":"setNonce","args":[{"t":"bytes","v":"030000000000000000000000"}]},
+      {"call":"setAAD","args":[{"t":"bytes","v":"01"}]},
+      {"call":"setTagSize","args":[{"t":"number","v":16}]}
+     ],
+     "input": {"t":"bytes","v":"02000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"e2b0c5da79a901c1745f700525cb335b8f8936ec039e4e4bb97ebd8c4457441f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 8452 C.1 AEAD_AES_128_GCM_SIV - ragged plaintext and AAD",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"set":"key","value":{"t":"bytes","v":"01000000000000000000000000000000"}},
+      {"call":"setNonce","args":[{"t":"bytes","v":"030000000000000000000000"}]},
+      {"call":"setAAD","args":[{"t":"bytes","v":"010000000000000000000000000000000200"}]},
+      {"call":"setTagSize","args":[{"t":"number","v":16}]}
+     ],
+     "input": {"t":"bytes","v":"0300000000000000000000000000000004000000"},
+     "expected": {"t":"bytes","v":"6bb0fecf5ded9b77f902c7d5da236a4391dd029724afc9805e976f451e6d87f6fe106514"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 8452 C.1 AEAD_AES_128_GCM_SIV - random key, 21-byte plaintext",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"set":"key","value":{"t":"bytes","v":"f901cfe8a69615a93fdf7a98cad48179"}},
+      {"call":"setNonce","args":[{"t":"bytes","v":"6245709fb18853f68d833640"}]},
+      {"call":"setAAD","args":[{"t":"bytes","v":"7576f7028ec6eb5ea7e298342a94d4b202b370ef9768ec6561c4fe6b7e7296fa859c21"}]},
+      {"call":"setTagSize","args":[{"t":"number","v":16}]}
+     ],
+     "input": {"t":"bytes","v":"e42a3c02c25b64869e146d7b233987bddfc240871d"},
+     "expected": {"t":"bytes","v":"391cc328d484a4f46406181bcd62efd9b3ee197d052d15506c84a9edd65e13e9d24a2a6e70"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 8452 C.2 AEAD_AES_256_GCM_SIV - one block, no AAD",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"set":"key","value":{"t":"bytes","v":"0100000000000000000000000000000000000000000000000000000000000000"}},
+      {"call":"setNonce","args":[{"t":"bytes","v":"030000000000000000000000"}]},
+      {"call":"setAAD","args":[{"t":"bytes","v":""}]},
+      {"call":"setTagSize","args":[{"t":"number","v":16}]}
+     ],
+     "input": {"t":"bytes","v":"01000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"85a01b63025ba19b7fd3ddfc033b3e76c9eac6fa700942702e90862383c6c366"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 8452 C.2 AEAD_AES_256_GCM_SIV - random key, 21-byte plaintext",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"set":"key","value":{"t":"bytes","v":"3c535de192eaed3822a2fbbe2ca9dfc88255e14a661b8aa82cc54236093bbc23"}},
+      {"call":"setNonce","args":[{"t":"bytes","v":"688089e55540db1872504e1c"}]},
+      {"call":"setAAD","args":[{"t":"bytes","v":"734320ccc9d9bbbb19cb81b2af4ecbc3e72834321f7aa0f70b7282b4f33df23f167541"}]},
+      {"call":"setTagSize","args":[{"t":"number","v":16}]}
+     ],
+     "input": {"t":"bytes","v":"ced532ce4159b035277d4dfbb7db62968b13cd4eec"},
+     "expected": {"t":"bytes","v":"626660c26ea6612fb17ad91e8e767639edd6c9faee9d6c7029675b89eaf4ba1ded1a286594"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 8452 C.2 AEAD_AES_256_GCM_SIV - 32-bit counter wrap",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"set":"key","value":{"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000"}},
+      {"call":"setNonce","args":[{"t":"bytes","v":"000000000000000000000000"}]},
+      {"call":"setAAD","args":[{"t":"bytes","v":""}]},
+      {"call":"setTagSize","args":[{"t":"number","v":16}]}
+     ],
+     "input": {"t":"bytes","v":"000000000000000000000000000000004db923dc793ee6497c76dcc03a98e108"},
+     "expected": {"t":"bytes","v":"f3f80f2cf0cb2dd9c5984fcda908456cc537703b5ba70324a6793a7bf218d3eaffffffff000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

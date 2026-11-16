@@ -1,0 +1,82 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/ranshi.js",
+ "algorithms": [
+  {
+   "name": "Ranshi",
+   "vectors": [
+    {
+     "text": "Self-computed regression vector - seed 1, first 20 bytes (implementation consistency test)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"00000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"00042021040806019dcca8c51255994f8ef917d1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Self-computed regression vector - seed 0x12345678, first 32 bytes (deterministic output verification)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"12345678"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"87985aa5155b24a34820f4c481b3ac98703a078829a8e24d89ca4f1dc5186e29"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Self-computed regression vector - seed 0xAAAAAAAA, first 24 bytes (pattern detection test)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":24}},
+      {"set":"seed","value":{"t":"bytes","v":"aaaaaaaa"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"000d3ff5598a4d8c174377b14f18060bb4f17d07f16bc54f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Self-computed regression vector - seed 0xFFFFFFFF, first 16 bytes (all-ones seed test)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":16}},
+      {"set":"seed","value":{"t":"bytes","v":"ffffffff"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0003e01ffc07fdff74bb9843f1cc88da"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Self-computed regression vector - seed 1 with skip, outputs 11-15 (long-term state verification)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"skip","value":{"t":"number","v":10}},
+      {"set":"seed","value":{"t":"bytes","v":"00000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"9e6002cb591c9737b4b84b8a04e3f8ae0536aff5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

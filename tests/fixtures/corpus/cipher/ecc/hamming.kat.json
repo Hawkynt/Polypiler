@@ -1,0 +1,100 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/hamming.js",
+ "algorithms": [
+  {
+   "name": "Hamming Code",
+   "vectors": [
+    {
+     "text": "Hamming (7,4) all zeros",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00000000"},
+     "expected": {"t":"bytes","v":"00000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Hamming (7,4) all ones",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01010101"},
+     "expected": {"t":"bytes","v":"01010101010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Hamming (7,4) pattern",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01000100"},
+     "expected": {"t":"bytes","v":"01000101000100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Extended Hamming (8,4) SECDED zeros",
+     "inverse": false,
+     "steps": [
+      {"set":"parityBits","value":{"t":"number","v":3}},
+      {"set":"extended","value":{"t":"bool","v":true}}
+     ],
+     "input": {"t":"bytes","v":"00000000"},
+     "expected": {"t":"bytes","v":"0000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Extended Hamming (8,4) SECDED ones",
+     "inverse": false,
+     "steps": [
+      {"set":"parityBits","value":{"t":"number","v":3}},
+      {"set":"extended","value":{"t":"bool","v":true}}
+     ],
+     "input": {"t":"bytes","v":"01010101"},
+     "expected": {"t":"bytes","v":"0101010101010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Shortened Hamming (6,3) zeros",
+     "inverse": false,
+     "steps": [
+      {"set":"parityBits","value":{"t":"number","v":3}},
+      {"set":"shortened","value":{"t":"number","v":1}}
+     ],
+     "input": {"t":"bytes","v":"000000"},
+     "expected": {"t":"bytes","v":"000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Shortened Hamming (6,3) pattern",
+     "inverse": false,
+     "steps": [
+      {"set":"parityBits","value":{"t":"number","v":3}},
+      {"set":"shortened","value":{"t":"number","v":1}}
+     ],
+     "input": {"t":"bytes","v":"010001"},
+     "expected": {"t":"bytes","v":"010001010001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

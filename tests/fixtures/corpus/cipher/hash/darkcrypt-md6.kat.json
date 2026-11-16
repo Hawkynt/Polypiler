@@ -1,0 +1,66 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/darkcrypt-md6.js",
+ "algorithms": [
+  {
+   "name": "MD6 (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "MD6 round 1 ShortMsgKAT_512 - Len = 0",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"e3bde7f708d2006335b09d95a0e8648a87f782e7a1ef17d676d84cc91fe006331749fcf14bf2a4c80ae1aeb52ed0799c8fc9420c59344d4731690e18f7a2cef3"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "MD6 round 1 ShortMsgKAT_512 - Len = 8",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"cc"},
+     "expected": {"t":"bytes","v":"0f953eba85b343063d9d9151fda0d12a527ef8bbf3dbefb8da5e11f0c4d7359e76058ed60c29fa1f8c33e87fdc5dde1250e3fcffd247561cef5b70df3d55fb25"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "MD6 round 1 LongMsgKAT_512 - Len = 4568 (two leaves)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"fe06a4706468b369f7624f62d04f9fac020f05152f13e350016b2a29efff9a393940c138553356b0e2848c01b622b95ffa11ab07585f7dcbbf90e9f8ec5fa2fb7b4cee0d0a4e8d33490abd058cf3bb85f0cd9b1bd3e9823082d70b1a92aca6f2c87216b4ba09feddcaa4cf254336146cc75604fb1f286918fa2434ca36be2621049438a400bdeea6c657f0301503cd7e6e38350838f60ea7f001755da4142ce4579b39029da83f1646b7ecb9947ee89aba377099b82026960b9ee600779bf00d6eb0cd09226db6915a7aded27e6749e2cbc2c8b030ce1850ebfbe24c0658f29e9e709cd10db8a77efdefc90fdd7b9ad7a7e0334412a53d248c4c12bf2987b7accd2a8a602f184583aa560c016093b56b100154477b834664e6b85a19f8dc909b4d79816af12266c731e29a304e9bed8ef1c8030365b7deaf3d436957308117c7c5767e0cda6e342ddaf824233cbf4e699dc667357cb35c602ac6bddee71b352af55cb93941a1a6301a9904447af9ee486114d57ae03901f10084adc0096e465e2ead2496273112f2fae626e230d42ec22ea10a8289b3e35eee42150769d6e663a3ca29174316ec93a24f148d984053b8f98664eaca3e0dea0b42e8ee30f81a2cd6e42c189a25fecb6e643e693e1f8871b837c3f5ff2aafd1650a465dc8e5c1993be65cffd87f2c680c86b0ad3118834a5f2e490015137ba945c2775dbd77fb3e5c67819a9a7a94a656fc4761659c5b30ed2ac55a6d249b700bc9c93d590490aaaaa75a9fc34a90d5a9106f2860bde19fe5815436068a7f8ea4636a"},
+     "expected": {"t":"bytes","v":"d7e8e9ce8252ff4dc9ffedc6d8e771c8e2d456bc959fc71003b4d0af9d392c40e9c02f2954756b5c6648af50fca073d37c63ee99c1f6891fda081db2e9574c45"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt MD6 \"abc\"",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"1c6233a806832e2c711a5595cdc355b04b81a3f547fff89e40391399bb925bc845a0cce9ecc3d1b0439450e079df51a23d9fdafe99a85e72d1562bbae6a1eb46"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt MD6 incremental 64-byte message",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"cedddc4d2d764a430bcfa5e03ca641f3fdb7aabf9782dd0174b4669a164f5ab81b223a3dd84a6cbd84d6be2a3a31babe316ccd400d66cbc180ddfa3c17fd0ed0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

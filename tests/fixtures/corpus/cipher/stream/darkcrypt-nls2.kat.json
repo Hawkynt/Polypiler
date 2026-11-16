@@ -1,0 +1,53 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/darkcrypt-nls2.js",
+ "algorithms": [
+  {
+   "name": "NLS2 (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "DarkCrypt Nls2lib — sequential key/IV, 128 zero bytes",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"iv","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"f68ab7b995e75e768cc1b62082ea3117a78d8d5bd0081ba01daeedd165c22813ca93b50e5991c57484bd8bc1bff7098282e68b572c2bfb7ad3803ff2581344f5c66e2ae44dea01fb7b04b0c1c38f39e1837c506f8d20a322241af75b7a9ba05e79c89c8d9a5b21e0b5931fc148178ebe7c1124908b8cb3121150d4c286a27d9c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Nls2lib — sequential key/IV, incrementing 64-byte input",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"iv","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"f68bb5ba91e2587184c8bc2b8ee73f18b79c9f48c41d0db705b7f7ca79df360ceab2972d7db4e353ac94a1ea93da27adb2d7b964181ecd4debb905c9642e7aca"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Nls2lib — non-zero key and IV, 48-byte message (verified against the DarkCrypt implementation)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0b30557a9fc4e90e33587da2c7ec1136"}},
+      {"set":"iv","value":{"t":"bytes","v":"073c71a6db10457aafe4194e83b8ed22"}}
+     ],
+     "input": {"t":"bytes","v":"03203d5a7794b1ceeb0825425f7c99b6d3f00d2a4764819ebbd8f5122f4c6986a3c0ddfa1734516e8ba8c5e2ff1c3956"},
+     "expected": {"t":"bytes","v":"d117766fec9449b87bb8a94f91182173a2ad79e5405797bffe7d7a8bbc68d3fa40df73adb3a8b903840eabd1cc68011f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,41 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/pcg-xsh-rs.js",
+ "algorithms": [
+  {
+   "name": "PCG-XSH-RS",
+   "vectors": [
+    {
+     "text": "PCG-XSH-RS seed=42, increment=54, first 6 x 32-bit outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":24}},
+      {"set":"increment","value":{"t":"bytes","v":"0000000000000036"}},
+      {"set":"seed","value":{"t":"bytes","v":"000000000000002a"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"522bd5a371b43492b011fa35e704af294a1aaabfaf9bfaaa"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "PCG-XSH-RS seed=0, increment=1, first 6 x 32-bit outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":24}},
+      {"set":"increment","value":{"t":"bytes","v":"0000000000000001"}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0b18fcd8bb5f56897033235de0b78bd0faba6f9ea2df44bd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

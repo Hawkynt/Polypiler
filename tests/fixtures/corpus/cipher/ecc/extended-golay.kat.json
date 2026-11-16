@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/extended-golay.js",
+ "algorithms": [
+  {
+   "name": "Extended Golay Code",
+   "vectors": [
+    {
+     "text": "Extended Golay all zeros",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000000000000000000000000"},
+     "expected": {"t":"bytes","v":"000000000000000000000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Extended Golay all ones",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"010101010101010101010101"},
+     "expected": {"t":"bytes","v":"010101010101010101010101010101010101010101010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Extended Golay single bit",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"010000000000000000000000"},
+     "expected": {"t":"bytes","v":"010000000000000000000000010100000001010100010001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -237,7 +237,7 @@ internal sealed class CSharpGenericsImportTests {
   [TestCase("public static int F() => 0;", "public interface I<out T> { }", "variance (in or out on a type parameter)")]
   [TestCase("public static int F() => 0;", "public interface I<T> { }", "a generic interface")]
   [TestCase("public static int F() => 0;", "public abstract class A<T> { }", "a generic class in a hierarchy")]
-  [TestCase("public static int F() => G<int>(); extern static int G<T>();", "", "extern")]
+  [TestCase("public static int F() => G<int>(); extern static int G<T>();", "", "a generic native function")]
   public void Construct_IsRefusedByName(string members, string declarations, string what) {
     var message = Refusal($"namespace Polypiler.Snippet {{ public class A {{ }} public sealed class B {{ }} {declarations} public static class C {{ {members} }} }}");
     Assert.That(message, Is.EqualTo($"'{what}' is not supported yet"));

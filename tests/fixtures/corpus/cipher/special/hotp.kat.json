@@ -1,0 +1,86 @@
+{
+ "schema": 1,
+ "file": "algorithms/special/hotp.js",
+ "algorithms": [
+  {
+   "name": "HOTP",
+   "vectors": [
+    {
+     "text": "RFC 4226 HOTP Test Vector - Counter 0 (6 digits)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"3132333435363738393031323334353637383930"}},
+      {"set":"counter","value":{"t":"number","v":0}},
+      {"set":"digits","value":{"t":"number","v":6}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"373535323234"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 4226 HOTP Test Vector - Counter 1 (6 digits)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"3132333435363738393031323334353637383930"}},
+      {"set":"counter","value":{"t":"number","v":1}},
+      {"set":"digits","value":{"t":"number","v":6}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"323837303832"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 4226 HOTP Test Vector - Counter 2 (6 digits)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"3132333435363738393031323334353637383930"}},
+      {"set":"counter","value":{"t":"number","v":2}},
+      {"set":"digits","value":{"t":"number","v":6}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"333539313532"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 4226 HOTP Test Vector - Counter 7 (7 digits)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"3132333435363738393031323334353637383930"}},
+      {"set":"counter","value":{"t":"number","v":7}},
+      {"set":"digits","value":{"t":"number","v":7}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"32313632353833"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 4226 HOTP Test Vector - Counter 8 (8 digits)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"3132333435363738393031323334353637383930"}},
+      {"set":"counter","value":{"t":"number","v":8}},
+      {"set":"digits","value":{"t":"number","v":8}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"3733333939383731"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

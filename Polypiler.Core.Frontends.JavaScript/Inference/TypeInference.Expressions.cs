@@ -192,6 +192,8 @@ internal sealed partial class TypeInference {
         return array.Element!.Float == 32 ? JsType.F64 : array.Element;
       case CallExpression call:
         return this.Call(call);
+      case AwaitExpression awaited:
+        return this.AwaitedType(awaited);
       case NewExpression creation:
         return creation.Callee is Identifier { Name: var name } constructor && !this._scope!.Bindings.ContainsKey(constructor)
           ? TypedArrays.TryGetValue(name, out var element) ? JsType.ArrayOf(JsType.Of(element), false)
@@ -254,6 +256,8 @@ internal sealed partial class TypeInference {
     switch (builtin) {
       case "Math.imul" or "Math.clz32":
         return JsType.I32;
+      case "Array.isArray":
+        return JsType.Boolean;
       case "Math.fround":
         return JsType.F32;
       case "Math.trunc" or "Math.floor" or "Math.ceil" or "Math.round" or "Math.abs" or "Math.sign" or "Math.sqrt" or "Math.min" or "Math.max":

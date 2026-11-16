@@ -1,0 +1,66 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/lzav.js",
+ "algorithms": [
+  {
+   "name": "LZAV",
+   "vectors": [
+    {
+     "text": "Empty input",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte 0x41",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"01000000360141"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Simple repetition - AAAA (too short for mref=6 match)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41414141"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"04000000360441414141"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Pattern repetition - ABCABC (too short for mref=6 match)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414243414243"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"060000003606414243414243"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Real text - Hello World! (no match, too short)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"48656c6c6f20576f726c6421"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"0c000000360c48656c6c6f20576f726c6421"},
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

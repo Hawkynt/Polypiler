@@ -1,0 +1,24 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/beth-piper.js",
+ "algorithms": [
+  {
+   "name": "Beth-Piper Stop-and-Go Generator",
+   "vectors": [
+    {
+     "text": "Basic functionality test with known key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"48656c6c6f20576f726c64"},
+     "expected": {"t":"bytes","v":"d99a8f65afffd6acbe039b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/classical/bazeries.js",
+ "algorithms": [
+  {
+   "name": "Bazeries Cylinder Cipher",
+   "vectors": [
+    {
+     "text": "Historical Bazeries Example",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"434950484552"}}
+     ],
+     "input": {"t":"bytes","v":"444546454e445448454541535457414c4c4f46544845434153544c45"},
+     "expected": {"t":"bytes","v":"44545446534e414c4345454c45454548575454464541484c44534f41"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Educational Demonstration",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"4b4559"}}
+     ],
+     "input": {"t":"bytes","v":"48454c4c4f"},
+     "expected": {"t":"bytes","v":"454f484c4c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Matrix Transposition Test",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"534543524554"}}
+     ],
+     "input": {"t":"bytes","v":"43525950544f475241504859"},
+     "expected": {"t":"bytes","v":"594152525448505043474f59"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

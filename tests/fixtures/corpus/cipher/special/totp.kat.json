@@ -1,0 +1,96 @@
+{
+ "schema": 1,
+ "file": "algorithms/special/totp.js",
+ "algorithms": [
+  {
+   "name": "TOTP",
+   "vectors": [
+    {
+     "text": "RFC 6238 TOTP Test Vector - SHA1 @ 59s (8 digits)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"3132333435363738393031323334353637383930"}},
+      {"set":"timestamp","value":{"t":"number","v":59}},
+      {"set":"timestep","value":{"t":"number","v":30}},
+      {"set":"digits","value":{"t":"number","v":8}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-1"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"3934323837303832"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 6238 TOTP Test Vector - SHA1 @ 1111111109s (8 digits)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"3132333435363738393031323334353637383930"}},
+      {"set":"timestamp","value":{"t":"number","v":1111111109}},
+      {"set":"timestep","value":{"t":"number","v":30}},
+      {"set":"digits","value":{"t":"number","v":8}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-1"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"3037303831383034"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 6238 TOTP Test Vector - SHA1 @ 1234567890s (8 digits)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"3132333435363738393031323334353637383930"}},
+      {"set":"timestamp","value":{"t":"number","v":1234567890}},
+      {"set":"timestep","value":{"t":"number","v":30}},
+      {"set":"digits","value":{"t":"number","v":8}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-1"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"3839303035393234"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 6238 TOTP Test Vector - SHA256 @ 59s (8 digits)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"3132333435363738393031323334353637383930313233343536373839303132"}},
+      {"set":"timestamp","value":{"t":"number","v":59}},
+      {"set":"timestep","value":{"t":"number","v":30}},
+      {"set":"digits","value":{"t":"number","v":8}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-256"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"3436313139323436"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 6238 TOTP Test Vector - SHA512 @ 59s (8 digits)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"31323334353637383930313233343536373839303132333435363738393031323334353637383930313233343536373839303132333435363738393031323334"}},
+      {"set":"timestamp","value":{"t":"number","v":59}},
+      {"set":"timestep","value":{"t":"number","v":30}},
+      {"set":"digits","value":{"t":"number","v":8}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-512"}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"3930363933393336"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

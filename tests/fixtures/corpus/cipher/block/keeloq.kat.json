@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/keeloq.js",
+ "algorithms": [
+  {
+   "name": "Keeloq",
+   "vectors": [
+    {
+     "text": "GitHub test vector #1",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"5cec6701b79fd949"}}
+     ],
+     "input": {"t":"bytes","v":"f741e2db"},
+     "expected": {"t":"bytes","v":"e44f4cdf"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "GitHub test vector #2",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"5cec6701b79fd949"}}
+     ],
+     "input": {"t":"bytes","v":"0ca69b92"},
+     "expected": {"t":"bytes","v":"a6ac0ea2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "keeloq-go test vector (independent implementation, same two vectors plus this one)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"beefdeadbeefdead"}}
+     ],
+     "input": {"t":"bytes","v":"2000c022"},
+     "expected": {"t":"bytes","v":"054c90c2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

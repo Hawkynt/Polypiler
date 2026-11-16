@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/darkcrypt-qcypher.js",
+ "algorithms": [
+  {
+   "name": "QCypher (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "DarkCrypt Qcypher — keystream from incrementing key, zero plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"bfc942b0682ded41418464d6357e8dba86af59fb971424fcd25b5827fe74dd437d12caa54d09e4d0c2a3d4db2b16f6c1fece08767dcbe78442036d83b7d3acb92b57e4543371e0caca4810784571a8fe7599cbaffe3c7e3e1a7810d3bd5a2330972af0bda7ab74edb6e12b6a81557704c01d8af10a9cf6cde1c016f5313e78ef"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Qcypher — incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"bf3502c4af056921ca34a9b99e94c4eb3872e9bf05d36fcc8d04bd78800e9b817d2984e03ba9c5f58f022631ef4111ddbd859b5fa4673acc7f9b7a6ebb0e589e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Qcypher — all-zero key, zero plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"f234bc5b14597fb310906d97aff87900"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

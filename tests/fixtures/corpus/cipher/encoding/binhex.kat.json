@@ -1,0 +1,33 @@
+{
+ "schema": 1,
+ "file": "algorithms/encoding/binhex.js",
+ "algorithms": [
+  {
+   "name": "BinHex 4.0 (Macintosh)",
+   "vectors": [
+    {
+     "text": "BinHex empty file test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"28546869732066696c65206d75737420626520636f6e76657274656420776974682042696e48657820342e30290a3a0a3a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Basic BinHex encoding test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"48656c6c6f"},
+     "expected": {"t":"bytes","v":"28546869732066696c65206d75737420626520636f6e76657274656420776974682042696e48657820342e30290a3a3527395845276d210a3a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

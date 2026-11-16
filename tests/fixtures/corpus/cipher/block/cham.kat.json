@@ -1,0 +1,24 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/cham.js",
+ "algorithms": [
+  {
+   "name": "CHAM",
+   "vectors": [
+    {
+     "text": "CHAM-128/128 (Paper Vector)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"00112233445566778899aabbccddeeff"},
+     "expected": {"t":"bytes","v":"346074c3c50057b532ec648df7329348"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

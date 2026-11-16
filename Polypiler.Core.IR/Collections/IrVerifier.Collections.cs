@@ -26,6 +26,9 @@ public static partial class IrVerifier {
       this.Declared(collection);
       var (operands, result) = IrCollections.Signature(operation.Op, collection);
       var given = operation.Arguments.Skip(constructs ? 0 : 1).ToList();
+      // A list of elements takes each of the element type.
+      if (operation.Op == IrCollectionOp.ListOf)
+        operands = [.. given.Select(_ => collection.Element!)];
       this.Require(given.Count == operands.Count, $"{operation.Op} takes {operands.Count} operands, not {given.Count}");
       for (var index = 0; index < operands.Count && index < given.Count; ++index)
         this.Require(given[index].Type.IsAssignableTo(operands[index]), $"operand {index + 1} of {operation.Op} has the type {given[index].Type}, expected {operands[index]}");

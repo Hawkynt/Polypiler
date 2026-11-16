@@ -1,0 +1,88 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/lz4-frame.js",
+ "algorithms": [
+  {
+   "name": "LZ4 Frame",
+   "vectors": [
+    {
+     "text": "Empty input - header, end mark and content checksum only",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"04224d186c7000000000000000000300000000055dcc02"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte - block stored uncompressed",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"04224d186c700100000000000000740100008041000000004d9a6510"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Text sample repeated 4x - compressed block",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"74686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e2074686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f672e20"},
+     "expected": {"t":"bytes","v":"04224d186c70b4000000000000001f39000000f01074686520717569636b2062726f776e20666f78206a756d7073206f766572201f00916c617a7920646f672e0e000f2d006b50646f672e2000000000b54777df"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Long repetitive run - 256 identical bytes",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161"},
+     "expected": {"t":"bytes","v":"04224d186c7000010000000000005a0b0000001f610100e75061616161610000000048ae2a39"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Alternating two-byte pattern - too short for a match",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414241424142414241424142"},
+     "expected": {"t":"bytes","v":"04224d186c700c00000000000000190c000080414241424142414241424142000000006ca23e8c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Pseudo-random binary sample with one repeated run",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"9e1fd24b6a0cf7832155be083dc471aa9e1fd24b6a0cf7831162ef904d7c38a1"},
+     "expected": {"t":"bytes","v":"04224d186c702000000000000000c61d000000f4019e1fd24b6a0cf7832155be083dc471aa1000801162ef904d7c38a100000000a5d3a3f5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "English text - block stored uncompressed",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4f7074696d616c2070617273696e67206d696e696d697365732074686520746f74616c20746f6b656e20636f73742c206e6f7420746865206c6f63616c206d61746368206c656e6774682e"},
+     "expected": {"t":"bytes","v":"04224d186c704b000000000000000e4b0000804f7074696d616c2070617273696e67206d696e696d697365732074686520746f74616c20746f6b656e20636f73742c206e6f7420746865206c6f63616c206d61746368206c656e6774682e0000000051b28b5e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

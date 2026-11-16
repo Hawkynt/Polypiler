@@ -1,7 +1,7 @@
 # O0501 — Remove helpers and private constants that nothing in the target syntax tree references
 
 <!-- status: implemented (prototype) -->
-> **Status: implemented (prototype).** The target passes `CSharpUnusedDeclarations`, `JavaScriptUnusedDeclarations` and `RustUnusedDeclarations` run between the backend's syntax tree and its printer ([#1336](https://github.com/Hawkynt/Polypiler/issues/1336)). Switched off with `--disable-opt O0501`. Removing dead functions and globals of the program stays [O0381](O0381-dead-function-elimination.md) and [O0383](O0383-global-dead-code-elimination.md).
+> **Status: implemented (prototype).** The target passes `CSharpUnusedDeclarations`, `JavaScriptUnusedDeclarations`, `PythonUnusedDeclarations` and `RustUnusedDeclarations` run between the backend's syntax tree and its printer ([#1336](https://github.com/Hawkynt/Polypiler/issues/1336)). Switched off with `--disable-opt O0501`. Removing dead functions and globals of the program stays [O0381](O0381-dead-function-elimination.md) and [O0383](O0383-global-dead-code-elimination.md).
 
 ## What it does
 
@@ -10,7 +10,9 @@ A pass before this one can make a declaration unused - [O0500](O0500-target-help
 inlines every call of a helper, and a helper used only by that helper loses its last caller too. This
 pass removes every helper and every private constant of the module that nothing in the file names any
 more, again and again until every one left is named. The empty lines in front of a removed
-declaration stay in front of what follows it.
+declaration stay in front of what follows it. In Python it also removes an `import` whose module nothing names once the
+helpers that used it are gone; a private function of the module's own stays, since a caller may still
+reach into the module for it.
 
 ## Example
 

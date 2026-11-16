@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/bcj-x86.js",
+ "algorithms": [
+  {
+   "name": "BCJ x86",
+   "vectors": [
+    {
+     "text": "Empty buffer",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "CALL rel32 immediately followed by NOP padding",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"e800000000909090"},
+     "expected": {"t":"bytes","v":"e805000000909090"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Typical function prologue with CALL and JMP",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"5589e5e810000000e920000000c3"},
+     "expected": {"t":"bytes","v":"5589e5e818000000e92d000000c3"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

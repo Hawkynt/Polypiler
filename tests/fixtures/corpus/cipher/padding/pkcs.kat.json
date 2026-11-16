@@ -1,0 +1,127 @@
+{
+ "schema": 1,
+ "file": "algorithms/padding/pkcs.js",
+ "algorithms": [
+  {
+   "name": "PKCS#1 v1.5",
+   "vectors": [
+    {
+     "text": "PKCS#1 v1.5 encryption padding - 16-byte message",
+     "inverse": false,
+     "steps": [
+      {"set":"keySize","value":{"t":"number","v":2048}},
+      {"set":"paddingType","value":{"t":"string","v":"encryption"}}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393170a"},
+     "expected": {"t":"bytes","v":"0002ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff006bc1bee22e409f96e93d7e117393170a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "PKCS#1 v1.5 encryption padding - Hello World",
+     "inverse": false,
+     "steps": [
+      {"set":"keySize","value":{"t":"number","v":2048}},
+      {"set":"paddingType","value":{"t":"string","v":"encryption"}}
+     ],
+     "input": {"t":"bytes","v":"48656c6c6f20576f726c64"},
+     "expected": {"t":"bytes","v":"0002ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0048656c6c6f20576f726c64"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "PKCS#5",
+   "vectors": [
+    {
+     "text": "PKCS#5 padding with 3 bytes needed",
+     "inverse": false,
+     "steps": [
+      {"set":"blockSize","value":{"t":"number","v":8}}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e"},
+     "expected": {"t":"bytes","v":"6bc1bee22e030303"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "PKCS#5 padding for full block",
+     "inverse": false,
+     "steps": [
+      {"set":"blockSize","value":{"t":"number","v":8}}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96"},
+     "expected": {"t":"bytes","v":"6bc1bee22e409f960808080808080808"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "PKCS#5 padding with 7 bytes needed",
+     "inverse": false,
+     "steps": [
+      {"set":"blockSize","value":{"t":"number","v":8}}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96e9"},
+     "expected": {"t":"bytes","v":"6bc1bee22e409f96e907070707070707"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "PKCS#7",
+   "vectors": [
+    {
+     "text": "PKCS#7 padding with 17 bytes needed",
+     "inverse": false,
+     "steps": [
+      {"set":"blockSize","value":{"t":"number","v":32}}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96e93d7e11739317"},
+     "expected": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393171111111111111111111111111111111111"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "PKCS#7 padding for full block",
+     "inverse": false,
+     "steps": [
+      {"set":"blockSize","value":{"t":"number","v":32}}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393172a"},
+     "expected": {"t":"bytes","v":"6bc1bee22e409f96e93d7e117393172a10101010101010101010101010101010"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "PKCS#7 padding with 3 bytes needed",
+     "inverse": false,
+     "steps": [
+      {"set":"blockSize","value":{"t":"number","v":8}}
+     ],
+     "input": {"t":"bytes","v":"6bc1bee22e"},
+     "expected": {"t":"bytes","v":"6bc1bee22e030303"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

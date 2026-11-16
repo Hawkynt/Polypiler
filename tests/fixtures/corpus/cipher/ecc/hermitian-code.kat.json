@@ -1,0 +1,77 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/hermitian-code.js",
+ "algorithms": [
+  {
+   "name": "Hermitian Code",
+   "vectors": [
+    {
+     "text": "Hermitian [8,3] all zeros codeword",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000000"},
+     "expected": {"t":"bytes","v":"0000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Hermitian [8,3] basis function f=1 (constant)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"010000"},
+     "expected": {"t":"bytes","v":"0101010101010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Hermitian [8,3] basis function f=x",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000100"},
+     "expected": {"t":"bytes","v":"0001020302030001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Hermitian [8,3] basis function f=y",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000001"},
+     "expected": {"t":"bytes","v":"0002010303010200"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Hermitian [8,3] linear combination f=1+x",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"010100"},
+     "expected": {"t":"bytes","v":"0100030203020100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Hermitian [8,3] linear combination f=x+y",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000101"},
+     "expected": {"t":"bytes","v":"0003030001020201"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

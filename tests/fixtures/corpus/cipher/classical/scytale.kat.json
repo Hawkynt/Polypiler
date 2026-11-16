@@ -1,0 +1,37 @@
+{
+ "schema": 1,
+ "file": "algorithms/classical/scytale.js",
+ "algorithms": [
+  {
+   "name": "Scytale Cipher",
+   "vectors": [
+    {
+     "text": "Circumference 3 over a message that does not fill the last row. The Wikipedia article works a different message, so it carries no value for this input",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"33"}}
+     ],
+     "input": {"t":"bytes","v":"5745415245464f554e444f5554"},
+     "expected": {"t":"bytes","v":"57524f44544545554f41464e55"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Circumference 4 over a message that fills the grid exactly. The Wikipedia article works a different message, so it carries no value for this input",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"34"}}
+     ],
+     "input": {"t":"bytes","v":"41545441434b41544441574e"},
+     "expected": {"t":"bytes","v":"414344544b4154415741544e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

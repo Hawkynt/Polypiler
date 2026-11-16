@@ -1,0 +1,95 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/xorshift32.js",
+ "algorithms": [
+  {
+   "name": "Xorshift32",
+   "vectors": [
+    {
+     "text": "Seed 1: First 5 outputs (20 bytes) - verified against reference implementation",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"00000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"00042021040806019dcca8c51255994f8ef917d1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 12345: First 5 outputs (20 bytes) - common test seed",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"00003039"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"c6e5747a652a09afa7e08fa0748e41ea2ad8a9d3"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 0 (defaults to 1): First 5 outputs - zero seed handling",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"00000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"00042021040806019dcca8c51255994f8ef917d1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 0xFFFFFFFF (max 32-bit): First 5 outputs (20 bytes) - edge case",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"ffffffff"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0003e01ffc07fdff74bb9843f1cc88da7a28ee91"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 42: First 8 outputs (32 bytes) - answer to everything",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"0000002a"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"00ad4528a90a34ac1c67af03d970c3c0e01ccbc455ea99b6dd5701d890eff2ae"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 2^31 (0x80000000): First 5 outputs - high bit set",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"80000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"8008400089088484aa914148d5b8029468b7e441"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

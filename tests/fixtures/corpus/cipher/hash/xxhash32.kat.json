@@ -1,0 +1,187 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/xxhash32.js",
+ "algorithms": [
+  {
+   "name": "xxHash32",
+   "vectors": [
+    {
+     "text": "Official sanity check, length 0, seed 0",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"02cc5d05"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Official sanity check, length 1, seed 0",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"cf65b03e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Official sanity check, length 14, seed 0",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0052929bb732a3242d00af950eec"},
+     "expected": {"t":"bytes","v":"1208e7e2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Official sanity check, length 222, seed 0",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0052929bb732a3242d00af950eecb893e3dfef93aad6cd2a538b5c3f545a6fd559c0fffc8f85b9331dab74f7b6059327b07084b3677c9f76480072ed7b9817e8dd485e0c0ccbd0653fadb28f11b06ce88db0f186086159566c8e4e781363bdab9d327309ea712fd97a9d55f0ca8ad0e95e1a36b36b0fca51ef8ba2c462ed0096f33449eb0fd13b92a1a963dbaaed3dcff10942cdf9b321a2ebf2c8f4e42f48d14b10f4c2efecf84ab53874c3a4a6620ebffd633741e386981aeb4cba56036687ed004559c18544b6c368f941a9eaf987e09f12d0d51454485d444051e338"},
+     "expected": {"t":"bytes","v":"5bd11dbd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": ".NET runtime XxHash32 test: 'abc'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"32d153ff"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": ".NET runtime XxHash32 test: '123456' (6 bytes)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"313233343536"},
+     "expected": {"t":"bytes","v":"b7014066"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "pierrec/xxHash test: 'abcdefghijklmnop' (exactly one 16-byte stripe)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6162636465666768696a6b6c6d6e6f70"},
+     "expected": {"t":"bytes","v":"9d2d8b62"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": ".NET runtime XxHash32 test: 'Hashing!' repeated 3 times (24 bytes)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"48617368696e672148617368696e672148617368696e6721"},
+     "expected": {"t":"bytes","v":"5df7d6c0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": ".NET runtime XxHash32 test: 20 bytes",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3132333435363738393031323334353637383930"},
+     "expected": {"t":"bytes","v":"2d0c3d1b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": ".NET runtime XxHash32 test: 21 bytes, tail not a whole number of lanes",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"313233343536373839303132333435363738393031"},
+     "expected": {"t":"bytes","v":"8ed1b04e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": ".NET runtime XxHash32 test: '.NET Hashes This' repeated 3 times (48 bytes, exact multiple of the stripe)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"2e4e45542048617368657320546869732e4e45542048617368657320546869732e4e4554204861736865732054686973"},
+     "expected": {"t":"bytes","v":"29da7472"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": ".NET runtime XxHash32 test: '.NET Hashes This!' repeated 3 times (51 bytes)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"2e4e4554204861736865732054686973212e4e4554204861736865732054686973212e4e455420486173686573205468697321"},
+     "expected": {"t":"bytes","v":"1fe08a04"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": ".NET runtime XxHash32 test: '.NET now has non-crypto hashing' repeated 3 times (93 bytes)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"2e4e4554206e6f7720686173206e6f6e2d63727970746f2068617368696e672e4e4554206e6f7720686173206e6f6e2d63727970746f2068617368696e672e4e4554206e6f7720686173206e6f6e2d63727970746f2068617368696e67"},
+     "expected": {"t":"bytes","v":"65242024"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": ".NET runtime XxHash32 test: 'Nobody inspects the spammish repetition'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4e6f626f647920696e73706563747320746865207370616d6d6973682072657065746974696f6e"},
+     "expected": {"t":"bytes","v":"e2293b2f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": ".NET runtime XxHash32 test: 'The quick brown fox jumps over the lazy dog'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67"},
+     "expected": {"t":"bytes","v":"e85ea4de"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "pierrec/xxHash test: 'abcdefghijklmnopqrstuvwxyz0123456789' (36 bytes)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6162636465666768696a6b6c6d6e6f707172737475767778797a30313233343536373839"},
+     "expected": {"t":"bytes","v":"42ae804d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

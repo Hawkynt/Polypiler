@@ -1,0 +1,59 @@
+{
+ "schema": 1,
+ "file": "algorithms/kdf/sp800-56c.js",
+ "algorithms": [
+  {
+   "name": "SP800-56C",
+   "vectors": [
+    {
+     "text": "SP 800-56C - HMAC-SHA1 Test Vector 1 (2 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"97ca00eac481e8b3556a"}},
+      {"set":"label","value":{"t":"bytes","v":"ae8cf2e46773a68098ea53b3"}},
+      {"set":"outputLength","value":{"t":"number","v":2}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-1"}}
+     ],
+     "input": {"t":"bytes","v":"52f4676023946c7307b5e8148d97f312623a6e88"},
+     "expected": {"t":"bytes","v":"1bcd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP 800-56C - HMAC-SHA1 Test Vector 2 (4 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"76b026053771b88e4e833962a10083835a33ddd9"}},
+      {"set":"label","value":{"t":"bytes","v":"f2d44c1b59d725ad7c662ca6"}},
+      {"set":"outputLength","value":{"t":"number","v":4}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-1"}}
+     ],
+     "input": {"t":"bytes","v":"eecb51e6d59a6fe688fb591799891d9211745a13"},
+     "expected": {"t":"bytes","v":"bc3d9b22"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP 800-56C - HMAC-SHA256 Test Vector 1 (3 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"28e12e410d501368b3e8"}},
+      {"set":"label","value":{"t":"bytes","v":"94d91d500177efafdc93e8b6"}},
+      {"set":"outputLength","value":{"t":"number","v":3}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-256"}}
+     ],
+     "input": {"t":"bytes","v":"b3dad1f46a18430ea0c8fbe2172922a5a42c47af40046db24d38cb11eff4ce44"},
+     "expected": {"t":"bytes","v":"d4c1fb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

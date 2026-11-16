@@ -1,0 +1,33 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/bcj-powerpc.js",
+ "algorithms": [
+  {
+   "name": "BCJ PowerPC",
+   "vectors": [
+    {
+     "text": "Empty buffer",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Two consecutive B/BL instructions (big-endian words, opcode 18)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4800000148001001"},
+     "expected": {"t":"bytes","v":"4800000148001005"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

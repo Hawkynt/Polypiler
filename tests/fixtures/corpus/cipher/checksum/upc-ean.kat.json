@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/upc-ean.js",
+ "algorithms": [
+  {
+   "name": "UPC-EAN",
+   "vectors": [
+    {
+     "text": "UPC-A validation",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3033363030303239313435"},
+     "expected": {"t":"bytes","v":"02"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "EAN-13 validation",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"343030363338313333333933"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Simple test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3132333435"},
+     "expected": {"t":"bytes","v":"07"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

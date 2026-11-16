@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace Polypiler.Core.IR;
@@ -51,6 +52,19 @@ public enum IrTrap {
 
   /// <summary>A text that names no member of an enum (<see cref="IrIntrinsicOp.EnumParse"/>), for which .NET throws an <c>ArgumentException</c>.</summary>
   UnknownName
+
+}
+
+/// <summary>
+/// Thrown by <see cref="IrInterpreter.Call(IrModule, string, object[], long)"/> when a call takes more
+/// steps than its budget allows, or calls deeper than <see cref="IrInterpreter.BudgetDepth"/>: no
+/// exception of the IR, so no catch of the program stops it.
+/// </summary>
+public sealed class IrBudgetException : Exception {
+
+  /// <summary>Makes the exception.</summary>
+  /// <param name="message">What ran out.</param>
+  public IrBudgetException(string message) : base(message) { }
 
 }
 
@@ -146,8 +160,32 @@ public static partial class IrInterpreter {
     => module.Globals.Count == 0 ? Call(_programs.GetValue(module, Index), [], module, function, arguments) : Instantiate(module).Call(function, arguments);
 
 
+  /// <summary>The deepest a call within a budget may nest calls, which keeps the interpreter well inside the stack of its thread.</summary>
+  public const int BudgetDepth = 128;
+
+  /// <summary>
+  /// Calls a function of a module without globals within a budget of steps: each statement executed is
+  /// one step, and so is each call. A compile-time evaluation runs so, and gives up on a call that
+  /// needs more.
+  /// </summary>
+  /// <param name="module">The module, which declares no globals.</param>
+  /// <param name="function">The name of the function to call.</param>
+  /// <param name="arguments">One value per parameter, of the parameter's type.</param>
+  /// <param name="steps">The most steps the call may take.</param>
+  /// <returns>The value returned, or <see langword="null"/> for a function that returns nothing.</returns>
+  /// <exception cref="ArgumentException">The module has globals, the function does not exist or the arguments do not fit it.</exception>
+  /// <exception cref="IrTrapException">An operation trapped.</exception>
+  /// <exception cref="IrBudgetException">The call needs more than <paramref name="steps"/> steps, or nests calls deeper than <see cref="BudgetDepth"/>.</exception>
+  public static object? Call(IrModule module, string function, object[] arguments, long steps) {
+    ArgumentNullException.ThrowIfNull(module);
+    if (module.Globals.Count > 0)
+      throw new ArgumentException($"The module '{module.Name}' has globals, which a call within a budget does not initialise.", nameof(module));
+
+    return Call(_programs.GetValue(module, Index), [], module, function, arguments, steps);
+  }
+
   /// <summary>A function of the module called with values taken across the boundary, in the globals of an instance.</summary>
-  private static object? Call(Program program, Dictionary<IrGlobal, object> globals, IrModule module, string function, object[] arguments) {
+  private static object? Call(Program program, Dictionary<IrGlobal, object> globals, IrModule module, string function, object[] arguments, long steps = long.MaxValue) {
     var functions = program.Functions;
     if (!functions.TryGetValue(function, out var target))
       throw new ArgumentException($"The module '{module.Name}' has no function '{function}'.", nameof(function));
@@ -156,7 +194,11 @@ public static partial class IrInterpreter {
       throw new ArgumentException($"'{function}' takes {target.Parameters.Count} arguments, not {arguments.Length}.", nameof(arguments));
 
     var values = arguments.Select((argument, index) => FromHost(target.Parameters[index], argument)).ToArray();
-    return ToHost(target.ReturnType, new Machine(program, globals).Invoke(target, values));
+    var machine = new Machine(program, globals);
+    if (steps != long.MaxValue)
+      machine.Limit(steps);
+
+    return ToHost(target.ReturnType, machine.Invoke(target, values));
   }
 
   private static Program Index(IrModule module) {
@@ -237,6 +279,9 @@ public static partial class IrInterpreter {
 
   /// <summary>The IR type a .NET type crosses the boundary as, or <see langword="null"/> when it does not.</summary>
   private static IrType? TypeOf(Type host) {
+    if (host == typeof(BigInteger))
+      return IrType.BigInt;
+
     if (host.IsSZArray)
       return TypeOf(host.GetElementType()!) is { } element && (element.IsNumeric || element.IsString) ? IrType.Array(element) : null;
 
@@ -274,7 +319,7 @@ public static partial class IrInterpreter {
 
   /// <summary>A .NET value as the interpreter carries it: every integer as a <see cref="long"/>.</summary>
   private static object Internal(object value) => value switch {
-    Array or bool or float or double or Record or string or Instance or Closure or FunctionReference or BoundMethod or NullReference => value,
+    Array or bool or float or double or BigInteger or Record or string or Instance or Closure or FunctionReference or BoundMethod or NullReference => value,
     ulong large => (long)large,
     char unit => (long)unit,
     _ => Convert.ToInt64(value, CultureInfo.InvariantCulture)
@@ -294,6 +339,7 @@ public static partial class IrInterpreter {
   };
 
   private static object? ToHost(IrType type, object? value) => value switch {
+    Settled settled => Settle(type, settled),
     not null when type.IsOptional => OptionalToHost(type, value),
     View view => ToArray(view),
     Record record => record.Fields.Select((field, index) => ToHost(type.StructType!.Fields[index].Type, field)).ToArray(),
@@ -306,10 +352,49 @@ public static partial class IrInterpreter {
 
   private sealed partial class Machine(Program program, Dictionary<IrGlobal, object> globals) {
 
+    /// <summary>The steps left: without a budget more than any run takes.</summary>
+    private long _steps = long.MaxValue;
+
+    /// <summary>The calls in progress, counted only within a budget.</summary>
+    private int _depth;
+
+    private bool _budgeted;
+
+    /// <summary>Sets the budget of the run: the most steps, and calls nested no deeper than <see cref="BudgetDepth"/>.</summary>
+    public void Limit(long steps) {
+      this._steps = steps;
+      this._budgeted = true;
+    }
+
+    /// <summary>Takes one step of the budget.</summary>
+    private void Step() {
+      if (--this._steps < 0)
+        throw new IrBudgetException("The call needs more steps than its budget allows.");
+    }
+
     public object? Invoke(IrFunction function, object[] arguments) {
+      if (!this._budgeted)
+        return this.Body(function, arguments);
+
+      this.Step();
+      if (++this._depth > BudgetDepth)
+        throw new IrBudgetException($"The call nests calls deeper than {BudgetDepth}.");
+
+      try {
+        return this.Body(function, arguments);
+      } finally {
+        --this._depth;
+      }
+    }
+
+    private object? Body(IrFunction function, object[] arguments) {
       // An iterator function runs nothing when it is called: it makes the sequence.
       if (IrSequences.IsIterator(function))
         return this.Sequence(function, arguments);
+
+      // An async function runs to its end when it is called: what it returns, or throws, is the async value.
+      if (function.IsAsync)
+        return this.Started(function, arguments);
 
       var frame = new Frame();
       for (var index = 0; index < arguments.Length; ++index)
@@ -321,8 +406,11 @@ public static partial class IrInterpreter {
       return frame.Result;
     }
 
-    /// <summary>Executes a statement and says how it ended.</summary>
+    /// <summary>Executes a statement and says how it ended; a statement other than a block is a step of the budget.</summary>
     private Flow Run(IrStmt statement, Frame frame) {
+      if (statement is not IrBlock)
+        this.Step();
+
       switch (statement) {
         case IrBlock block:
           foreach (var inner in block.Statements) {
@@ -434,8 +522,13 @@ public static partial class IrInterpreter {
           return Copied(globals[reference.Global]);
         case IrStrConst text:
           return text.Value;
+        case IrBigConst big:
+          return big.Value;
         case IrUnary unary:
           var operand = this.Evaluate(unary.Operand, frame);
+          if (operand is BigInteger exact)
+            return IrBigInts.Evaluate(unary.Op, exact);
+
           if (unary.Type.IsFloat)
             return operand is float single ? (object)-single : -(double)operand;
 
@@ -517,6 +610,12 @@ public static partial class IrInterpreter {
           return ArraySequence((Array)NotNull(this.Evaluate(sequence.Array, frame)));
         case IrSequence operation:
           return this.SequenceOperation(operation, frame);
+        case IrAwait awaited:
+          return Awaited((Settled)this.Evaluate(awaited.Operand, frame));
+        case IrAsync operation:
+          return this.AsyncOperation(operation, frame);
+        case IrForeignCall or IrLastError:
+          return this.Foreign(expression, frame);
         default:
           throw new NotSupportedException($"Unknown expression {expression.GetType().Name}.");
       }
@@ -674,6 +773,9 @@ public static partial class IrInterpreter {
       if (first is bool)
         return binary.Op == IrBinaryOp.Equal ? first.Equals(second) : !first.Equals(second);
 
+      if (first is BigInteger big)
+        return IrBigInts.Evaluate(binary.Op, big, second is BigInteger other ? other : (long)second);
+
       var type = binary.Left.Type;
       if (type == IrType.F32)
         return Binary(binary.Op, (float)first, (float)second);
@@ -767,6 +869,9 @@ public static partial class IrInterpreter {
     private static object Convert(IrConvert conversion, object operand) {
       var from = conversion.Operand.Type;
       var to = conversion.Type;
+      if (from.IsBigInt || to.IsBigInt)
+        return ConvertBig(from, to, conversion.Contract, operand);
+
       if (from.IsFloat) {
         var number = operand is float single ? single : (double)operand;
         if (to == IrType.F32)
@@ -788,6 +893,22 @@ public static partial class IrInterpreter {
       return conversion.Contract == IrConversion.Trap
         ? Fit(to, IrOperators.Number(from, value))
         : IrOperators.Wrap(to, value);
+    }
+
+    /// <summary>A conversion from or to the arbitrary-precision integer, as <see cref="IrBigInts"/> states it.</summary>
+    private static object ConvertBig(IrType from, IrType to, IrConversion contract, object operand) {
+      if (to.IsBigInt)
+        return operand switch {
+          double number => IrBigInts.FromDouble(number),
+          float single => IrBigInts.FromDouble(single),
+          _ => IrBigInts.Of(from, (long)operand)
+        };
+
+      var value = (BigInteger)operand;
+      if (to == IrType.F64)
+        return IrBigInts.ToDouble(value);
+
+      return contract == IrConversion.Trap ? IrBigInts.Fit(to, value) : IrBigInts.Wrap(to, value);
     }
 
     /// <summary>

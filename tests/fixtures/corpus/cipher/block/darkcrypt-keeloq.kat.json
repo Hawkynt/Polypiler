@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/darkcrypt-keeloq.js",
+ "algorithms": [
+  {
+   "name": "KeeLoq (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "Published KeeLoq vector, in DarkCrypt little-endian byte order",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"49d99fb70167ec5c"}}
+     ],
+     "input": {"t":"bytes","v":"dbe241f7"},
+     "expected": {"t":"bytes","v":"df4c4fe4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Keeloq — incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0001020304050607"}}
+     ],
+     "input": {"t":"bytes","v":"00010203"},
+     "expected": {"t":"bytes","v":"24bc009e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Keeloq — shifted incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0102030405060708"}}
+     ],
+     "input": {"t":"bytes","v":"10111213"},
+     "expected": {"t":"bytes","v":"75c2a9d9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

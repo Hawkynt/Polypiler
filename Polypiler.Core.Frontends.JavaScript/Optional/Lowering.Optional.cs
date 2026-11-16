@@ -205,12 +205,13 @@ internal sealed partial class Lowering {
     return true;
   }
 
-  /// <summary>The arguments a call leaves out: <c>undefined</c> for each parameter that may be absent, or the reason the call is refused.</summary>
-  private IEnumerable<IrExpr> Missing(CallExpression call, FunctionModel target) {
-    foreach (var parameter in target.Parameters.Skip(call.Arguments.Count)) {
+  /// <summary>The arguments a call leaves out: the default of a parameter that has one, <c>undefined</c> for each that may be absent, or the reason the call is refused.</summary>
+  private IEnumerable<IrExpr> Missing(Node call, FunctionModel target, int given) {
+    foreach (var parameter in target.Parameters.Skip(given)) {
       var type = parameter.Parameter?.Type ?? this.Storable(parameter.Entry, call);
-      yield return type.IsOptional ? new IrNone(type) : type.IsNullable ? new IrNull(type)
-        : throw this.Unsupported(call, $"a call of {target.Candidate.Name} with {call.Arguments.Count} arguments for {target.Parameters.Count} parameters");
+      yield return parameter.Default is { } value ? this.Value(value, type)
+        : type.IsOptional ? new IrNone(type) : type.IsNullable ? new IrNull(type)
+        : throw this.Unsupported(call, $"a call of {target.Candidate.Name} with {given} arguments for {target.Parameters.Count} parameters");
     }
   }
 

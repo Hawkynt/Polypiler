@@ -8,17 +8,21 @@ using System.Text;
 using Polypiler.Core;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
+using Polypiler.Core.Backends.Python;
 using Polypiler.Core.Backends.Rust;
 using Polypiler.Core.Frontends.CSharp;
 using Polypiler.Core.Frontends.JavaScript;
+using Polypiler.Core.Frontends.Python;
 using Polypiler.Core.Frontends.Rust;
 using Polypiler.Core.Frontends.Rust.Cargo;
 using Polypiler.Core.IR;
 using Polypiler.Core.Backends.CSharp.Passes;
 using Polypiler.Core.Backends.JavaScript.Passes;
+using Polypiler.Core.Backends.Python.Passes;
 using Polypiler.Core.Backends.Rust.Passes;
 using Polypiler.Core.Optimize;
 using Polypiler.Core.Optimize.Passes;
+using Polypiler.Core.Optimize.Specialize;
 using Polypiler.Core.Optimize.Target;
 using Polypiler.Core.Recognize;
 using Polypiler.Core.Verification.Manifests;
@@ -27,7 +31,7 @@ namespace Polypiler.Cli;
 
 /// <summary>
 /// The <c>translate</c> command of the prototype:
-/// <c>polypiler translate &lt;file&gt; --from &lt;csharp|javascript&gt; --to &lt;javascript|csharp|rust&gt; --output &lt;directory&gt;</c>.
+/// <c>polypiler translate &lt;file&gt; --from &lt;csharp|javascript|python|rust&gt; --to &lt;javascript|csharp|python|rust&gt; --output &lt;directory&gt;</c>.
 /// A target language may take a profile. <c>--profile</c> is one option that every target reads its
 /// own way: for C# it names the target framework, and <c>--langversion</c> raises the version of the
 /// language above the one the profile brings; for JavaScript it names the language level, and
@@ -48,7 +52,7 @@ namespace Polypiler.Cli;
 /// header), the optimizations applied, the caveats and warnings, and the command line that writes the
 /// output again, with its paths relative to the output directory.
 /// </summary>
-public sealed class TranslateCommand : ICliCommand {
+public sealed partial class TranslateCommand : ICliCommand {
 
   /// <summary>Exit code when the source, or the IR for the chosen target, uses a construct that is not supported.</summary>
   public const int UnsupportedConstruct = (int)ExitCode.UnsupportedConstruct;
@@ -75,6 +79,7 @@ public sealed class TranslateCommand : ICliCommand {
   private const string DisableOpt = "--disable-opt";
   private const string ExplainOpt = "--explain-opt";
   private const string Instantiate = "--instantiate";
+  private const string Bind = "--bind";
   private const string RustVersion = "--rust-version";
   private const string OverflowChecksOption = "--overflow-checks";
   private const string CargoProfileOption = "--cargo-profile";
@@ -97,7 +102,7 @@ public sealed class TranslateCommand : ICliCommand {
     [ExplainOpt] = "write every optimization applied to standard error",
     [Export] = "JavaScript: the functions to translate",
     [ExplainTypes] = "JavaScript: write why every value has its type to standard output",
-    [Profile] = "the target profile: a target framework of C#, a language level of JavaScript, an edition of Rust",
+    [Profile] = "the target profile: a target framework of C#, a language level of JavaScript, a version of Python, an edition of Rust",
     [Module] = "JavaScript: how the file is packaged",
     [Global] = "JavaScript: the global object a script declares",
     [TypedArrays] = "JavaScript: an ECMAScript 5 engine with typed arrays",
@@ -107,7 +112,8 @@ public sealed class TranslateCommand : ICliCommand {
     [OverflowChecksOption] = "Rust: what an overflowing operator does, as rustc -C overflow-checks: panic (debug) or wrap (release); by default what the Cargo profile gives",
     [CargoProfileOption] = "Rust: the Cargo profile whose overflow-checks apply when --overflow-checks is not given (default: dev)",
     [LangVersion] = "C#: the language version, above the one of the profile",
-    [RustVersion] = "Rust: the minimum supported Rust version, above the one of the edition"
+    [RustVersion] = "Rust: the minimum supported Rust version, above the one of the edition",
+    [Bind] = "JavaScript: the binding module or global object of a native library, repeatable"
   };
 
   private readonly Backend[] _backendsOfThis;
@@ -131,6 +137,7 @@ public sealed class TranslateCommand : ICliCommand {
   private static readonly Frontend[] _frontends = [
     new("csharp", [new(Instantiate, "<method[type,...]>")], InstantiateMisuse, ImportCSharp),
     new("javascript", [new(Export, "<name>[,<name>...]"), new(ExplainTypes, null)], ExportMisuse, ImportJavaScript),
+    new("python", [], _ => null, ImportPython),
     new("rust", [new(OverflowChecksOption, "<panic|wrap>"), new(CargoProfileOption, "<name>")], OverflowChecksMisuse, ImportRust)
   ];
 
@@ -138,6 +145,7 @@ public sealed class TranslateCommand : ICliCommand {
   private static readonly Backend[] _backends = [
     JavaScript(JavaScriptCapabilities.Standard, Implementations),
     CSharp(CSharpCapabilities.Default, Implementations),
+    Python(PythonCapabilities.Standard, Implementations),
     Rust(RustCapabilities.Default, Implementations)
   ];
 
@@ -169,7 +177,7 @@ public sealed class TranslateCommand : ICliCommand {
       return new Option<bool>(option.Name) { Description = description };
 
     var helpName = option.Value[1..option.Value.IndexOf('>')];
-    return option.Name is DisableOpt or Export or Instantiate
+    return option.Name is DisableOpt or Export or Instantiate or Bind
       ? new Option<string[]>(option.Name) { Description = description, HelpName = helpName }
       : new Option<string>(option.Name) { Description = description, HelpName = helpName, Required = _required.Contains(option.Name) };
   }
@@ -189,7 +197,7 @@ public sealed class TranslateCommand : ICliCommand {
   /// <param name="capabilities">The table the JavaScript backend chooses its constructs from.</param>
   /// <returns>The process exit code.</returns>
   public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, JavaScriptCapabilities capabilities)
-    => Run(arguments, output, error, [JavaScript(capabilities, Implementations), CSharp(CSharpCapabilities.Default, Implementations), Rust(RustCapabilities.Default, Implementations)]);
+    => Run(arguments, output, error, [JavaScript(capabilities, Implementations), CSharp(CSharpCapabilities.Default, Implementations), Python(PythonCapabilities.Standard, Implementations), Rust(RustCapabilities.Default, Implementations)]);
 
   /// <summary>Runs the command with portable floating-point implementations of the caller's in place of the precomputed ones.</summary>
   /// <param name="arguments">The arguments after the word <c>translate</c>.</param>
@@ -201,7 +209,7 @@ public sealed class TranslateCommand : ICliCommand {
   /// </param>
   /// <returns>The process exit code.</returns>
   public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Func<IrModule> implementations)
-    => Run(arguments, output, error, [JavaScript(JavaScriptCapabilities.Standard, implementations), CSharp(CSharpCapabilities.Default, implementations), Rust(RustCapabilities.Default, implementations)]);
+    => Run(arguments, output, error, [JavaScript(JavaScriptCapabilities.Standard, implementations), CSharp(CSharpCapabilities.Default, implementations), Python(PythonCapabilities.Standard, implementations), Rust(RustCapabilities.Default, implementations)]);
 
   /// <summary>Runs <c>polypiler translate</c> with the arguments, the command made with the given backends.</summary>
   private static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Backend[] backends) {
@@ -251,6 +259,9 @@ public sealed class TranslateCommand : ICliCommand {
     if (module is null)
       return exitCode;
 
+    if (UnusedBinding(module, options) is { } unused)
+      return Refuse(context, unused);
+
     var (optimized, applications) = Optimized(file, module, options, context, backend);
     return Emit(optimized, options, context, backend, new Record(file, bytes, frontend.Name, caveats, applications));
   }
@@ -268,7 +279,7 @@ public sealed class TranslateCommand : ICliCommand {
   /// of their numbers.
   /// </summary>
   private static readonly string[] _optimizations = [
-    .. RuleTable.Default.Ids.Concat(IrPassPipeline.Default.Ids).Concat(CSharpTargetPasses.Pipeline.Ids).Concat(JavaScriptTargetPasses.Pipeline.Ids).Concat(RustTargetPasses.Pipeline.Ids)
+    .. RuleTable.Default.Ids.Concat(IrPassPipeline.Default.Ids).Append(PyIntSpecialization.Id).Concat(CSharpTargetPasses.Pipeline.Ids).Concat(JavaScriptTargetPasses.Pipeline.Ids).Concat(PythonTargetPasses.Pipeline.Ids).Concat(RustTargetPasses.Pipeline.Ids)
       .Distinct().Order(StringComparer.Ordinal)
   ];
 
@@ -299,16 +310,20 @@ public sealed class TranslateCommand : ICliCommand {
   /// <c>--explain-opt</c> every rule application is written to the error stream as a note.
   /// </summary>
   private static (IrModule Module, IReadOnlyList<RuleApplication> Applications) Optimized(string file, IrModule module, IReadOnlyDictionary<string, string> options, CliContext context, Backend backend) {
-    var result = Optimizer.Run(module, new OptimizerOptions {
+    var disabled = options.TryGetValue(DisableOpt, out var list) ? list.Split(',').ToHashSet() : [];
+    // The specialization of the arbitrary-precision integer is required: it runs at every level, --opt none too.
+    var specialized = disabled.Contains(PyIntSpecialization.Id) ? new OptimizationResult(module, []) : PyIntSpecialization.Run(module);
+    var result = Optimizer.Run(specialized.Module, new OptimizerOptions {
       Level = LevelOf(options)!.Value,
-      Disabled = options.TryGetValue(DisableOpt, out var list) ? list.Split(',').ToHashSet() : [],
+      Disabled = disabled,
       Target = backend.Target
     });
+    IReadOnlyList<RuleApplication> applications = [.. specialized.Applications, .. result.Applications];
     if (options.ContainsKey(ExplainOpt))
-      foreach (var application in result.Applications)
+      foreach (var application in applications)
         context.Note($"{file}: opt {application}");
 
-    return (result.Module, result.Applications);
+    return (result.Module, applications);
   }
 
   /// <summary>Checks a module and writes it in the target language into the output directory.</summary>
@@ -365,9 +380,13 @@ public sealed class TranslateCommand : ICliCommand {
     });
     module = passes.Module;
     if (record is not null) {
-      if (options.ContainsKey(ExplainOpt))
+      if (options.ContainsKey(ExplainOpt)) {
         foreach (var application in passes.Applications)
           context.Note($"{record.File}: opt {application}");
+
+        foreach (var note in passes.Notes)
+          context.Note($"{record.File}: opt {note}");
+      }
 
       record = record with { Applications = [.. record.Applications, .. passes.Applications] };
     }
@@ -434,7 +453,7 @@ public sealed class TranslateCommand : ICliCommand {
   /// code is known to do differently from the original is written as a note; it is no error.
   /// </summary>
   private static (IrModule? Module, int ExitCode, IReadOnlyList<ManifestMessage> Caveats) ImportJavaScript(string file, string source, IReadOnlyDictionary<string, string> options, CliContext context) {
-    var imported = JavaScriptFrontend.Import(file, source, options.TryGetValue(Export, out var names) ? Names(names) : null);
+    var imported = JavaScriptFrontend.Import(file, source, options.TryGetValue(Export, out var names) ? Names(names) : null, Required);
     foreach (var diagnostic in imported.Diagnostics)
       context.Report(diagnostic);
 
@@ -451,6 +470,25 @@ public sealed class TranslateCommand : ICliCommand {
       : UnsupportedConstruct;
     return (imported.Module, failure, [.. imported.Caveats.Select(caveat => new ManifestMessage(caveat.Id, caveat.Description))]);
   }
+
+  /// <summary>
+  /// Imports Python, parsed by the installed CPython. What the imported code is known to do
+  /// differently from the original is written as a note, as it is for JavaScript.
+  /// </summary>
+  private static (IrModule? Module, int ExitCode, IReadOnlyList<ManifestMessage> Caveats) ImportPython(string file, string source, IReadOnlyDictionary<string, string> options, CliContext context) {
+    var imported = PythonFrontend.Import(file, source);
+    foreach (var diagnostic in imported.Diagnostics)
+      context.Report(diagnostic);
+
+    foreach (var caveat in imported.Caveats)
+      context.Note($"{file}: note {caveat.Id}: {caveat.Description}");
+
+    var failure = imported.Diagnostics.Any(diagnostic => diagnostic.Code == PythonFrontend.SyntaxError) ? InvalidSource : UnsupportedConstruct;
+    return (imported.Module, failure, [.. imported.Caveats.Select(caveat => new ManifestMessage(caveat.Id, caveat.Description))]);
+  }
+
+  /// <summary>The text of a file a JavaScript module requires, or <see langword="null"/> when there is none.</summary>
+  private static string? Required(string file) => File.Exists(file) ? File.ReadAllText(file) : null;
 
   private static string[] Names(string list) => list.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
@@ -538,8 +576,8 @@ public sealed class TranslateCommand : ICliCommand {
     NativeAccuracy.Node,
     options => JavaScriptProfileOf(options).Profile!.ToString(),
     new RuleTarget(capabilities.RemainderFromQuotient),
-    [new(Profile, "<name>"), new(Module, Choice(JavaScriptProfile.ModuleNames)), new(Global, "<name>"), new(TypedArrays, null), new(Float, FloatChoice)],
-    options => FloatMisuse(options) ?? JavaScriptProfileOf(options).Error,
+    [new(Profile, "<name>"), new(Module, Choice(JavaScriptProfile.ModuleNames)), new(Global, "<name>"), new(TypedArrays, null), new(Float, FloatChoice), new(Bind, "<library=module-or-global>")],
+    options => FloatMisuse(options) ?? JavaScriptProfileOf(options).Error ?? BindMisuse(options),
     (module, options) => JavaScriptEmitter.Legalize(module, implementations, JavaScriptProfileOf(options).Profile!, FloatModeOf(options), capabilities),
     (module, options) => JavaScriptEmitter.Check(module, JavaScriptProfileOf(options).Profile!, capabilities),
     (module, options, passes) => JavaScriptEmitter.Emit(module, JavaScriptProfileOf(options).Profile!, FloatModeOf(options), capabilities, passes));
@@ -549,7 +587,7 @@ public sealed class TranslateCommand : ICliCommand {
     JavaScriptProfile.TryParse(
       options.GetValueOrDefault(Profile), options.GetValueOrDefault(Module), options.GetValueOrDefault(Global), options.ContainsKey(TypedArrays),
       out var profile, out var error);
-    return (profile, error);
+    return (profile is null ? null : profile with { Bindings = BindingsOf(options) }, error);
   }
 
   /// <summary>The C# backend with a capability table.</summary>
@@ -562,6 +600,23 @@ public sealed class TranslateCommand : ICliCommand {
     (module, options) => CSharpEmitter.Legalize(module, implementations, CSharpProfileOf(options), FloatModeOf(options), capabilities),
     (module, options) => CSharpEmitter.Check(module, CSharpProfileOf(options), capabilities),
     (module, options, passes) => CSharpEmitter.Emit(module, CSharpProfileOf(options), FloatModeOf(options), options.GetValueOrDefault(Namespace), capabilities, passes));
+
+  /// <summary>The Python backend with a capability table; <c>--profile</c> names the version of Python.</summary>
+  private static Backend Python(PythonCapabilities capabilities, Func<IrModule> implementations) => new("python",
+    PythonEmitter.Runtime,
+    options => PythonProfileOf(options).Profile!.Name,
+    RuleTarget.Neutral,
+    [new(Profile, Choice(PythonProfile.Names)), new(Float, FloatChoice)],
+    options => FloatMisuse(options) ?? PythonProfileOf(options).Error,
+    (module, options) => PythonEmitter.Legalize(module, implementations, PythonProfileOf(options).Profile!, FloatModeOf(options), capabilities),
+    (module, options) => PythonEmitter.Check(module, PythonProfileOf(options).Profile!, capabilities),
+    (module, options, passes) => PythonEmitter.Emit(module, PythonProfileOf(options).Profile!, FloatModeOf(options), capabilities, passes));
+
+  /// <summary>The Python profile <c>--profile</c> names, the default one without it, or what is wrong with the name.</summary>
+  private static (PythonProfile? Profile, string? Error) PythonProfileOf(IReadOnlyDictionary<string, string> options) {
+    PythonProfile.TryParse(options.GetValueOrDefault(Profile), out var profile, out var error);
+    return (profile, error);
+  }
 
   /// <summary>The Rust backend with a capability table; <c>--profile</c> names the edition, <c>--rust-version</c> the MSRV.</summary>
   private static Backend Rust(RustCapabilities capabilities, Func<IrModule> implementations) => new("rust",
@@ -616,7 +671,7 @@ public sealed class TranslateCommand : ICliCommand {
   /// <summary>Names in quotes, the last joined by "and", the others by commas: 'a', 'b' and 'c'.</summary>
   private static string Listed(IEnumerable<string> names) {
     var quoted = names.Select(name => $"'{name}'").ToList();
-    return quoted.Count < 2 ? string.Concat(quoted) : string.Join(", ", quoted.Take(quoted.Count - 1)) + " and " + quoted[^1];
+    return quoted.Count < 2 ? string.Concat(quoted) : $"{string.Join(", ", quoted[..^1])} and {quoted[^1]}";
   }
 
   /// <summary>Reports a command line the command cannot carry out as <c>PLY0003</c>.</summary>
@@ -666,9 +721,9 @@ public sealed class TranslateCommand : ICliCommand {
           $"INTRINSICS.{native.Op}", native.Format.ToString(), native.Contract.ToString(), native.Runtime, native.Slack, native.Bound))])
         : null,
       Helpers = [.. helpers.Select(helper => new ManifestHelper(helper.Symbol, helper.Licence, helper.Origin, helper.CallSites, helper.Size, helper.DependsOn))],
-      NativeDependencies = [],
+      NativeDependencies = [.. module.ForeignFunctions.Select(function => function.Library).Distinct().Select(library => new ManifestNativeDependency(library, "unspecified", "NOASSERTION"))],
       Licensing = new(OutputLicence.Of(OutputLicence.Header(_utf8.GetString(record.Bytes)), helpers.Select(helper => helper.Licence)), Obligations(helpers), []),
-      Caveats = record.Caveats,
+      Caveats = [.. record.Caveats, .. ForeignCaveats(module, options, backend)],
       Optimization = new(options.GetValueOrDefault(Opt, "default"), options.TryGetValue(DisableOpt, out var disabled) ? disabled.Split(',') : [],
         [.. record.Applications.Select(application => application.Id).Distinct().Select(id => new ManifestPass(id, "unproven"))]),
       Warnings = ManifestMessage.WarningsOf(context.Diagnostics.Items),

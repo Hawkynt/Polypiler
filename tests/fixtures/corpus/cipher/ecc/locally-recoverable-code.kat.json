@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/locally-recoverable-code.js",
+ "algorithms": [
+  {
+   "name": "Locally Recoverable Code",
+   "vectors": [
+    {
+     "text": "LRC [6,3,3] all zeros vector",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000000"},
+     "expected": {"t":"bytes","v":"000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LRC [6,3,3] message [1,0,0] with locality r=2",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"010000"},
+     "expected": {"t":"bytes","v":"010000010001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LRC [6,3,3] message [0,1,0] with local parities",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000100"},
+     "expected": {"t":"bytes","v":"000100010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "LRC [6,3,3] message [1,1,1] full pattern",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"010101"},
+     "expected": {"t":"bytes","v":"010101000001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

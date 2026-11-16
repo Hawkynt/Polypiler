@@ -1,0 +1,121 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/esch384.js",
+ "algorithms": [
+  {
+   "name": "Esch384",
+   "vectors": [
+    {
+     "text": "Esch384: Empty message (NIST LWC KAT Count=1)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"2981715e2263ebd0cb6e5c2c99d0776d5e691ee737fde05247895e75d02e7447fd6ab707e2ec8385a539777965e472ee"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Esch384: Single byte 0x00 (NIST LWC KAT Count=2)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00"},
+     "expected": {"t":"bytes","v":"ca78366c86e82726c19ebd1dbbb1375cef93c570f856ce2ff5da0ca87140dacd65f3e1c5af5f84b3f6390b9ac1a2fa4d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Esch384: Two bytes 0x0001 (NIST LWC KAT Count=3)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001"},
+     "expected": {"t":"bytes","v":"76a4f5b45a6062de68f974824fcc7de8ce4bd9ce64ce9a8958a3409151b2481d13b5d9c1bdca1a658d31110088c54922"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Esch384: Four bytes 0x00010203 (NIST LWC KAT Count=5)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"00010203"},
+     "expected": {"t":"bytes","v":"900c76a75ad5fec6924934e8eadc78bcb3951e241a2ac9301e6d35895689ba7c93411a5b6def5a2f87248aff1bdd240e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Esch384: 8 bytes (NIST LWC KAT Count=9)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001020304050607"},
+     "expected": {"t":"bytes","v":"571560322d28dc5f8039794b4a3290a17ccdd60fa6c36ee78dcf9c05ce592d64021ef324af69fcac6829fd84aa69f35b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Esch384: 16 bytes (full rate) (NIST LWC KAT Count=17)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"0008f97d6bbb701d5e33fcc178efe3e3d5e77915d4a4daf6e1ae34cd28edb895a053e19d930b50f72837e1a8f5b1f450"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Esch384: 20 bytes (NIST LWC KAT Count=21)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f10111213"},
+     "expected": {"t":"bytes","v":"7e04b13784f319c59936c2555b3ee347d7e3fbed51138f5fcd79482a1f5be9d9f9dea8f598d5b01f4916f3be6fd0a24d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Esch384: 32 bytes (NIST LWC KAT Count=33)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"},
+     "expected": {"t":"bytes","v":"55ba6e68b5ef92458c75e4888b25b31dc6212933b138c9623217af9aaff2a4691b81331de422387d12f170ef088e0ea1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Esch384: 48 bytes (NIST LWC KAT Count=49)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f"},
+     "expected": {"t":"bytes","v":"e938cdfe53d40963908d7f3ffa0671d80ab95925964bbbb3efe97676e94fc21bd6b836482ec13840999473fc7b148ef1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Esch384: 64 bytes (NIST LWC KAT Count=65)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"580d48b4dcead117350855547063a629fd200cd623681eeb4c3c16fa2222614a94ce8a8bb69343a621227debd018f0ad"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

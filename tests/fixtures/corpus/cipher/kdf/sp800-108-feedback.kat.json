@@ -1,0 +1,119 @@
+{
+ "schema": 1,
+ "file": "algorithms/kdf/sp800-108-feedback.js",
+ "algorithms": [
+  {
+   "name": "SP800-108-Feedback",
+   "vectors": [
+    {
+     "text": "SP 800-108 Feedback Mode - HMAC-SHA1 Test Vector 1 (2 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"label","value":{"t":"bytes","v":"37935cbae5f5b003398f8e3f"}},
+      {"set":"context","value":{"t":"bytes","v":"0976fdec7817d94d60c4e0c9091d82e38bcfc58d7fff0829a13d1b4455b8"}},
+      {"set":"outputLength","value":{"t":"number","v":2}},
+      {"set":"counterBits","value":{"t":"number","v":32}},
+      {"set":"outputLengthBits","value":{"t":"number","v":32}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-1"}}
+     ],
+     "input": {"t":"bytes","v":"e6ea4e4f7178a81230a01da05705b9c8b902121b"},
+     "expected": {"t":"bytes","v":"1092"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP 800-108 Feedback Mode - HMAC-SHA1 Test Vector 2 (2 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"label","value":{"t":"bytes","v":"6ee961f615859ca0aae6ace0"}},
+      {"set":"context","value":{"t":"bytes","v":"614e4b95faa64cbe30ce47d9c426536a54f62e51d5909f8216204075516f"}},
+      {"set":"outputLength","value":{"t":"number","v":2}},
+      {"set":"counterBits","value":{"t":"number","v":32}},
+      {"set":"outputLengthBits","value":{"t":"number","v":32}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-1"}}
+     ],
+     "input": {"t":"bytes","v":"5b5e2c32e98f06aa4868eec0ec18d53904dc0c05"},
+     "expected": {"t":"bytes","v":"419a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP 800-108 Feedback Mode - HMAC-SHA1 Test Vector 3 (2 bytes)",
+     "inverse": false,
+     "steps": [
+      {"set":"label","value":{"t":"bytes","v":"c1e9241ee2203b12ce1147be"}},
+      {"set":"context","value":{"t":"bytes","v":"46402d8c205c356e9a09755adc2bf243b55b14424b64db419e0ceb22c211"}},
+      {"set":"outputLength","value":{"t":"number","v":2}},
+      {"set":"counterBits","value":{"t":"number","v":32}},
+      {"set":"outputLengthBits","value":{"t":"number","v":32}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-1"}}
+     ],
+     "input": {"t":"bytes","v":"6611cf92c30689b302b190a7b720359a6f79af93"},
+     "expected": {"t":"bytes","v":"5e6f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP 800-108 Feedback Mode - HMAC-SHA1, 20 bytes (exactly one PRF block)",
+     "inverse": false,
+     "steps": [
+      {"set":"label","value":{"t":"bytes","v":"fa9877411df9bba2b96706ea"}},
+      {"set":"context","value":{"t":"bytes","v":"314f85d1e8bfa91f2419b25cca0eaeb58a6e77244b20fedcf458b6656cd0e67da2e417151dcfaad5946efc97924c89c9be7fea6ac66e7af8d165df9c252bfa0f0d00f8850ca49177a0ccbeac1f0818ed8d1d7aea7455c608b22771a18f1a7a9974fd4b1bcc7641c404ce650a737ddc759232b662e2af403a"}},
+      {"set":"outputLength","value":{"t":"number","v":20}},
+      {"set":"counterBits","value":{"t":"number","v":32}},
+      {"set":"outputLengthBits","value":{"t":"number","v":32}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-1"}}
+     ],
+     "input": {"t":"bytes","v":"3b674a2db34ddffba29091a0ad3077c9dd4cc245"},
+     "expected": {"t":"bytes","v":"4371d87e4a58f982afdfb70dc632ed620d76f14d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP 800-108 Feedback Mode - HMAC-SHA256, 36 bytes (one group past the first block)",
+     "inverse": false,
+     "steps": [
+      {"set":"label","value":{"t":"bytes","v":"07d8f46f432b585c9c35aad27d3b34bf"}},
+      {"set":"context","value":{"t":"bytes","v":"acdea99ad3d17295e1dc11935595aadb2c95d06fcf9ea5cb89e9f5d42b1ee04260a4b706555e5524a900f5162da44f51"}},
+      {"set":"outputLength","value":{"t":"number","v":36}},
+      {"set":"counterBits","value":{"t":"number","v":32}},
+      {"set":"outputLengthBits","value":{"t":"number","v":32}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-256"}}
+     ],
+     "input": {"t":"bytes","v":"abbef1c4c15ba0660f118f4e3078193d104d286f7aab95b88d71cc00ccd4f38a"},
+     "expected": {"t":"bytes","v":"773ad91cc0e639a067cb586f246157f9992874cb933f62c8b7383a5aa7198dc1e11c5ab7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP 800-108 Feedback Mode - HMAC-SHA256, 48 bytes (two PRF blocks)",
+     "inverse": false,
+     "steps": [
+      {"set":"label","value":{"t":"bytes","v":"6b5b22df64669ecd796545637ba48f55"}},
+      {"set":"context","value":{"t":"bytes","v":"61312d1cf43b42197348acb6fb89f72070be9b7e633545eb5f563dea9a45405c573229fcd8450a50f3671228e3e7ae39213a7c8982643b6992661aa0e950fefe"}},
+      {"set":"outputLength","value":{"t":"number","v":48}},
+      {"set":"counterBits","value":{"t":"number","v":32}},
+      {"set":"outputLengthBits","value":{"t":"number","v":32}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-256"}}
+     ],
+     "input": {"t":"bytes","v":"ba9a647c679326716cf4b98700199fc4f8592e9fc68f794d80da1e974c89d52d"},
+     "expected": {"t":"bytes","v":"bf6ec210daddb2b977e22fa5e15497fadcd692428ec54561ce502966a8e89a86e812c8421b1ff843a06a46b7ab43d112"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

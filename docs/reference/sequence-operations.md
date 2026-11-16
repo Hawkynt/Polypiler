@@ -77,6 +77,13 @@ private static IEnumerable<int> Deferred_Where(int[] source, Func<int, int> sele
 - `Range` is checked where it is evaluated by `RangeCount`, which returns the count or throws; a start
   that is no constant is kept in a temporary the check reads.
 
+The loop above is what fusion makes. What the optimiser emits is the **specialised** form: where the
+lambdas never leave the call - a chain with a terminal, whose function is no iterator -
+[O0463](../optimizations/O0463-lambda-specialisation.md) lifts them, copies the fused function with them
+bound and lets inlining copy both into the caller, so that `a.Select(x => x).Where(x => x > 3).Sum()`
+is one loop in `F` with no delegate and no call. An iterator - the stored `q` above - keeps its lambdas,
+and so does every output of `--opt none` or `--disable-opt O0463`.
+
 The sort and the check are operations of the IR, `StableSort` (`(i32[], fn(i32, i32) → i32) → void`) and
 `RangeCount` (`(i32, i32) → i32`), which the interpreter computes itself. No target has them natively, so
 legalization binds both, in every backend (`SequenceLegalization`), to the helpers of the same names in

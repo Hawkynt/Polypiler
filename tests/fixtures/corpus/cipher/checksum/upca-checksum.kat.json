@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/upca-checksum.js",
+ "algorithms": [
+  {
+   "name": "UPC-A",
+   "vectors": [
+    {
+     "text": "Coca-Cola Classic UPC",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3033363030303239313435"},
+     "expected": {"t":"bytes","v":"02"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Coke 12oz Can UPC",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3031323030303138313738"},
+     "expected": {"t":"bytes","v":"08"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Campbell's Soup UPC",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3035313030303031323233"},
+     "expected": {"t":"bytes","v":"04"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

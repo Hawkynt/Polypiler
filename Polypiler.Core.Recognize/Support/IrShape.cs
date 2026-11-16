@@ -27,6 +27,7 @@ public static class IrShape {
 
     return (left, right) switch {
       (IrConst a, IrConst b) => a.Value == b.Value,
+      (IrBigConst a, IrBigConst b) => a.Value == b.Value,
       (IrLocalRef a, IrLocalRef b) => a.Local == b.Local,
       (IrConstRef a, IrConstRef b) => ReferenceEquals(a.Constant, b.Constant),
       (IrUnary a, IrUnary b) => a.Op == b.Op && Same(a.Operand, b.Operand),
@@ -101,6 +102,9 @@ public static class IrShape {
     IrBoundMethod { Receiver: { } receiver } => [receiver],
     IrArraySequence sequence => [sequence.Array],
     IrSequence operation => operation.Arguments,
+    IrAwait awaited => [awaited.Operand],
+    IrAsync operation => operation.Arguments,
+    IrForeignCall call => call.Arguments,
     _ => []
   };
 
@@ -136,7 +140,8 @@ public static class IrShape {
   /// <param name="node">The node.</param>
   /// <returns><see langword="true"/> when the node itself has no effect.</returns>
   public static bool IsSideEffectFreeNode(IrExpr node) => node switch {
-    IrCall or IrStep or IrNewArray or IrGlobalRef or IrNew or IrMethodCall or IrBind or IrThrowExpression or IrInvoke or IrLambda or IrBoundMethod or IrSequence => false,
+    IrCall or IrStep or IrNewArray or IrGlobalRef or IrNew or IrMethodCall or IrBind or IrThrowExpression or IrInvoke or IrLambda or IrBoundMethod or IrSequence or IrAwait or IrAsync => false,
+    IrForeignCall or IrLastError => false,
     IrFieldLoad load => !load.Target.Type.IsObject,
     IrIntrinsic intrinsic => intrinsic.Type != IrType.Void && intrinsic.Op != IrIntrinsicOp.ArrayOf,
     _ => true
@@ -155,10 +160,10 @@ public static class IrShape {
   /// <param name="node">The node.</param>
   /// <returns><see langword="true"/> when the node itself is total.</returns>
   public static bool IsTrapFreeNode(IrExpr node) => node switch {
-    IrConst or IrLocalRef => true,
+    IrConst or IrBigConst or IrLocalRef => true,
     IrConstRef reference => !reference.Type.IsArray,
     IrUnary unary => unary.Op != IrUnaryOp.NegateChecked,
-    IrBinary binary => !IrOperators.Traps(binary.Op) && !(binary.Left.Type.IsInteger && binary.Op is IrBinaryOp.Divide or IrBinaryOp.Remainder),
+    IrBinary binary => !IrOperators.Traps(binary.Op) && !((binary.Left.Type.IsInteger || binary.Left.Type.IsBigInt) && binary.Op is IrBinaryOp.Divide or IrBinaryOp.Remainder),
     IrConvert conversion => conversion.Contract == IrConversion.Wrap && !conversion.Operand.Type.IsFloat,
     IrConditional => true,
     IrIntrinsic { Op: IrIntrinsicOp.ToInt32 or IrIntrinsicOp.ToUint32 } => true,
@@ -244,6 +249,9 @@ public static class IrShape {
     IrBoundMethod { Receiver: not null } bound => bound with { Receiver = operands[0] },
     IrArraySequence => new IrArraySequence(operands[0]),
     IrSequence operation => operation with { Arguments = operands },
+    IrAwait => new IrAwait(operands[0]),
+    IrAsync operation => operation with { Arguments = operands },
+    IrForeignCall call => call with { Arguments = operands },
     _ => expression
   };
 

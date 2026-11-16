@@ -240,7 +240,7 @@ public sealed class IrModuleFormatTests {
   }
 
   // The numbers of the layout, as IrModuleFormat writes them.
-  internal const byte Null = 0, Shared = 1, Const = 2, LocalRef = 4, Unary = 5, FieldLoad = 16, GlobalRef = 19, StrConst = 20, New = 21, MethodCall = 23, Block = 43, ExprStmt = 48, Try = 60, ForEachCollection = 62, ForEachSequence = 67, Sequence = 68;
+  internal const byte Null = 0, Shared = 1, Const = 2, LocalRef = 4, Unary = 5, FieldLoad = 16, GlobalRef = 19, StrConst = 20, New = 21, MethodCall = 23, Block = 43, ExprStmt = 48, Try = 60, ForEachCollection = 62, ForEachSequence = 67, Sequence = 68, Await = 69, Async = 70, ForeignCall = 71, LastError = 72, BigConst = 73;
 
   internal const byte I32 = (byte)IrTypeKind.I32;
 
@@ -264,10 +264,17 @@ public sealed class IrModuleFormatTests {
       locals(writer);
     body(writer);
     NoOrigin(writer);
+    NoForeignFunctions(writer);
   });
 
   /// <summary>What ends a function that is no instantiation: its absent value and no origin.</summary>
   internal static void NoOrigin(BinaryWriter writer) {
+    writer.Write7BitEncodedInt(0);
+    writer.Write(false);
+  }
+
+  /// <summary>What ends a module without foreign functions (#1332) and without an initializer (#1365): their count, 0, and false.</summary>
+  internal static void NoForeignFunctions(BinaryWriter writer) {
     writer.Write7BitEncodedInt(0);
     writer.Write(false);
   }
@@ -293,7 +300,7 @@ public sealed class IrModuleFormatTests {
   }
 
   private static object[] Malformed() => [
-    new TestCaseData(Expression(writer => writer.Write((byte)(Sequence + 1))), "is no kind of node").SetName("A node of no kind"),
+    new TestCaseData(Expression(writer => writer.Write((byte)(BigConst + 1))), "is no kind of node").SetName("A node of no kind"),
     new TestCaseData(Expression(writer => { writer.Write(GlobalRef); writer.Write(I32); writer.Write7BitEncodedInt(0); }), "global 0 does not exist").SetName("A global that does not exist"),
     new TestCaseData(Expression(writer => { writer.Write(Const); writer.Write((byte)99); }), "is no kind of type").SetName("A type of no kind"),
     new TestCaseData(Expression(writer => { writer.Write(Const); writer.Write((byte)IrTypeKind.Struct); writer.Write7BitEncodedInt(1); }), "struct 0 does not exist").SetName("A struct that does not exist"),
@@ -323,6 +330,7 @@ public sealed class IrModuleFormatTests {
   /// <summary>A struct declared without fields.</summary>
   internal static void Opaque(BinaryWriter writer) {
     writer.Write((byte)0);
+    writer.Write(false);
     writer.Write(false);
     writer.Write(false);
   }
@@ -366,6 +374,7 @@ public sealed class IrModuleFormatTests {
     }
 
     NoOrigin(writer);
+    NoForeignFunctions(writer);
   });
 
   [TestCaseSource(nameof(Malformed))]

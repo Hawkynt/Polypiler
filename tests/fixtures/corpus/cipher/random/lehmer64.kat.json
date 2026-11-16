@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/lehmer64.js",
+ "algorithms": [
+  {
+   "name": "Lehmer64",
+   "vectors": [
+    {
+     "text": "Seed 1 (SplitMix64 initialization): First 5 outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"d013072351f5fc50f5116e796b986d61cfe0853995d9c9838af139b0bd173856f4ba5b360862da7f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 0 (SplitMix64 initialization): First 5 outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"c112a6a15fadb6f6ec0339a6f15317e284824b46bbd0a6f9e2f53aaa2457752d85de4d73c42a63b9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed 42 (SplitMix64 initialization): First 5 outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"000000000000002a"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"ceae6504d53ce75febbe9b2aeb6593fc1349d62b159350f9a92566124ec338fbbc24bd3b1be4839f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Direct state 0x123456789ABCDEF0123456789ABCDEF0: First 3 outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":24}},
+      {"set":"state","value":{"t":"bytes","v":"123456789abcdef0123456789abcdef0"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"bf82f820876e23a96664d56f05045b883cf48e8a467812b9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

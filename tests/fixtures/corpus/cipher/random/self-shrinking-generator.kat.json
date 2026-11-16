@@ -1,0 +1,86 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/self-shrinking-generator.js",
+ "algorithms": [
+  {
+   "name": "Self-Shrinking Generator",
+   "vectors": [
+    {
+     "text": "SSG Test Vector 1: Polynomial 0x3B, Seed 0x01",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":8}},
+      {"set":"polynomial","value":{"t":"number","v":59}},
+      {"set":"seed","value":{"t":"bytes","v":"01"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"20240a0007702aa0","typed":"Uint8Array"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SSG Test Vector 2: Polynomial 0x3B, Seed 0xFF",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":8}},
+      {"set":"polynomial","value":{"t":"number","v":59}},
+      {"set":"seed","value":{"t":"bytes","v":"ff"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"f9ffed42be2f7f92","typed":"Uint8Array"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SSG Test Vector 3: Polynomial 0xD5, Seed 0x42",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":8}},
+      {"set":"polynomial","value":{"t":"number","v":213}},
+      {"set":"seed","value":{"t":"bytes","v":"42"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"40cc111100c88844","typed":"Uint8Array"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SSG Test Vector 4: Polynomial 0x3B, Seed 0xAB",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":8}},
+      {"set":"polynomial","value":{"t":"number","v":59}},
+      {"set":"seed","value":{"t":"bytes","v":"ab"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"baa4b49aaa802aae","typed":"Uint8Array"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SSG Test Vector 5: Polynomial 0x3B, Seed 0x12",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":8}},
+      {"set":"polynomial","value":{"t":"number","v":59}},
+      {"set":"seed","value":{"t":"bytes","v":"12"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"0694062519a00000","typed":"Uint8Array"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

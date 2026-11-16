@@ -93,6 +93,7 @@ internal sealed partial class Lowering(string path, BoundModel model) {
     }
 
     this.Globals();
+    this.DeclareForeign(classes);
     var seen = new HashSet<string>();
     foreach (var (file, semantics, type) in classes) {
       path = file;
@@ -114,7 +115,7 @@ internal sealed partial class Lowering(string path, BoundModel model) {
           if (!seen.Add(method.Identifier.Text))
             throw new UnsupportedException(method, "method overloading");
 
-          if (this.Intrinsics.ContainsKey(method.Identifier.Text))
+          if (this.Intrinsics.ContainsKey(method.Identifier.Text) || IsForeignDeclaration(method))
             continue;
 
           if (method.TypeParameterList is not null) {
@@ -134,10 +135,13 @@ internal sealed partial class Lowering(string path, BoundModel model) {
     functions = this.Instantiations(functions);
     if (this._diagnostics.Count == 0)
       this.CheckInitializers(name, functions);
+    if (this._diagnostics.Count == 0)
+      this.CheckWhenAll(name, functions);
 
     var module = new IrModule(name, functions, this._constants.Values.ToList()) {
       Types = [.. this._types], Globals = [.. this._initialized.Select(entry => entry.Global)],
-      Caveats = this._cultureImplied ? [CSharpFrontend.InvariantCulture] : []
+      Caveats = this._cultureImplied ? [CSharpFrontend.InvariantCulture] : [],
+      ForeignFunctions = this.ForeignFunctions
     };
     if (this._diagnostics.Count == 0)
       this.Constructed(module);
@@ -253,7 +257,7 @@ internal sealed partial class Lowering(string path, BoundModel model) {
   private IrFunction Method(MethodDeclarationSyntax method) {
     NoAwaitUsing(method);
     foreach (var modifier in method.Modifiers)
-      if (modifier.Kind() is not (SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword or SyntaxKind.InternalKeyword or SyntaxKind.StaticKeyword or SyntaxKind.UnsafeKeyword))
+      if (modifier.Kind() is not (SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword or SyntaxKind.InternalKeyword or SyntaxKind.StaticKeyword or SyntaxKind.UnsafeKeyword or SyntaxKind.AsyncKeyword))
         throw new UnsupportedException(method, modifier.Text);
 
     this.RefuseSkipLocalsInit(method);
@@ -279,6 +283,7 @@ internal sealed partial class Lowering(string path, BoundModel model) {
     this._localBase = 0;
     this._receiver = receiver;
     this._bound.Clear();
+    this.RefuseUnordered(node, symbol);
     var returnType = symbol.MethodKind == MethodKind.Constructor ? IrType.Void : this.Map(symbol.ReturnType, node is MethodDeclarationSyntax method ? method.ReturnType : node);
     var parameters = receiver is null ? new List<IrLocal>() : [receiver];
     var syntax = declared.ToList();
@@ -302,7 +307,7 @@ internal sealed partial class Lowering(string path, BoundModel model) {
     if (block is not null) {
       statements.AddRange(this.Block(block).Statements);
     } else if (expressionBody is not null) {
-      if (returnType == IrType.Void)
+      if ((returnType.IsAsync ? returnType.Element : returnType) == IrType.Void)
         this.Effect(expressionBody, statements);
       else
         statements.Add(new IrReturn(this.Initialized(expressionBody, statements).Value));
@@ -366,6 +371,9 @@ internal sealed partial class Lowering(string path, BoundModel model) {
 
     if (this.SequenceType(type, node) is { } sequence)
       return sequence;
+
+    if (this.AsyncType(type, node) is { } async)
+      return async;
 
     if (type is INamedTypeSymbol named && this._structs.TryGetValue(named, out var declared))
       return IrType.Struct(declared);
@@ -653,6 +661,7 @@ internal sealed partial class Lowering(string path, BoundModel model) {
         break;
       case InvocationExpressionSyntax when this.Paired(expression, into):
         break;
+      case AwaitExpressionSyntax:
       case InvocationExpressionSyntax:
       case BaseObjectCreationExpressionSyntax when this.ClassOf(model.GetTypeInfo(expression).Type) is not null:
         into.Add(new IrExprStmt(this.Value(expression)));
@@ -822,6 +831,9 @@ internal sealed partial class Lowering(string path, BoundModel model) {
       throw this.Reference(reference);
 
     this.RefuseOpen(expression);
+    if (this.ForeignValue(expression) is { } foreign)
+      return foreign;
+
     var info = model.GetTypeInfo(expression);
     if (this.Defaulted(expression, info) is { } defaulted)
       return defaulted;
@@ -882,6 +894,9 @@ internal sealed partial class Lowering(string path, BoundModel model) {
 
     if (model.GetConstantValue(expression) is { HasValue: true, Value: { } folded })
       return new IrConst(type, Carried(folded));
+
+    if (expression is AwaitExpressionSyntax awaited)
+      return this.Await(awaited);
 
     if (this.PointerNatural(expression, type) is { } pointerNode)
       return pointerNode;

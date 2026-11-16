@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/ppmd.js",
+ "algorithms": [
+  {
+   "name": "PPMd (PPM with Dynamic Memory)",
+   "vectors": [
+    {
+     "text": "Empty data test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"0600000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"06010000000040ffffbf00"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Mixed alphanumeric data",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"54686520717569636b2062726f776e20666f78206a756d7073206f76657220746865206c617a7920646f67"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"062b0000000054b40d0f80f667318b3d4b6262e68bd4acdbb40efb6467ae324b4c4d84c3dbc8ac94af9c0a8c21d02a438100"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repetitive text compression",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263616263616263616263616263616263"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"06120000000061b10918aae30000"},
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "file": "algorithms/asymmetric/rabin.js",
+ "algorithms": [
+  {
+   "name": "Rabin",
+   "vectors": [
+    {
+     "text": "Rabin Round-trip Test - Crypto++ Implementation Pattern",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0400"}}
+     ],
+     "input": {"t":"bytes","v":"48656c6c6f20576f726c64"},
+     "expected": {"t":"bytes","v":"48656c6c6f20576f726c64"},
+     "node": {
+      "outcome": "failed",
+      "output": {"t":"bytes","v":"1479352bb9fd8c64eb9a204386c7ea1b191b6ef48710"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Rabin-2048 round-trip",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0800"}}
+     ],
+     "input": {"t":"bytes","v":"546865207365636f6e64206b65792073697a65"},
+     "expected": {"t":"bytes","v":"546865207365636f6e64206b65792073697a65"},
+     "node": {
+      "outcome": "failed",
+      "output": {"t":"bytes","v":"537e06ceda20c066ea6b4d3f7293a9f06ee26b88de6eb9c5e1f7dc8b5005516408051e1b438b"},
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

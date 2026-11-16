@@ -119,6 +119,12 @@ internal sealed partial class Lowering {
     if (value.Type.ClassType is { } type && IrExceptionClass.IsException(type))
       return [new IrThrow(value)];
 
+    // A string thrown out of the function - 'Result() not implemented' of a base class - is an Error of that message to the caller (#1365).
+    if (value.Type.IsString && (!this._tries.TryPeek(out var around) || around.Handler is null)) {
+      this.ThrowsText = true;
+      return [new IrThrow(new IrNew(IrExceptionClass.Reference, IrExceptionClass.Constructor(IrExceptionClass.Exception, 1), [value]))];
+    }
+
     if (this.Observer(thrown) is { } place)
       throw this.Refuse(thrown, JavaScriptFrontend.NonErrorThrowDescriptor, $"a thrown value that is not an Error reaches {place}, which observes it");
 

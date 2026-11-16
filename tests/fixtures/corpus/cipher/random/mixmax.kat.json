@@ -1,0 +1,81 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/mixmax.js",
+ "algorithms": [
+  {
+   "name": "MIXMAX",
+   "vectors": [
+    {
+     "text": "Seed [1,2,3,4]: First 4 outputs (32 bytes) - Verified against C# implementation",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"00000001000000020000000300000004"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"6379afc57b50bf572c9062f116e0458ad22a0a30e848249ba286b8c5a633b27a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed [0]: First 3 outputs (24 bytes) - Zero seed with SplitMix64 initialization",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":24}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"05bc6a4a6d369615b1d0a961f181c7420294730f6fbef9ae"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed [1]: First 5 outputs (40 bytes) - Single-byte seed propagation",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"ff4a6538e039e776dea700280bdc6e54b67e275ac7959c340dcf790540c41f19b13744fcb2dff6ee"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed [42]: First 4 outputs (32 bytes) - Common test seed value",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":32}},
+      {"set":"seed","value":{"t":"bytes","v":"000000000000002a"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"462494ab7e4722b7233c616cc59dcf723d3137eccf3befadb59766ee350e766e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed [123456789]: First 3 outputs (24 bytes) - Large seed value test",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":24}},
+      {"set":"seed","value":{"t":"bytes","v":"00000000075bcd15"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"8506a0fdac78f9caefb5db32389c75de1d094a706b95537f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

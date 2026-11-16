@@ -1,0 +1,68 @@
+{
+ "schema": 1,
+ "file": "algorithms/mac/cbcmac.js",
+ "algorithms": [
+  {
+   "name": "CBC-MAC",
+   "vectors": [
+    {
+     "text": "FIPS 113 / BouncyCastle Test #1 - Zero IV, Non-aligned",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0123456789abcdef"}},
+      {"set":"macSize","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"37363534333231204e6f77206973207468652074696d6520666f7220"},
+     "expected": {"t":"bytes","v":"f1d30f68"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "BouncyCastle Test #2 - Explicit IV, Non-aligned",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0123456789abcdef"}},
+      {"set":"iv","value":{"t":"bytes","v":"1234567890abcdef"}},
+      {"set":"macSize","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"37363534333231204e6f77206973207468652074696d6520666f7220"},
+     "expected": {"t":"bytes","v":"58d2e77e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "BouncyCastle Test #3 - Word Aligned (Zero Padding)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0123456789abcdef"}},
+      {"set":"macSize","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"3736353433323120"},
+     "expected": {"t":"bytes","v":"21fb1936"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "BouncyCastle Test #4 - Full MAC Length",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0123456789abcdef"}},
+      {"set":"macSize","value":{"t":"number","v":8}}
+     ],
+     "input": {"t":"bytes","v":"37363534333231204e6f77206973207468652074696d6520666f7220"},
+     "expected": {"t":"bytes","v":"f1d30f6849312ca4"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

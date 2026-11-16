@@ -1,0 +1,76 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/sum-checksum.js",
+ "algorithms": [
+  {
+   "name": "Sum-8",
+   "vectors": [
+    {
+     "text": "Simple sequence",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01020304"},
+     "expected": {"t":"bytes","v":"0a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Overflow test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"ffff"},
+     "expected": {"t":"bytes","v":"fe"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Sum-16",
+   "vectors": [
+    {
+     "text": "Simple sequence",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01020304"},
+     "expected": {"t":"bytes","v":"000a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Multi-byte sum",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"ffffff"},
+     "expected": {"t":"bytes","v":"02fd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Sum-32",
+   "vectors": [
+    {
+     "text": "Simple sequence",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01020304"},
+     "expected": {"t":"bytes","v":"0000000a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -238,3 +238,26 @@ the library, copied into the module (see [the Rust backend](../architecture/RUST
   0 mismatches; the stored NaNs (11 per JavaScript profile, 26 without typed arrays) by class. The
   fixtures `float/FloatView.cs` and `js/FloatView.js`, a WAV reader among their methods, give in every
   profile of both backends what the C# fixture gives on .NET.
+
+## The arbitrary-precision integer
+
+`bigint` (`IrType.BigInt`, #494) is an exact integer of any magnitude, the type a Python `int` is
+imported as. Its constant is `IrBigConst`. `+`, `-`, `*` and negation are exact; `Divide` and
+`Remainder` truncate as on the fixed widths and trap on a zero divisor only (a frontend with floor
+division builds it from them); `&`, `|`, `^` and the complement work on the infinite two's complement,
+so `-1 & 0xFF` is 255; `<<` and `>>` take an unmasked `i32` count, `>>` floors, and a negative count
+shifts the other way. A conversion to a fixed width wraps (modulo 2^width) or traps outside the type;
+from one it is exact; to `f64` it rounds to nearest, ties to even, an infinity beyond the largest
+finite number; from a float it truncates and traps for a NaN and an infinity. There is no conversion
+to `f32`, which would round twice.
+
+| Target | Form |
+| --- | --- |
+| C# `net4.6` and later | `System.Numerics.BigInteger`; to `double` the helper `BigToDouble`, because .NET's cast cuts the bits it does not keep |
+| C# `net2.0`, `net3.5` | none: `PLY1053` |
+| JavaScript ES2020 and later | `BigInt`; division through `$udiv64`/`$urem64`, a trapping conversion through `$bigfit` |
+| JavaScript below ES2020 | none: `PLY1152` |
+| Python, every profile | `int`, with helpers for the truncating division, shifts by a count of any sign and the conversions to and from `float` |
+
+[O0062](../optimizations/O0062-python-int-specialization.md) narrows it to a fixed width wherever masks
+and ranges prove that exact.

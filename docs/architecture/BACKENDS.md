@@ -1,6 +1,6 @@
 # Backends: tree, passes, printer
 
-**Status:** implemented for the C#, the JavaScript and the Rust backend of the prototype ([#1336](https://github.com/Hawkynt/Polypiler/issues/1336)); stage 8 of the [pipeline](PIPELINE.md). The helpers are one IR library since [#1353](https://github.com/Hawkynt/Polypiler/issues/1353).
+**Status:** implemented for the C# and the JavaScript backend of the prototype ([#1336](https://github.com/Hawkynt/Polypiler/issues/1336)), for the Python backend ([Python backend](PYTHON-BACKEND.md)) and for the Rust backend ([Rust backend](RUST-BACKEND.md)); stage 8 of the [pipeline](PIPELINE.md). The helpers are one IR library since [#1353](https://github.com/Hawkynt/Polypiler/issues/1353).
 
 A backend does not write text. It builds a syntax tree of its target language from the IR, runs the
 target passes over that tree and hands the result to its printer, the only place where generated code
@@ -14,13 +14,13 @@ flowchart LR
   Print --> File["Generated file"]
 ```
 
-| | C# | JavaScript | Rust |
-| --- | --- | --- | --- |
-| Tree | `Polypiler.Core.Backends.CSharp/Syntax/CSharpSyntax.cs`: compilation unit, namespaces, types, members, statements, expressions | `Polypiler.Core.Backends.JavaScript/Syntax/JavaScriptSyntax.cs`: ESTree-shaped program, statements, expressions | `Polypiler.Core.Backends.Rust/Syntax/RustSyntax.cs`: files, items, statements, expressions; a crate is `RustCrate` |
-| Printer | `CSharpPrinter.Print(CsCompilationUnit, CSharpProfile)` | `JavaScriptPrinter.Print(JsProgram, JavaScriptProfile)` | `RustPrinter.Print(RsFile)`, rustfmt's default layout |
-| Reader | `CSharpSyntaxReader` (Roslyn) | `JavaScriptSyntaxReader` (Acornima) | `RustSyntaxReader` (recursive descent over the printed subset) |
-| Passes | `CSharpTargetPasses.Pipeline` | `JavaScriptTargetPasses.Pipeline` | `RustTargetPasses.Pipeline` |
-| Tree after the passes | `CSharpEmitter.Build(…)` | `JavaScriptEmitter.Build(…)` | `RustEmitter.Build(…)` |
+| | C# | JavaScript | Python | Rust |
+| --- | --- | --- | --- | --- |
+| Tree | `Polypiler.Core.Backends.CSharp/Syntax/CSharpSyntax.cs`: compilation unit, namespaces, types, members, statements, expressions | `Polypiler.Core.Backends.JavaScript/Syntax/JavaScriptSyntax.cs`: ESTree-shaped program, statements, expressions | `Polypiler.Core.Backends.Python/Syntax/PythonSyntax.cs`: module, statements, expressions after CPython's `ast` | `Polypiler.Core.Backends.Rust/Syntax/RustSyntax.cs`: files, items, statements, expressions; a crate is `RustCrate` |
+| Printer | `CSharpPrinter.Print(CsCompilationUnit, CSharpProfile)` | `JavaScriptPrinter.Print(JsProgram, JavaScriptProfile)` | `PythonPrinter.Print(PyModule)` | `RustPrinter.Print(RsFile)`, rustfmt's default layout |
+| Reader | `CSharpSyntaxReader` (Roslyn) | `JavaScriptSyntaxReader` (Acornima) | `PythonSyntaxReader` (its own, for the subset it prints) | `RustSyntaxReader` (recursive descent over the printed subset) |
+| Passes | `CSharpTargetPasses.Pipeline` | `JavaScriptTargetPasses.Pipeline` | `PythonTargetPasses.Pipeline` | `RustTargetPasses.Pipeline` |
+| Tree after the passes | `CSharpEmitter.Build(…)` | `JavaScriptEmitter.Build(…)` | `PythonEmitter.Build(…)` | `RustEmitter.Build(…)` |
 
 The Rust backend is described on [its own page](RUST-BACKEND.md).
 
@@ -102,7 +102,8 @@ and why:
 | `Polypiler.Core.Backends.CSharp/Helpers/Collections/CSharpCollectionClasses.cs` | The nested classes the keyed collections are where .NET's do not order or compare as the IR says: a representation of the target. |
 | `Polypiler.Core.Backends.CSharp/Helpers/String/CSharpStringHelpers.cs` | The string operations of ECMA-262 in C#: operations of the IR, not yet carried into the library (a follow-up of #1353). |
 | `Polypiler.Core.Backends.CSharp/Helpers/String/CSharpNumberTextHelpers.cs` | The numbers to text and back of ECMA-262 in C# (Ryu, V8): operations of the IR, not yet carried into the library (a follow-up of #1353). |
-| `Polypiler.Core.Backends.JavaScript/Helpers/JavaScriptHelpers.cs` | The level's own form of the IR's operations: `$imul`, `$fround` and `$trunc` below ECMAScript 2015; with `BigInt` the division that traps (`$div64` to `$urem64`) and the conversions from floating point (`$f2l`, `$f2lc`, `$f32`); the bounded access, creation, filling, copying and step of an array, plain or typed (`$get`, `$set`, `$new`, `$len`, `$fill`, `$copy`, `$step` and its forms); the bits of a number through a `DataView` (`$bits64`, `$float64`), and of a pair of halves as text (`$key64`). Each is the operation itself on the target's representation, for which the IR has no weaker operation to write it with; the 64-bit arithmetic on pairs of halves (O0075) and the traps of the arithmetic on numbers are helpers of the library. |
+| `Polypiler.Core.Backends.CSharp/Helpers/BigIntegers.cs` | `BigToDouble`: the IR's conversion of an arbitrary-precision integer to `f64` rounds to nearest, where .NET's own `(double)` of a `BigInteger` cuts the bits it does not keep - the conversion itself on the target's representation, which the library cannot write without a `BigInteger` of its own subset. |
+| `Polypiler.Core.Backends.JavaScript/Helpers/JavaScriptHelpers.cs` | The level's own form of the IR's operations: `$imul`, `$fround` and `$trunc` below ECMAScript 2015; with `BigInt` the division that traps (`$div64` to `$urem64`) and the conversions from floating point (`$f2l`, `$f2lc`, `$f32`) and the range check of an arbitrary-precision integer (`$bigfit`); the bounded access, creation, filling, copying and step of an array, plain or typed (`$get`, `$set`, `$new`, `$len`, `$fill`, `$copy`, `$step` and its forms); the bits of a number through a `DataView` (`$bits64`, `$float64`), and of a pair of halves as text (`$key64`). Each is the operation itself on the target's representation, for which the IR has no weaker operation to write it with; the 64-bit arithmetic on pairs of halves (O0075) and the traps of the arithmetic on numbers are helpers of the library. |
 | `Polypiler.Core.Backends.JavaScript/Helpers/HelperTexts.cs` | The notation of the helpers that stay: one text, or one for a `BigInt` and one for the halves. |
 | `Polypiler.Core.Backends.JavaScript/Helpers/Errors.cs` | The error classes the exception classes of the IR become, and the helpers that throw and chain them: a representation of the target. |
 | `Polypiler.Core.Backends.JavaScript/Helpers/Optional.cs` | How an optional value that holds none is spelled at the boundary of JavaScript: a representation. |
@@ -111,9 +112,17 @@ and why:
 | `Polypiler.Core.Backends.JavaScript/Helpers/Collections.cs` | The slots of `$Keyed`, a map or set below ECMAScript 2015, and the list operations of the arrays the lists are: a representation. |
 | `Polypiler.Core.Backends.JavaScript/Helpers/Sequences.cs` | The cursor of a lazy sequence below ECMAScript 2015 - `$generator`, `$closeAll`, `$iterate`, `$arrayIterator` - is an object with `next()` and `"return"()` that closes over the state machine and its pending `finally` blocks: the iterator protocol of ECMA-262, a representation of the IR's sequence, which has no type the library could be written in. |
 | `Polypiler.Core.Backends.JavaScript/Helpers/Pointers.cs` | A pointer is a region object `{ a, o, n, s, k }` and a byte offset, its loads and stores of another kind go through a `DataView` or the bits of a plain array's elements: a representation of the IR's bounded pointer, like the view's. |
+| `Polypiler.Core.Backends.JavaScript/Helpers/Async.cs` | `$async` drives the generator an async function is at ECMAScript 2015 on the native `Promise`, `$whenAll` waits for every promise and rejects with the first rejection in argument order (#1330): both work on the target's `Promise`, of which the IR has no type the library could be written in. |
 | `Polypiler.Core.Backends.JavaScript/Helpers/Enum/Enums.cs` | The frozen object an enum is, looked up by name and value: a representation. |
 | `Polypiler.Core.Backends.JavaScript/Helpers/String/Strings.cs` | The string operations of .NET and of the later levels in JavaScript: operations of the IR, not yet carried into the library (a follow-up of #1353). |
 | `Polypiler.Core.Backends.JavaScript/Helpers/String/NumberText.cs` | The numbers to text and back of .NET in JavaScript: operations of the IR, not yet carried into the library (a follow-up of #1353). |
+| `Polypiler.Core.Backends.Python/Helpers/PythonHelpers.cs` | The operations of the IR Python has no expression for, written with what Python has: it cannot raise inside an expression, so every operation that traps is a function (the checked range of an integer, the truncating division and remainder, a negative index or array length, the conversions of a float to an integer); its float division and remainder raise where IEEE 754 gives an infinity or a NaN; it has no binary32 type, so rounding to it goes through `struct`; and the operations that have no portable implementation in the IR (square root, roundings, sign, IEEE minimum and maximum) are written as Python computes them exactly. Each is the operation itself, for which the IR has no weaker operation to write it with. |
+| `Polypiler.Core.Backends.Python/Helpers/PythonHelpers.Objects.cs` | The object model where Python has no expression: the checked cast (`_ply_cast`), an exception with its cause and its message, an assignment to a cell inside an expression, a raise where a value stands, the unwrap of an optional value, the orders and equalities of generic definitions, a dict key of a NaN, an array of distinct structs, the restartable sequence `_PlySequence` (an object whose every enumeration calls the generator function anew, as the IR's restartable sequence is), the names of an enum's values as .NET writes and parses them, and ECMA-262's `ToInt32`/`ToUint32`: representations of the target and operations of the IR not yet carried into the library. |
+| `Polypiler.Core.Backends.Python/Helpers/PythonHelpers.Strings.cs` | The string operations of the IR where Python would count from the end, clamp, split or trim otherwise, on a `str` of UTF-16 code units: operations of the IR, not yet carried into the library (a follow-up of #1353). |
+| `Polypiler.Core.Backends.Python/Helpers/PythonHelpers.Collections.cs` | The list operations that check an index, the searches by `Equals`, the keyed operations that trap, the walks that trap after a change as .NET's enumerators do, `_PlySlots` (a `dict` in the order of .NET's slots) and `_PlyList` (a `list` that counts its changes): representations of the target. |
+| `Polypiler.Core.Backends.Python/Helpers/PythonHelpers.Views.cs` | A view is a `_PlyView` of a list, its first element and a length, or of the bytes of a list read with a `struct` format: the representation of the IR's span and memory, which Python has no type for, with the bounded copies, fills and comparisons and the bytes of the endian accesses. |
+| `Polypiler.Core.Backends.Python/Helpers/PythonHelpers.Pointers.cs` | A pointer is a `_PlyPointer` of a region and a byte offset, its loads and stores of another type go through the bytes of the elements they cover: a representation of the IR's bounded pointer, like the view's. |
+| `Polypiler.Core.Backends.Python/Helpers/PythonHelpers.NumberText.cs` | The numbers to text and back of .NET and of ECMA-262 in Python: operations of the IR, not yet carried into the library (a follow-up of #1353). |
 
 Outside the folders the emitters keep a few more of the same kind: the C# `Throw<T>` of a throw
 expression before C# 7, the C# `SinglePass<T>` that makes the one cursor of an iterator a sequence
@@ -134,7 +143,7 @@ with which the passes share one namespace of numbers. A pass never prints and ne
 | Number | Pass | What it does |
 | --- | --- | --- |
 | [O0500](../optimizations/O0500-target-helper-inlining.md) | helper inlining | a call of a single-expression helper becomes its body where the cost rule says so |
-| [O0501](../optimizations/O0501-target-unused-declaration-removal.md) | unused declaration removal | a helper or private constant nothing names any more is removed |
+| [O0501](../optimizations/O0501-target-unused-declaration-removal.md) | unused declaration removal | a helper or private constant nothing names any more is removed; in Python also an `import` nothing uses |
 
 The emitter declares only the helpers the code calls (and those they call); a function legalization
 copied in from the library is a helper to these passes as well. O0501 removes what later passes made
@@ -159,4 +168,7 @@ a helper over its budget whose body is one expression.
   `--opt none` the backends must reproduce every byte (`GoldenOutputTests`).
 - **Parse-back:** every generated file is parsed by Roslyn at the profile's language version and by
   Acornima at the profile's ECMAScript version, read into the tree and compared with the tree it was
-  printed from, parentheses and layout aside (`ParseBackTests`).
+  printed from, parentheses and layout aside (`ParseBackTests`). Every prototype source translated to
+  Python in its oldest and its newest profile is read back by `PythonSyntaxReader` and compared the
+  same way (`PythonParseBackTests`); CPython itself runs the generated modules in the differential
+  tests of the Python/Perl layer.

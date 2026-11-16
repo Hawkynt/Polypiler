@@ -108,7 +108,7 @@ internal sealed class CSharpFunctionsImportTests {
   [TestCase("public static int F(Del d) => d(1);", "a params delegate", "public delegate int Del(params int[] x);")]
   [TestCase("public static int F() { int G<T>(T v) => 1; return G(1); }", "a generic local function")]
   [TestCase("public static int F() { Action f = async () => { }; return 1; }", "an async lambda")]
-  [TestCase("public static int F() { Func<System.Threading.Tasks.Task<int>> f = async () => 1; return 1; }", "System.Threading.Tasks.Task<int>")]
+  [TestCase("public static int F() { Func<System.Threading.Tasks.Task<int>> f = async () => 1; return 1; }", "an async lambda")]
   [TestCase("public static int F() { Delegate d = null; return 1; }", "System.Delegate")]
   [TestCase("public static int F(Func<int> f) => (int)f.DynamicInvoke();", "object")]
   [TestCase("public static int F() { Func<int, int> f = Math.Abs; return f(-1); }", "the method group Math.Abs")]

@@ -1,0 +1,53 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/feal-nx.js",
+ "algorithms": [
+  {
+   "name": "FEAL-NX",
+   "vectors": [
+    {
+     "text": "FEAL-NX test vector #1 (32 rounds)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"rounds","value":{"t":"number","v":32}}
+     ],
+     "input": {"t":"bytes","v":"0000000100020003"},
+     "expected": {"t":"bytes","v":"0309e94066035e24"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "FEAL-NX test vector #2 (32 rounds)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"rounds","value":{"t":"number","v":32}}
+     ],
+     "input": {"t":"bytes","v":"0001000200030004"},
+     "expected": {"t":"bytes","v":"f158cba2fbdb6747"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "FEAL-NX test vector #3 (32 rounds)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"rounds","value":{"t":"number","v":32}}
+     ],
+     "input": {"t":"bytes","v":"0002000300040005"},
+     "expected": {"t":"bytes","v":"07a44b91188fb722"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

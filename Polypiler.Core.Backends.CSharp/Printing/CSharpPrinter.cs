@@ -79,7 +79,7 @@ public static class CSharpPrinter {
   public static int Precedence(CsExpression expression) => expression switch {
     CsIntegerLiteral { Value.Sign: < 0 } or CsRealLiteral { Value: < 0 } => Unary,
     CsRealLiteral real when !double.IsNaN(real.Value) && double.IsNegative(real.Value) => Unary,
-    CsPrefixUnary or CsCast => Unary,
+    CsPrefixUnary or CsCast or CsAwait => Unary,
     CsBinary binary => Of(binary.Operator),
     CsIsType => Relational,
     CsConditional => Conditional,
@@ -173,6 +173,7 @@ public static class CSharpPrinter {
           this.Enum(declared, depth);
           break;
         case CsField field:
+          this.Attributes(field.Attributes, depth);
           this.Modifiers(field.Modifiers, depth).Append(field.FieldType.Name).Append(' ').Append(field.Name);
           if (field.Initializer is not null) {
             this._text.Append(" = ");
@@ -182,6 +183,7 @@ public static class CSharpPrinter {
           this._text.Append(";\n");
           break;
         case CsMethod method:
+          this.Attributes(method.Attributes, depth);
           this.Modifiers(method.Modifiers, depth).Append(method.ReturnType.Name).Append(' ').Append(method.Name);
           if (method.TypeParameters.Count > 0)
             this._text.Append('<').AppendJoin(", ", method.TypeParameters).Append('>');
@@ -261,6 +263,9 @@ public static class CSharpPrinter {
           this._text.Append(", ");
 
         var parameter = parameters[index];
+        foreach (var attribute in parameter.Attributes)
+          this._text.Append('[').Append(attribute).Append("] ");
+
         if (parameter.Modifier is not null)
           this._text.Append(parameter.Modifier).Append(' ');
 
@@ -312,7 +317,14 @@ public static class CSharpPrinter {
       this.Line(depth).Append("}\n");
     }
 
+    /// <summary>Attributes, each between its brackets on a line of its own.</summary>
+    private void Attributes(IReadOnlyList<string> attributes, int depth) {
+      foreach (var attribute in attributes)
+        this.Line(depth).Append('[').Append(attribute).Append("]\n");
+    }
+
     private void Type(CsTypeDeclaration type, int depth) {
+      this.Attributes(type.Attributes, depth);
       this.Modifiers(type.Modifiers, depth).Append(type.Keyword).Append(' ').Append(type.Name);
       if (type.TypeParameters.Count > 0)
         this._text.Append('<').AppendJoin(", ", type.TypeParameters).Append('>');
@@ -651,7 +663,7 @@ public static class CSharpPrinter {
           this.Arguments(call.Arguments, depth);
           break;
         case CsOutArgument argument:
-          this._text.Append("out ");
+          this._text.Append(argument.Keyword).Append(' ');
           this.Expression(argument.Value, depth);
           break;
         case CsElementAccess element:
@@ -663,6 +675,10 @@ public static class CSharpPrinter {
         case CsCast cast:
           this._text.Append('(').Append(cast.TargetType.Name).Append(')');
           this.Operand(cast.Operand, IsTight(cast.Operand, null), depth);
+          break;
+        case CsAwait awaited:
+          this._text.Append("await ");
+          this.Operand(awaited.Operand, IsTight(awaited.Operand, null), depth);
           break;
         case CsPrefixUnary unary:
           this._text.Append(unary.Operator);

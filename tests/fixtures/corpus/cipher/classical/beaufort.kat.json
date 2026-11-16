@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/classical/beaufort.js",
+ "algorithms": [
+  {
+   "name": "Beaufort Cipher",
+   "vectors": [
+    {
+     "text": "Key shorter than the message. No published source carries this value",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"4c454d4f4e"}}
+     ],
+     "input": {"t":"bytes","v":"41545441434b41544441574e"},
+     "expected": {"t":"bytes","v":"4c4c544f4c4245544c4e5052"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Educational Test Vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"4b4559"}}
+     ],
+     "input": {"t":"bytes","v":"48454c4c4f"},
+     "expected": {"t":"bytes","v":"44414e5a51"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Reciprocal Property Test",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"434950484552"}}
+     ],
+     "input": {"t":"bytes","v":"42454155464f5254"},
+     "expected": {"t":"bytes","v":"4245504e5a444c50"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

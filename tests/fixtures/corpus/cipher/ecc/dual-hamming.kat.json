@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/dual-hamming.js",
+ "algorithms": [
+  {
+   "name": "Dual Hamming Code",
+   "vectors": [
+    {
+     "text": "Dual Hamming (7,3) all zeros",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000000"},
+     "expected": {"t":"bytes","v":"00000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Dual Hamming (7,3) pattern 001",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000001"},
+     "expected": {"t":"bytes","v":"00000001010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Dual Hamming (7,3) pattern 010",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000100"},
+     "expected": {"t":"bytes","v":"00010100000101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Dual Hamming (7,3) pattern 100",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"010000"},
+     "expected": {"t":"bytes","v":"01000100010001"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

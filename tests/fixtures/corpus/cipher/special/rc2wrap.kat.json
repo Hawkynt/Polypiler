@@ -1,0 +1,27 @@
+{
+ "schema": 1,
+ "file": "algorithms/special/rc2wrap.js",
+ "algorithms": [
+  {
+   "name": "RC2-WRAP",
+   "vectors": [
+    {
+     "text": "RFC 3217 RC2 Key Wrap Example (40-bit effective)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"fd04fd08060707fb0003fefffd02fe05"}},
+      {"set":"iv","value":{"t":"bytes","v":"c7d90059b29e97f7"}},
+      {"set":"effectiveBits","value":{"t":"number","v":40}},
+      {"set":"pad","value":{"t":"bytes","v":"4845cce7fd1250"}}
+     ],
+     "input": {"t":"bytes","v":"b70a25fbc9d86a86050ce0d711ead4d9"},
+     "expected": {"t":"bytes","v":"70e699fb5701f7833330fb71e87c85a420bdc99af05d22af5a0e48d35f3138986cbaafb4b28d4f35"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,86 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/grain.js",
+ "algorithms": [
+  {
+   "name": "Grain v1",
+   "vectors": [
+    {
+     "text": "eSTREAM Grain v1 Test Vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000"}},
+      {"set":"iv","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000"},
+     "expected": {"t":"bytes","v":"7d405a412bfa1f7b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Grain-128",
+   "vectors": [
+    {
+     "text": "Bouncy Castle Test Vector #1 - All zeros",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}},
+      {"set":"iv","value":{"t":"bytes","v":"000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"f09b7bf7d7f6b5c2de2ffc73ac21397f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Bouncy Castle Test Vector #2 - Pattern key and IV",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0123456789abcdef123456789abcdef0"}},
+      {"set":"iv","value":{"t":"bytes","v":"0123456789abcdef12345678"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"afb5babfa8de896b4b9c6acaf7c4fbfd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Grain - 128-byte keystream (key=00..0F, IV=0)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"iv","value":{"t":"bytes","v":"000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"969eae24e41b22689ea73c99e83b78ecd9d37afeb4c2ab9ff760f75865b971d0d5d096bc45717cf6087ad03125823dc9c9e4225cfe6ccb648a04b13062503e2bbc0fbb260a7d7e25a8638b20cca5500779b0597d61339f693ddb29c970d43c03fe48a4e1f1ef2c43466a7189713981bf510c7c113c58752076ae9f15323a589a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Grain - enc of 00..3F (key=00..0F, IV=0)",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"iv","value":{"t":"bytes","v":"000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"969fac27e01e246f96ae3692e43676e3c9c268eda0d7bd88ef79ed4379a46fcff5f1b49f61545ad12053fa1a09af13e6f9d5106fca59fd53b23d8b0b5e6d0014"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

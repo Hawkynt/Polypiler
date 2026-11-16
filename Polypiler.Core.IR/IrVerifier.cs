@@ -51,8 +51,15 @@ public static partial class IrVerifier {
     Generics(module, diagnostics);
     Disposables(types, functions, diagnostics);
     Pointers(module, diagnostics);
+    Timed(module, diagnostics);
+    var foreign = Foreign(module, names, types, diagnostics);
+    // The initializer runs once at load: it takes nothing, gives nothing and nothing outside calls it.
+    if (module.Initializer is { } initializer
+        && !(functions.TryGetValue(initializer, out var start) && start is { IsPublic: false, Parameters.Count: 0, IsAsync: false } && start.ReturnType == IrType.Void))
+      diagnostics.Add(Error(initializer, "the initializer of the module is no private function of the module that takes and gives nothing"));
+
     foreach (var function in module.Functions)
-      new FunctionCheck(function, functions, constants, types, diagnostics) { Globals = globals, Members = members, Signatures = signatures }.Run();
+      new FunctionCheck(function, functions, constants, types, diagnostics) { Globals = globals, Members = members, Signatures = signatures, ForeignFunctions = foreign }.Run();
 
     if (diagnostics.Count == 0)
       foreach (var (constructor, call) in IrConstruction.VirtualCalls(module))
@@ -91,7 +98,7 @@ public static partial class IrVerifier {
     private int _breakable;
 
     public void Run() {
-      this.Require(function.ReturnType.IsStorable || function.ReturnType == IrType.Void,
+      this.Require(function.ReturnType.IsStorable || function.ReturnType == IrType.Void || (function.IsAsync && IrAsyncFunctions.IsResult(function.ReturnType.Element!)),
         $"the return type {function.ReturnType} is not a type of the IR");
       this.Declared(function.ReturnType);
       foreach (var parameter in function.Parameters) {
@@ -111,6 +118,7 @@ public static partial class IrVerifier {
       this.Iterator();
       this.Constructed();
       this.Pointers();
+      this.Awaited();
     }
 
     private void Require(bool holds, string message) {
@@ -223,10 +231,11 @@ public static partial class IrVerifier {
           break;
         case IrReturn result:
           this.Require(this._finally == 0, "a return inside a finally block");
+          var returned = this.Returned;
           if (result.Value is null)
-            this.Require(this._returnType == IrType.Void || this._returnType.IsLazySequence, "a return without a value in a function that returns one");
+            this.Require(returned == IrType.Void || returned.IsLazySequence, "a return without a value in a function that returns one");
           else
-            this.Value(result.Value, this._returnType, "the value returned");
+            this.Value(result.Value, returned, "the value returned");
 
           break;
         case IrUsing scope:
@@ -321,7 +330,7 @@ public static partial class IrVerifier {
         case IrGlobalRef reference:
           this.Global(reference.Global);
           break;
-        case IrStrConst:
+        case IrStrConst or IrBigConst:
           break;
         case IrConstRef reference:
           this.Known(reference.Constant);
@@ -431,6 +440,12 @@ public static partial class IrVerifier {
         case IrSequence operation:
           this.SequenceOperation(operation);
           break;
+        case IrAwait or IrAsync:
+          this.AsyncExpression(expression);
+          break;
+        case IrForeignCall or IrLastError:
+          this.Foreign(expression);
+          break;
         case IrIntrinsic intrinsic:
           for (var index = 0; index < intrinsic.Arguments.Count; ++index)
             if (index == 0 && (intrinsic.Op == IrIntrinsicOp.ArrayCopy || (intrinsic.Op == IrIntrinsicOp.ViewOf && intrinsic.Type.Kind is IrTypeKind.ReadOnlySpan or IrTypeKind.ReadOnlyMemory)))
@@ -519,6 +534,9 @@ public static partial class IrVerifier {
     /// <remarks>An enum converts to its underlying type and back, which changes no bit and so wraps.</remarks>
     private static bool Converts(IrConvert conversion) {
       var from = conversion.Operand.Type;
+      if (from.IsBigInt || conversion.Type.IsBigInt)
+        return IrBigInts.Converts(from, conversion.Type, conversion.Contract);
+
       if (!from.IsNumeric || !conversion.Type.IsNumeric)
         return false;
 
@@ -533,7 +551,8 @@ public static partial class IrVerifier {
 
     internal static bool InRange(IrConst constant) => constant.Type.Kind switch {
       IrTypeKind.Bool => constant.Value is 0 or 1,
-      IrTypeKind.Void or IrTypeKind.Array or IrTypeKind.Struct or IrTypeKind.Span or IrTypeKind.ReadOnlySpan or IrTypeKind.Object or IrTypeKind.Optional or IrTypeKind.Function or IrTypeKind.Memory or IrTypeKind.ReadOnlyMemory => false,
+      // An arbitrary-precision integer is a constant of its own node, IrBigConst.
+      IrTypeKind.BigInt or IrTypeKind.Void or IrTypeKind.Array or IrTypeKind.Struct or IrTypeKind.Span or IrTypeKind.ReadOnlySpan or IrTypeKind.Object or IrTypeKind.Optional or IrTypeKind.Function or IrTypeKind.Memory or IrTypeKind.ReadOnlyMemory => false,
       IrTypeKind.F32 => constant.Value is >= int.MinValue and <= int.MaxValue,
       IrTypeKind.F64 => true,
       _ => constant.Type.IsLong || (constant.Value >= IrOperators.Minimum(constant.Type) && constant.Value <= IrOperators.Maximum(constant.Type))

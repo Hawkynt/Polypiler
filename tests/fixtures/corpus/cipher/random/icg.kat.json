@@ -1,0 +1,62 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/icg.js",
+ "algorithms": [
+  {
+   "name": "ICG (Inversive Congruential Generator)",
+   "vectors": [
+    {
+     "text": "ICG with C# default parameters - seed=1, first 5 values",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":40}},
+      {"set":"multiplier","value":{"t":"bytes","v":"5851f42d4c957f2d"}},
+      {"set":"increment","value":{"t":"bytes","v":"14057b7ef767814f"}},
+      {"set":"modulo","value":{"t":"bytes","v":"ffffffffffffffc5"}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000001"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"6c576fac43fd007c26aa6283eb34dd79b7bd4dc5927e304704b92c926378a484e97a4a5839b3a1d9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ICG with seed=0 (special case - returns increment)",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":8}},
+      {"set":"multiplier","value":{"t":"bytes","v":"5851f42d4c957f2d"}},
+      {"set":"increment","value":{"t":"bytes","v":"14057b7ef767814f"}},
+      {"set":"modulo","value":{"t":"bytes","v":"ffffffffffffffc5"}},
+      {"set":"seed","value":{"t":"bytes","v":"0000000000000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"14057b7ef767814f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ICG with small modulus m=251 (prime), a=3, c=5, seed=7",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":10}},
+      {"set":"multiplier","value":{"t":"bytes","v":"03"}},
+      {"set":"increment","value":{"t":"bytes","v":"05"}},
+      {"set":"modulo","value":{"t":"bytes","v":"fb"}},
+      {"set":"seed","value":{"t":"bytes","v":"07"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"71415aa4e6dc0db378bb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

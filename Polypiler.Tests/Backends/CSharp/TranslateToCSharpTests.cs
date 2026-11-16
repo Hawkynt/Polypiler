@@ -75,7 +75,7 @@ public sealed class TranslateToCSharpTests {
   }
 
   /// <summary>Test design 10: a command line that cannot be carried out is PLY0003, exit code 2, and writes nothing.</summary>
-  [TestCase(new[] { "--to", "cobol", "--output", "out" }, "unknown target language 'cobol'; the prototype writes 'javascript', 'csharp' and 'rust'", TestName = "Misuse: unknown target")]
+  [TestCase(new[] { "--to", "cobol", "--output", "out" }, "unknown target language 'cobol'; the prototype writes 'javascript', 'csharp', 'python' and 'rust'", TestName = "Misuse: unknown target")]
   [TestCase(new[] { "--to", "CSharp", "--output", "out" }, "unknown target language 'CSharp'", TestName = "Misuse: the target is case-sensitive")]
   [TestCase(new[] { "--to", "csharp" }, "option '--output' is required", TestName = "Misuse: missing output")]
   [TestCase(new[] { "--to", "csharp", "--output", "out", "--namespace" }, "option '--namespace' requires a value", TestName = "Misuse: namespace without a value")]
@@ -209,7 +209,7 @@ public sealed class TranslateToCSharpTests {
 
   [Test]
   public void Help_NamesBothTargetsAndTheNamespaceOption()
-    => Assert.That(Invoke("translate", "--help").Output, Does.Contain("usage: polypiler translate <file> [options]").And.Contain("  --to <javascript|csharp|rust> ").And.Contain("  --namespace <name> "));
+    => Assert.That(Invoke("translate", "--help").Output, Does.Contain("usage: polypiler translate <file> [options]").And.Contain("  --to <javascript|csharp|python|rust> ").And.Contain("  --namespace <name> "));
 
   /// <summary>The help names the two options that choose what the C# is written for.</summary>
   [Test]

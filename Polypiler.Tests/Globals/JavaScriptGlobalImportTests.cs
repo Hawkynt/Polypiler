@@ -98,10 +98,6 @@ public sealed class JavaScriptGlobalImportTests {
   [TestCase("export var counter = 0; export function f() { return counter; }", JavaScriptFrontend.Unsupported, "'the exported variable counter' is not supported yet")]
   [TestCase("let counter = 0; export { counter }; export function f() { return counter; }", JavaScriptFrontend.Unsupported, "'the exported variable counter' is not supported yet")]
   [TestCase("const t = new Uint8Array(1); export default t; export function f() { return t[0]; }", JavaScriptFrontend.Unsupported, "'the exported variable t' is not supported yet")]
-  [TestCase("let c = 0; c = 5; export function f() { return c; }", JavaScriptFrontend.Unsupported, "'a statement at the top level of the module' is not supported yet")]
-  [TestCase("let c = 0; for (;;) { } export function f() { return c; }", JavaScriptFrontend.Unsupported, "'a statement at the top level of the module' is not supported yet")]
-  [TestCase("let c = 0; if (c) { } export function f() { return c; }", JavaScriptFrontend.Unsupported, "'a statement at the top level of the module' is not supported yet")]
-  [TestCase("let c = 0; f(); export function f() { return c; }", JavaScriptFrontend.Unsupported, "'a statement at the top level of the module' is not supported yet")]
   [TestCase("let a = b; let b = 1; export function f() { return a; }", JavaScriptFrontend.Unsupported, "'reading the variable b before its declaration' is not supported yet")]
   [TestCase("let y = 0; function g() { return y; } let x = g(); export function f() { return x; }", JavaScriptFrontend.Unsupported,
     "'an initializer that calls g, which reads or writes a variable of the module' is not supported yet")]

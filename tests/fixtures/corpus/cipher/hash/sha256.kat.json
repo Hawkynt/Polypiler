@@ -1,0 +1,82 @@
+{
+ "schema": 1,
+ "file": "algorithms/hash/sha256.js",
+ "algorithms": [
+  {
+   "name": "SHA-224",
+   "vectors": [
+    {
+     "text": "NIST Test Vector - Empty String",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"d14a028c2a3a2bc9476102bb288234c415a2b01f828ea62ac5b3e42f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST Test Vector - 'abc'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"23097d223405d8228642a477bda255b32aadbce4bda0b3f7e36c9da7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST Test Vector - Alphabet",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6162636465666768696a6b6c6d6e6f707172737475767778797a"},
+     "expected": {"t":"bytes","v":"45a5f72c39c5cff2522eb3429799e49e5f44b356ef926bcf390dccc2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "SHA-256",
+   "vectors": [
+    {
+     "text": "NIST Test Vector - Empty String",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST Test Vector - 'abc'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST Test Vector - Long String",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"6162636462636465636465666465666765666768666768696768696a68696a6b696a6b6c6a6b6c6d6b6c6d6e6c6d6e6f6d6e6f706e6f7071"},
+     "expected": {"t":"bytes","v":"248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

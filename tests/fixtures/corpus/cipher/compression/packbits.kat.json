@@ -1,0 +1,99 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/packbits.js",
+ "algorithms": [
+  {
+   "name": "PackBits RLE",
+   "vectors": [
+    {
+     "text": "Empty input",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte literal",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"0041"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Simple run of 3 identical bytes",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414141"},
+     "expected": {"t":"bytes","v":"fe41"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Three different literals",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414243"},
+     "expected": {"t":"bytes","v":"02414243"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Run followed by literals",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41414141424344"},
+     "expected": {"t":"bytes","v":"fd4102424344"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Literals followed by run",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41424344444444"},
+     "expected": {"t":"bytes","v":"02414243fd44"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Maximum run length (128 bytes)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141"},
+     "expected": {"t":"bytes","v":"8141"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Maximum literal sequence (128 bytes)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f"},
+     "expected": {"t":"bytes","v":"7f000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

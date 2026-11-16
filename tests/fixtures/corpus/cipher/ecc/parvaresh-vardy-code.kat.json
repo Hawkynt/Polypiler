@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/ecc/parvaresh-vardy-code.js",
+ "algorithms": [
+  {
+   "name": "Parvaresh-Vardy Code",
+   "vectors": [
+    {
+     "text": "Parvaresh-Vardy [8,2] all zeros",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0000"},
+     "expected": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Parvaresh-Vardy [8,2] constant polynomial",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0100"},
+     "expected": {"t":"bytes","v":"01010101010101010101010101010101"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Parvaresh-Vardy [8,2] linear polynomial correlation",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0001"},
+     "expected": {"t":"bytes","v":"0102030405060708010405030207060c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Parvaresh-Vardy [8,2] mixed correlation",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0101"},
+     "expected": {"t":"bytes","v":"0003020504070609000504020306070d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

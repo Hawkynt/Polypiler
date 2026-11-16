@@ -167,7 +167,7 @@ public static class FloatManifest {
       IrStructNew creation => creation.Arguments,
       IrFieldLoad load => [load.Target],
       IrStructEquals equality => [equality.Left, equality.Right],
-      IrNew or IrMethodCall or IrReferenceEquals or IrTypeTest or IrCast or IrAsCast or IrSome or IrIsNone or IrUnwrap or IrCoalesce or IrIsNull or IrBind or IrGenericEquals or IrGenericCompare or IrThrowExpression or IrCollection or IrArraySequence or IrSequence => IrTree.Operands(expression),
+      IrNew or IrMethodCall or IrReferenceEquals or IrTypeTest or IrCast or IrAsCast or IrSome or IrIsNone or IrUnwrap or IrCoalesce or IrIsNull or IrBind or IrGenericEquals or IrGenericCompare or IrThrowExpression or IrCollection or IrArraySequence or IrSequence or IrAwait or IrAsync => IrTree.Operands(expression),
       _ => []
     };
     if (expression is IrIntrinsic intrinsic1)

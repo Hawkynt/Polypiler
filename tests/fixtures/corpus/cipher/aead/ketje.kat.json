@@ -1,0 +1,106 @@
+{
+ "schema": 1,
+ "file": "algorithms/aead/ketje.js",
+ "algorithms": [
+  {
+   "name": "Ketje Jr",
+   "vectors": [
+    {
+     "text": "Ketje Jr: Empty message",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b"}},
+      {"set":"nonce","value":{"t":"bytes","v":"101112131415161718191a"}},
+      {"set":"aad","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"8863d23f545aa267efed5d57a0ff001c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Ketje Jr: 16-byte plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b"}},
+      {"set":"nonce","value":{"t":"bytes","v":"101112131415161718191a"}},
+      {"set":"aad","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":"00112233445566778899aabbccddeeff"},
+     "expected": {"t":"bytes","v":"876139e1b2ac4db54db9393bcecd08c1995151a728881be914bad2d245e93c0f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Ketje Jr: 15-byte plaintext with 14-byte AAD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b"}},
+      {"set":"nonce","value":{"t":"bytes","v":"101112131415161718191a"}},
+      {"set":"aad","value":{"t":"bytes","v":"6164646974696f6e616c2064617461"}}
+     ],
+     "input": {"t":"bytes","v":"746865207365637265742074657874"},
+     "expected": {"t":"bytes","v":"72199bac3edf79c25394dfc3e2dbb3c4c382d6e6c5f2ca57c3c4cc32b31e3e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "Ketje Sr",
+   "vectors": [
+    {
+     "text": "Ketje Sr: Empty message",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"101112131415161718191a1b1c1d1e1f"}},
+      {"set":"aad","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"a43bd96529a5ec5286ea168d34027c05"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Ketje Sr: 16-byte plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"101112131415161718191a1b1c1d1e1f"}},
+      {"set":"aad","value":{"t":"bytes","v":""}}
+     ],
+     "input": {"t":"bytes","v":"00112233445566778899aabbccddeeff"},
+     "expected": {"t":"bytes","v":"e8c5f20762f1e6b93a41ab6e32725f5ea6d6e37f7e3dd7f06d02dec9b9f12504"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Ketje Sr: 15-byte plaintext with 14-byte AAD",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}},
+      {"set":"nonce","value":{"t":"bytes","v":"101112131415161718191a1b1c1d1e1f"}},
+      {"set":"aad","value":{"t":"bytes","v":"6164646974696f6e616c2064617461"}}
+     ],
+     "input": {"t":"bytes","v":"746865207365637265742074657874"},
+     "expected": {"t":"bytes","v":"ea4ed1ff4837daadb4092be77c2cbb54a432e8abbe4667f8e11033a512c5df"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

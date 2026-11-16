@@ -123,7 +123,7 @@ internal sealed class JavaScriptFunctionsImportTests {
   [TestCase("export function f() { const g = function () { return this; }; return g(); }", "PLY1102", "'this' is not supported yet")]
   [TestCase("export function f() { const g = () => 1; return new g(); }", "PLY1102", "'new g' is not supported yet")]
   [TestCase("export function f() { const g = () => 1; return g.call(null); }", "PLY1102", "'a call of g.call' is not supported yet")]
-  [TestCase("export function f() { const g = (a = 1) => a; return g(); }", "PLY1102", "'a default parameter value' is not supported yet")]
+  [TestCase("export function f() { const g = (a = 1) => a; return g(); }", "PLY1102", "'a call of g with 0 arguments for 1 parameters' is not supported yet")]
   [TestCase("export function f() { const g = (...a) => 1; return g(); }", "PLY1102", "'a rest parameter' is not supported yet")]
   [TestCase("export function f() { let f = 1; f = () => 2; return 0; }", "PLY1105", "'f' holds both number and a function")]
   [TestCase("export function f() { const g = () => 1; return g(1); }", "PLY1102", "'a call of g with 1 arguments for 0 parameters' is not supported yet")]

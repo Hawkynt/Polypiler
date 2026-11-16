@@ -157,6 +157,12 @@ public static partial class IrInterpreter {
             made.Items.Add(Copied(LoadElement(array, index)));
 
           return made;
+        case IrCollectionOp.ListOf:
+          var listed = new ListValue();
+          foreach (var element in arguments)
+            listed.Items.Add(Copied(element));
+
+          return listed;
         case IrCollectionOp.MapNew or IrCollectionOp.SetNew:
           return new TableValue(operation.Type.Order);
         case IrCollectionOp.ListCount:

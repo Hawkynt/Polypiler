@@ -1,0 +1,37 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/darkcrypt-a5.js",
+ "algorithms": [
+  {
+   "name": "A5 (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "DarkCrypt A5 — keystream from incrementing key, zero input",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0001020304050607"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"fd65ae4da3a3dcbc8e1c52a8c7fb387af2644f41e2f17eee773c526206c56dcb50c51d253501f6959bb1b3572df82b8d93b40aa3b907ce02e6d9bdcf5975e5b28762ee187a9c71e40c5db01eca4136cd74acbd1779e1301edc07ebf25300a9f4c327f5806c2065ad0d6a32aa6f2589d3e040888e0ccb7d683ad91905e99dcadb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt A5 — incrementing key/plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0001020304050607"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"fd64ac4ea7a6dabb861558a3cbf63675e2755d52f6e468f96f2548791ad873d470e43f061124d0b2b398997c01d505a2a38538908d32f835dee087f46548db8d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

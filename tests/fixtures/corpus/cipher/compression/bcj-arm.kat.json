@@ -1,0 +1,33 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/bcj-arm.js",
+ "algorithms": [
+  {
+   "name": "BCJ ARM",
+   "vectors": [
+    {
+     "text": "Empty buffer",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Two consecutive BL instructions (little-endian words, opcode byte 0xEB)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000000eb010203eb"},
+     "expected": {"t":"bytes","v":"000000eb020203eb"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

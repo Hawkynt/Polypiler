@@ -1,0 +1,88 @@
+{
+ "schema": 1,
+ "file": "algorithms/encoding/xxencode.js",
+ "algorithms": [
+  {
+   "name": "XXencoding",
+   "vectors": [
+    {
+     "text": "XXencode empty data test",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":""},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Basic 3-byte zero test - XXencode",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"000000"},
+     "expected": {"t":"bytes","v":"2b2b2b2b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Simple pattern encoding test - XXencode",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"010203"},
+     "expected": {"t":"bytes","v":"2b453631"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "XXencode 1-byte group - eight data bits need exactly two 6-bit symbols",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4d"},
+     "expected": {"t":"bytes","v":"4845"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "XXencode 2-byte group - sixteen data bits need exactly three 6-bit symbols",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4d61"},
+     "expected": {"t":"bytes","v":"484b32"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "XXencode trailing NUL regression test - the old decoder stripped trailing zero bytes as if they were padding, so any payload ending in NUL decoded short and could not be re-encoded",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"01020300"},
+     "expected": {"t":"bytes","v":"2b4536312b2b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "XXencode all-NUL payload regression test - the old decoder returned an empty array for any all-zero payload",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0000000000"},
+     "expected": {"t":"bytes","v":"2b2b2b2b2b2b2b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

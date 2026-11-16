@@ -1,0 +1,56 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/ars.js",
+ "algorithms": [
+  {
+   "name": "ARS (AES-based Random Stream)",
+   "vectors": [
+    {
+     "text": "ARS4x32-10: Counter=0, Key=0 - Random123 kat_vectors",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}},
+      {"set":"outputSize","value":{"t":"number","v":16}},
+      {"set":"rounds","value":{"t":"number","v":10}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"19ee738def016450e4dbc2130d9cbe0c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ARS4x32-10: Counter=π digits, Key=π digits - Random123 kat_vectors",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"223809a4d0319f2998fa2e08896c4eec"}},
+      {"set":"outputSize","value":{"t":"number","v":16}},
+      {"set":"rounds","value":{"t":"number","v":10}}
+     ],
+     "input": {"t":"bytes","v":"886a3f24d308a3852e8a191344737003"},
+     "expected": {"t":"bytes","v":"d6e716a574ad5783ecb3595bf3ff6387"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "ARS4x32-10: Counter=0xFFFFFFFF (all), Key=mixed - Random123 kat_vectors",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"ffffffffffffffff0000000000000000"}},
+      {"set":"outputSize","value":{"t":"number","v":16}},
+      {"set":"rounds","value":{"t":"number","v":10}}
+     ],
+     "input": {"t":"bytes","v":"ffffffffffffffffffffffffffffffff"},
+     "expected": {"t":"bytes","v":"b14337bb5155639ffc87bceca97894a1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

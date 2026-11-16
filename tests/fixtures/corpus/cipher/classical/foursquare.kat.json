@@ -1,0 +1,50 @@
+{
+ "schema": 1,
+ "file": "algorithms/classical/foursquare.js",
+ "algorithms": [
+  {
+   "name": "Four-Square Cipher",
+   "vectors": [
+    {
+     "text": "Keywords EXAMPLE and KEYWORD over one digraph pair, J folded onto I. No published source carries this value",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"4558414d504c452c4b4559574f5244"}}
+     ],
+     "input": {"t":"bytes","v":"48454c50"},
+     "expected": {"t":"bytes","v":"46594e46"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Keywords with repeated letters - FORTIFICATION and BATTLE both dedupe. No published source carries this value",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"464f5254494649434154494f4e2c424154544c45"}}
+     ],
+     "input": {"t":"bytes","v":"41545441434b41544441574e"},
+     "expected": {"t":"bytes","v":"54504d4c49465450464c584b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Odd-length message padded to an even number of digraphs with X. No published source carries this value",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"4a4f484e2c5041554c"}}
+     ],
+     "input": {"t":"bytes","v":"424541544c4553"},
+     "expected": {"t":"bytes","v":"41414e4f50505358"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

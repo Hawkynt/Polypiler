@@ -1,0 +1,287 @@
+{
+ "schema": 1,
+ "file": "algorithms/kdf/tls-prf.js",
+ "algorithms": [
+  {
+   "name": "TLS-PRF",
+   "vectors": [
+    {
+     "text": "Botan TLS-PRF Vector 1",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"a6d455cb1b2929e43d63cce55ce89d66f252549729c19c1511"}},
+      {"set":"outputSize","value":{"t":"number","v":1}}
+     ],
+     "input": {"t":"bytes","v":"6c81af87abd86be83c37ce981f6bfe11bd53a8"},
+     "expected": {"t":"bytes","v":"a8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan TLS-PRF Vector 2",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"510194c9c9f90d98452fb914f636d5e5297c"}},
+      {"set":"outputSize","value":{"t":"number","v":2}}
+     ],
+     "input": {"t":"bytes","v":"6bb61d34af2bccf45a850850bcde35e55a92ba"},
+     "expected": {"t":"bytes","v":"5e75"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan TLS-PRF Vector 3",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"7fc24d382379a9cd54d53458947cb28e298a1dcc5eb2556f71acac1b"}},
+      {"set":"outputSize","value":{"t":"number","v":3}}
+     ],
+     "input": {"t":"bytes","v":"3cc54f5f3ef82c93ce60eb62dc9df005280dd1"},
+     "expected": {"t":"bytes","v":"706f52"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan TLS-PRF Vector 4",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"9f6fafed1f241a1e40adeaf2ad80"}},
+      {"set":"outputSize","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"bd3462dc587dfa992ae48bd7643b62a9971928"},
+     "expected": {"t":"bytes","v":"841d7339"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan TLS-PRF Vector 5",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"1026b9224fc59706beadae58ebd161fd2eac"}},
+      {"set":"outputSize","value":{"t":"number","v":5}}
+     ],
+     "input": {"t":"bytes","v":"1235a061fa3867b8e51511d1e672ce141e2fa6"},
+     "expected": {"t":"bytes","v":"d856787d41"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan TLS-PRF Vector 6",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"512fbf47d9da2915"}},
+      {"set":"outputSize","value":{"t":"number","v":6}}
+     ],
+     "input": {"t":"bytes","v":"63a22c3c7c5651103648f5cfc9764a7bde821f"},
+     "expected": {"t":"bytes","v":"f13096feed6e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan TLS-PRF Vector 7",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"519b87db85fbe92fb4070f3bef6e3d97df69b66061eb83b4a334e8eedc0f8e"}},
+      {"set":"outputSize","value":{"t":"number","v":7}}
+     ],
+     "input": {"t":"bytes","v":"aa15082f10f25ec4f96dffe9dc3d80bba6361b"},
+     "expected": {"t":"bytes","v":"b637fcade57896"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan TLS-PRF Vector 8",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"453c2549058b063c83e8b85e5cef3570df51b7d79b486f4f33"}},
+      {"set":"outputSize","value":{"t":"number","v":8}}
+     ],
+     "input": {"t":"bytes","v":"775b727ce679b8696171c7be60fc2e3f4de516"},
+     "expected": {"t":"bytes","v":"3431016193616501"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan TLS-PRF Vector 9",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"5569fc"}},
+      {"set":"outputSize","value":{"t":"number","v":9}}
+     ],
+     "input": {"t":"bytes","v":"ab299ad69dc581f13d86562ae2be8b08015ff8"},
+     "expected": {"t":"bytes","v":"a624cc363499b1ea64"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan TLS-PRF Vector 10",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"7fde51efb4044017c95e3608f8fb6f"}},
+      {"set":"outputSize","value":{"t":"number","v":10}}
+     ],
+     "input": {"t":"bytes","v":"ae4947624d877916e5b01eddab8e4cdc817630"},
+     "expected": {"t":"bytes","v":"5b908eb5b2a7f115cf57"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan TLS-PRF Vector 16",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"859d1ee9a694865ecc1830c361d24485ac1026"}},
+      {"set":"outputSize","value":{"t":"number","v":16}}
+     ],
+     "input": {"t":"bytes","v":"77bf131d53997b1fb2ace2137e26992b36bf3e"},
+     "expected": {"t":"bytes","v":"60d0a09fcfde24ab73f62a7c9f594766"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan TLS-PRF Vector 20",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"255230a341e671bc31b1"}},
+      {"set":"outputSize","value":{"t":"number","v":20}}
+     ],
+     "input": {"t":"bytes","v":"bcbd1efda490b9d541ba9df50fe9a451dd0313"},
+     "expected": {"t":"bytes","v":"2291e19459725562f106f63fe2f81e73ba23f04a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan TLS-PRF Vector 31 (Empty Salt)",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":""}},
+      {"set":"outputSize","value":{"t":"number","v":31}}
+     ],
+     "input": {"t":"bytes","v":"0ae876a7bb96c24cefa6ed53cee7b0a41b8ff7b3"},
+     "expected": {"t":"bytes","v":"881b99c3e43b1a42f096cf556d3143d5c5dbc4e984d26c5f3075bcb08b73da"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan TLS-PRF Vector 32",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"fcd5c9637a21e43f3cff6ecf65b6e2f97933779f101ad6"}},
+      {"set":"outputSize","value":{"t":"number","v":32}}
+     ],
+     "input": {"t":"bytes","v":"2212169d33fadc6ff94a3e5e0020587953cf1964"},
+     "expected": {"t":"bytes","v":"1e1c646c2bfbdc62fa4c81f1d0781f5f269d3f45e5c33cac8a2640226c8c5d16"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "TLS-12-PRF(HMAC(SHA-224))",
+   "vectors": [
+    {
+     "text": "IETF TLS 1.2 SHA-224 Test Vector",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"f5a3fe6d34e2e28560fdcaf6823f9091"}},
+      {"set":"outputSize","value":{"t":"number","v":88}},
+      {"set":"label","value":{"t":"bytes","v":"74657374206c6162656c"}}
+     ],
+     "input": {"t":"bytes","v":"e18828740352b530d69b34c6597dea2e"},
+     "expected": {"t":"bytes","v":"224d8af3c0453393a9779789d21cf7da5ee62ae6b617873d489428efc8dd58d1566e7029e2ca3a5ecd355dc64d4d927e2fbd78c4233e8604b14749a77a92a70fddf614bc0df623d798604e4ca5512794d802a258e82f86cf"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "TLS-12-PRF(HMAC(SHA-256))",
+   "vectors": [
+    {
+     "text": "IETF TLS 1.2 SHA-256 Test Vector",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"a0ba9f936cda311827a6f796ffd5198c"}},
+      {"set":"outputSize","value":{"t":"number","v":100}},
+      {"set":"label","value":{"t":"bytes","v":"74657374206c6162656c"}}
+     ],
+     "input": {"t":"bytes","v":"9bbe436ba940f017b17652849a71db35"},
+     "expected": {"t":"bytes","v":"e3f229ba727be17b8d122620557cd453c2aab21d07c3d495329b52d4e61edb5a6b301791e90d35c9c9a46b4e14baf9af0fa022f7077def17abfd3797c0564bab4fbc91666e9def9b97fce34f796789baa48082d122ee42c5a72e5a5110fff70187347b66"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "TLS-12-PRF(HMAC(SHA-384))",
+   "vectors": [
+    {
+     "text": "IETF TLS 1.2 SHA-384 Test Vector",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"cd665cf6a8447dd6ff8b27555edb7465"}},
+      {"set":"outputSize","value":{"t":"number","v":148}},
+      {"set":"label","value":{"t":"bytes","v":"74657374206c6162656c"}}
+     ],
+     "input": {"t":"bytes","v":"b80b733d6ceefcdc71566ea48e5567df"},
+     "expected": {"t":"bytes","v":"7b0c18e9ced410ed1804f2cfa34a336a1c14dffb4900bb5fd7942107e81c83cde9ca0faa60be9fe34f82b1233c9146a0e534cb400fed2700884f9dc236f80edd8bfa961144c9e8d792eca722a7b32fc3d416d473ebc2c5fd4abfdad05d9184259b5bf8cd4d90fa0d31e2dec479e4f1a26066f2eea9a69236a3e52655c9e9aee691c8f3a26854308d5eaa3be85e0990703d73e56f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "TLS-12-PRF(HMAC(SHA-512))",
+   "vectors": [
+    {
+     "text": "IETF TLS 1.2 SHA-512 Test Vector",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"d4640e12e4bcdbfb437f03e6ae418ee5"}},
+      {"set":"outputSize","value":{"t":"number","v":196}},
+      {"set":"label","value":{"t":"bytes","v":"74657374206c6162656c"}}
+     ],
+     "input": {"t":"bytes","v":"b0323523c1853599584d88568bbb05eb"},
+     "expected": {"t":"bytes","v":"1261f588c798c5c201ff036e7a9cb5edcd7fe3f94c669a122a4638d7d508b283042df6789875c7147e906d868bc75c45e20eb40c1cf4a1713b27371f68432592f7dc8ea8ef223e12ea8507841311bf68653d0cfc4056d811f025c45ddfa6e6fec702f054b409d6f28dd0a3233e498da41a3e75c5630eedbe22fe254e33a1b0e9f6b9826675bec7d01a845658dc9c397545401d40b9f46c7a400ee1b8f81ca0a60d1a397a1028bff5d2ef5066126842fb8da4197632bdb54ff6633f86bbc836e640d4d898"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

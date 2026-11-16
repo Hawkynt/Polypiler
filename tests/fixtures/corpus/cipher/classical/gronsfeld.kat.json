@@ -1,0 +1,76 @@
+{
+ "schema": 1,
+ "file": "algorithms/classical/gronsfeld.js",
+ "algorithms": [
+  {
+   "name": "Gronsfeld Cipher",
+   "vectors": [
+    {
+     "text": "Traditional Gronsfeld example with simple numeric key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"3331343135"}}
+     ],
+     "input": {"t":"bytes","v":"444546454e445448454541535457414c4c4f46544845434153544c45"},
+     "expected": {"t":"bytes","v":"47464a465347554c464a44545858464f4d5347594b46474258574d49"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Military communication example",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"31323334"}}
+     ],
+     "input": {"t":"bytes","v":"41545441434b41544441574e"},
+     "expected": {"t":"bytes","v":"42565745444d445845435a52"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Basic alphabet transformation test",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"3132333435"}}
+     ],
+     "input": {"t":"bytes","v":"4142434445464748494a4b4c4d4e4f505152535455565758595a"},
+     "expected": {"t":"bytes","v":"424446484a47494b4d4f4c4e505254515355575956585a424441"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single digit key test - equivalent to Caesar",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"33"}}
+     ],
+     "input": {"t":"bytes","v":"48454c4c4f"},
+     "expected": {"t":"bytes","v":"4b484f4f52"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Mixed case text with spaces",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"3132333435"}}
+     ],
+     "input": {"t":"bytes","v":"48656c6c6f20576f726c64"},
+     "expected": {"t":"bytes","v":"49676f7074205871757069"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

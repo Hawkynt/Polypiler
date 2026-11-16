@@ -1,0 +1,221 @@
+{
+ "schema": 1,
+ "file": "algorithms/kdf/bcrypt.js",
+ "algorithms": [
+  {
+   "name": "Bcrypt",
+   "vectors": [
+    {
+     "text": "Botan Test Vector #1: 'abc' with cost 5",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"16147436e008f0056afe16461e258ddd"}},
+      {"set":"cost","value":{"t":"number","v":5}}
+     ],
+     "input": {"t":"bytes","v":"616263"},
+     "expected": {"t":"bytes","v":"f09adacb994a66245e9c13794afe65194c18a23cefa2b5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan Test Vector #2: Empty password with cost 5",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"10410410410410410410410410410410"}},
+      {"set":"cost","value":{"t":"number","v":5}}
+     ],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"f702365c4d4ae1d53d97cd28b0b93f11f79fce44d560fd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan Test Vector #3: Hex U*2 with cost 5",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"10410410410410410410410410410410"}},
+      {"set":"cost","value":{"t":"number","v":5}}
+     ],
+     "input": {"t":"bytes","v":"552a55"},
+     "expected": {"t":"bytes","v":"1bb69143f9a8d304c8d23d99ab049a77a68e2ccc744206"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan Test Vector #4: Hex U*U* with cost 5",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"10410410410410410410410410410410"}},
+      {"set":"cost","value":{"t":"number","v":5}}
+     ],
+     "input": {"t":"bytes","v":"552a552a"},
+     "expected": {"t":"bytes","v":"5c84350bdfbaa96ac16f615ae79f35cfdacd682d369f23"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan Test Vector #5: Long ASCII string (72+ chars truncated)",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"71d79f8218a39259a7a29aabb2dbafc3"}},
+      {"set":"cost","value":{"t":"number","v":5}}
+     ],
+     "input": {"t":"bytes","v":"303132333435363738396162636465666768696a6b6c6d6e6f707172737475767778797a4142434445464748494a4b4c4d4e4f505152535455565758595a303132333435363738396368617273206166746572203732206172652069676e6f726564"},
+     "expected": {"t":"bytes","v":"eeee31f80919920425881002d140d555b28a5c72e00f09"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan Test Vector #6: OpenBSD 'A' single char",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"00000000000000000000000000000000"}},
+      {"set":"cost","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"df49e1237b7559ecc1afa1b861865d3378cf0e5c275c18"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan Test Vector #7: OpenBSD 'AB'",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"00000000000000000000000000000000"}},
+      {"set":"cost","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"4142"},
+     "expected": {"t":"bytes","v":"80da2e9dfb3c32087a9cfd61b89e48369ed91adfc17e6d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan Test Vector #8: OpenBSD 'ABC'",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"00000000000000000000000000000000"}},
+      {"set":"cost","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"414243"},
+     "expected": {"t":"bytes","v":"520ab39653ca2460bd0f6ddabf81ece1a3d4324bef460a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan Test Vector #9: OpenBSD 'ABCD'",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"00000000000000000000000000000000"}},
+      {"set":"cost","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"41424344"},
+     "expected": {"t":"bytes","v":"ed6602ad33de5fe8853fc9a8f0c7ce13d38b4e91cd2cd9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan Test Vector #10: OpenBSD 'ABCDE'",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"00000000000000000000000000000000"}},
+      {"set":"cost","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"4142434445"},
+     "expected": {"t":"bytes","v":"72c54a412df2d3cceae0532423896f5c9c0d84310012f8"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan Test Vector #11: OpenBSD 'ABCDEF'",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"00000000000000000000000000000000"}},
+      {"set":"cost","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"414243444546"},
+     "expected": {"t":"bytes","v":"e6059ef065df289351509ba118f7fde74dec2568a0195f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan Test Vector #12: OpenBSD 'ABCDEFG'",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"00000000000000000000000000000000"}},
+      {"set":"cost","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"41424344454647"},
+     "expected": {"t":"bytes","v":"1f05fceff3707cf28ddb42e1b2d7402c3d9c777804644d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan Test Vector #13: OpenBSD 'ABCDEFGH'",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"00000000000000000000000000000000"}},
+      {"set":"cost","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"4142434445464748"},
+     "expected": {"t":"bytes","v":"dd8155e77701443c1a93a8e8728e22c68882efabff2564"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan Test Vector #14: OpenBSD 'ABCDEFGHI'",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"00000000000000000000000000000000"}},
+      {"set":"cost","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"414243444546474849"},
+     "expected": {"t":"bytes","v":"7093a1d05df6deb41cdff0b17a5fb21e6f73f8bd110509"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Botan Test Vector #15: OpenBSD 'ABCDEFGHIJ'",
+     "inverse": false,
+     "steps": [
+      {"set":"salt","value":{"t":"bytes","v":"00000000000000000000000000000000"}},
+      {"set":"cost","value":{"t":"number","v":4}}
+     ],
+     "input": {"t":"bytes","v":"4142434445464748494a"},
+     "expected": {"t":"bytes","v":"392aaa30d1be011e7c21d60559db66e0f57945a6ee6502"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

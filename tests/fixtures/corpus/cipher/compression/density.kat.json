@@ -1,0 +1,77 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/density.js",
+ "algorithms": [
+  {
+   "name": "Density (Chameleon)",
+   "vectors": [
+    {
+     "text": "Empty input - still emits the 4-byte length header",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Simple 4-byte literal (ABCD)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41424344"},
+     "expected": {"t":"bytes","v":"040000000100000041424344"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repetition pattern (ABCDABCD) - the prediction hash comes from the PREVIOUS chunk, so an immediate repeat is not itself a hit: both chunks are literals",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4142434441424344"},
+     "expected": {"t":"bytes","v":"08000000030000004142434441424344"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Long repetition (AAAABBBBAAAABBBB) - the AAAA->BBBB transition recurs, so the 4th chunk (following a BBBB, same as when the 2nd chunk followed AAAA) is a correct zero-payload prediction",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41414141424242424141414142424242"},
+     "expected": {"t":"bytes","v":"1000000007000000414141414242424241414141"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Mixed data - Hello World! (12 bytes = 3 chunks, all literals)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"48656c6c6f20576f726c6421"},
+     "expected": {"t":"bytes","v":"0c0000000700000048656c6c6f20576f726c6421"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Regression: 256 repeated bytes - zero-payload matches after the first literal",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161"},
+     "expected": {"t":"bytes","v":"0001000003000000616161616161616100000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

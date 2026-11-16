@@ -1,0 +1,91 @@
+{
+ "schema": 1,
+ "file": "algorithms/modes/fpe.js",
+ "algorithms": [
+  {
+   "name": "FPE",
+   "vectors": [
+    {
+     "text": "NIST FF1 sample 1 - AES-128, radix 10, empty tweak",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setKey","args":[{"t":"bytes","v":"2b7e151628aed2a6abf7158809cf4f3c"}]},
+      {"call":"setTweak","args":[{"t":"bytes","v":""}]},
+      {"call":"setAlphabet","args":[{"t":"string","v":"0123456789"}]}
+     ],
+     "input": {"t":"bytes","v":"30313233343536373839"},
+     "expected": {"t":"bytes","v":"32343333343737343834"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST FF1 sample 2 - AES-128, radix 10, 10-byte tweak",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setKey","args":[{"t":"bytes","v":"2b7e151628aed2a6abf7158809cf4f3c"}]},
+      {"call":"setTweak","args":[{"t":"bytes","v":"39383736353433323130"}]},
+      {"call":"setAlphabet","args":[{"t":"string","v":"0123456789"}]}
+     ],
+     "input": {"t":"bytes","v":"30313233343536373839"},
+     "expected": {"t":"bytes","v":"36313234323030373733"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST FF1 sample 3 - AES-128, radix 36, 11-byte tweak",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setKey","args":[{"t":"bytes","v":"2b7e151628aed2a6abf7158809cf4f3c"}]},
+      {"call":"setTweak","args":[{"t":"bytes","v":"3737373770717273373737"}]},
+      {"call":"setAlphabet","args":[{"t":"string","v":"0123456789abcdefghijklmnopqrstuvwxyz"}]}
+     ],
+     "input": {"t":"bytes","v":"30313233343536373839616263646566676869"},
+     "expected": {"t":"bytes","v":"6139747634306d6c6c396b647535303965756d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST FF1 sample 4 - AES-192, radix 10, empty tweak",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setKey","args":[{"t":"bytes","v":"2b7e151628aed2a6abf7158809cf4f3cef4359d8d580aa4f"}]},
+      {"call":"setTweak","args":[{"t":"bytes","v":""}]},
+      {"call":"setAlphabet","args":[{"t":"string","v":"0123456789"}]}
+     ],
+     "input": {"t":"bytes","v":"30313233343536373839"},
+     "expected": {"t":"bytes","v":"32383330363638313332"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "NIST FF1 sample 7 - AES-256, radix 10, empty tweak",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setKey","args":[{"t":"bytes","v":"2b7e151628aed2a6abf7158809cf4f3cef4359d8d580aa4f7f036d6f04fc6a94"}]},
+      {"call":"setTweak","args":[{"t":"bytes","v":""}]},
+      {"call":"setAlphabet","args":[{"t":"string","v":"0123456789"}]}
+     ],
+     "input": {"t":"bytes","v":"30313233343536373839"},
+     "expected": {"t":"bytes","v":"36363537363637303039"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

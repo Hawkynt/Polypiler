@@ -1,0 +1,89 @@
+{
+ "schema": 1,
+ "file": "algorithms/crypto/aeswrap.js",
+ "algorithms": [
+  {
+   "name": "AES Key Wrap",
+   "vectors": [
+    {
+     "text": "RFC 3394 - 128-bit KEK, 128-bit Key Data",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"00112233445566778899aabbccddeeff"},
+     "expected": {"t":"bytes","v":"1fa68b0a8112b447aef34bd8fb5a7b829d3e862371d2cfe5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 3394 - 192-bit KEK, 128-bit Key Data",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f1011121314151617"}}
+     ],
+     "input": {"t":"bytes","v":"00112233445566778899aabbccddeeff"},
+     "expected": {"t":"bytes","v":"96778b25ae6ca435f92b5b97c050aed2468ab8a17ad84e5d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 3394 - 256-bit KEK, 128-bit Key Data",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}}
+     ],
+     "input": {"t":"bytes","v":"00112233445566778899aabbccddeeff"},
+     "expected": {"t":"bytes","v":"64e8c3f9ce0f5ba263e9777905818a2a93c8191e7d6e8ae7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 3394 - 192-bit KEK, 192-bit Key Data",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f1011121314151617"}}
+     ],
+     "input": {"t":"bytes","v":"00112233445566778899aabbccddeeff0001020304050607"},
+     "expected": {"t":"bytes","v":"031d33264e15d33268f24ec260743edce1c6c7ddee725a936ba814915c6762d2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 3394 - 256-bit KEK, 192-bit Key Data",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}}
+     ],
+     "input": {"t":"bytes","v":"00112233445566778899aabbccddeeff0001020304050607"},
+     "expected": {"t":"bytes","v":"a8f9bc1612c68b3ff6e6f4fbe30e71e4769c8b80a32cb8958cd5d17d6b254da1"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 3394 - 256-bit KEK, 256-bit Key Data",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}}
+     ],
+     "input": {"t":"bytes","v":"00112233445566778899aabbccddeeff000102030405060708090a0b0c0d0e0f"},
+     "expected": {"t":"bytes","v":"28c9f404c4b810f4cbccb35cfb87f8263f5786e2d80ed326cbc7f0e71a99f43bfb988b9b7a02dd21"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

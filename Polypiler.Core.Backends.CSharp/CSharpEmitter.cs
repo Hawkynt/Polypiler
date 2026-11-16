@@ -87,7 +87,8 @@ public static partial class CSharpEmitter {
     [IrTypeKind.U64] = "ulong",
     [IrTypeKind.F32] = "float",
     [IrTypeKind.F64] = "double",
-    [IrTypeKind.String] = "string"
+    [IrTypeKind.String] = "string",
+    [IrTypeKind.BigInt] = BigIntegerType
   };
 
   private static readonly Dictionary<IrUnaryOp, string> _unary = new() {
@@ -195,6 +196,8 @@ public static partial class CSharpEmitter {
 
     problems.AddRange(FilterProblems(module, profile, table));
     problems.AddRange(PointerProblems(module, profile, table));
+    problems.AddRange(AsyncProblems(module, profile, table));
+    problems.AddRange(BigIntProblems(module, profile, table));
     return problems.Distinct().ToList();
   }
 
@@ -466,7 +469,7 @@ public static partial class CSharpEmitter {
 
   /// <summary>The operands of an expression, or <see langword="null"/> for a kind this backend does not know.</summary>
   private static IReadOnlyList<IrExpr>? Operands(IrExpr expression) => expression switch {
-    IrConst or IrLocalRef or IrConstRef or IrGlobalRef or IrStrConst => [],
+    IrConst or IrLocalRef or IrConstRef or IrGlobalRef or IrStrConst or IrBigConst => [],
     IrUnary unary => [unary.Operand],
     IrBinary binary => [binary.Left, binary.Right],
     IrConvert conversion => [conversion.Operand],
@@ -486,6 +489,8 @@ public static partial class CSharpEmitter {
     IrCollection => IrTree.Operands(expression),
     IrLambda or IrFunctionRef or IrBoundMethod or IrInvoke => IrTree.Operands(expression),
     IrArraySequence => IrTree.Operands(expression),
+    IrAwait or IrAsync => IrTree.Operands(expression),
+    IrForeignCall or IrLastError => IrTree.Operands(expression),
     _ => null
   };
 
@@ -530,7 +535,7 @@ public static partial class CSharpEmitter {
   /// floating-point type, or to an integer type that holds every value of the source.
   /// </summary>
   private static bool Keeps(IrConvert conversion)
-    => conversion.Type.IsFloat || (conversion.Operand.Type.IsInteger && IrOperators.Contains(conversion.Type, conversion.Operand.Type));
+    => conversion.Type.IsFloat || conversion.Type.IsBigInt || (conversion.Operand.Type.IsInteger && IrOperators.Contains(conversion.Type, conversion.Operand.Type));
 
   /// <summary>Whether a conversion takes a floating-point number to the nearest value of an integer type.</summary>
   private static bool Saturates(IrConvert conversion) => conversion.Contract == IrConversion.Saturate && conversion.Type.IsInteger;
@@ -674,7 +679,7 @@ public static partial class CSharpEmitter {
       // A member keeps its name in every profile; a helper of that name gives way, as does a variable to both.
       // An instantiation and a copy of a function are spelled as the generics decide, copies of one name as overloads of it.
       this._generics = CSharpGenerics.Of(module, this.Has);
-      var members = module.Constants.Select(constant => constant.Name).Concat(module.Globals.Select(global => global.Name)).Concat(module.Functions.Select(function => this.Spelled(function.Name)));
+      var members = module.Constants.Select(constant => constant.Name).Concat(module.Globals.Select(global => global.Name)).Concat(module.Functions.Select(function => this.Spelled(function.Name))).Concat(ForeignNames(module));
       this._members = this.Aliased(Names(members, [this.ClassName]), module.Functions.Select(function => function.Name));
       // A struct is named beside the class, where a member of the class of its name would hide it.
       this._typeNames = this.Aliased(Names(module.Types.Select(type => this.Spelled(type.Name)), [this.ClassName, .. this._members.Values.Select(member => member.TrimStart('@'))]), module.Types.Select(type => type.Name));
@@ -684,7 +689,7 @@ public static partial class CSharpEmitter {
       this._helpers = Names(helpers.Select(helper => helper.Name), taken);
       this._taken = [.. taken, .. this._helpers.Values];
       // The nested classes of the collections give way to every name of the module and its helpers.
-      this._nested = Names([CSharpCollectionClasses.KeyedSlotsName, CSharpCollectionClasses.FloatKeysName, CSharpCollectionClasses.SingleKeysName],
+      this._nested = Names([CSharpCollectionClasses.KeyedSlotsName, CSharpCollectionClasses.FloatKeysName, CSharpCollectionClasses.SingleKeysName, CSharpCollectionClasses.AssertionExceptionName],
         [.. this._taken, .. this._typeNames.Values]);
     }
 
@@ -767,9 +772,11 @@ public static partial class CSharpEmitter {
 
       // The classes are written first: the names of their variables are settled before those of the static class.
       var classes = this.Classes();
-      foreach (var function in this._module.Functions.Where(function => !this.IsMember(function)))
+      var nested = this.ScopeFunctions();
+      var inner = nested.Values.SelectMany(functions => functions).Select(function => function.Name).ToHashSet(StringComparer.Ordinal);
+      foreach (var function in this._module.Functions.Where(function => !this.IsMember(function) && !inner.Contains(function.Name)))
         if (!this._generics.Generalized.TryGetValue(function.Name, out var origin))
-          members.Add(this.Function(function) with { IsHelper = this._copied.Contains(function.Name) });
+          members.Add(this.WithScopeFunctions(this.Function(function) with { IsHelper = this._copied.Contains(function.Name) }, function, nested));
         else if (this._generics.Written.Contains(function.Name))
           members.Add(this.Generic(function, origin));
 
@@ -786,6 +793,11 @@ public static partial class CSharpEmitter {
       this.Emitted = emitted;
 
       members.AddRange(this.CollectionClasses());
+      members.AddRange(this.ForeignMembers());
+
+      // The initializer of the module runs when the class is first used, after its fields have their values (#1365).
+      if (this._module.Initializer is { } initializer)
+        members.Add(new CsConstructor(["static"], this._class, [], new CsBlock([new CsExpressionStatement(new CsInvocation(new CsName(this._members[initializer]), []))])));
 
       // The delegate types are known once everything that names one is written.
       members.InsertRange(0, this.Delegates());
@@ -795,9 +807,9 @@ public static partial class CSharpEmitter {
         members = [.. members.Select(Exposed)];
 
       var types = this.Enums();
-      types.AddRange(this.Structs());
+      types.AddRange(this.Structs().Select(this.Laid));
       types.AddRange(classes);
-      types.Add(new CsTypeDeclaration(["public", "static"], "class", this._class, null, [], [.. members.Select(member => member with { Leading = CsTrivia.Blank })]));
+      types.Add(new CsTypeDeclaration(this.ClassModifiers, "class", this._class, null, [], [.. members.Select(member => member with { Leading = CsTrivia.Blank })]));
       List<string> header = [
         $"{this.ClassName}: generated by polypiler. Change the source, not this file.",
         $"Profile: {this._profile}.",
@@ -806,6 +818,8 @@ public static partial class CSharpEmitter {
         .. Caveats(this._module),
         .. this.Notices(),
         .. this.PointerNotes(),
+        .. this.AsyncNotes(),
+        .. this.ForeignNotes(),
         .. ImplementationSources.Notices(this._module.Implementations.Select(pair => pair.Implementation).Concat(this._module.Inlined))
       ];
       if (@namespace is null)
@@ -839,7 +853,7 @@ public static partial class CSharpEmitter {
     }
 
     private CsMethod Function(IrFunction function) {
-      var modifiers = Unsafe([function.IsPublic ? "public" : "private", "static"], function);
+      var modifiers = Asynchronous(Unsafe([function.IsPublic ? "public" : "private", "static"], function), function);
       var returns = new CsType(this.TypeName(function.ReturnType));
       var (parameters, body, expression) = this.Body(function, 0, function.Body, true);
       return new CsMethod(modifiers, returns, this._members[function.Name], [], parameters, body, expression);
@@ -861,7 +875,7 @@ public static partial class CSharpEmitter {
       this._scopes.Add(new Scope());
       var parameters = function.Parameters.Skip(skipped).Select(parameter => new CsParameter(new CsType(this.TypeName(parameter.Type)), this.Declare(parameter))).ToList();
       var wraps = Expressions(statements).Any(this.Wraps);
-      if (arrow && statements.Statements is [IrReturn { Value: { } result }] && this.Has(CSharpFeature.ExpressionBody)) {
+      if (arrow && statements.Statements is [IrReturn { Value: { } result }] && this.Has(CSharpFeature.ExpressionBody) && !Unawaited(function)) {
         // A result that is itself a checked expression sets the context of everything in it.
         var value = this.Stored(result);
         return (parameters, null, wraps && !Traps(Promoted(result)) ? new CsCheckedExpression(false, value) { Type = value.Type } : value);
@@ -869,6 +883,7 @@ public static partial class CSharpEmitter {
 
       var body = this.Statements(statements);
       this.Ended(body);
+      this.Awaiting(function, body);
       return (parameters, new CsBlock(wraps ? [new CsCheckedStatement(false, new CsBlock(body))] : body), null);
     }
 
@@ -880,6 +895,7 @@ public static partial class CSharpEmitter {
         : type.IsFunction ? this.FunctionTypeName(type)
         : type.IsLazySequence ? this.SequenceTypeName(type)
         : type.IsPointer ? this.TypeName(type.Element!) + "*"
+        : type.IsAsync ? this.AsyncTypeName(type)
         : type.Element is null ? _types[type.Kind] : this.TypeName(type.Element) + "[]";
 
     /// <summary>The statements of a block, which is a block to C# as well: a declaration space of its own.</summary>
@@ -1223,8 +1239,14 @@ public static partial class CSharpEmitter {
     }
 
     private (CsExpression Node, int Binding) Plain(IrExpr expression) {
+      if (this.ForeignNode(expression) is { } foreign)
+        return foreign;
+
       if (this.SequenceNode(expression) is { } sequence)
         return sequence;
+
+      if (this.AsyncNode(expression) is { } awaited)
+        return awaited;
 
       switch (expression) {
         case IrConst { Type.IsEnum: true } constant:
@@ -1235,6 +1257,8 @@ public static partial class CSharpEmitter {
           return (this.Qualified(this._members[reference.Constant.Name]), Primary);
         case IrStrConst text:
           return (new CsStringLiteral(text.Value), Primary);
+        case IrBigConst big:
+          return BigLiteral(big);
         case IrLocalRef reference when reference.Local == this._receiver:
           return (new CsName("this") { Type = reference.Type }, Primary);
         case IrLocalRef reference when reference.Local == this._value:
@@ -1364,6 +1388,9 @@ public static partial class CSharpEmitter {
       var to = conversion.Type;
       if (from == to)
         return this.Expression(conversion.Operand);
+
+      if (from.IsBigInt || to.IsBigInt)
+        return this.BigConvert(conversion);
 
       if (!this.Casts(conversion))
         return this.Call(Row(conversion, this._table)!, [conversion.Operand]);

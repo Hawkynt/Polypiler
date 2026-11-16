@@ -1,0 +1,24 @@
+{
+ "schema": 1,
+ "file": "algorithms/mac/iso9797alg3.js",
+ "algorithms": [
+  {
+   "name": "ISO9797 Algorithm 3",
+   "vectors": [
+    {
+     "text": "BouncyCastle ISO9797Alg3MacTest Vector #1",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"7ca110454a1a6e570131d9619dc1376e"}}
+     ],
+     "input": {"t":"bytes","v":"48656c6c6f20576f726c642021212121"},
+     "expected": {"t":"bytes","v":"f09b856213bab83b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

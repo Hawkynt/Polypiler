@@ -1,0 +1,91 @@
+{
+ "schema": 1,
+ "file": "algorithms/modes/xts.js",
+ "algorithms": [
+  {
+   "name": "XTS",
+   "vectors": [
+    {
+     "text": "IEEE 1619 XTS-AES vector 2 (two full blocks)",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"33333333330000000000000000000000"}]},
+      {"call":"setKey","args":[{"t":"bytes","v":"1111111111111111111111111111111122222222222222222222222222222222"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"33333333330000000000000000000000"}]}
+     ],
+     "input": {"t":"bytes","v":"4444444444444444444444444444444444444444444444444444444444444444"},
+     "expected": {"t":"bytes","v":"c454185e6a16936e39334038acef838bfb186fff7480adc4289382ecd6d394f0"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "IEEE 1619 XTS-AES vector 15 (17 bytes, ciphertext stealing)",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"9a785634120000000000000000000000"}]},
+      {"call":"setKey","args":[{"t":"bytes","v":"fffefdfcfbfaf9f8f7f6f5f4f3f2f1f0bfbebdbcbbbab9b8b7b6b5b4b3b2b1b0"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"9a785634120000000000000000000000"}]}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f10"},
+     "expected": {"t":"bytes","v":"6c1625db4671522d3d7599601de7ca09ed"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "IEEE 1619 XTS-AES vector 16 (18 bytes, ciphertext stealing)",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"9a785634120000000000000000000000"}]},
+      {"call":"setKey","args":[{"t":"bytes","v":"fffefdfcfbfaf9f8f7f6f5f4f3f2f1f0bfbebdbcbbbab9b8b7b6b5b4b3b2b1b0"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"9a785634120000000000000000000000"}]}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f1011"},
+     "expected": {"t":"bytes","v":"d069444b7a7e0cab09e24447d24deb1fedbf"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "IEEE 1619 XTS-AES vector 17 (19 bytes, ciphertext stealing)",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"9a785634120000000000000000000000"}]},
+      {"call":"setKey","args":[{"t":"bytes","v":"fffefdfcfbfaf9f8f7f6f5f4f3f2f1f0bfbebdbcbbbab9b8b7b6b5b4b3b2b1b0"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"9a785634120000000000000000000000"}]}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112"},
+     "expected": {"t":"bytes","v":"e5df1351c0544ba1350b3363cd8ef4beedbf9d"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "IEEE 1619 XTS-AES vector 18 (20 bytes, ciphertext stealing)",
+     "inverse": false,
+     "steps": [
+      {"call":"setBlockCipher","args":[{"t":"object","v":"RijndaelInstance"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"9a785634120000000000000000000000"}]},
+      {"call":"setKey","args":[{"t":"bytes","v":"fffefdfcfbfaf9f8f7f6f5f4f3f2f1f0bfbebdbcbbbab9b8b7b6b5b4b3b2b1b0"}]},
+      {"call":"setIV","args":[{"t":"bytes","v":"9a785634120000000000000000000000"}]}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f10111213"},
+     "expected": {"t":"bytes","v":"9d84c813f719aa2c7be3f66171c7c5c2edbf9dac"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "file": "algorithms/random/xoshiro128starstar.js",
+ "algorithms": [
+  {
+   "name": "Xoshiro128**",
+   "vectors": [
+    {
+     "text": "Seed=0: First five 32-bit outputs from xoshiro128**",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"00000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"2037b06a9e34ae0224504996391367e59272d943"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed=1: First five 32-bit outputs from xoshiro128**",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"01000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"d4197117e52d9681b39a60e37ac1bc7c8e542c6f"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed=42: First five 32-bit outputs from xoshiro128**",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"2a000000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"3d945d27b4aab9d94e30a104211041369c97ee88"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Seed=12345: First five 32-bit outputs",
+     "inverse": false,
+     "steps": [
+      {"set":"outputSize","value":{"t":"number","v":20}},
+      {"set":"seed","value":{"t":"bytes","v":"39300000"}}
+     ],
+     "input": {"t":"null"},
+     "expected": {"t":"bytes","v":"b30b2a41dd95190c658600df663db8e2e47d12f9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

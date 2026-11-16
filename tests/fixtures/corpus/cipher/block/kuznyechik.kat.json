@@ -1,0 +1,37 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/kuznyechik.js",
+ "algorithms": [
+  {
+   "name": "Kuznyechik",
+   "vectors": [
+    {
+     "text": "RFC 7801 Section 5.5 - Encryption Test Vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"8899aabbccddeeff0011223344556677fedcba98765432100123456789abcdef"}}
+     ],
+     "input": {"t":"bytes","v":"1122334455667700ffeeddccbbaa9988"},
+     "expected": {"t":"bytes","v":"7f679d90bebc24305a468d42b9d4edcd"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "RFC 7801 Section 5.6 - Decryption Test Vector",
+     "inverse": true,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"8899aabbccddeeff0011223344556677fedcba98765432100123456789abcdef"}}
+     ],
+     "input": {"t":"bytes","v":"7f679d90bebc24305a468d42b9d4edcd"},
+     "expected": {"t":"bytes","v":"1122334455667700ffeeddccbbaa9988"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

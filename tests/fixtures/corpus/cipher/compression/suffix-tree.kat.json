@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/suffix-tree.js",
+ "algorithms": [
+  {
+   "name": "Suffix Tree Compression",
+   "vectors": [
+    {
+     "text": "Empty input",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repetitive pattern - optimal for suffix tree",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616261626162"},
+     "expected": {"t":"bytes","v":"06000000000261620402000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Classic suffix tree example",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"62616e616e61"},
+     "expected": {"t":"bytes","v":"06000000000362616e0302000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

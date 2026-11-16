@@ -1,0 +1,181 @@
+{
+ "schema": 1,
+ "file": "algorithms/kdf/sp800-108-counter.js",
+ "algorithms": [
+  {
+   "name": "SP800-108-Counter",
+   "vectors": [
+    {
+     "text": "SP800-108-Counter(HMAC(SHA-1)) - 20 bytes, exactly one PRF block",
+     "inverse": false,
+     "steps": [
+      {"set":"label","value":{"t":"bytes","v":"eb5a279f6ac4522804faf25e"}},
+      {"set":"context","value":{"t":"bytes","v":"13e3ea2cf37566a55321c8e6386faac93421d614948ebf5bba07649d77a27e161021346bac19b3ade49d4250ddeacad90e3643389c320305541b5c3cce41dea5586caceb3d43c43b256da060cb3366108ab7895c7afda46c68c09d63d49e74ad74b05d94"}},
+      {"set":"outputLength","value":{"t":"number","v":20}},
+      {"set":"counterBits","value":{"t":"number","v":32}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-1"}}
+     ],
+     "input": {"t":"bytes","v":"17182760595f697f27e4e64a8e66102ac83a4b11"},
+     "expected": {"t":"bytes","v":"afa3f9dabb5be44c4d25dd83eb1c0983d89961ca"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP800-108-Counter(HMAC(SHA-256)) - 12 bytes, truncated below one PRF block",
+     "inverse": false,
+     "steps": [
+      {"set":"label","value":{"t":"bytes","v":"036e2c420a6053e7441595745da71384"}},
+      {"set":"context","value":{"t":"bytes","v":"7ca576af452eb08eccd0bf5a9ce6e5bd"}},
+      {"set":"outputLength","value":{"t":"number","v":12}},
+      {"set":"counterBits","value":{"t":"number","v":32}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-256"}}
+     ],
+     "input": {"t":"bytes","v":"8a90e91cf6e25ae0f733a0eb186415af49cd7a0d78e1b6d01626b711aab4f12b"},
+     "expected": {"t":"bytes","v":"69283d6572c9eba192b68279"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP800-108-Counter(HMAC(SHA-256)) - 36 bytes, one byte group past the first block",
+     "inverse": false,
+     "steps": [
+      {"set":"label","value":{"t":"bytes","v":"a16cc203753424e8b08633fe43d9b0c4"}},
+      {"set":"context","value":{"t":"bytes","v":"54eeac24933ff6829bc37e7b1ed932b9f050899bb7d0c32615a708ee213d9085585fb010544fe4d29a8021b39fbb267d"}},
+      {"set":"outputLength","value":{"t":"number","v":36}},
+      {"set":"counterBits","value":{"t":"number","v":32}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-256"}}
+     ],
+     "input": {"t":"bytes","v":"304932533feea6cc93b9a5b01e362b416f6cf1c3eb8019191cd9f607814b6b71"},
+     "expected": {"t":"bytes","v":"719a8ae5eb4b1ac325d6e3598080e05cc15aede16f0547de0646e7639c1bf605ca557969"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP800-108-Counter(HMAC(SHA-256)) - 48 bytes, two PRF blocks",
+     "inverse": false,
+     "steps": [
+      {"set":"label","value":{"t":"bytes","v":"be7baa20a4fd50eb81d30ce04aa8fbfb"}},
+      {"set":"context","value":{"t":"bytes","v":"ec72d16625fa2404052a5cd44ea924e376b53ad759442803809bb2b09e1189d16950f654fccf806519aa7113c8a64a4a89f470d92a9b0477fe0b0b5549294060"}},
+      {"set":"outputLength","value":{"t":"number","v":48}},
+      {"set":"counterBits","value":{"t":"number","v":32}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-256"}}
+     ],
+     "input": {"t":"bytes","v":"4b7ef2ca535af6b75b9cbf60a0d61a92af7edad9d568688fd9cde1c0c95f3e33"},
+     "expected": {"t":"bytes","v":"caebdad694080005aff424e983bad862f4f7efec50102381cd25509fabc487a36509dabc6760088a7d33e7a37be94791"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP800-108-Counter(HMAC(SHA-512)) - 20 bytes, heavy truncation of a 64 byte block",
+     "inverse": false,
+     "steps": [
+      {"set":"label","value":{"t":"bytes","v":"196636113098b35c35406bb4"}},
+      {"set":"context","value":{"t":"bytes","v":"17e42893512c6df7747906508ad41396096a13b7d9aa87c4f7fabcbd9795165823a1b54819eb190691c96bad55ad233a85f3c554c3e9b2d9b588a9f0da09df0d83d6141b83f5a62190fd16aa20b15552c3417c96b931e7eb55e06cd57406d5ab79fe12a7"}},
+      {"set":"outputLength","value":{"t":"number","v":20}},
+      {"set":"counterBits","value":{"t":"number","v":32}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-512"}}
+     ],
+     "input": {"t":"bytes","v":"bffa0f4267d5f24f219151cb38c581c0d1cff8efe475d7c38a47726b226df36e47e1a579993b4bef9e3197330610ed57350bde57ec6edf231bceff1532017c0d"},
+     "expected": {"t":"bytes","v":"40595aeef8c541a9c453e27d38f6f04463331a8a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP800-108-Counter(HMAC(SHA-256),8,32) - 8 bit counter, 24 bytes",
+     "inverse": false,
+     "steps": [
+      {"set":"label","value":{"t":"bytes","v":"d17a21b0e89b371149ee89d4c9239b8a"}},
+      {"set":"context","value":{"t":"bytes","v":"6baf3ba16f03e5b10fe439a307b16f208ab54cb1a2a564d40644f27ad298f515"}},
+      {"set":"outputLength","value":{"t":"number","v":24}},
+      {"set":"counterBits","value":{"t":"number","v":8}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-256"}}
+     ],
+     "input": {"t":"bytes","v":"b1fefddae964b5becda2ac39309eed39ba1fff819425ec48e0ce2efa5eee2e13"},
+     "expected": {"t":"bytes","v":"ba1dea3338a92eeeb3ae0046ac214ba56beb939b7054efe3"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP800-108-Counter(HMAC(SHA-256),16,32) - 16 bit counter, 36 bytes over two blocks",
+     "inverse": false,
+     "steps": [
+      {"set":"label","value":{"t":"bytes","v":"2523abf2d9bd9ee7e06faf7c62999705"}},
+      {"set":"context","value":{"t":"bytes","v":"6bf53bfb235ae2edce466761860f7470b5fae6d51cd7ce250f984062994dfdf5fead470abb43fe434817564c5dee6f30"}},
+      {"set":"outputLength","value":{"t":"number","v":36}},
+      {"set":"counterBits","value":{"t":"number","v":16}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-256"}}
+     ],
+     "input": {"t":"bytes","v":"c342730ce2412fcdeb94cdf6b9f23d656f44c9cd0acfa9c6ca6904aaafe19d2a"},
+     "expected": {"t":"bytes","v":"99cbbccf79545b8a341637395b0349955077ef3b3901e06f6507962b4f08b8d5154b03ad"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP800-108-Counter(HMAC(SHA-256)) - 80-byte key, 48 bytes over two blocks (OpenSSL KBKDF)",
+     "inverse": false,
+     "steps": [
+      {"set":"label","value":{"t":"bytes","v":"4c4142454c"}},
+      {"set":"context","value":{"t":"bytes","v":"434f4e54455854"}},
+      {"set":"outputLength","value":{"t":"number","v":48}},
+      {"set":"counterBits","value":{"t":"number","v":32}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-256"}}
+     ],
+     "input": {"t":"bytes","v":"01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4ebf2f900070e151c232a"},
+     "expected": {"t":"bytes","v":"f28a73665986e50ce5d1084bdcf38f9f77c895daba4e28f099b7a118e01ead397831f8dd6a3402ed1339de497275652c"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP800-108-Counter(HMAC(SHA-1)) - 65-byte key, 40 bytes over two blocks (OpenSSL KBKDF)",
+     "inverse": false,
+     "steps": [
+      {"set":"label","value":{"t":"bytes","v":"4c4142454c"}},
+      {"set":"context","value":{"t":"bytes","v":"434f4e54455854"}},
+      {"set":"outputLength","value":{"t":"number","v":40}},
+      {"set":"counterBits","value":{"t":"number","v":32}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-1"}}
+     ],
+     "input": {"t":"bytes","v":"030a11181f262d343b424950575e656c737a81888f969da4abb2b9c0c7ced5dce3eaf1f8ff060d141b222930373e454c535a61686f767d848b9299a0a7aeb5bcc3"},
+     "expected": {"t":"bytes","v":"ebead2132a5ef912e34faace8bc36debc5f4fb6ed4d1d07a56d5c07dbdee4477ee99dcdd8c2be549"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SP800-108-Counter(HMAC(SHA-512)) - 129-byte key, 80 bytes over two blocks (OpenSSL KBKDF)",
+     "inverse": false,
+     "steps": [
+      {"set":"label","value":{"t":"bytes","v":"4c4142454c"}},
+      {"set":"context","value":{"t":"bytes","v":"434f4e54455854"}},
+      {"set":"outputLength","value":{"t":"number","v":80}},
+      {"set":"counterBits","value":{"t":"number","v":32}},
+      {"set":"hashAlgorithm","value":{"t":"string","v":"SHA-512"}}
+     ],
+     "input": {"t":"bytes","v":"050c131a21282f363d444b525960676e757c838a91989fa6adb4bbc2c9d0d7dee5ecf3fa01080f161d242b323940474e555c636a71787f868d949ba2a9b0b7bec5ccd3dae1e8eff6fd040b121920272e353c434a51585f666d747b828990979ea5acb3bac1c8cfd6dde4ebf2f900070e151c232a31383f464d545b626970777e85"},
+     "expected": {"t":"bytes","v":"ddeb839807194f5ab52f2f3f635085978a4739a0490ca179ee2b5dd632f868aa25d466af05a6f673d853ebfcbf01b4ad1f3da478c3306ee1ffc945f802cc22b2930adb6a77c745ea0679d8300093ec3b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -118,7 +118,21 @@ public enum IrTypeKind {
   /// number or <c>void</c>, are read and written. It lives on the stack only, like a span, and is never a
   /// result. <c>docs/reference/pointers.md</c> states what its operations mean.
   /// </summary>
-  Pointer
+  Pointer,
+
+  /// <summary>
+  /// The result of an async function, <c>async&lt;T&gt;</c> (#1330): C#'s <c>Task&lt;T&gt;</c> and
+  /// JavaScript's <c>Promise</c> of a value of its <see cref="IrType.Element"/> type, or of none for
+  /// <c>async&lt;void&gt;</c>. It is no value of its own: it is awaited where it is created, or handed
+  /// directly to <see cref="IrAsyncOp.WhenAll"/>. <c>docs/reference/async.md</c> states why.
+  /// </summary>
+  Async,
+
+  /// <summary>
+  /// An exact integer of any magnitude, as Python's <c>int</c> is: its arithmetic never wraps and never
+  /// overflows. What its operations mean is stated at <see cref="IrBigInts"/>.
+  /// </summary>
+  BigInt
 
 }
 
@@ -188,6 +202,12 @@ public sealed record IrType {
   /// <summary>An IEEE 754 binary64 number.</summary>
   public static IrType F64 { get; } = new(IrTypeKind.F64, null);
 
+  /// <summary>An exact integer of any magnitude, written <c>bigint</c> (<see cref="IrBigInts"/>).</summary>
+  public static IrType BigInt { get; } = new(IrTypeKind.BigInt, null);
+
+  /// <summary>Whether the type is the arbitrary-precision integer.</summary>
+  public bool IsBigInt => this.Kind == IrTypeKind.BigInt;
+
   /// <summary>An immutable, non-null sequence of UTF-16 code units, written <c>str</c>.</summary>
   public static IrType String { get; } = new(IrTypeKind.String, null);
 
@@ -223,6 +243,18 @@ public sealed record IrType {
 
   /// <summary>Whether the type is a pointer.</summary>
   public bool IsPointer => this.Kind == IrTypeKind.Pointer;
+
+  /// <summary>The result of an async function (<see cref="IrTypeKind.Async"/>): a value of a type, or none for <see cref="Void"/>.</summary>
+  /// <param name="result">The type of the value the function returns, or <see cref="Void"/>.</param>
+  /// <param name="valueTask">Whether the source declared it as C#'s <c>ValueTask&lt;T&gt;</c>, which a profile that has it writes again.</param>
+  /// <returns>The async type.</returns>
+  public static IrType Async(IrType result, bool valueTask = false) => new(IrTypeKind.Async, result) { IsValueTask = valueTask };
+
+  /// <summary>Whether the type is the result of an async function.</summary>
+  public bool IsAsync => this.Kind == IrTypeKind.Async;
+
+  /// <summary>Whether an async type was declared as C#'s <c>ValueTask&lt;T&gt;</c>; <see langword="false"/> for every other type.</summary>
+  public bool IsValueTask { get; private init; }
 
   /// <summary>Whether the type is a memory, a view that may be stored, writable or read-only.</summary>
   public bool IsMemory => this.Kind is IrTypeKind.Memory or IrTypeKind.ReadOnlyMemory;
@@ -436,6 +468,7 @@ public sealed record IrType {
     : this.IsPointer ? this.Element!.IsNumeric || this.Element == Void
     : this.IsCollection ? IrCollections.IsElement(this)
     : this.IsLazySequence ? IrSequences.IsElement(this.Element!)
+    : this.IsAsync ? false
     : this.Kind != IrTypeKind.Void && (this.Element is null || this.Element.IsNumeric || (!this.IsView && !this.IsMemory && (this.Element.IsStruct || this.Element.IsString || this.Element.IsFunction)));
 
   /// <summary>The name of the type as the IR writes it, for example <c>i32</c>, <c>u8[]</c>, <c>str</c>, <c>i32?</c> or the name of a struct.</summary>
@@ -454,6 +487,7 @@ public sealed record IrType {
       : this.Kind == IrTypeKind.ReadOnlyMemory ? $"readonly memory<{this.Element}>"
       : this.Kind == IrTypeKind.Sequence ? (this.Restartable ? $"seq<{this.Element}>" : $"seq<{this.Element}, single-pass>")
       : this.Kind == IrTypeKind.Pointer ? $"{this.Element}*"
+      : this.Kind == IrTypeKind.Async ? (this.IsValueTask ? $"async<{this.Element}, value task>" : $"async<{this.Element}>")
       : $"{this.Element}[]";
 
 }

@@ -1,0 +1,55 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/repair.js",
+ "algorithms": [
+  {
+   "name": "RePair",
+   "vectors": [
+    {
+     "text": "Empty input",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"00000000"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single repeated pair - 'aaaa' (RePair Wikipedia style example)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"61616161"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"0400000001000000610061000200000000010001"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repetitive text - 'abcabcabc'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263616263616263"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"09000000030000006100620000016300010101010200000002010101"},
+      "deterministic": true
+     }
+    },
+    {
+     "text": "No repeated pairs - 'abcdef'",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"616263646566"},
+     "node": {
+      "outcome": "passed",
+      "output": {"t":"bytes","v":"060000000000000006000000610062006300640065006600"},
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

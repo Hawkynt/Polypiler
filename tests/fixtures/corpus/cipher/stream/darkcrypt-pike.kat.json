@@ -1,0 +1,37 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/darkcrypt-pike.js",
+ "algorithms": [
+  {
+   "name": "Pike (DarkCrypt)",
+   "vectors": [
+    {
+     "text": "DarkCrypt Pike - 64-byte key keystream",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"}}
+     ],
+     "input": {"t":"bytes","v":"0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"35d6782712939f32ec285eb4bb2d69ca9b40f741c877ada8dcc7f3621c46f25c41ff7dae6fee4983a225f7007beb26fd038138499fbef54e310d899ccbe82193f1cba7645c56cf82fc582a3527662d085d269059929eb783f1953d7dad93ad703e77943c37cb50be8a4aeb3cfacb3365c10e4f6ffe45b7d9ef09aaf4b45ab7da"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "DarkCrypt Pike - incrementing plaintext",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"}}
+     ],
+     "input": {"t":"bytes","v":"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"},
+     "expected": {"t":"bytes","v":"35d77a2416969935e42154bfb72067c58b51e552dc62bbbfc4dee979005bec4361de5f8d4bcb6fa48a0cdd2b57c608d233b00a7aab8bc3790934b3a7f7d51fac"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

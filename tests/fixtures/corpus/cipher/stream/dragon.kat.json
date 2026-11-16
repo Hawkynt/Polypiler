@@ -1,0 +1,37 @@
+{
+ "schema": 1,
+ "file": "algorithms/stream/dragon.js",
+ "algorithms": [
+  {
+   "name": "Dragon",
+   "vectors": [
+    {
+     "text": "Dragon Test Vector - All Zeros",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00000000000000000000000000000000"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Dragon Test Vector - Simple Key",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"000102030405060708090a0b0c0d0e0f"}}
+     ],
+     "input": {"t":"bytes","v":"00000000000000000000000000000000"},
+     "expected": {"t":"bytes","v":"f4d08c757452e0d3d56512493f13973b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

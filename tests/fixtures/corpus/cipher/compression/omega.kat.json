@@ -1,0 +1,88 @@
+{
+ "schema": 1,
+ "file": "algorithms/compression/omega.js",
+ "algorithms": [
+  {
+   "name": "Omega Coding",
+   "vectors": [
+    {
+     "text": "Empty input",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":""},
+     "expected": {"t":"bytes","v":"00000000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Single byte value",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"41"},
+     "expected": {"t":"bytes","v":"01000000b420"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Repeated byte values",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4141"},
+     "expected": {"t":"bytes","v":"02000000b425a100"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Two different byte values",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"4142"},
+     "expected": {"t":"bytes","v":"02000000b425a180"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Three different byte values",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"414243"},
+     "expected": {"t":"bytes","v":"03000000b425a1ad10"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Hello string bytes",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"48656c6c6f"},
+     "expected": {"t":"bytes","v":"05000000b495b32db56dab7000"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "Sequential small values",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"0102030405"},
+     "expected": {"t":"bytes","v":"050000009a8aac"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

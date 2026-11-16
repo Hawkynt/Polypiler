@@ -1,0 +1,276 @@
+{
+ "schema": 1,
+ "file": "algorithms/block/simeck.js",
+ "algorithms": [
+  {
+   "name": "SIMECK-32",
+   "vectors": [
+    {
+     "text": "SIMECK-32 Official Test Vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"1918111009080100"}}
+     ],
+     "input": {"t":"bytes","v":"65656877"},
+     "expected": {"t":"bytes","v":"770d2c76"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SIMECK-32 Reference Vector #2",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"3d6c4ae1678418be"}}
+     ],
+     "input": {"t":"bytes","v":"48230029"},
+     "expected": {"t":"bytes","v":"65359de9"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SIMECK-32 Reference Vector #3",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"6df116495f906952"}}
+     ],
+     "input": {"t":"bytes","v":"72ae2cd6"},
+     "expected": {"t":"bytes","v":"0ab073ca"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SIMECK-32 Reference Vector #4",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"2ea60bb301eb26e9"}}
+     ],
+     "input": {"t":"bytes","v":"41bb5af1"},
+     "expected": {"t":"bytes","v":"6ed0bc2e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SIMECK-32 Reference Vector #5",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"00990f3e390c7e87"}}
+     ],
+     "input": {"t":"bytes","v":"153c12db"},
+     "expected": {"t":"bytes","v":"76374119"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SIMECK-32 Reference Vector #6",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"4db74d06491c440d"}}
+     ],
+     "input": {"t":"bytes","v":"305e0124"},
+     "expected": {"t":"bytes","v":"8252aa91"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SIMECK-32 Reference Vector #7",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"4dc8074d2d1239b3"}}
+     ],
+     "input": {"t":"bytes","v":"54de1547"},
+     "expected": {"t":"bytes","v":"e288e7ea"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SIMECK-32 Reference Vector #8",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"5d03701f26a6428b"}}
+     ],
+     "input": {"t":"bytes","v":"66bb6443"},
+     "expected": {"t":"bytes","v":"b73099ae"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SIMECK-32 Reference Vector #9",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"1e1f3b2512384509"}}
+     ],
+     "input": {"t":"bytes","v":"767d7a5a"},
+     "expected": {"t":"bytes","v":"058a62df"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SIMECK-32 Reference Vector #10",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"7ff57f966bfc63cb"}}
+     ],
+     "input": {"t":"bytes","v":"1ad46e5d"},
+     "expected": {"t":"bytes","v":"60c443f2"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  },
+  {
+   "name": "SIMECK-64",
+   "vectors": [
+    {
+     "text": "SIMECK-64 Official Test Vector",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"1b1a1918131211100b0a090803020100"}}
+     ],
+     "input": {"t":"bytes","v":"656b696c20646e75"},
+     "expected": {"t":"bytes","v":"45ce69025f7ab7ed"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SIMECK-64 Reference Vector #2",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"0938251f43bb8ba606b747de870c3e99"}}
+     ],
+     "input": {"t":"bytes","v":"f1bbe9ebe16cd6ae"},
+     "expected": {"t":"bytes","v":"4d11c6b9da2f7e28"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SIMECK-64 Reference Vector #3",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"323ba122444066d09e7d49dc407836fd"}}
+     ],
+     "input": {"t":"bytes","v":"1cdbae3296f5453b"},
+     "expected": {"t":"bytes","v":"1e6a0792f5a717c5"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SIMECK-64 Reference Vector #4",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"61ff698f2ddc8e6653bf67d699d5e980"}}
+     ],
+     "input": {"t":"bytes","v":"b9729d49e18b1fda"},
+     "expected": {"t":"bytes","v":"fca0fa8194bda9c7"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SIMECK-64 Reference Vector #5",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"cfd3902d597e35cf9e0cf4d52c53cbc9"}}
+     ],
+     "input": {"t":"bytes","v":"844f4a779d9c1672"},
+     "expected": {"t":"bytes","v":"562b1caa75266241"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SIMECK-64 Reference Vector #6",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"f8466a046454ceb13b33821fd4618dbe"}}
+     ],
+     "input": {"t":"bytes","v":"78818744e6d91d2a"},
+     "expected": {"t":"bytes","v":"d946fa4941516d8e"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SIMECK-64 Reference Vector #7",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"97278a5928ce0bf52543e53cadae2488"}}
+     ],
+     "input": {"t":"bytes","v":"d0576876162f6768"},
+     "expected": {"t":"bytes","v":"ca3e5050126fa61b"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SIMECK-64 Reference Vector #8",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"a786c2b5c19be1c0978c2ff11128c18c"}}
+     ],
+     "input": {"t":"bytes","v":"08614014c9cd68d4"},
+     "expected": {"t":"bytes","v":"a307ab5aa10f5c29"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SIMECK-64 Reference Vector #9",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"63b126df89a982790c9bb4479cfed971"}}
+     ],
+     "input": {"t":"bytes","v":"d96ca166d923d155"},
+     "expected": {"t":"bytes","v":"5e47b40d9854418a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "SIMECK-64 Reference Vector #10",
+     "inverse": false,
+     "steps": [
+      {"set":"key","value":{"t":"bytes","v":"463608dc1b2861c93f41078428a11e20"}}
+     ],
+     "input": {"t":"bytes","v":"3f895ef162e09612"},
+     "expected": {"t":"bytes","v":"c5fd5a6c32056800"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}

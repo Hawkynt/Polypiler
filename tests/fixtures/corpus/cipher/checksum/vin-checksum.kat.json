@@ -1,0 +1,44 @@
+{
+ "schema": 1,
+ "file": "algorithms/checksum/vin-checksum.js",
+ "algorithms": [
+  {
+   "name": "VIN",
+   "vectors": [
+    {
+     "text": "VIN with check digit X (1M8GDM9AXKP042788)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"314d3847444d3941584b50303432373838"},
+     "expected": {"t":"bytes","v":"0a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "VIN all ones (11111111111111111)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"3131313131313131313131313131313131"},
+     "expected": {"t":"bytes","v":"01"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    },
+    {
+     "text": "VIN example (5YJ3E1EAXHF000316)",
+     "inverse": false,
+     "steps": [],
+     "input": {"t":"bytes","v":"35594a3345314541584846303030333136"},
+     "expected": {"t":"bytes","v":"0a"},
+     "node": {
+      "outcome": "passed",
+      "deterministic": true
+     }
+    }
+   ]
+  }
+ ]
+}
