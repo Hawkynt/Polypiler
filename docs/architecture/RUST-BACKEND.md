@@ -17,6 +17,7 @@ Related: [backends](BACKENDS.md) · [pipeline](PIPELINE.md) · [exceptions](../r
 | `Cargo.toml` | `[package]` with `name` (the module's name in `snake_case`), `version = "0.1.0"`, the `edition` and, from Rust 1.56, `rust-version`; no dependencies |
 | `src/lib.rs` | the header (`//!`: profile, helper licences, floating-point record, caveats, notices), `#![forbid(unsafe_code)]`, the lints the code needs allowed, `pub mod <module>;` |
 | `src/<module>.rs` | the constants, the spelling functions and helpers, the functions; a `#[cfg(test)] mod tests` when tests are asked for |
+| `src/<placed>.rs` | the functions `RustEmitOptions.Modules` places in a module of their own (see [Modules](#modules)) |
 
 The backend builds a Rust syntax tree from the IR (`Polypiler.Core.Backends.Rust/Syntax/RustSyntax.cs`),
 runs the target passes over it - helper inlining (O0500), removal of what nothing names (O0501) -
@@ -75,9 +76,9 @@ name escapes as a raw identifier (`r#gen`). The MSRV decides the rows of `RustCa
 | `Negate`, `BitNot`, `LogicalNot` | `a.wrapping_neg()` (`-a` for floating point), `!a`, `!c` - a negated comparison of integers turned around (`a >= b`) |
 | arithmetic and comparisons of floating point | the operators; a compound assignment where clippy's `assign_op_pattern` asks |
 | conversions between integers | `i64::from(a)` where every value fits (a literal in it, also in the arms of an `if`, carries its type: `u64::from(if c { 1u32 } else { 0u32 })`), `a as u8` wrapping, `u8::try_from(a).expect("IntegerOverflow")` trapping |
-| conversions to and from floating point | `a as f64`, `f64::from(a)` for `f32` to `f64`, `a as i32` saturating (Rust's `as`), `ply_f2i_trap_<t>(a)` trapping |
+| conversions to and from floating point | `a as f64`, `f64::from(a)` for `f32` to `f64`, `a as i32` saturating (Rust's `as`), `ply_f2i_trap_<t>(a)` trapping; ECMA-262's wrapping `ToInt32`/`ToUint32` (4294967301.0 to 5) the spelling function `ply_rs_f2i_wrap_i32(a)`, `(x.trunc() % 4294967296.0) as i64 as i32`, the IR library's `ToInt32` in Rust's casts (#461) |
 | intrinsics with a method | `rotate_left`, `count_ones`, `leading_zeros`, `trailing_zeros`, `swap_bytes`, `reverse_bits`, `is_power_of_two`, `min`, `max`, `saturating_*`, `checked_abs`, `wrapping_abs`, `sqrt`, `floor`, `ceil`, `trunc`, `round`, `round_ties_even`, `abs`, `mul_add`, `copysign`, `is_nan`, `is_infinite`, `is_finite`, `is_sign_negative`, `is_normal`, `is_subnormal`, `to_bits`, `from_bits` |
-| every other intrinsic | the helper of the IR library (`IntegerLibrary`, `MinimumDouble`, `SignOf`, `RoundHalfUp`, `ToInt32`, `Clamp`, …) or the portable floating-point implementation, copied into the module |
+| every other intrinsic | the helper of the IR library (`IntegerLibrary`, `MinimumDouble`, `SignOf`, `RoundHalfUp`, `Clamp`, …) or the portable floating-point implementation, copied into the module |
 | `if`, `while`, `do`-`while`, `for` | `if`/`else if`, `while c` (`loop` for `while true`), `loop { …; if !c { break; } }`, a `while` whose step precedes every `continue`; a counted loop `for i in a..b` where its counter and bound allow |
 | `switch` | `match` with or-patterns and ranges of three or more consecutive labels, `_` last; one section an `if`; a `break` inside a section leaves `'s<n>: { match … }` |
 | `return` | the tail of the function, `return v;` elsewhere |
@@ -134,7 +135,24 @@ name escapes as a raw identifier (`r#gen`). The MSRV decides the rows of `RustCa
 | a loop over a list, a map or a set | `for entry in list.iter()`, `map.iter().flatten()` (which skips the freed slots), the element, key or value copied into the loop's variable |
 | a list, a map or a set passed on | `&[T]` where the callee only reads it, `&mut Vec<T>` where it changes it (a fixed point over the calls); a new one is moved where a variable or a result takes it |
 | a loop whose first pass always returns | an `if` (clippy's `never_loop`) |
+| a loop without a condition left only by `break`s of it, right before the `return` of a scalar (#458) | the value of that return, each `break` carrying it: `loop { if p >= x { break p; } p = p.wrapping_shl(1); }` as the function's tail |
+| a counted loop `i <= c` to a constant below the type's maximum; a loop over an inclusive range as the Rust frontend imports it - a flag that the range is done, the counter moved on modulo its width after the flag is set (#458) | `for i in 0..=100i32`, `for _ in 0..=255u8`, `for i in start..=end` - Rust's `RangeInclusive`, which ends at the type's maximum without overflowing; `i <= n` of a variable stays a `while`, since at the maximum the source's loop never ends |
+| a reduction: a binding made right before an element loop whose only statement combines it with a value of the element by `wrapping_add`, `wrapping_mul`, `^`, `\|` or `&` (#459) | an iterator fold, `data.iter().map(\|&b\| u32::from(b)).fold(0u32, \|acc, x\| acc.wrapping_add(x))`, the map left out for the element itself - never `sum` or `product`, whose overflow follows the build mode; not where the value names the binding, can leave the function (`?`) or the start is computed |
 | `c ? true : x`, `c ? false : x`, `c ? x : true`, `c ? x : false` of truth values | `c \|\| x`, `!c && x`, `!c \|\| x`, `c && x`, which evaluate the same way; `!(a && b)` as `!a \|\| !b` |
+
+## Modules
+
+`RustEmitOptions.Modules` places functions, by IR name, in modules of the crate (#459): each such
+module is a file `src/<module>.rs` that `src/lib.rs` declares (`pub mod` where it has a public item,
+else `mod`, sorted by name). Everything else - functions placed nowhere, helpers and spelling
+functions, constants, globals, types, the tests - stays in the IR module's file, which is left out
+where nothing remains. Each file names what it uses of another with one `use crate::<module>::<item>;`
+per item, sorted, and only what its code uses; an item another file uses is `pub(crate)` at least,
+and the tests module has `use` lines of its own for the placed functions it calls. Emission is
+reproducible: the same module and options give the same files. A placed function that names a type
+of the crate (whose fields and methods are private to its module) and a module named `lib` or `main`
+are refused with `PLY1550`. The IR holds one module and calls only within it, and the command line
+has no option for a placement yet, so a crate of several modules comes from this option alone.
 
 ## Objects
 
@@ -243,7 +261,8 @@ order, where `clamp` would panic), `clippy::manual_range_contains`, `clippy::neg
 and `clippy::nonminimal_bool` (a negated ordering of floating-point numbers), `clippy::too_many_arguments`,
 `clippy::type_complexity` (a function value that takes or gives another one, a type the source named in one word),
 `clippy::manual_find` (a search the source wrote as a loop that returns `Some(i)`, then `None`),
-`clippy::unnecessary_literal_unwrap` (an optional value made of a value and then read, as the source has it).
+`clippy::unnecessary_literal_unwrap` (an optional value made of a value and then read, as the source has it),
+`clippy::reversed_empty_ranges` (a loop over a range of constants the source wrote empty, `5..=3u8`).
 No group is ever allowed. Every other lint is avoided by the shape the backend writes.
 
 ## Verification
@@ -272,7 +291,11 @@ No group is ever allowed. Every other lint is avoided by the shape the backend w
   outcome is what rustc recorded for the original in the mode of the import.
 - `RustBackendScenarioTests` (layer `rust`): the scenarios of the issues with their hand-checked
   values, clippy with `-D warnings` and `cargo fmt --check` on the crates, the generated tests passing
-  and a mutated one failing.
+  and a mutated one failing; the loops with a value, the inclusive counted loops and the reductions
+  against the C# compiler's build, the inclusive ranges of Rust (to 255u8, over all of i8, empty)
+  against `rustc` in both import modes, the wrapping conversion from floating point against the IR
+  library's `ToInt32`, the saturating addition, and the crate of the modules `util` and `hash`, each
+  with overflow checks on and off.
 
 The runner (`Polypiler.Core.Verification/Runners`): `RustRunner` builds (`cargo build`), tests
 (`cargo test`), format-checks (`cargo fmt --check`), lints (`cargo clippy -- -D warnings`) and calls
