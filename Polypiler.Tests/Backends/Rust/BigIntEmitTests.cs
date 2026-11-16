@@ -112,6 +112,12 @@ public sealed class BigIntEmitTests {
     Assert.That(text, Does.Contain("ply_big_shift(&ply_big_add(&a, &ply_big(1)), 2147483648)"));
   }
 
+  /// <summary>A comparison of an operation's value compares the new value itself, a variable in place.</summary>
+  [Test]
+  public void ComparisonOfAnOperation_ComparesItsValue()
+    => Assert.That(Emitted(Single(IrType.Bool, [A], new IrBinary(IrBinaryOp.Less, new IrBinary(IrBinaryOp.Add, new IrLocalRef(A), new IrBigConst(1)), new IrLocalRef(A)))),
+      Does.Contain("ply_big_add(&a, &ply_big(1)) < a"));
+
   /// <summary>The struct, its order and only the helpers the code calls - with the ones those call - are in the crate; the header names num-bigint.</summary>
   [Test]
   public void Crate_CarriesTheTypeAndOnlyTheHelpersItCalls() {
