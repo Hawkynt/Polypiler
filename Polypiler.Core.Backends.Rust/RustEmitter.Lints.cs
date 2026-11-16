@@ -20,7 +20,8 @@ public static partial class RustEmitter {
   /// <c>unused_comparisons</c> of rustc), a range test written out (<c>manual_range_contains</c>), an
   /// ordering of floating-point numbers negated (<c>neg_cmp_op_on_partial_ord</c>, <c>nonminimal_bool</c>),
   /// a constant close to π or e (<c>approx_constant</c>), a loop that never ends (<c>empty_loop</c>), a
-  /// value copied to a variable and straight back (<c>almost_swapped</c>) and
+  /// value copied to a variable and straight back (<c>almost_swapped</c>), two variables swapped through a
+  /// third, as <c>std::mem::swap</c> lowers (<c>manual_swap</c>) and
   /// a signature of the source with more than seven parameters (<c>too_many_arguments</c>). The list is
   /// closed; no group and no <c>clippy::all</c> is ever allowed.
   /// </summary>
@@ -31,7 +32,7 @@ public static partial class RustEmitter {
       "unused_assignments", "unused_comparisons", "clippy::absurd_extreme_comparisons", "clippy::almost_swapped", "clippy::approx_constant", "clippy::empty_loop",
       "clippy::eq_op", "clippy::erasing_op", "clippy::identity_op", "clippy::manual_clamp", "clippy::manual_range_contains", "clippy::min_max",
       "clippy::neg_cmp_op_on_partial_ord", "clippy::nonminimal_bool", "clippy::too_many_arguments", "clippy::type_complexity",
-      "clippy::manual_find", "clippy::unnecessary_literal_unwrap"
+      "clippy::manual_find", "clippy::unnecessary_literal_unwrap", "clippy::manual_swap"
     ];
 
     /// <summary>The well-known constants of <c>std::f64::consts</c> clippy compares literals with.</summary>
@@ -68,6 +69,12 @@ public static partial class RustEmitter {
           case RsBlock block when block.Statements.Zip(block.Statements.Skip(1)).Any(pair => pair is (RsLet { Initializer: RsPath source } binding, RsExpressionStatement { Expression: RsAssign { Operator: "=", Target: RsPath target, Value: RsPath value } })
             && target.Name == source.Name && value.Name == binding.Name):
             needed.Add("clippy::almost_swapped");
+            break;
+          case RsBlock block when block.Statements.Zip(block.Statements.Skip(1), block.Statements.Skip(2)).Any(triple => triple is (RsLet { Initializer: RsPath first } held,
+              RsExpressionStatement { Expression: RsAssign { Operator: "=", Target: RsPath into, Value: RsPath second } },
+              RsExpressionStatement { Expression: RsAssign { Operator: "=", Target: RsPath back, Value: RsPath saved } })
+            && into.Name == first.Name && back.Name == second.Name && saved.Name == held.Name):
+            needed.Add("clippy::manual_swap");
             break;
           case RsLet { TypeName: { } type } when IsComplex(type):
             needed.Add("clippy::type_complexity");

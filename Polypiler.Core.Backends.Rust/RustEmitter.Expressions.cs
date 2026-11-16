@@ -94,7 +94,7 @@ public static partial class RustEmitter {
       IrConst { Type.IsEnum: true } constant => this.EnumConstant(constant),
       IrIntrinsic operation when EnumOperations.IsEnum(operation.Op) => this.EnumOperation(operation),
       IrIntrinsic operation when NumberTextOperations.IsNumberText(operation.Op) => this.NumberText(operation),
-      IrIntrinsic { Op: IrIntrinsicOp.ViewOf or IrIntrinsicOp.Slice or IrIntrinsicOp.ViewLength or IrIntrinsicOp.ViewToArray or IrIntrinsicOp.ViewEqual or IrIntrinsicOp.ViewFill } operation
+      IrIntrinsic { Op: IrIntrinsicOp.ViewOf or IrIntrinsicOp.Slice or IrIntrinsicOp.ViewLength or IrIntrinsicOp.ViewToArray or IrIntrinsicOp.ViewEqual or IrIntrinsicOp.ViewFill or IrIntrinsicOp.ViewCopy } operation
         => this.ViewOperation(operation),
       IrStrConst or IrConstRef { Type.IsString: true } or IrConditional { Type.IsString: true } => this.StringValue(expression),
       IrArrayLoad { Array: IrConstRef table, Type.IsString: true } load => this.TableText(table, load.Index),
@@ -130,6 +130,7 @@ public static partial class RustEmitter {
       IrStep { Target: IrArrayLoad { Array: IrGlobalRef { Global: var locked } } load } step when IsLocked(locked) => this.LockedStep(step, load, locked),
       IrStep { Target: IrArrayLoad load } step => this.ElementStep(load, step, false),
       IrArrayLoad { Index: IrLocalRef counter } when this._elements.TryGetValue(counter.Local, out var element) => new RsPath(element) { Type = expression.Type },
+      IrArrayLoad load when this.ZippedElement(load.Array, load.Index) is { } zipped => zipped,
       IrArrayLoad { Array: IrGlobalRef { Global: var locked } } load when IsLocked(locked) => this.LockedElement(locked, load.Index),
       IrArrayLoad load => new RsIndex(this.ArrayTarget(load.Array), this.Index(load.Index)) { Type = load.Type },
       IrArrayLength { Array: IrGlobalRef { Global: var locked } } when this._globalLengths.TryGetValue(locked.Name, out var count)

@@ -23,6 +23,18 @@ public static partial class RustEmitter {
           continue;
         }
 
+        if (this.ParallelLoop(statements, index, out var consumed) is { } parallel) {
+          into.Add(parallel);
+          index += consumed - 1;
+          continue;
+        }
+
+        if (this.SplitViews(statements, index) is { } split) {
+          into.Add(split);
+          ++index;
+          continue;
+        }
+
         if (this.Statement(statements[index], into))
           return;
       }
@@ -453,37 +465,12 @@ public static partial class RustEmitter {
     /// an element loop (<see cref="ElementLoop"/>). <see langword="null"/> for any other pair of statements.
     /// </summary>
     private RsStatement? CountedLoop(IReadOnlyList<IrStmt> statements, int index) {
-      if (index + 1 >= statements.Count || statements[index] is not IrDeclare { Initializer: { } start } declare)
-        return null;
-
-      IrExpr condition;
-      List<IrStmt> rest;
-      IrStmt step;
-      switch (statements[index + 1]) {
-        case IrWhile { Body.Statements.Count: > 0 } loop when !ContinuesLoop(loop.Body.Statements.Take(loop.Body.Statements.Count - 1)):
-          (condition, rest, step) = (loop.Condition, [.. loop.Body.Statements.Take(loop.Body.Statements.Count - 1)], loop.Body.Statements[^1]);
-          break;
-        case IrFor { Step.Statements: [var only] } loop:
-          (condition, rest, step) = (loop.Condition, [.. loop.Body.Statements], only);
-          break;
-        default:
-          return null;
-      }
-
-      if (condition is not IrBinary { Op: IrBinaryOp.Less, Left: IrLocalRef counter, Right: var bound } || counter.Local != declare.Local || !counter.Type.IsInteger || this._shared.Contains(counter.Local))
-        return null;
-
-      var stepsByOne = step switch {
-        IrAssign { Value: IrBinary { Op: IrBinaryOp.Add or IrBinaryOp.AddChecked, Left: IrLocalRef self, Right: IrConst { Value: 1 } } } assign => assign.Local == declare.Local && self.Local == declare.Local,
-        IrExprStmt { Expression: IrStep { Target: IrLocalRef self, Increment: true } } => self.Local == declare.Local,
-        _ => false
-      };
-      if (!stepsByOne)
+      if (index + 1 >= statements.Count || statements[index] is not IrDeclare { Initializer: { } start } declare || this.Counted(declare, statements[index + 1]) is not ({ } bound, { } rest))
         return null;
 
       var invariant = bound is IrConst || bound is IrConstRef || (bound is IrLocalRef limit && limit.Local != declare.Local && !Assigns(rest, limit.Local))
         || (bound is IrArrayLength { Array: IrConstRef or IrLocalRef } length && (length.Array is not IrLocalRef array || !Assigns(rest, array.Local)));
-      if (!invariant || Assigns(rest, declare.Local) || statements.Skip(index + 2).Any(after => Mentions(after, declare.Local)))
+      if (!invariant || statements.Skip(index + 2).Any(after => Mentions(after, declare.Local)))
         return null;
 
       if (start is IrConst { Value: 0 } && bound is IrArrayLength { Array: var iterated } && this.ElementLoop(declare.Local, iterated, rest) is { } elements)

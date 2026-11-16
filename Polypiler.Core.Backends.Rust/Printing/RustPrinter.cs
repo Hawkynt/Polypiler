@@ -529,7 +529,8 @@ public static class RustPrinter {
             return $"{target}\n{inner}[{at}]";
         }
 
-        return target + "[" + Expression(index.Index, indent, column) + "]";
+        var opened = (target.Contains('\n') ? 0 : column) + target[(target.LastIndexOf('\n') + 1)..].Length + 1;
+        return target + "[" + Expression(index.Index, indent, opened, trailing + 1) + "]";
       }
       case RsBinary binary: {
         var operands = new List<(string? Operator, RsExpression Operand)>();
@@ -558,7 +559,8 @@ public static class RustPrinter {
       case RsCast cast: {
         var operand = Expression(cast.Operand, indent, column);
         var last = operand[(operand.LastIndexOf('\n') + 1)..];
-        var end = (operand.Contains('\n') ? last.Length : column + last.Length) + 4 + cast.Target.Length + trailing;
+        // rustfmt's rewrite_pair measures the last line of an operand of several lines against the width left at the cast's own column.
+        var end = column + last.Length + 4 + cast.Target.Length + trailing;
         return end <= MaxWidth ? operand + " as " + cast.Target : operand + "\n" + inner + "as " + cast.Target;
       }
       case RsParenthesized parenthesized:

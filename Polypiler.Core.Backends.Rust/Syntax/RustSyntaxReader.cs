@@ -173,6 +173,22 @@ public static class RustSyntaxReader {
       return token.Kind == Kind.Identifier || token.Text == "_" ? token.Text : throw new FormatException($"Expected a name, found '{token.Text}'.");
     }
 
+    /// <summary>
+    /// A pattern of names in parentheses, <c>(l, r)</c>, as a <c>let</c> that takes a pair apart has it, or
+    /// <c>(&amp;s, d)</c> as a loop over two zipped slices.
+    /// </summary>
+    private string TuplePattern() {
+      this.Expect("(");
+      var names = new List<string> { this.Bound() };
+      while (this.Accept(","))
+        names.Add(this.Bound());
+      this.Expect(")");
+      return $"({string.Join(", ", names)})";
+    }
+
+    /// <summary>A name a pattern binds, <c>&amp;x</c> where it copies the element a reference points to.</summary>
+    private string Bound() => (this.Accept("&") ? "&" : "") + this.Identifier();
+
     public RsFile File() {
       var docs = new List<string>();
       var attributes = new List<string>();
@@ -368,7 +384,7 @@ public static class RustSyntaxReader {
       while (!this.Accept("}")) {
         if (this.Accept("let")) {
           var mutable = this.Accept("mut");
-          var name = this.Identifier();
+          var name = this.Is("(") ? this.TuplePattern() : this.Identifier();
           string? type = null;
           if (this.Accept(":"))
             type = this.TypeText();
@@ -720,7 +736,7 @@ public static class RustSyntaxReader {
       }
 
       this.Expect("for");
-      var pattern = (this.Accept("&") ? "&" : "") + this.Identifier();
+      var pattern = this.Is("(") ? this.TuplePattern() : this.Bound();
       this.Expect("in");
       var iterator = this.Header();
       return new RsFor(label, pattern, iterator, this.Block());
