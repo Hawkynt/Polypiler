@@ -44,6 +44,9 @@ public static partial class RustEmitter {
       /// <summary>Whether a <c>continue</c> of the loop left the labelled block of a <c>do</c>-<c>while</c> body.</summary>
       public bool Continued { get; set; }
 
+      /// <summary>The value every <c>break</c> of the loop gives, <c>break v</c>, where the loop is the value of a <c>return</c>; <see langword="null"/> for none.</summary>
+      public IrExpr? Value { get; init; }
+
     }
 
     private enum BreakableKind { Loop, Switch, ContinueBlock }

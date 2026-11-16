@@ -17,6 +17,17 @@ public static partial class RustEmitter {
     /// </summary>
     private void Statements(IReadOnlyList<IrStmt> statements, List<RsStatement> into) {
       for (var index = 0; index < statements.Count; ++index) {
+        if (this.ValueLoop(statements, index) is { } valued) {
+          into.Add(valued);
+          return;
+        }
+
+        if (this.InclusiveLoop(statements, index) is { } inclusive) {
+          into.Add(inclusive);
+          index += 2;
+          continue;
+        }
+
         if (this.CountedLoop(statements, index) is { } counted) {
           into.Add(counted);
           ++index;
@@ -274,11 +285,11 @@ public static partial class RustEmitter {
     /// condition is the constant <c>true</c>. The step of a <c>for</c> follows the body, and every
     /// <c>continue</c> of the loop runs it before it goes on.
     /// </summary>
-    private RsExpression Loop(IrExpr condition, IReadOnlyList<IrStmt> body, IReadOnlyList<IrStmt>? step) {
+    private RsExpression Loop(IrExpr condition, IReadOnlyList<IrStmt> body, IReadOnlyList<IrStmt>? step, IrExpr? value = null) {
       var label = this.NewLabel("l");
       var test = condition is IrConst { Value: not 0 } ? null : this.Expression(condition);
       var stepped = step is null ? null : this.Block(step).Statements;
-      var loop = new Breakable(BreakableKind.Loop, label, stepped);
+      var loop = new Breakable(BreakableKind.Loop, label, stepped) { Value = value };
       this._breakables.Add(loop);
       var block = this.Block(body);
       this._breakables.RemoveAt(this._breakables.Count - 1);
@@ -325,11 +336,146 @@ public static partial class RustEmitter {
         return this.Refuse("a break out of a try");
 
       var crossed = this._breakables.Count - 1 > this._breakables.IndexOf(target);
+      var value = target.Value is null ? null : this.Expression(target.Value);
       if (target.Kind == BreakableKind.Loop && !crossed)
-        return new RsBreak(null, null);
+        return new RsBreak(null, value);
 
       target.Used = true;
-      return new RsBreak(target.Label, null);
+      return new RsBreak(target.Label, value);
+    }
+
+    /// <summary>
+    /// A loop without a condition whose exits are <c>break</c>s of it, followed by the <c>return</c>
+    /// of a scalar, as the value of that return: <c>loop { …; break p; … }</c>. Nothing runs between a
+    /// <c>break</c> and the return, so each <c>break</c> gives what the return would read. Not inside a
+    /// <c>try</c> or a closure, nor in a function that propagates an exception, whose returns are
+    /// written otherwise; <see langword="null"/> for any other pair of statements.
+    /// </summary>
+    private RsStatement? ValueLoop(IReadOnlyList<IrStmt> statements, int index) {
+      if (index + 1 >= statements.Count || statements[index] is not IrWhile { Condition: IrConst { Value: not 0 } } loop
+        || statements[index + 1] is not IrReturn { Value: { } value } || TypeName(value.Type) is null || !BreaksLoop(loop.Body.Statements)
+        || this._tries.Count > 0 || this._closureResults.Count > 0 || this._throwing.Contains(this._function.Name))
+        return null;
+
+      return new RsExpressionStatement(new RsReturn(this.Loop(loop.Condition, loop.Body.Statements, null, value)));
+    }
+
+    /// <summary>
+    /// A loop over an inclusive range as the Rust frontend imports it, written back as
+    /// <c>for i in a..=b</c>: a flag that the range is done, true at once where the start is above the
+    /// end; a counter at the start; and a loop while the flag is false whose step first sets the flag
+    /// where the counter has reached the end, <c>(end as u64 - i as u64) &lt; 1</c>, then moves the
+    /// counter on modulo its width - so that the counter never overflows at the end of its type, which
+    /// Rust's <c>RangeInclusive</c> does not either. The bounds are constants or variables the body
+    /// does not assign; the body assigns neither the flag nor the counter, has no <c>continue</c> where
+    /// the loop is a <c>while</c>, and nothing after the loop names either. <see langword="null"/> for
+    /// any other three statements.
+    /// </summary>
+    private RsStatement? InclusiveLoop(IReadOnlyList<IrStmt> statements, int index) {
+      if (index + 2 >= statements.Count || statements[index] is not IrDeclare { Initializer: { } empty } flag || flag.Local.Type != IrType.Bool
+        || statements[index + 1] is not IrDeclare { Initializer: { } start, Local: { Type.IsInteger: true } local })
+        return null;
+
+      List<IrStmt> rest;
+      IReadOnlyList<IrStmt> step;
+      switch (statements[index + 2]) {
+        case IrWhile { Condition: IrUnary { Op: IrUnaryOp.LogicalNot, Operand: IrLocalRef tested }, Body.Statements: [.., _, _] } loop when tested.Local == flag.Local && !ContinuesLoop(loop.Body.Statements):
+          (rest, step) = ([.. loop.Body.Statements.Take(loop.Body.Statements.Count - 2)], [.. loop.Body.Statements.Skip(loop.Body.Statements.Count - 2)]);
+          break;
+        case IrFor { Condition: IrUnary { Op: IrUnaryOp.LogicalNot, Operand: IrLocalRef tested }, Step.Statements: [_, _] } loop when tested.Local == flag.Local:
+          (rest, step) = ([.. loop.Body.Statements], loop.Step.Statements);
+          break;
+        default:
+          return null;
+      }
+
+      if (step[0] is not IrAssign { Value: IrBinary { Op: IrBinaryOp.Less, Left: IrBinary { Op: IrBinaryOp.Subtract, Left: var reached, Right: var current }, Right: IrConst { Value: 1 } } } last
+        || last.Local != flag.Local || !IsCounter(current, local)
+        || step[1] is not IrAssign advance || Moved(advance.Value) is not { } moved
+        || advance.Local != local || !IsCounter(moved, local) || Bound(Extended(reached), local.Type) is not { } end || Bound(start, local.Type) is not { } first)
+        return null;
+
+      if (!EmptyWhen(empty, first, end) || this._shared.Contains(local) || this._shared.Contains(flag.Local) || Assigns(rest, local) || Assigns(rest, flag.Local)
+        || new[] { first, end }.Any(bound => bound is IrLocalRef { Local: var variable } && (Assigns(rest, variable) || this._shared.Contains(variable)))
+        || rest.Any(statement => Mentions(statement, flag.Local)) || statements.Skip(index + 3).Any(after => Mentions(after, local) || Mentions(after, flag.Local)))
+        return null;
+
+      // A first statement that only copies the counter into a variable of its own names the range's element.
+      var pattern = rest.Any(statement => Mentions(statement, local)) ? this._locals[local] : "_";
+      if (rest is [IrDeclare { Initializer: IrLocalRef { Local: var copied } } named, ..] && copied == local && named.Local.Type == local.Type
+        && !Assigns(rest, named.Local) && !this._shared.Contains(named.Local) && !rest.Skip(1).Any(statement => Mentions(statement, local))) {
+        pattern = this._locals[named.Local];
+        rest = [.. rest.Skip(1)];
+      }
+
+      var label = this.NewLabel("l");
+      var breakable = new Breakable(BreakableKind.Loop, label);
+      this._breakables.Add(breakable);
+      var block = this.Block(rest);
+      this._breakables.RemoveAt(this._breakables.Count - 1);
+      var from = this.Expression(first);
+      var to = this.Expression(end);
+      // A range of two literals is typed by its end, 0..=255u8.
+      if (from is RsLiteral && to is RsLiteral)
+        to = Suffixed(to);
+
+      return new RsExpressionStatement(new RsFor(breakable.Used ? label : null, pattern, new RsRange(this.Operand(from, 3), this.Operand(to, 3), true), block));
+    }
+
+    /// <summary>
+    /// What a range loop's step adds one to modulo 2^64 and wraps back into the counter's type,
+    /// <c>(i as u64 + 1) as u8</c>, or adds one to in a 64-bit counter's own type; <see langword="null"/> for any other value.
+    /// </summary>
+    private static IrExpr? Moved(IrExpr value) => value switch {
+      IrConvert { Contract: IrConversion.Wrap, Operand: IrBinary { Op: IrBinaryOp.Add, Left: var moved, Right: IrConst { Value: 1 } } } => moved,
+      IrBinary { Op: IrBinaryOp.Add, Left: var moved, Right: IrConst { Value: 1 } } => moved,
+      _ => null
+    };
+
+    /// <summary>Whether an operand of a range loop's step is its counter, maybe extended to a wider type.</summary>
+    private static bool IsCounter(IrExpr operand, IrLocal counter) => Extended(operand) is IrLocalRef { Local: var local } && local == counter;
+
+    /// <summary>
+    /// An operand without the conversions that extend it to a type at least as wide, which a step that
+    /// subtracts or adds modulo 2^64 sees the same value through: <c>end as u64</c> as <c>end</c>.
+    /// </summary>
+    private static IrExpr Extended(IrExpr operand) {
+      while (operand is IrConvert { Operand: { Type.IsInteger: true } inner } convert && convert.Type.IsInteger && convert.Type.Bits >= inner.Type.Bits)
+        operand = inner;
+
+      return operand;
+    }
+
+    /// <summary>A bound of a range of the counter's type: a variable of it, or a constant that is one of its values, as a constant of it.</summary>
+    private static IrExpr? Bound(IrExpr bound, IrType type) => bound switch {
+      IrLocalRef reference when reference.Type == type => reference,
+      IrConst constant when constant.Type.IsInteger && IrOperators.Number(constant.Type, constant.Value) is var number
+        && number >= IrOperators.Minimum(type) && number <= IrOperators.Maximum(type) => new IrConst(type, (long)number),
+      _ => null
+    };
+
+    /// <summary>
+    /// Whether the first value of a range's flag is that the range is empty, its start above its end:
+    /// <c>start &gt; end</c> of the bounds or of their values in a type that holds both, <c>!(start &lt;= end)</c>,
+    /// or the constant of two constant bounds.
+    /// </summary>
+    private static bool EmptyWhen(IrExpr flag, IrExpr start, IrExpr end) => flag switch {
+      IrBinary { Op: IrBinaryOp.Greater } above => SameValue(above.Left, start) && SameValue(above.Right, end),
+      IrUnary { Op: IrUnaryOp.LogicalNot, Operand: IrBinary { Op: IrBinaryOp.LessOrEqual } within } => SameValue(within.Left, start) && SameValue(within.Right, end),
+      IrConst { Value: var value } when start is IrConst low && end is IrConst high => value != 0 == IrOperators.Number(low.Type, low.Value) > IrOperators.Number(high.Type, high.Value),
+      _ => false
+    };
+
+    /// <summary>Whether an operand is a bound, maybe converted to a type that holds every value of it.</summary>
+    private static bool SameValue(IrExpr operand, IrExpr bound) {
+      while (operand is IrConvert { Operand: { Type.IsInteger: true } inner } convert && convert.Type.IsInteger && IrOperators.Contains(convert.Type, inner.Type))
+        operand = inner;
+
+      return (operand, bound) switch {
+        (IrConst a, IrConst b) => IrOperators.Number(a.Type, a.Value) == IrOperators.Number(b.Type, b.Value),
+        (IrLocalRef a, IrLocalRef b) => a.Local == b.Local,
+        _ => false
+      };
     }
 
     /// <summary>
@@ -470,7 +616,12 @@ public static partial class RustEmitter {
           return null;
       }
 
-      if (condition is not IrBinary { Op: IrBinaryOp.Less, Left: IrLocalRef counter, Right: var bound } || counter.Local != declare.Local || !counter.Type.IsInteger || this._shared.Contains(counter.Local))
+      if (condition is not IrBinary { Op: IrBinaryOp.Less or IrBinaryOp.LessOrEqual, Left: IrLocalRef counter, Right: var bound } test || counter.Local != declare.Local || !counter.Type.IsInteger || this._shared.Contains(counter.Local))
+        return null;
+
+      // i <= b is a range a..=b only where b is a constant below the largest value: at the largest one the source's loop never ends.
+      var inclusive = test.Op == IrBinaryOp.LessOrEqual;
+      if (inclusive && (bound is not IrConst { Value: var last } || IrOperators.Number(bound.Type, last) >= IrOperators.Maximum(bound.Type)))
         return null;
 
       var stepsByOne = step switch {
@@ -486,7 +637,7 @@ public static partial class RustEmitter {
       if (!invariant || Assigns(rest, declare.Local) || statements.Skip(index + 2).Any(after => Mentions(after, declare.Local)))
         return null;
 
-      if (start is IrConst { Value: 0 } && bound is IrArrayLength { Array: var iterated } && this.ElementLoop(declare.Local, iterated, rest) is { } elements)
+      if (!inclusive && start is IrConst { Value: 0 } && bound is IrArrayLength { Array: var iterated } && this.ElementLoop(declare.Local, iterated, rest) is { } elements)
         return elements;
 
       var label = this.NewLabel("l");
@@ -496,11 +647,14 @@ public static partial class RustEmitter {
       this._breakables.RemoveAt(this._breakables.Count - 1);
       var from = this.Expression(start);
       var to = this.Expression(bound);
-      if (from is RsLiteral && to is RsLiteral)
+      // A range of two literals is typed by its start, 0u32..10, an inclusive one by its end, 0..=100i32.
+      if (from is RsLiteral && to is RsLiteral && inclusive)
+        to = Suffixed(to);
+      else if (from is RsLiteral && to is RsLiteral)
         from = Suffixed(from);
 
       var pattern = rest.Any(statement => Mentions(statement, declare.Local)) ? this._locals[declare.Local] : "_";
-      return new RsExpressionStatement(new RsFor(breakable.Used ? label : null, pattern, new RsRange(this.Operand(from, 3), this.Operand(to, 3), false), block));
+      return new RsExpressionStatement(new RsFor(breakable.Used ? label : null, pattern, new RsRange(this.Operand(from, 3), this.Operand(to, 3), inclusive), block));
     }
 
     /// <summary>The element of an array an element loop reads in place of <c>a[i]</c>, by the loop's counter.</summary>
