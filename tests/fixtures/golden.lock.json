@@ -2272,6 +2272,16 @@
       "bytes": 4111
     },
     {
+      "path": "tests/fixtures/prototype/rust/recorded/traits.panic.txt",
+      "sha256": "2874065d10dc65b8518f218110a7091e8b0aa9ce5e0b751185b0f916cf464044",
+      "bytes": 1442
+    },
+    {
+      "path": "tests/fixtures/prototype/rust/recorded/traits.wrap.txt",
+      "sha256": "4b9b3cbe066dfd92ae0a44c5dadd7267911637ca3b8a4860d1d46c6a89fa8ba9",
+      "bytes": 1328
+    },
+    {
       "path": "tests/fixtures/prototype/rust/recorded/types.panic.txt",
       "sha256": "e6e668dbada15054710a200b811f6ac7a6eafbdb467e1348633fbe5492143d73",
       "bytes": 1749
