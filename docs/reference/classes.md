@@ -104,6 +104,8 @@ holds an object.
 | `class D extends B { … }` without a constructor (#1369) | a constructor of the parameters of the nearest one up the lineage, calling it with them | supported |
 | `const C = Object.freeze({ K: { name: '…', level: 1 }, … })` of members of one shape of strings, numbers and truth values (#1371) | a class `C` of read-only fields, `C.K` a new object of its values | supported |
 | `Object.keys(o)` of an object of a class or a record, `Object.keys(o).forEach(key => …)`, `for (const key of Object.keys(o))` with `o[key]` and `r[key] = v` (#1373) | the Array of its keys; the body once per key, `o[key]` the field | supported |
+| a local, a `return`, an assignment to a variable or an argument that takes a call of a method whose every implementation only throws, or a conditional of two such calls (#1389) | the call as a statement, then a throw of `InvalidOperationException` that is never reached; the rest of the block is dead | supported |
+| the value of such a call where the method could return: an operand, an element, a branch of a conditional whose other branch has a value | - | `PLY1102`: "the value of …, a call that only throws" |
 | a call of an overridden method on `this` reachable from a constructor, which a class derived from the one constructed implements | - | `PLY1102`: "a call of an overridden method on 'this' during construction" |
 | a getter or a setter alone over a pair of its base class, an accessor over a field or a method, members of a frozen object of two shapes, a comparison of them by identity, a write into one, `r[key] = v` of a key `r` lacks, a `return`, `break` or `continue` in a loop over `Object.keys` | - | `PLY1102` naming it |
 | `extends` of anything but a class of the file (`Array`, `Error`, a call), `Object.setPrototypeOf`, a hierarchy that loops, a member of a base class declared again in another kind, an override with another number of parameters, a derived class without a constructor whose base constructor takes a rest parameter, a derived constructor that does not begin with the base call | - | `PLY1102` naming it |
@@ -230,7 +232,13 @@ kind names a method it can name.
 **JavaScript.** Every method of a JavaScript class is virtual; in the IR it is `Virtual` only where a
 derived class of the file overrides it, so that the C# output marks it `virtual` there and nowhere
 else. The parameters and results of a method and its overrides are inferred jointly: in `shapes.js`
-every `area` is a double, because a product is never narrowed.
+every `area` is a double, because a product is never narrowed. A method that only throws adds
+nothing to the result of its slot: a call of it has the type its overrides return, and where none
+returns, as `IBlockCipherInstance.Result` of the Cipher framework calls `this.isInverse ?
+this.DecryptBlock(block) : this.EncryptBlock(block)` in a class that overrides `Result` itself, the
+call has no value (#1389). The declaration that takes it lowers as the call, followed by a throw
+that the call never returns to, and the statements behind it, the update of a `for` loop among them,
+are never written.
 
 ## Known differences
 

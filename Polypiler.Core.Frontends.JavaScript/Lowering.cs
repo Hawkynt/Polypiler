@@ -44,6 +44,7 @@ internal sealed partial class Lowering(TypeInference types) {
     this._locals.Clear();
     this._assigned = [];
     this._receiver = null;
+    this._diverged = false;
     types.Enter(model);
     try {
       if (model.Problem is { } problem)
@@ -159,8 +160,14 @@ internal sealed partial class Lowering(TypeInference types) {
     var list = statements.ToList();
     var hoisted = this.Hoisted(list, into);
     var start = into.Count;
-    foreach (var statement in list.Where(statement => statement is not FunctionDeclaration))
+    foreach (var statement in list.Where(statement => statement is not FunctionDeclaration)) {
       this.Statement(statement, into);
+      // What follows a call of no value is never run (#1389).
+      if (this._diverged) {
+        this._diverged = false;
+        break;
+      }
+    }
 
     this.Assign(hoisted, into, start);
     return new IrBlock(into);
@@ -171,6 +178,8 @@ internal sealed partial class Lowering(TypeInference types) {
 
   private void Statement(Statement statement, List<IrStmt> into) {
     switch (statement) {
+      case Acornima.Ast.Statement when this.Diverging(statement, into):
+        break;
       case ExpressionStatement or ForOfStatement when this.KeyLoop(statement, into):
         break;
       case BlockStatement block:
@@ -317,7 +326,8 @@ internal sealed partial class Lowering(TypeInference types) {
     var renewed = PerIteration(perPass, condition, body, step);
     statements.Add(renewed.Count > 0 ? new IrFor(condition, body, new IrBlock(step)) { PerIteration = renewed }
       : Contains(loop.Body, node => node is ContinueStatement) ? new IrFor(condition, body, new IrBlock(step))
-      : new IrWhile(condition, new IrBlock([.. body.Statements, .. step])));
+      // A body that never reaches its end - it returns or throws on every path - never reaches the update either.
+      : new IrWhile(condition, AlwaysReturns(body) ? body : new IrBlock([.. body.Statements, .. step])));
     return new IrBlock(statements);
   }
 
