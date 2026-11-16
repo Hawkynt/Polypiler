@@ -1236,11 +1236,29 @@ codes:
     area: rust
     owner: "#461"
     surfaces: standard error of polypiler translate --to rust, one line per refused construct
+  - code: PLY1552
+    severity: error
+    exit: UnsupportedConstruct
+    title: construct the result trap policy cannot express
+    message: "trap policy 'result' is not available for '<construct>' (in <place>)"
+    rule: rust.backend.trap-policy
+    area: rust
+    owner: "#1392"
+    surfaces: standard error of polypiler translate --to rust --trap-policy result, one line per construct that would still panic (a helper that panics, a trap inside a closure, a step of locked module state, a type named Error)
+  - code: PLY1558
+    severity: error
+    exit: UnsupportedConstruct
+    title: lazy sequence the Rust backend does not write as an iterator
+    message: "'<construct>' cannot be written as a Rust iterator (in <place>)"
+    rule: rust.backend.iterators
+    area: rust
+    owner: "#1391"
+    surfaces: standard error of polypiler translate --to rust, one line per refused construct
   - code: PLY1560
     severity: error
     exit: UnsupportedConstruct
-    title: exception region under the panic trap policy
-    message: "exception region in <function> cannot be emitted under the trap policy 'panic': '<construct>' is not supported by the Rust backend"
+    title: exception region the Rust backend cannot write
+    message: "exception region in <function> cannot be emitted under the trap policy '<panic|result>': '<construct>' is not supported by the Rust backend"
     rule: rust.backend.exceptions
     area: rust
     owner: "#458"
@@ -1254,6 +1272,15 @@ codes:
     area: rust
     owner: "#460"
     surfaces: standard error of polypiler translate --to rust, for one array passed to a call twice where it is written
+  - code: PLY1567
+    severity: error
+    exit: UnsupportedConstruct
+    title: mutable overlay view without unsafe Rust
+    message: "mutable overlay view in '<function>' requires unsafe Rust; the target profile sets allowUnsafe to false"
+    rule: rust.backend.unsafe
+    area: rust
+    owner: "#460"
+    surfaces: standard error of polypiler translate --to rust, for a Reinterpret view that is written while the profile allows no unsafe code
   - code: PLY1574
     severity: error
     exit: UnsupportedConstruct

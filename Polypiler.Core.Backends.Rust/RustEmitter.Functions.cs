@@ -44,6 +44,9 @@ public static partial class RustEmitter {
       /// <summary>Whether a <c>continue</c> of the loop left the labelled block of a <c>do</c>-<c>while</c> body.</summary>
       public bool Continued { get; set; }
 
+      /// <summary>The value every <c>break</c> of the loop gives, <c>break v</c>, where the loop is the value of a <c>return</c>; <see langword="null"/> for none.</summary>
+      public IrExpr? Value { get; init; }
+
     }
 
     private enum BreakableKind { Loop, Switch, ContinueBlock }
@@ -54,12 +57,15 @@ public static partial class RustEmitter {
       this._labels = 0;
       this._breakables.Clear();
       this._function = function;
+      this._definition = this._definitions.GetValueOrDefault(function.Name);
+      this._standIns = this._definition?.Parameters.ToDictionary(parameter => parameter.StandIn, parameter => parameter.Name) ?? [];
       this._arrayFacts = this._arrays.GetValueOrDefault(function.Name) ?? new();
       this._arrayParameters = function.Parameters.Select((parameter, index) => (parameter, index)).Where(pair => pair.parameter.Type.IsArray).ToDictionary(pair => pair.parameter, pair => pair.index);
       if (this._arrayFacts.Problem is { } problem)
         this.Refuse(problem);
 
       this.Analyse(function);
+      this.PointerFacts(function);
       this.FieldAliases(function);
       var name = this._functions[function.Name];
       var member = this._members.GetValueOrDefault(function.Name);
@@ -68,8 +74,10 @@ public static partial class RustEmitter {
 
       if (this._bodiless.Contains(function.Name))
         return new RsFunction(name, "", [], null, RsBlock.Empty);
+      if (IrSequences.IsIterator(function))
+        return this.Iterator(function, name);
 
-      var parameters = function.Parameters.Select((parameter, index) => new RsParameter(this._locals[parameter], this.ParameterType(function, index))).ToList();
+      var parameters = function.Parameters.SelectMany((parameter, index) => parameter.Type.IsPointer ? this.PointerParameters(parameter) : [new RsParameter(this._locals[parameter], this.ParameterType(function, index))]).ToList();
       var generics = "";
       if (this._free.TryGetValue(function.Name, out var owner)) {
         // The object of a method of a hierarchy: a reference to its struct, or to any type of its class's trait.
@@ -83,7 +91,7 @@ public static partial class RustEmitter {
 
       var returns = this.ResultType(function);
       if (this._throwing.Contains(function.Name))
-        returns = Fallible(returns);
+        returns = Fallible(returns, this.FailureType);
       var statements = new List<RsStatement>();
       foreach (var parameter in function.Parameters.Where(this._reassigned.Contains)) {
         // A parameter given a string or a new array of its own holds a copy it owns from the start.
@@ -105,7 +113,13 @@ public static partial class RustEmitter {
       if (this._throwing.Contains(function.Name) && function.ReturnType == IrType.Void && !(statements.Count > 0 && Diverges(statements[^1])))
         statements.Add(new RsExpressionStatement(this.Returned(null)));
       var body = Tidy.Function(new RsBlock(statements, null), function.ReturnType == IrType.Void && !this._throwing.Contains(function.Name));
-      return new RsFunction(name, function.IsPublic || this._free.ContainsKey(function.Name) ? "pub" : "", parameters, returns, body) { Generics = generics.Length > 0 ? generics : Lifetime(function, this._arrayFacts).Length > 0 ? "<'a>" : "" };
+      var lifetime = Lifetime(function, this._arrayFacts).Length > 0 ? "'a" : "";
+      var written = new RsFunction(name, function.IsPublic || this._free.ContainsKey(function.Name) ? "pub" : "", parameters, returns, body) {
+        Generics = generics.Length > 0 ? generics : this._definition?.Generics(lifetime) ?? (lifetime.Length > 0 ? $"<{lifetime}>" : ""),
+        Where = this._definition?.Where ?? []
+      };
+      this.PanicFree(written);
+      return written;
     }
 
     /// <summary>The function being written.</summary>
@@ -278,6 +292,17 @@ public static partial class RustEmitter {
             this.Count(final.Statements, bindings, depth);
           break;
         }
+        case IrForEachSequence loop:
+          this.CountIn(loop.Sequence, bindings, depth);
+          bindings[loop.Element] = new Binding(null, depth + 1) { Count = 1 };
+          this.Count(loop.Body.Statements, bindings, depth + 1);
+          break;
+        case IrYield produced:
+          this.CountIn(produced.Value, bindings, depth);
+          break;
+        case IrYieldFrom delegated:
+          this.CountIn(delegated.Sequence, bindings, depth);
+          break;
         case IrForEachCollection loop:
           this.CountIn(loop.Collection, bindings, depth);
           if (loop.Element is { } loopElement)

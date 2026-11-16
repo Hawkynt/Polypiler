@@ -23,7 +23,7 @@ public static class RustSyntaxReader {
     return new Parser(Tokenize(text)).File();
   }
 
-  private enum Kind { Identifier, Number, String, Lifetime, Punctuation, InnerDoc, OuterDoc, InnerAttribute, OuterAttribute, End }
+  private enum Kind { Identifier, Number, String, Lifetime, Punctuation, InnerDoc, OuterDoc, InnerAttribute, OuterAttribute, Comment, End }
 
   private sealed record Token(Kind Kind, string Text);
 
@@ -50,6 +50,8 @@ public static class RustSyntaxReader {
           tokens.Add(new(Kind.InnerDoc, line[3..].TrimStart(' ')));
         else if (line.StartsWith("///", StringComparison.Ordinal))
           tokens.Add(new(Kind.OuterDoc, line[3..].TrimStart(' ')));
+        else
+          tokens.Add(new(Kind.Comment, line[2..].TrimStart(' ')));
         index = end;
         continue;
       }
@@ -173,6 +175,22 @@ public static class RustSyntaxReader {
       return token.Kind == Kind.Identifier || token.Text == "_" ? token.Text : throw new FormatException($"Expected a name, found '{token.Text}'.");
     }
 
+    /// <summary>
+    /// A pattern of names in parentheses, <c>(l, r)</c>, as a <c>let</c> that takes a pair apart has it, or
+    /// <c>(&amp;s, d)</c> as a loop over two zipped slices.
+    /// </summary>
+    private string TuplePattern() {
+      this.Expect("(");
+      var names = new List<string> { this.Bound() };
+      while (this.Accept(","))
+        names.Add(this.Bound());
+      this.Expect(")");
+      return $"({string.Join(", ", names)})";
+    }
+
+    /// <summary>A name a pattern binds, <c>&amp;x</c> where it copies the element a reference points to.</summary>
+    private string Bound() => (this.Accept("&") ? "&" : "") + this.Identifier();
+
     public RsFile File() {
       var docs = new List<string>();
       var attributes = new List<string>();
@@ -246,6 +264,7 @@ public static class RustSyntaxReader {
           items.Add(this.Item());
         item = new RsTrait(name, visibility, supertraits, items);
       } else if (this.Accept("impl")) {
+        var generics = this.Is("<") ? this.TypeText() : "";
         var first = this.TypeText(true);
         string? trait = null;
         if (this.Accept("for")) {
@@ -257,13 +276,30 @@ public static class RustSyntaxReader {
         var items = new List<RsItem>();
         while (!this.Accept("}"))
           items.Add(this.Item());
-        item = new RsImpl(trait, first, items);
+        item = new RsImpl(trait, first, items) { Generics = generics };
+      } else if (this.Accept("type")) {
+        var name = this.Identifier();
+        this.Expect("=");
+        var type = this.TypeText();
+        this.Expect(";");
+        item = new RsTypeAlias(name, type);
       } else if (this.Accept("use")) {
         var path = new StringBuilder();
         while (!this.Is(";"))
           path.Append(this.Next().Text);
         this.Expect(";");
-        item = new RsUse(path.ToString());
+        item = new RsUse(path.ToString()) { Visibility = visibility };
+      } else if (this.Accept("enum")) {
+        var name = this.Identifier();
+        this.Expect("{");
+        var variants = new List<RsVariant>();
+        while (!this.Accept("}")) {
+          var variant = this.Identifier();
+          variants.Add(new RsVariant(variant, this.Accept("=") ? this.Next().Text : null));
+          this.Accept(",");
+        }
+
+        item = new RsEnum(name, visibility, variants);
       } else {
         throw new FormatException($"Expected an item, found '{this.Peek().Text}'.");
       }
@@ -274,6 +310,7 @@ public static class RustSyntaxReader {
     /// <summary><c>struct Name { fields }</c>, <c>struct Name(fields);</c> or <c>struct Name;</c>.</summary>
     private RsStruct Struct(string visibility) {
       var name = this.Identifier();
+      var generics = this.Is("<") ? this.TypeText() : "";
       var fields = new List<RsFieldDeclaration>();
       if (this.Accept(";"))
         return new RsStruct(name, visibility, fields);
@@ -296,7 +333,7 @@ public static class RustSyntaxReader {
 
       if (tuple)
         this.Expect(";");
-      return new RsStruct(name, visibility, fields);
+      return new RsStruct(name, visibility, fields) { Generics = generics };
     }
 
     private RsFunction Function(string visibility) {
@@ -328,9 +365,19 @@ public static class RustSyntaxReader {
       if (this.Accept("->"))
         returns = this.TypeText();
 
+      // The bounds of the generic parameters after the signature, T: Ord + Copy, each ended by its comma.
+      var clauses = new List<string>();
+      if (this.Accept("where"))
+        while (!this.Is("{")) {
+          var parameter = this.Identifier();
+          this.Expect(":");
+          clauses.Add($"{parameter}: {this.TypeText()}");
+          this.Expect(",");
+        }
+
       // A required method of a trait has no body: a declaration block.
       var body = this.Accept(";") ? new RsBlock([], null) { IsDeclaration = true } : this.Block();
-      return new RsFunction(name, visibility, parameters, returns, body) { Generics = generics };
+      return new RsFunction(name, visibility, parameters, returns, body) { Generics = generics, Where = clauses };
     }
 
     /// <summary>
@@ -344,7 +391,7 @@ public static class RustSyntaxReader {
       var generics = this.Is("<");
       while (true) {
         var token = this.Peek();
-        if (depth == 0 && (token.Text is "," or ")" or "=" or "{" or ";" or ">" or "|" && token.Kind == Kind.Punctuation || beforeFor && token.Text == "for"))
+        if (depth == 0 && (token.Text is "," or ")" or "=" or "{" or ";" or ">" or "|" && token.Kind == Kind.Punctuation || beforeFor && token.Text == "for" || token.Text == "where"))
           return text.ToString();
 
         depth += token.Text switch { "[" or "(" or "<" => 1, "]" or ")" or ">" => -1, ">>" => -2, _ => 0 };
@@ -354,7 +401,7 @@ public static class RustSyntaxReader {
         else if (token.Text == "->")
           text.Append(" -> ");
         else
-          text.Append(token.Text == "+" ? " + " : token.Text).Append(token.Text is ";" or "," or ":" or "mut" or "dyn" or "impl" ? " " : "");
+          text.Append(token.Text is "+" or "=" ? $" {token.Text} " : token.Text).Append(token.Text is ";" or "," or ":" or "mut" or "dyn" or "impl" ? " " : "");
 
         if (generics && depth == 0)
           return text.ToString();
@@ -368,7 +415,7 @@ public static class RustSyntaxReader {
       while (!this.Accept("}")) {
         if (this.Accept("let")) {
           var mutable = this.Accept("mut");
-          var name = this.Identifier();
+          var name = this.Is("(") ? this.TuplePattern() : this.Identifier();
           string? type = null;
           if (this.Accept(":"))
             type = this.TypeText();
@@ -383,6 +430,11 @@ public static class RustSyntaxReader {
 
         if (this.Accept("fn")) {
           statements.Add(new RsItemStatement(this.Function("")));
+          continue;
+        }
+
+        if (this.Peek().Kind == Kind.Comment) {
+          statements.Add(new RsComment(this.Next().Text));
           continue;
         }
 
@@ -495,6 +547,12 @@ public static class RustSyntaxReader {
       while (true) {
         if (this.Accept(".")) {
           var name = this.Peek().Kind == Kind.Number ? this.Next().Text : this.Identifier();
+          // A method with its type arguments, `cast::<u8>`, keeps them in its name.
+          if (this.Is("::") && this.Is("<", 1)) {
+            this.Expect("::");
+            name += "::" + this.TypeText();
+          }
+
           expression = this.Is("(") ? new RsMethodCall(expression, name, this.Arguments(")")) : new RsField(expression, name);
         } else if (this.Accept("?")) {
           expression = new RsTry(expression);
@@ -551,6 +609,9 @@ public static class RustSyntaxReader {
         this.Expect(")");
         return new RsParenthesized(inner);
       }
+
+      if (this.Accept("unsafe"))
+        return new RsUnsafe(this.Block());
 
       if (this.Is("move") || this.Is("|") || this.Is("||"))
         return this.Closure();
@@ -610,8 +671,9 @@ public static class RustSyntaxReader {
 
       if (token.Kind == Kind.Identifier) {
         var path = new StringBuilder(this.Next().Text);
+        // A segment is a name or the type arguments of a call, def::<i32>.
         while (this.Accept("::"))
-          path.Append("::").Append(this.Identifier());
+          path.Append("::").Append(this.Is("<") ? this.TypeText() : this.Identifier());
         if (this.Is("{") && !this._noStruct) {
           this.Expect("{");
           var fields = new List<RsFieldValue>();
@@ -647,7 +709,8 @@ public static class RustSyntaxReader {
       if (!this.Accept("||")) {
         this.Expect("|");
         while (!this.Accept("|")) {
-          var name = this.Identifier();
+          // A parameter that takes the value a reference points at, |&x|, is written with its pattern.
+          var name = (this.Accept("&") ? "&" : "") + this.Identifier();
           parameters.Add(new RsParameter(name, this.Accept(":") ? this.TypeText() : ""));
           this.Accept(",");
         }
@@ -720,10 +783,16 @@ public static class RustSyntaxReader {
       }
 
       this.Expect("for");
-      var pattern = (this.Accept("&") ? "&" : "") + this.Identifier();
+      var pattern = new StringBuilder();
+      while (!this.Is("in")) {
+        // A pattern of names, references and tuples: (place, &digit), with rustfmt's space after a comma and a mut.
+        var part = this.Next().Text;
+        pattern.Append(part).Append(part is "," or "mut" ? " " : "");
+      }
+
       this.Expect("in");
       var iterator = this.Header();
-      return new RsFor(label, pattern, iterator, this.Block());
+      return new RsFor(label, pattern.ToString(), iterator, this.Block());
     }
 
   }

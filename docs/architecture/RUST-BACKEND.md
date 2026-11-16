@@ -5,7 +5,8 @@
 arrays and slices, structs, enums, classes, interfaces and module state since
 [#460](https://github.com/Hawkynt/Polypiler/issues/460) and [#462](https://github.com/Hawkynt/Polypiler/issues/462);
 closures, function values, optional values, module state behind a `Mutex`, lists, maps and sets and
-exceptions as `Result` since phase 2; lazy sequences follow. The runner that builds
+exceptions as `Result` since phase 2; lazy sequences as `Iterator` state machines since
+[#1391](https://github.com/Hawkynt/Polypiler/issues/1391). The runner that builds
 and executes the output is [#468](https://github.com/Hawkynt/Polypiler/issues/468).
 Related: [backends](BACKENDS.md) · [pipeline](PIPELINE.md) · [exceptions](../reference/exceptions.md) ·
 [integer operations](../reference/integer-operations.md).
@@ -15,8 +16,9 @@ Related: [backends](BACKENDS.md) · [pipeline](PIPELINE.md) · [exceptions](../r
 | File | What it holds |
 | --- | --- |
 | `Cargo.toml` | `[package]` with `name` (the module's name in `snake_case`), `version = "0.1.0"`, the `edition` and, from Rust 1.56, `rust-version`; no dependencies |
-| `src/lib.rs` | the header (`//!`: profile, helper licences, floating-point record, caveats, notices), `#![forbid(unsafe_code)]`, the lints the code needs allowed, `pub mod <module>;` |
+| `src/lib.rs` | the header (`//!`: profile, helper licences, floating-point record, caveats, notices, the unsafe ledger), `#![forbid(unsafe_code)]` (`#![deny(unsafe_code)]` where the one unsafe lowering is used, see [Unsafe code](#unsafe-code)), the lints the code needs allowed, `pub mod <module>;` |
 | `src/<module>.rs` | the constants, the spelling functions and helpers, the functions; a `#[cfg(test)] mod tests` when tests are asked for |
+| `src/<placed>.rs` | the functions `RustEmitOptions.Modules` places in a module of their own, `src/util/bits.rs` for `util::bits` (see [Modules](#modules)) |
 
 The backend builds a Rust syntax tree from the IR (`Polypiler.Core.Backends.Rust/Syntax/RustSyntax.cs`),
 runs the target passes over it - helper inlining (O0500), removal of what nothing names (O0501) -
@@ -38,13 +40,17 @@ flowchart LR
 ## Profiles
 
 `--profile` names the edition, `--rust-version` raises the minimum supported Rust version (MSRV)
-above the release that stabilized it:
+above the release that stabilized it, and `--trap-policy panic|result` says what a trap is
+([the trap policy](#the-trap-policy-result)):
 
 | Profile | Edition | MSRV by default |
 | --- | --- | --- |
 | `rust2018` | 2018 | 1.31 |
 | `rust2021` | 2021 | 1.56 |
 | `rust2024` (default) | 2024 | 1.85 |
+
+`--allow-unsafe` sets the profile's `allowUnsafe` (off by default), which admits the one lowering that needs
+unsafe code, a written overlay view ([Unsafe code](#unsafe-code)); the header's profile line says so.
 
 The edition decides the keywords (`async`, `await`, `dyn`, `try` from 2018, `gen` from 2024), which a
 name escapes as a raw identifier (`r#gen`). The MSRV decides the rows of `RustCapabilities`:
@@ -75,9 +81,9 @@ name escapes as a raw identifier (`r#gen`). The MSRV decides the rows of `RustCa
 | `Negate`, `BitNot`, `LogicalNot` | `a.wrapping_neg()` (`-a` for floating point), `!a`, `!c` - a negated comparison of integers turned around (`a >= b`) |
 | arithmetic and comparisons of floating point | the operators; a compound assignment where clippy's `assign_op_pattern` asks |
 | conversions between integers | `i64::from(a)` where every value fits (a literal in it, also in the arms of an `if`, carries its type: `u64::from(if c { 1u32 } else { 0u32 })`), `a as u8` wrapping, `u8::try_from(a).expect("IntegerOverflow")` trapping |
-| conversions to and from floating point | `a as f64`, `f64::from(a)` for `f32` to `f64`, `a as i32` saturating (Rust's `as`), `ply_f2i_trap_<t>(a)` trapping |
+| conversions to and from floating point | `a as f64`, `f64::from(a)` for `f32` to `f64`, `a as i32` saturating (Rust's `as`), `ply_f2i_trap_<t>(a)` trapping; ECMA-262's wrapping `ToInt32`/`ToUint32` (4294967301.0 to 5) the spelling function `ply_rs_f2i_wrap_i32(a)`, `(x.trunc() % 4294967296.0) as i64 as i32`, the IR library's `ToInt32` in Rust's casts (#461) |
 | intrinsics with a method | `rotate_left`, `count_ones`, `leading_zeros`, `trailing_zeros`, `swap_bytes`, `reverse_bits`, `is_power_of_two`, `min`, `max`, `saturating_*`, `checked_abs`, `wrapping_abs`, `sqrt`, `floor`, `ceil`, `trunc`, `round`, `round_ties_even`, `abs`, `mul_add`, `copysign`, `is_nan`, `is_infinite`, `is_finite`, `is_sign_negative`, `is_normal`, `is_subnormal`, `to_bits`, `from_bits` |
-| every other intrinsic | the helper of the IR library (`IntegerLibrary`, `MinimumDouble`, `SignOf`, `RoundHalfUp`, `ToInt32`, `Clamp`, …) or the portable floating-point implementation, copied into the module |
+| every other intrinsic | the helper of the IR library (`IntegerLibrary`, `MinimumDouble`, `SignOf`, `RoundHalfUp`, `Clamp`, …) or the portable floating-point implementation, copied into the module |
 | `if`, `while`, `do`-`while`, `for` | `if`/`else if`, `while c` (`loop` for `while true`), `loop { …; if !c { break; } }`, a `while` whose step precedes every `continue`; a counted loop `for i in a..b` where its counter and bound allow |
 | `switch` | `match` with or-patterns and ranges of three or more consecutive labels, `_` last; one section an `if`; a `break` inside a section leaves `'s<n>: { match … }` |
 | `return` | the tail of the function, `return v;` elsewhere |
@@ -114,10 +120,20 @@ name escapes as a raw identifier (`r#gen`). The MSRV decides the rows of `RustCa
 | an interface, a class something derives from | a trait, its values `Rc<dyn Trait>`; see [Objects](#objects) |
 | a virtual or interface call | `Trait::method(&*o, ..)` of the trait of the method's slot |
 | `is T`, `as T`, `(T)` | `o.is_t()`, `Rc::clone(&o).into_t()`, `….into_t().expect("InvalidCast")` of the trait `PlyObject`; `ply_cast` keeps a null |
-| a generic method or class | one function or struct per instantiation the module uses (`max_f64`, `RingI64`); `IEquatable`/`IComparable` at the instantiated type, a floating-point one by `ply_same_value_f64`, `ply_compare_f64` |
+| a generic method (#1394) | one Rust generic function, `pub fn max<T: Ord + Copy>(a: T, b: T) -> T`, where its template does nothing with a value of a parameter but hold, pass, store and load it in an array of it (`Copy`), make its default (`T::default()`, `Default`), compare it with `Equals` (`a == b`, `Eq`) and test the sign of `CompareTo` (`a >= b`, `Ord`); bounds inline for one parameter with at most two, else a `where` clause; a call names the type arguments where Rust cannot infer them, `def::<i32>()`. See [Generic methods](#generic-methods) |
+| an instantiation the generic function does not take, a generic class | one function or struct per instantiation the module uses (`max_f64`, `RingI64`); `IEquatable`/`IComparable` at the instantiated type, a floating-point one by `ply_same_value_f64`, `ply_compare_f64` |
 | a global (static field) | `static NAME: AtomicI32 = AtomicI32::new(0);` read and written with `Ordering::Relaxed`, `++` as `fetch_add` - process-wide as .NET's static fields are |
 | a global that has no atomic form: an array, a string, a floating-point number | a static behind a `Mutex`: `static BUCKETS: Mutex<[u32; 4]> = Mutex::new([0; 4]);` (an array is the fixed array it always is), `static TEXT: Mutex<Vec<u16>> = Mutex::new(Vec::new());`, a first value made at run time in a `LazyLock`; accessed through `ply_with(&BUCKETS, \|buckets\| buckets[i])`, which holds the lock for that one access and takes a poisoned one over, every operand that may take a lock (a call, another such global) evaluated into a binding first; the length of an array is its constant. Not `thread_local!`, which would give each thread a global of its own |
-| a view (`Span<T>`, `ReadOnlySpan<T>`) | a slice, `&[T]`, `&mut [T]` where the function writes it; `AsSpan(start, length)` `ply_view(a, start, length)`, which panics with `ArgumentOutOfRange` outside the source; `Length` `s.len() as i32` |
+| a view (`Span<T>`, `ReadOnlySpan<T>`) | a slice, `&[T]`, `&mut [T]` where the function writes it (also through a view made of it); `AsSpan(start, length)` `ply_view(a, start, length)`, which panics with `ArgumentOutOfRange` outside the source; `Length` `s.len() as i32`; a view of a new array of a known length borrows an array, `&mut [0u8; 3]` |
+| a counted loop from 0 to the shorter of two arrays, `Min(a.Length, b.Length)` directly or in the variables Rust's `zip` lowers to, that uses the counter only to read and write the two arrays' elements (#460) | `for (&s, d) in src.iter().zip(dst.iter_mut()) { *d = …; }`: `iter()` for an array only read, `iter_mut()` for one written, `_` for one not touched; `zip` stops at the shorter side as the bound does, the bound's variables are left out; any other loop keeps its index, `data[i as usize]`, which clippy's `needless_range_loop` does not flag |
+| `x = y` of two array variables outside every loop, where `y` holds a vector the function made and nothing after names `y` | a move, `let mut b = a;` - one owner after the other, not two owners of one shared array |
+| `ViewCopy` (`CopyTo`) | `ply_view_mut(target, 0, source.len() as i32).copy_from_slice(source)`, `ArgumentOutOfRange` for a shorter target before anything is copied, a source that is made bound first; between two parts of one variable both parts checked by `ply_view`, then `a.copy_within(s..s + n, d)`, as the IR's `memmove` |
+| two views that split one variable at a position, `l = a[0..m]` and `r = a[m..]`, one of them written | `let (l, r) = a.split_at_mut(ply_view(a, 0, m).len());` |
+| a pointer (#1331): `Pin` of an array or view variable, `StackAlloc`, `AddressOf`, a pointer parameter | its position in a region known statically, an `i64`: a pin indexes the variable (`let mut p: i64 = 0;`, a pin of one element checked by `ply_pointer`), a `stackalloc` or a pin of a new array an array of its own (`let mut s_memory = [0i64; 2];`, a vector for a length known at run time), the address of a local the local itself, a pointer parameter its slice and its position (`fn sum_of(p_region: &[i32], p: i64, n: i32)`, `&mut` where it or a callee writes through it) |
+| `PointerAdd`, `PointerDifference`, the comparisons | `p.wrapping_add(i64::from(n))`, scaled from the pointer's elements to the region's (`.wrapping_mul(4)` for a `u32*` over bytes); `q.wrapping_sub(p)` (divided by the width); `q < p` of positions in one region; `== null` the emptiness of a whole pin (`data.is_empty()`), a constant of any other region |
+| `PointerLoad`, `PointerStore` | `data[p as usize]`, or `data[ply_pointer(p, 1, data.len(), true).start]` where an empty region is the null pointer (`NullReference`); a wider number over bytes `u32::from_le_bytes(d[ply_pointer(p, 4, d.len(), true)].try_into().expect("4 bytes"))`, stored by `copy_from_slice(&value.to_le_bytes())` after the place is bound - the lowest byte first on every host, as the IR has it; an element of the same width `to_bits`, `from_bits`, `as`; through the address of a local the local, `d = f64::from_bits(…)` |
+| `Reinterpret` (`MemoryMarshal.Cast`, `AsBytes`) only read | a copy taken where it is made, as the IR allows: `&ply_overlay_u8_u32(source)`, built from `chunks_exact` and `from_le_bytes`, or `to_le_bytes` per element; only of memory the function never writes |
+| `Reinterpret` written | `PLY1567` unless `allowUnsafe`; then, as bytes only, `ply_rs_overlay_bytes_mut_<t>(&mut a)`, the one unsafe block ([Unsafe code](#unsafe-code)) |
 | a function type `fn(A, B) -> R` | `Rc<dyn Fn(A, B) -> R>`; `Option<Rc<dyn Fn(A, B) -> R>>` for a signature the module writes `null` of or makes an array of; see [Function values](#function-values) |
 | a lambda | `Rc::new(move \|a: A, b: B\| body)`, what it captures bound first in a block around it (`{ let f = Rc::clone(&f); move \|v: i32\| f(v) }`), `move` only where it captures |
 | a local function that captures nothing but such functions | a `fn` at the start of the function's body, called by its name, recursion included; `Rc::new(f)` where it is a value |
@@ -134,7 +150,89 @@ name escapes as a raw identifier (`r#gen`). The MSRV decides the rows of `RustCa
 | a loop over a list, a map or a set | `for entry in list.iter()`, `map.iter().flatten()` (which skips the freed slots), the element, key or value copied into the loop's variable |
 | a list, a map or a set passed on | `&[T]` where the callee only reads it, `&mut Vec<T>` where it changes it (a fixed point over the calls); a new one is moved where a variable or a result takes it |
 | a loop whose first pass always returns | an `if` (clippy's `never_loop`) |
+| an iterator function (`yield`) | `#[derive(Clone)] pub struct Up { state: u32, n: i32, i: i32 }`, `impl Iterator for Up { type Item = i32; fn next(&mut self) -> Option<i32> { … } }`, `fn up(n: i32) -> Up { Up { state: 0, n, i: 0 } }` - the struct in its first state is the sequence, a clone a new enumeration; see [Lazy sequences](#lazy-sequences) |
+| `yield v`, `yield break`, the end of the body | `self.state = 2; return Some(v);`; `self.state = 3; return None;` - `Some(v)`, `None` as the value of an arm where no arm goes on (clippy's `never_loop`) |
+| a loop over a sequence or `yield from` inside an iterator, where it suspends | a field `cursor0: Option<Up>`, `self.cursor0 = Some(up(self.n));`, then `let v = match self.cursor0.as_mut().and_then(Iterator::next) { Some(value) => value, None => { self.state = 4; continue; } };` |
+| `try`/`finally` around a `yield` | the `finally` where the body leaves the `try`; `impl Drop` runs it at the states where it is pending, innermost first |
+| a sequence parameter | `impl Iterator<Item = T> + Clone`; of an iterator a generic of its struct, `fn take<S: Iterator<Item = i32> + Clone>(source: S, count: i32) -> Take<S>` |
+| an array or a string an iterator takes | borrowed for the struct's lifetime: `fn evens(a: &[i32]) -> Evens<'_>`, `fn pairs<'a>(a: &'a [i32], b: &'a [i32]) -> Pairs<'a>` |
+| an iterator method of a class | the struct keeps the object, `counter: Rc<Counter>`; the method takes `self: &Rc<Self>` and makes it with `Rc::clone(self)` |
+| a loop over a sequence, a sequence passed or held | `for v in up(3)`, `if let Some(v) = up(3).next()` where the first pass always leaves; `sum(s.clone())`, `let s = up(2);`; an array as a sequence `a.iter().copied()` |
+| a loop without a condition left only by `break`s of it, right before the `return` of a scalar (#458) | the value of that return, each `break` carrying it: `loop { if p >= x { break p; } p = p.wrapping_shl(1); }` as the function's tail |
+| a counted loop `i <= c` to a constant below the type's maximum; a loop over an inclusive range as the Rust frontend imports it - a flag that the range is done, the counter moved on modulo its width after the flag is set (#458) | `for i in 0..=100i32`, `for _ in 0..=255u8`, `for i in start..=end` - Rust's `RangeInclusive`, which ends at the type's maximum without overflowing; `i <= n` of a variable stays a `while`, since at the maximum the source's loop never ends |
+| a reduction: a binding made right before an element loop whose only statement combines it with a value of the element by `wrapping_add`, `wrapping_mul`, `^`, `\|` or `&` (#459) | an iterator fold, `data.iter().map(\|&b\| u32::from(b)).fold(0u32, \|acc, x\| acc.wrapping_add(x))`, the map left out for the element itself - never `sum` or `product`, whose overflow follows the build mode; not where the value names the binding, can leave the function (`?`) or the start is computed |
 | `c ? true : x`, `c ? false : x`, `c ? x : true`, `c ? x : false` of truth values | `c \|\| x`, `!c && x`, `!c \|\| x`, `c && x`, which evaluate the same way; `!(a && b)` as `!a \|\| !b` |
+| the arbitrary-precision integer `bigint` (#1390) | `PlyBigInt`, a struct of the crate (see [Arbitrary-precision integers](#arbitrary-precision-integers)); a parameter or a result by value, a variable whose value a place takes `x.clone()`, a returned one moved |
+| a `bigint` constant | `ply_big(5)`, an `i128` literal, up to 2^127 - 1 either side; beyond, its digits `ply_big_parse("…")` |
+| `Add`, `Subtract`, `Multiply`, `Divide`, `Remainder`, `And`, `Or`, `Xor` of `bigint` | `ply_big_add(&a, &b)`, `ply_big_sub`, `ply_big_mul`, `ply_big_div`, `ply_big_rem` (truncating, `panic!("DivideByZero")` on 0), `ply_big_and`, `ply_big_or`, `ply_big_xor` (on the infinite two's complement); an operand that is no variable borrowed in place, `&ply_big_add(&a, &b)` |
+| `Negate`, `BitNot` of `bigint` | `ply_big_neg(&a)`, `ply_big_not(&a)` (`-a - 1`) |
+| `ShiftLeft`, `ShiftRight` of `bigint` by an `i32` | `ply_big_shift(&a, i64::from(n))`, `ply_big_shift(&a, -i64::from(n))`, a constant count its literal: never masked, a right shift rounding down, a negative count shifting the other way |
+| comparisons of `bigint` | `a < b`, `a == b`: the derived `PartialEq` and the `Ord` of the struct, on the variables in place |
+| a conversion to `bigint` | `ply_big(i128::from(x))` of an integer, a constant its literal; `ply_big_of_f64(x)` of `f64` (`f64::from(x)` of `f32`), truncating, `IntegerOverflow` on a NaN or an infinity |
+| a conversion of `bigint` to a fixed width, to `f64` | wrapping `ply_big_low(&a) as i32` (the low 64 bits of the two's complement), trapping `ply_big_fit(&a, -2147483648, 2147483647) as i32`; `ply_big_to_f64(&a)`, the nearest number, an infinity beyond the largest |
+
+## Generic methods
+
+The IR holds no type parameter: a generic method is one function per list of type arguments the
+module uses, and, from the C# frontend, a template - the body with the parameters standing as types
+of their own (`IrGenericTemplate`). The backend writes a template as one generic function where every
+operation on a value of a parameter has a Rust bound of the meaning .NET gives it, and lets that
+function take the place of every instantiation whose type arguments the bounds admit
+(`Emit/GenericDefinitions.cs`):
+
+| Operation on a value of `T` | Rust | Bound | Admitted type arguments |
+| --- | --- | --- | --- |
+| held, passed, returned, stored in or loaded from `T[]` | `a: T`, `&[T]`, `&mut [T]` | `Copy` | every scalar |
+| `default(T)`, `new T()` | `T::default()` | `Default` | every scalar |
+| `a.Equals(b)` | `a == b` | `Eq` | integers, `bool` |
+| `a.CompareTo(b)` against `0` | `a >= b`; `0 < a.CompareTo(b)` as `a > b` | `Ord` | integers, `bool` |
+
+`Ord` and `Eq` rather than `PartialOrd` and `PartialEq` keep a float out of the generic function, also
+for a caller of the crate: .NET orders a NaN below every number and lets `Equals` find a NaN, which
+`<` and `==` of `f64` do not. An instantiation stays a function of its own, written as before, where:
+
+- a type argument is not admitted: a floating-point number under `Ord`/`Eq` (`max_f64` beside `max`),
+  a class, a struct, a string;
+- the template does anything else with a value of a parameter: uses the value of `CompareTo` itself
+  (the difference of two narrow integers in .NET), compares it with another number than zero, calls
+  another generic method with it, captures it in a lambda, holds a string or a collection - and also
+  fixed-width arithmetic on `T`, which the C# frontend does not import (generic math);
+- an array that may be null is passed to it (`Option<&[i32]>`).
+
+The template is written through the ordinary emitter, instantiated with one integer type per
+parameter that no value of the body has (`u64`, `i64`, … the first free ones), so that the analyses of
+arrays, mutability and names run on it unchanged; the stand-in is spelled as the parameter, its
+constant - a default - as `T::default()`. A template whose body uses all eight integer types stays per
+instantiation. An instantiation is replaced only where it is the template instantiated with its own
+arguments, as the C# backend checks before it writes a definition back. Generic classes have no
+template in the IR and stay one struct per instantiation (`RingI64`); the Rust frontend records no
+template of the generics it monomorphises, so a Rust source round-trips per instantiation too.
+
+## Modules
+
+`RustEmitOptions.Modules` places functions, by IR name, in modules of the crate (#459), each given as
+its path from the crate root: `util` is the file `src/util.rs`, `util::bits` the file
+`src/util/bits.rs`, each declared by its parent (`src/lib.rs` for a module below the root; a parent
+without functions of its own is a file of declarations), `pub mod` where it or a module below it has a
+public item, else `mod`, sorted by name. A function named after its module's path, as the Rust
+frontend names them (`util_bits_mix`), is called by the rest of its name there (`mix`), unless another
+function of the crate has that name. Everything else - functions placed nowhere, helpers and spelling
+functions, constants, globals, types, the tests - stays in the IR module's file, or in `src/lib.rs`
+itself where the IR module is the crate root (`RustEmitOptions.CrateRoot`, and always for a module
+named `lib` or `main`, whose file would be the root's or a program's); a function that names a type of
+the crate stays there too, since a type's fields and methods are private to its module. Each file names
+what it uses of another with one `use crate::<module>::<item>;` per item, sorted, and only what its code
+uses; an item another file uses is `pub(crate)` at least. `RustEmitOptions.TestFunctions` makes
+functions `#[test]` functions of the `#[cfg(test)] mod tests`, which has `use super::*;` where it uses
+what its file declares or imports and `use` lines of its own for the rest. Emission is reproducible: the
+same module and options give the same files. A module below the root named `lib` or `main` is refused
+with `PLY1550`.
+
+`polypiler translate <crate>/src/lib.rs --from rust --to rust` passes the source crate's layout through:
+the Rust frontend reports the module of every free function outside the root (`ImportResult.Modules`)
+and the crate's tests, and the crate is written back with one file per source module, its root in
+`src/lib.rs`, its tests as `#[test]` functions, and the package named after the folder of
+`src/lib.rs`. A Rust source of one file and every source of another language stay one module.
 
 ## Objects
 
@@ -189,13 +287,81 @@ a function capture:
 A closure is `'static`: it borrows nothing, so it may be stored and returned. The object of a method
 (`self`), which a closure would borrow, is refused as a capture.
 
+## Lazy sequences
+
+An iterator function produces its values on demand, and so does its Rust form: a struct holding a
+state number, the function's parameters and the variables it keeps from one `yield` to the next,
+implementing `Iterator`. `next` resumes in the state the struct stopped in - a `loop` over
+`match self.state` - and runs on to the next `yield`, which sets the state it resumes in and returns
+`Some(v)`, or to the end, which returns `None`. The body is cut into states as the JavaScript
+backend's ES5 state machine cuts it (`docs/reference/sequences.md`): a statement that suspends, ends
+the sequence or jumps out of itself becomes jumps between states (`self.state = n; continue;`), every
+other statement is written as it is inside the arm of its state. A state that only goes on to another
+is merged into the one before it, a jump through an empty state goes to its target, and a state that
+only ends the sequence is left out.
+
+A variable named in more than one state is a field of the struct, starting at the zero of its type
+(`0`, `false`, `Vec::new()`, `None`, `T::default()`); any other one is a `let` inside its arm. A
+loop over a sequence that suspends keeps a cursor field, `Option<S>`, set when the loop starts and
+dropped when it ends. A sequence is restartable: the struct in its first state is the sequence, so
+every enumeration of a variable is a clone of it (`s.clone()`), and a single-pass sequence (a
+JavaScript generator object) named once is moved.
+
+A `finally` block around a `yield` runs where the body leaves the `try` - at its end, before a
+`yield break` or a jump out of it - and, when the consumer drops the iterator while it is suspended
+inside, from the struct's `impl Drop`, which runs the blocks pending at that state innermost first
+and drops the cursors inside them before. A `break` out of a loop over the sequence drops the
+iterator at the end of the loop, as .NET's `foreach` disposes it.
+
+What stays refused is named with `PLY1558`: an iterator of a class with a hierarchy, one that takes a
+collection, writes an array it takes or assigns a string it takes, a variable kept across a `yield`
+that is an array, a collection or a sequence or has no first value (an object that is never null),
+a closure capturing a variable kept across a `yield`, a `switch` or a loop over a collection that
+suspends, a jump out of a `try` with a catch clause or out of a `finally` inside an iterator, a
+recursive iterator (its struct would hold itself), a sequence an iterator keeps that borrows an
+array of its own, an array or a string a sequence borrows that is written while a variable holds the
+sequence or used in the loop over it, a sequence variable assigned again, a single-pass sequence
+enumerated twice, and an iterator that lets an exception of the module out.
+
+## Arbitrary-precision integers
+
+The IR's `bigint` (`IrBigInts`: Python's `int` where no fixed width is proven) has no type in Rust's
+standard library. The representation follows rung 1 of the code-integration ladder of
+[AGENTS.md](../../AGENTS.md#sourcing-an-implementation), **convert**: `PlyBigInt`, a sign and the
+magnitude's 32-bit digits, least significant first, in safe Rust, its algorithms converted from
+[num-bigint](https://github.com/rust-num/num-bigint) 0.5.1 (MIT OR Apache-2.0, used under MIT;
+`Helpers/THIRD-PARTY-NOTICE.num-bigint.txt`): the addition and subtraction with carry and borrow, the
+schoolbook multiplication, Knuth's algorithm D for the division, the shifts, the two's complement of
+the bitwise operators digit by digit, the decimal digits of a constant. `Helpers/BigInts.cs` holds each
+function as Rust source, read into the syntax tree when a crate calls it, with the functions it calls -
+a crate carries only those - and `src/lib.rs` names num-bigint, its authors and its licence in its header.
+
+num-bigint is not a dependency of the crate, nor vendored as a crate:
+
+- the runner and CI build offline (`CARGO_NET_OFFLINE`, `cargo --offline`) with no registry cache, and a
+  generated crate has no dependencies, so that it builds wherever its toolchain is;
+- num-bigint 0.5 needs Rust 1.60 and its dependencies more; `rust2018` promises Rust 1.31 and `rust2021`
+  1.56. The converted helpers name nothing of the standard library newer than 1.31 (`i128`, `to_bits`,
+  `trim_start_matches`, `then_with`), which `RustBigIntTests` checks with clippy's `incompatible_msrv` at
+  `msrv = "1.31.0"`, so no profile needs a capability row for them;
+- the IR needs a fraction of the crate: no radix conversion but decimal digits, no Karatsuba or
+  Burnikel-Ziegler, no `num-traits`. The conversion reads as Rust of the crate's own and passes
+  `cargo fmt --check` and clippy with `-D warnings`.
+
+Each operation is a function that borrows its operands and gives a new value, so a variable is never
+moved by an operation; a value a place takes - an argument, a binding, an assignment - is the
+variable's clone, a returned variable is moved. A comparison is the operator of the struct's order. The
+traps are the IR's: a division or remainder by zero panics with `DivideByZero`, a trapping narrowing and
+a NaN or an infinity made an integer with `IntegerOverflow`, in every build mode, since no helper uses
+an operator whose meaning depends on `overflow-checks`.
+
 ## Exceptions
 
 A trap - an overflow, a division by zero, an index outside an array - is a panic, as it is wherever
 no handler stands; no exception object is made for it. An exception of a class of the module, thrown
 with `throw`, is a value instead, which the functions between the throw and the handler hand back as a
-`Result`, so a catch clause sees it in safe Rust. The two never meet: a catch clause of a class a trap
-belongs to (`Exception`, `InvalidOperationException`, …) stands only around a body that cannot trap,
+`Result`, so a catch clause sees it in safe Rust. Under the default trap policy `panic` the two never
+meet: a catch clause of a class a trap belongs to (`Exception`, `InvalidOperationException`, …) stands only around a body that cannot trap,
 which the backend proves of every statement and call in it, and a throw of a class of the library
 remains a trap.
 
@@ -211,25 +377,83 @@ A trap is a panic whose message is the name of the IR trap - `IntegerOverflow`, 
 `ArgumentOutOfRange`, … - in every build mode; the verification reads it back with `RustTraps`
 ([exceptions](../reference/exceptions.md#rust)).
 
+### The trap policy `result`
+
+`--trap-policy result` ([ADR 0008](../adr/0008-rust-trap-policy.md); `panic` is the default and writes
+what the paragraphs above say) makes a trap an error value instead. Every function a trap, a throw or a
+call can leave returns `Result<T, E>`, found as a fixed point: the crate is built again with the
+functions that let an error out declared fallible until no new one does, so a function nothing can
+leave keeps its plain type, exports included. Every trap is an explicit check: `checked_add(b).ok_or(Error::IntegerOverflow)?`,
+`T::try_from(x).map_err(|_| Error::IntegerOverflow)?`, `*a.get(i).ok_or(Error::IndexOutOfRange)?` (and
+`get_mut` for a store), `x.as_ref().ok_or(Error::NullReference)?`; the spelling functions of the
+division and the checked conversions return a `Result` themselves (`if b == 0 { return Err(Error::DivideByZero); }`).
+Inside a `try` body the check is a `match` whose empty arm leaves the body, `None => break 't0 ply_trap(4)`.
+
+A module without exception classes and catch clauses gets `src/error.rs`, `pub use error::Error;` in
+`src/lib.rs`: `#[repr(u16)] pub enum Error` with a variant per trap the crate produces, named after the
+IR trap, with the stable codes `DivideByZero = 1`, `IntegerOverflow = 2`, `IndexOutOfRange = 3` and the
+other traps from 4, `Display` printing the name, `std::error::Error` implemented. A module with
+exceptions keeps `Rc<PlyError>`: a trap is the exception of its class with the default message
+(`ply_trap(class)`), so a `catch (OverflowException)` or `catch (ArithmeticException)` sees it - which lifts
+the `PLY1560` refusal of catching a trap - and a throw of a library exception is an exception too.
+`Display` of an exception prints its trap's name, or its class's name. A generated test of a fallible
+function asserts `assert_eq!(f(1, 0), Err(Error::DivideByZero));`.
+
+What would still panic is refused with `PLY1552`, naming it: a call of a string or collection helper
+that panics (`ply_list_index`, `ply_parse_i32`, …), a trap inside a closure, a step of an element of
+module state behind a lock, and a type of the module named `Error`. The exception regions of `PLY1560`
+other than catching a trap stay refused under both policies.
+
+## Unsafe code
+
+A crate holds no `unsafe` and forbids it, with one exception (#460): a written overlay view - a view of the
+bytes of another view, written through - must share its source's memory, which safe Rust cannot borrow at two
+element types. Without `allowUnsafe` it is refused with `PLY1567`. With it, the overlay is the spelling function
+
+```rust
+#[allow(unsafe_code)]
+#[cfg(target_endian = "little")]
+fn ply_rs_overlay_bytes_mut_u32(p: &mut [u32]) -> &mut [u8] {
+    // SAFETY: the bytes of `p` are u32 elements, which have no padding and no invalid bit pattern, and
+    // u8 has alignment 1; the result borrows `p` exclusively for its lifetime and covers exactly its bytes.
+    unsafe {
+        core::slice::from_raw_parts_mut(p.as_mut_ptr().cast::<u8>(), core::mem::size_of_val(p))
+    }
+}
+```
+
+the root says `#![deny(unsafe_code)]` instead of `forbid`, and the header lists the use - the helper, the
+function and the lowering row - as `RustEmitter.UnsafeLedger` does. Only bytes are written so: a view of wider
+numbers over bytes would be misaligned. The native byte order is the IR's only on a little-endian target, so
+the function exists only there and a big-endian build fails instead of computing something else. A crate with
+unsafe code passes Miri (`cargo +<rust-miri> miri test`) in the Rust layer of CI. The audit: no crate written
+without `allowUnsafe` holds the token `unsafe`, and every unsafe block has its `SAFETY:` comment.
+
 ## Refused
 
-What the backend does not write yet is refused with `PLY1550`, naming the construct: pointers,
-memory, a view cast to another element type or made on the stack, an optional value of a type that
+What the backend does not write yet is refused with `PLY1550`, naming the construct: pointers compared or
+subtracted across two regions (their order is no value, and safe Rust has no address), arithmetic on the
+address of a local or the address passed on, a pointer given pointers into two regions, a pin of a view that
+is made or of an array that may be null, a wider pointer into memory that is not bytes, an overlay view of
+memory the function writes, a written overlay of other numbers than bytes, a copy between a view variable
+and its own array, a view made on the stack, an optional value of a type that
 is no value, an array that may be null and is written (`an array that may be null and is written`) or
 is a borrowed result, a collection in the order of insertion (JavaScript's `Map` and `Set`), one of
 objects or with floating-point keys, a collection changed in a loop over it, held by two variables or
-passed on where no variable holds it, a lazy sequence (`yield`: Rust has no stable generators, and the
-backend writes no state machine of an iterator function yet; making the sequence all at once would
-change its effects and could not end on an infinite one), a variable that names a field's array where the function touches the field otherwise while it
+passed on where no variable holds it, a variable that names a field's array where the function touches the field otherwise while it
 lives or gives the array away whole, a function value that takes or gives more than values and other function values, two function values
 compared with each other, a closure that captures the object of a method, an array it captures that is
-written, or a variable other than a value that is assigned, collections and sequences (`Collection`, `Yield`), `using`, a global
+written, or a variable other than a value that is assigned, collections (`Collection`), `using`, a global
 array without a first value of a known length or used as a whole (passed on, iterated as a slice),
 a global of another type, a record with a floating-point field,
 a method that passes on the object of a hierarchy; an array safe Rust cannot own (written and shared by two variables, or a parameter and a new
 array in one written variable), a struct with a field that is no value. One array passed to a call
-twice where it is written and the callee swaps its parameters is `PLY1566`. Two exported functions
-whose Rust names are the same are `PLY1574`; an exception region outside the form of
+twice where it is written and the callee swaps its parameters is `PLY1566`; a written overlay view without
+`allowUnsafe` `PLY1567`. A lazy sequence outside the form of
+[Lazy sequences](#lazy-sequences) is `PLY1558`, naming the construct. Two exported functions
+whose Rust names are the same are `PLY1574`; a `bigint` anywhere but a parameter, a result, a variable or
+an operand - an element of a list, a map or a set, a field, a global, a variable a closure captures - is
+refused by that place's own rule (`a list of bigint`, `a closure that captures a variable of the type bigint`); an exception region outside the form of
 [Exceptions](#exceptions) `PLY1560`, naming why.
 
 ## Lints
@@ -243,7 +467,9 @@ order, where `clamp` would panic), `clippy::manual_range_contains`, `clippy::neg
 and `clippy::nonminimal_bool` (a negated ordering of floating-point numbers), `clippy::too_many_arguments`,
 `clippy::type_complexity` (a function value that takes or gives another one, a type the source named in one word),
 `clippy::manual_find` (a search the source wrote as a loop that returns `Some(i)`, then `None`),
-`clippy::unnecessary_literal_unwrap` (an optional value made of a value and then read, as the source has it).
+`clippy::unnecessary_literal_unwrap` (an optional value made of a value and then read, as the source has it),
+`clippy::manual_swap` (two variables swapped through a third, as `std::mem::swap` lowers),
+`clippy::reversed_empty_ranges` (a loop over a range of constants the source wrote empty, `5..=3u8`).
 No group is ever allowed. Every other lint is avoided by the shape the backend writes.
 
 ## Verification
@@ -254,7 +480,17 @@ No group is ever allowed. Every other lint is avoided by the shape the backend w
 - `RustPrinterLayoutTests`, `RustEmitEdgeTests`, `RustTargetPassTests`, `RustReaderAndAnalysisTests`:
   the printer, the emitter, the target passes, the reader and the liveness analysis on the forms the
   fixtures do not reach, rule by rule.
-- `MemoryEmitTests`, `TypeEmitTests`, `ObjectEmitTests`, `ClosureEmitTests`, `OptionalEmitTests`, `StateEmitTests`, `CollectionEmitTests`, `FieldAliasEmitTests`, `ExceptionEmitTests`: arrays, ownership and aliasing, structs, classes, traits, module state, function values, optional values and arrays that may be null, their forms and refusals.
+- `ZipAndViewEmitTests`, `PointerEmitTests`, `OverlayEmitTests`: parallel loops, moves, view copies, `split_at_mut`,
+  pointers and overlay views, their forms, refusals and the unsafe audit over every prototype fixture.
+- `MemoryEmitTests`, `TypeEmitTests`, `ObjectEmitTests`, `ClosureEmitTests`, `OptionalEmitTests`, `StateEmitTests`, `CollectionEmitTests`, `FieldAliasEmitTests`, `ExceptionEmitTests`, `IteratorEmitTests`: arrays, ownership and aliasing, structs, classes, traits, module state, function values, optional values and arrays that may be null, lazy sequences, their forms and refusals.
+- `BigIntEmitTests`: the form of every operation and conversion of `bigint`, the boundaries of a
+  constant's `i128` literal, the helpers a crate carries and their origin, the refusals.
+- `RustBigIntTests` (layer `rust`): every operation and conversion of `BigIntCases` - zero, the signs,
+  2^63 and 2^64 on both sides, 2^1100 + 1, every shift count from -64 to 200 - against .NET's
+  `BigInteger`, every public function of the Python fixtures the backend writes against CPython's
+  recording, Python's `2**100 + 1`, each with overflow checks on and off through a driver that builds a
+  `PlyBigInt` from its fields; the crate formatted and clippy-clean in `rust2018` and `rust2024`, and at
+  `msrv = "1.31.0"`.
 - `RustDifferentialTests` (layer `rust`): every prototype fixture - all 24 since #460 - is built by the
   pinned toolchain and called on every case of `PrototypeCases`, with overflow checks on and off; every
   outcome, the final contents of every array argument included, equals the C# compiler's and the
@@ -264,15 +500,30 @@ No group is ever allowed. Every other lint is avoided by the shape the backend w
   optional values, a field's array named by a local (classes/Rc4), module state (each sequence of calls in one process, as one load of the class in
   .NET), collections and the LINQ shapes legalization writes as loops (collections/WordFrequency,
   sequences/ByteMedian, and the functions of collections/Collections the backend writes, which a test
-  lists), exceptions of the module's classes (exceptions/Classes), the floating-point view of bytes -
-  against .NET in both overflow modes.
-- `RustRoundTripTests` (layer `rust`): every Rust fixture the backend writes (ten of fifteen; the
+  lists), the iterator functions and LINQ chains of sequences/Iterators and sequences/Pipelines the
+  backend writes (a test lists them), exceptions of the module's classes (exceptions/Classes), the floating-point view of bytes, the
+  pointers (pointers/Fnv1aPointer and every function of pointers/Pointers but the two that compare pointers
+  into two arrays, their traps against the interpreter) and the views (the functions of spans/Spans the
+  backend writes) - against .NET in both overflow modes.
+- `RustUnsafeAuditTests` (layer `rust`): the crate of a written overlay under `allowUnsafe` builds, passes
+  clippy and `cargo fmt --check`, its test gives the value the bytes say, and it passes Miri on the `rust-miri`
+  nightly (ignored, naming the toolchain, where it is not installed); no crate without `allowUnsafe` needs Miri.
+- `RustRoundTripTests` (layer `rust`): every Rust fixture the backend writes (eleven of fifteen; the
   others are listed in `RustFixture.BackendPending` and refused by name), imported by the Rust frontend
   in each overflow mode, comes back as a crate that is built with overflow checks on and off; every
   outcome is what rustc recorded for the original in the mode of the import.
 - `RustBackendScenarioTests` (layer `rust`): the scenarios of the issues with their hand-checked
   values, clippy with `-D warnings` and `cargo fmt --check` on the crates, the generated tests passing
-  and a mutated one failing.
+  and a mutated one failing; the loops with a value, the inclusive counted loops and the reductions
+  against the C# compiler's build, the inclusive ranges of Rust (to 255u8, over all of i8, empty)
+  against `rustc` in both import modes, the wrapping conversion from floating point against the IR
+  library's `ToInt32`, the saturating addition, and the crate of the modules `util` and `hash`, each
+  with overflow checks on and off.
+- `RustIteratorScenarioTests` (layer `rust`): an infinite counter taken 5 items runs its body 5 times;
+  finally blocks around yields run as in .NET on every way out (traced through a global), iterators
+  over borrowed arrays and strings, generic sequence parameters and loops that suspend give the C#
+  compiler's values in both overflow modes; the crates and the written part of the `sequences`
+  family pass clippy with `-D warnings` and `cargo fmt --check`.
 
 The runner (`Polypiler.Core.Verification/Runners`): `RustRunner` builds (`cargo build`), tests
 (`cargo test`), format-checks (`cargo fmt --check`), lints (`cargo clippy -- -D warnings`) and calls
@@ -282,3 +533,25 @@ exports through a generated driver (`RustDriverGenerator`) on input images - sca
 (`OverflowChecks`, `DebugAssertions`, `OptLevel`) that have no defaults. Diagnostics: `PLY1591` the
 compiler rejected the input, `PLY1592` the driver died, `PLY1595` a protocol error such as a signature
 that does not fit the declaration.
+
+## Cipher known-answer tests
+
+`polypiler-tooling cipher kat --targets rust` ([#1365](https://github.com/Hawkynt/Polypiler/issues/1365))
+translates a Cipher algorithm file with `--to rust` into `crate/`, writes a test crate beside it
+(`Cargo.toml` depending on the translation, `tests/kat.rs` with one `#[test]` per checkable vector)
+and runs `cargo test --offline`. Rust has no reflection, so `KatRustCrate` reads the translated files
+back with `RustSyntaxReader` and writes every call and every input as a literal of the type the
+translation declares, through the syntax tree and `RustPrinter`. A translation is reached through:
+
+| What the vector does | What the crate must have |
+| --- | --- |
+| look the algorithm up by name | a `pub fn algorithms()` without parameters giving `Vec<Rc<dyn Algorithm>>` (or `Vec<Rc<Struct>>`), each with an accessor `field_name` giving `&RefCell<Vec<u16>>`, `Vec<u16>` or `&[u16]` |
+| `CreateInstance(isInverse)` | a method `create_instance` of the algorithm's type or of a trait it has, giving `Rc<dyn Instance>`, also in an `Option` or a `Result` |
+| call a method, `Feed`, `Result` | a method of the instance's type or of a trait it has, named in `snake_case`, with as many parameters; `result` giving a vector, slice or array of numbers |
+| set a property | an accessor `field_<name>` giving `&Cell<T>` or `&RefCell<T>` |
+
+Where the crate lacks the registry or the name, the file counts as translated and nothing runs; where
+it lacks what one vector needs, that vector's test fails with the reason. A failing comparison names
+the first differing byte, a panic of the translation its message, a crate that does not compile the
+compiler's first error. Today every Cipher file is still refused before that (the registry is a
+global list of objects, `PLY1550`).

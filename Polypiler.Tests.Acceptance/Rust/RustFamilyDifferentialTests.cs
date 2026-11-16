@@ -98,6 +98,14 @@ public sealed class RustFamilyDifferentialTests {
     yield return new("sequences/ByteMedian", () => LinqFixtures.Imported("ByteMedian"), () => [.. LinqFixtures.Calls("ByteMedian")],
       call => PrototypeFixture.InvokedOutcome(LinqFixtures.Compiled("ByteMedian", call.Method), call));
 
+    yield return new("sequences/Iterators (written part)", () => Written(SequenceFixtures.Imported(), WrittenIterators),
+      () => [.. SequenceFixtures.Calls().Where(call => WrittenIterators.Contains(call.Method))],
+      call => PrototypeFixture.InvokedOutcome(SequenceFixtures.Compiled(call.Method), call));
+
+    yield return new("sequences/Pipelines (written part)", () => Written(LinqFixtures.Imported("Pipelines"), WrittenPipelines),
+      () => [.. LinqFixtures.Calls("Pipelines").Where(call => WrittenPipelines.Contains(call.Method))],
+      call => PrototypeFixture.InvokedOutcome(LinqFixtures.Compiled("Pipelines", call.Method), call));
+
     yield return new("collections/Collections (written part)", () => Written(CollectionFixtures.Imported("Collections"), WrittenCollections),
       () => [.. CollectionFixtures.Calls().Where(call => call.File == "Collections" && WrittenCollections.Contains(call.Call.Method)).Select(call => call.Call)],
       call => PrototypeFixture.InvokedOutcome(CollectionFixtures.Compiled("CollectionsDemo", call.Method), call));
@@ -119,6 +127,19 @@ public sealed class RustFamilyDifferentialTests {
         .Select(range => new PrototypeCall("Compute", [SpanFixtures.Wikipedia, range.Offset, range.Length]) { Returns = typeof(uint) })],
       call => SpanFixtures.DotNet("Adler32Span", call));
 
+    yield return new("spans/Spans (written part)", () => Written(SpanFixtures.Imported("Spans"), WrittenSpans),
+      () => [.. SpanFixtures.Calls().Where(call => WrittenSpans.Contains(call.Method))],
+      call => SpanFixtures.DotNet("Spans", call));
+
+    // FNV-1a's published vectors: "" is 0x811C9DC5, "a" is 0xE40C292C; and the bytes 0 to 15.
+    yield return new("pointers/Fnv1aPointer", () => PointerFixtures.Imported("Fnv1aPointer"),
+      () => [.. new[] { Array.Empty<byte>(), System.Text.Encoding.ASCII.GetBytes("a"), System.Text.Encoding.ASCII.GetBytes("foobar"), PointerFixtures.D }.Select(bytes => new PrototypeCall("Hash", [bytes]) { Returns = typeof(uint) })],
+      call => PointerFixtures.DotNet("Fnv1aPointer", call));
+
+    yield return new("pointers/Pointers (written part)", () => Written(PointerFixtures.Imported("Pointers"), WrittenPointers),
+      () => [.. PointerFixtures.Calls().Where(call => WrittenPointers.Contains(call.Method))],
+      call => PointerFixtures.DotNet("Pointers", call));
+
     yield return new("float/FloatView", () => PrototypeFixture.Imported("float/FloatView"),
       () => [.. FloatViewCases.FixtureMethods.SelectMany(method => FloatViewCases.FixtureCalls(method, new Random(2026), 20))],
       call => PrototypeFixture.CompiledOutcome("float/FloatView", call),
@@ -127,6 +148,69 @@ public sealed class RustFamilyDifferentialTests {
 
   /// <summary>The functions of collections/Collections the backend writes; the others catch traps, hold objects or floating-point keys, or change a collection in a loop over it.</summary>
   private static readonly string[] WrittenCollections = ["ListOps", "Grow", "Write", "RemoveLastOfEmpty", "Search", "Copies", "Words", "Pairs", "Widened", "DictionaryOrder", "SetOrder", "Count", "ClearThenInsert", "MissingKey", "Values"];
+
+  /// <summary>
+  /// The functions of sequences/Iterators the backend writes (#1391); the others write an array their
+  /// iterator takes while it runs, catch a trap or loop over a collection in an iterator.
+  /// </summary>
+  private static readonly string[] WrittenIterators = ["Twice", "FibSum", "Guard", "Nested", "Restarted", "Taken", "FromArray", "Longs", "Floats", "Truths", "Objects", "Method", "Captured", "Widened"];
+
+  /// <summary>
+  /// The functions of sequences/Pipelines the backend writes, the LINQ chains legalization makes
+  /// iterator functions of among them; the others capture a list in a closure, catch a trap or take a
+  /// function value of a sequence.
+  /// </summary>
+  private static readonly string[] WrittenPipelines = ["Deferred", "Recount", "Late", "SumOfSingles", "SumOfDoubles", "Extremes", "Window", "Infinite", "TakeCalls", "LazyTrap",
+    "Zipped", "Indexed", "Escaped", "IndexOfNaN", "Searches", "ContainsNaN"];
+
+  [TestCase("Iterators")]
+  [TestCase("Pipelines")]
+  public void WrittenSequences_AreEveryFunctionTheBackendWrites(string fixture) {
+    var module = fixture == "Iterators" ? SequenceFixtures.Imported() : LinqFixtures.Imported(fixture);
+    var written = module.Functions.Where(function => function.IsPublic && !function.Name.Contains('.') && RustCrates.Check(Written(module, [function.Name])).Count == 0).Select(function => function.Name).ToList();
+    Assert.That(written, Is.EquivalentTo(fixture == "Iterators" ? WrittenIterators : WrittenPipelines), string.Join(", ", written));
+  }
+
+  /// <summary>
+  /// The functions of spans/Spans the backend writes - copies between views and within one, overlays of bytes read
+  /// as numbers; the others copy with TryCopyTo, compare views (of floating-point numbers too), read or write a
+  /// temporary through a view or make one on the stack.
+  /// </summary>
+  private static readonly string[] WrittenSpans = [.. SpanFixtures.Imported("Spans").Functions
+    .Where(function => function.IsPublic && function.Name is not ("TryInto" or "NaNEqual" or "ReadFrom" or "Zeroed" or "Same" or "WriteAt" or "Fixed" or "Origins" or "Singles" or "Doubles")).Select(function => function.Name)];
+
+  [Test]
+  public void WrittenSpanPart_IsEveryFunctionTheBackendWrites() {
+    var module = SpanFixtures.Imported("Spans");
+    var written = module.Functions.Where(function => function.IsPublic && RustCrates.Check(Written(module, [function.Name])).Count == 0).Select(function => function.Name);
+    Assert.That(written, Is.EquivalentTo(WrittenSpans));
+  }
+
+  /// <summary>The functions of pointers/Pointers the backend writes; Apart and Before compare pointers into two arrays, which safe Rust has no address for.</summary>
+  private static readonly string[] WrittenPointers = ["Checksum", "Word", "Distance", "Stack", "Local", "EmptyIsNull", "Bits", "At", "Origins", "Shorts", "UShorts", "Ints", "Longs", "ULongs", "Floats", "Doubles", "Store", "Wide", "Inside", "Through", "Passed"];
+
+  [Test]
+  public void WrittenPointerPart_IsEveryFunctionTheBackendWrites() {
+    var module = PointerFixtures.Imported("Pointers");
+    var written = module.Functions.Where(function => function.IsPublic && RustCrates.Check(Written(module, [function.Name])).Count == 0).Select(function => function.Name);
+    Assert.That(written, Is.EquivalentTo(WrittenPointers));
+    Assert.That(RustCrates.Check(Written(module, ["Before"])).Select(problem => problem.Message), Has.Some.Contain("'a pointer comparison across two regions'"));
+  }
+
+  /// <summary>
+  /// The traps of the pointers - a read past either end, one that straddles the end, the null pointer of an empty
+  /// array - which .NET leaves undefined: the crate's outcome is the interpreter's, with overflow checks on and off.
+  /// </summary>
+  [Test]
+  [RequiresToolchain(RustRunner.Toolchain)]
+  public async Task PointerTraps_AreTheInterpreters() {
+    var module = Written(PointerFixtures.Imported("Pointers"), WrittenPointers);
+    var calls = PointerFixtures.Traps().Where(trap => WrittenPointers.Contains(trap.Call.Method))
+      .Select(trap => trap.Call with { Returns = PointerFixtures.Compiled("Pointers", trap.Call.Method).ReturnType }).ToList();
+    var expected = calls.Select(call => PrototypeFixture.InterpretedOutcome(module, call)).ToList();
+    foreach (var checks in new[] { OverflowChecks.Panic, OverflowChecks.Wrap })
+      Assert.That(await RustRun.OutcomesAsync(module, calls, checks), Is.EqualTo(expected), $"overflow checks {checks}");
+  }
 
   /// <summary>A module with only the public functions named and every function they call.</summary>
   internal static IrModule Written(IrModule module, IReadOnlyCollection<string> names) {

@@ -115,6 +115,10 @@ public static partial class RustEmitter {
 
     /// <summary>Whether a member uses its object otherwise than through a field or a member that needs no <c>Rc</c>.</summary>
     private bool PassesOn(IrFunction function) {
+      // An iterator method keeps its object in its struct: an Rc of its own.
+      if (IrSequences.IsIterator(function))
+        return true;
+
       var self = function.Parameters[0];
       var nodes = ArrayOwnership.Statements(function.Body).SelectMany(statement => IrTree.Expressions(statement)).SelectMany(IrTree.Nodes).ToList();
       var uses = nodes.Count(node => node is IrLocalRef reference && reference.Local == self);
@@ -178,7 +182,7 @@ public static partial class RustEmitter {
       switch (value) {
         case IrNull:
           return (new RsPath("None") { Type = value.Type }, Held.Null);
-        case IrLocalRef reference when this.CurrentMember is { Kind: MemberKind.Instance } && this._function.Parameters[0] == reference.Local:
+        case IrLocalRef reference when this.CurrentMember is { Kind: MemberKind.Instance } && this._function.Parameters[0] == reference.Local && !this.IsKept(reference.Local):
           return (new RsPath("self") { Type = value.Type }, this._sharedSelf.Contains(this._function.Name) ? Held.Reference : Held.Self);
         case IrLocalRef reference when this._free.ContainsKey(this._function.Name) && this._function.Parameters[0] == reference.Local:
           return (new RsPath(this._locals[reference.Local]) { Type = value.Type }, Held.Borrowed);
@@ -203,7 +207,7 @@ public static partial class RustEmitter {
       }
     }
 
-    private static RsExpression NullReference(RsExpression optional) => Expect(optional, IrTrap.NullReference);
+    private RsExpression NullReference(RsExpression optional) => this.Checked(optional, IrTrap.NullReference);
 
     private RsExpression Cloned(RsExpression shared) {
       this._uses.Add("std::rc::Rc");
@@ -221,7 +225,7 @@ public static partial class RustEmitter {
       if (optional)
         return this.Method(this.ObjectValue(value, true), "and_then", target, new RsPath($"{ObjectTrait}::{this.Conversion("into_", target)}"));
 
-      return Expect(this.Method(this.ObjectValue(value, false), this.Conversion("into_", target), target), IrTrap.InvalidCast);
+      return this.Checked(this.Method(this.ObjectValue(value, false), this.Conversion("into_", target), target), IrTrap.InvalidCast);
     }
 
     /// <summary>A value of a class type as a place owns it: <c>Rc&lt;T&gt;</c>, or <c>Option&lt;Rc&lt;T&gt;&gt;</c> where it may be null.</summary>
@@ -232,9 +236,9 @@ public static partial class RustEmitter {
         Held.Value or Held.Plain => Some(expression),
         Held.Place => Some(this.Cloned(new RsReference(false, expression))),
         Held.Reference => Some(this.Cloned(expression)),
-        Held.OptionalValue => optional ? expression : NullReference(expression),
-        Held.OptionalPlace => optional ? new RsMethodCall(expression, "clone", []) { Type = value.Type } : NullReference(new RsMethodCall(expression, "clone", [])),
-        Held.Null => optional ? expression : Panic(IrTrap.NullReference),
+        Held.OptionalValue => optional ? expression : this.NullReference(expression),
+        Held.OptionalPlace => optional ? new RsMethodCall(expression, "clone", []) { Type = value.Type } : this.NullReference(new RsMethodCall(expression, "clone", [])),
+        Held.Null => optional ? expression : this.Trap(IrTrap.NullReference),
         _ => this.Refuse("the object of a method that is no Rc")
       };
     }
@@ -246,9 +250,9 @@ public static partial class RustEmitter {
         Held.Value => new RsReference(false, expression) { Type = value.Type },
         Held.Place => new RsReference(false, expression) { Type = value.Type },
         Held.Reference => expression,
-        Held.OptionalValue => new RsReference(false, NullReference(expression)) { Type = value.Type },
+        Held.OptionalValue => new RsReference(false, this.NullReference(expression)) { Type = value.Type },
         Held.OptionalPlace => this.NonNull(expression),
-        Held.Null => Panic(IrTrap.NullReference),
+        Held.Null => this.Trap(IrTrap.NullReference),
         _ => this.Refuse("the object of a method that is no Rc")
       };
     }
@@ -258,16 +262,17 @@ public static partial class RustEmitter {
     /// a function rather than <c>x.as_ref().expect(..)</c> in place, which clippy's
     /// <c>unnecessary_unwrap</c> flags after a test of the variable it cannot see the reason for.
     /// </summary>
-    private RsExpression NonNull(RsExpression optional)
-      => new RsCall(new RsPath(this.StringHelper("ply_non_null")), [new RsReference(false, optional)]) { Type = optional.Type };
+    private RsExpression NonNull(RsExpression optional) => this.Results
+      ? this.Checked(new RsMethodCall(this.Operand(optional, 15), "as_ref", []) { Type = optional.Type }, IrTrap.NullReference)
+      : new RsCall(new RsPath(this.StringHelper("ply_non_null")), [new RsReference(false, optional)]) { Type = optional.Type };
 
     /// <summary>A value of a class type as the receiver of a method or a field: the object, a null one trapping.</summary>
     private RsExpression ObjectReceiver(IrExpr value) {
       var (expression, held) = this.Object(value);
       return held switch {
-        Held.OptionalValue => NullReference(expression),
+        Held.OptionalValue => this.NullReference(expression),
         Held.OptionalPlace => this.NonNull(expression),
-        Held.Null => Panic(IrTrap.NullReference),
+        Held.Null => this.Trap(IrTrap.NullReference),
         _ => this.Receiver(expression)
       };
     }
@@ -424,9 +429,12 @@ public static partial class RustEmitter {
       if (member.Kind != MemberKind.Instance)
         return new RsCall(new RsPath($"{this.StructName(member.Class)}::{member.Name}"), arguments) { Type = call.Type };
 
-      var receiver = this._sharedSelf.Contains(call.Function) ? this.Receiver(this.ObjectBorrow(call.Arguments[0])) : this.ObjectReceiver(call.Arguments[0]);
+      var receiver = this._sharedSelf.Contains(call.Function) ? this.Receiver(SelfBorrowed(this.ObjectBorrow(call.Arguments[0]))) : this.ObjectReceiver(call.Arguments[0]);
       return new RsMethodCall(receiver, member.Name, [.. arguments.Skip(1)]) { Type = call.Type };
     }
+
+    /// <summary>The receiver of a method that takes <c>self: &amp;Rc&lt;Self&gt;</c>, which the call borrows itself: <c>counter.f()</c> for <c>(&amp;counter).f()</c> (clippy's <c>needless_borrow</c>).</summary>
+    private static RsExpression SelfBorrowed(RsExpression borrowed) => borrowed is RsReference { Mutable: false } reference ? reference.Operand : borrowed;
 
     /// <summary>
     /// The items of a class: <c>pub struct Name</c> with a <c>Cell</c> or <c>RefCell</c> per field and
@@ -558,7 +566,7 @@ public static partial class RustEmitter {
       }
 
       var load = new RsLet("old", false, null, new RsMethodCall(name, "load", [relaxed]));
-      var value = new RsLet("new", false, null, Expect(this.Method(new RsPath("old") { Type = global.Type }, step.Increment ? "checked_add" : "checked_sub", global.Type, one), IrTrap.IntegerOverflow));
+      var value = new RsLet("new", false, null, this.Checked(this.Method(new RsPath("old") { Type = global.Type }, step.Increment ? "checked_add" : "checked_sub", global.Type, one), IrTrap.IntegerOverflow));
       var store = new RsExpressionStatement(new RsMethodCall(name, "store", [new RsPath("new"), relaxed]));
       return new RsBlockExpression(new RsBlock([load, value, store], new RsPath(step.Postfix ? "old" : "new"))) { Type = global.Type };
     }

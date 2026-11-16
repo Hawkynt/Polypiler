@@ -15,7 +15,6 @@ public static partial class RustEmitter {
   /// generators, and the backend writes no state machine of an iterator function yet. A sequence made
   /// all at once would change what the source does: its effects, the order of a trace, an infinite one.
   /// </summary>
-  private const string LazySequence = "a lazy sequence (yield), which needs a state machine the Rust backend does not write";
 
   private sealed partial class Writer {
 
@@ -172,7 +171,9 @@ public static partial class RustEmitter {
 
       if (operation.Op == IrCollectionOp.ListFromArray) {
         this.CollectionType(type);
-        return new RsMethodCall(this.Receiver(this.Borrow(arguments[0], false)), "to_vec", []) { Type = type };
+        // A method borrows its receiver itself: `array.to_vec()`, never `(&array).to_vec()` (clippy's needless_borrow).
+        var borrowed = this.Borrow(arguments[0], false);
+        return new RsMethodCall(this.Receiver(borrowed is RsReference { Mutable: false, Operand: var owner } ? owner : borrowed), "to_vec", []) { Type = type };
       }
 
       var collection = arguments[0];
@@ -213,7 +214,7 @@ public static partial class RustEmitter {
         case IrCollectionOp.ListCopyToArray:
           return new RsMethodCall(place, "to_vec", []) { Type = type };
         case IrCollectionOp.MapGet:
-          return Expect(this.Helper("ply_map_get", type, this.CollectionArgument(collection, false), this.Key(arguments[1])), IrTrap.KeyNotFound);
+          return this.Checked(this.Helper("ply_map_get", type, this.CollectionArgument(collection, false), this.Key(arguments[1])), IrTrap.KeyNotFound);
         case IrCollectionOp.MapTryGet when IsOptionalValue(type):
           return this.Helper("ply_map_get", type, this.CollectionArgument(collection, false), this.Key(arguments[1]));
         case IrCollectionOp.MapContainsKey:

@@ -1,0 +1,62 @@
+// The known-answer tests of one Cipher algorithm file, run on its translation to Rust: written by
+// polypiler-tooling cipher kat beside the translated crate. Every vector is one test, its inputs
+// and its expected bytes literals of it. The algorithm comes from the registry of the translation,
+// algorithms(), the instance from its create_instance; the vector's steps set its properties and
+// call its methods through the instance's trait, as node did, and what feed and result give must
+// be exactly the recorded bytes.
+#![allow(clippy::all, unused_imports, unused_mut, unused_variables, dead_code)]
+
+/// An element of what result gives: a number of the translation, which must be a byte.
+pub trait KatNumber: Copy {
+    /// The number as a floating-point value, which holds every byte exactly.
+    fn number(self) -> f64;
+}
+
+macro_rules! kat_number {
+    ($($t:ty),*) => {
+        $(impl KatNumber for $t {
+            fn number(self) -> f64 {
+                self as f64
+            }
+        })*
+    };
+}
+
+kat_number!(u8, i8, u16, i16, u32, i32, u64, i64, u128, i128, usize, isize, f32, f64);
+
+/// Compares what result gave with the recorded bytes: every element a byte, every byte the same.
+pub fn check<T: KatNumber>(result: &[T], expected: &[u8]) {
+    let mut bytes = Vec::with_capacity(result.len());
+    for (index, &item) in result.iter().enumerate() {
+        let number = item.number();
+        if number != number.floor() || !(0.0..=255.0).contains(&number) {
+            panic!("Result gave {number} at {index}, which is no byte");
+        }
+        bytes.push(number as u8);
+    }
+    let length = bytes.len().min(expected.len());
+    for index in 0..length {
+        if bytes[index] != expected[index] {
+            panic!(
+                "first differing byte at {index}: expected 0x{:02x}, got 0x{:02x} ({} bytes expected, {} given)",
+                expected[index],
+                bytes[index],
+                expected.len(),
+                bytes.len()
+            );
+        }
+    }
+    if bytes.len() != expected.len() {
+        panic!(
+            "first differing byte at {length}: expected {} bytes, got {}",
+            expected.len(),
+            bytes.len()
+        );
+    }
+}
+
+/// A text as the translation holds it: its UTF-16 code units.
+pub fn utf16(text: &str) -> Vec<u16> {
+    text.encode_utf16().collect()
+}
+

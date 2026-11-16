@@ -39,6 +39,27 @@ public sealed record RustEmitOptions {
   /// <summary>The unit tests, emitted into a <c>#[cfg(test)]</c> module at the end of the module's file.</summary>
   public IReadOnlyList<RustTestCase> Tests { get; init; } = [];
 
+  /// <summary>
+  /// The module of the crate each function is placed in, by the function's IR name, as a path from
+  /// the crate root: <c>util</c> writes it into <c>src/util.rs</c>, <c>util::bits</c> into
+  /// <c>src/util/bits.rs</c>, and every other file names it by <c>use crate::util::f;</c>. A function
+  /// whose IR name starts with the module's path joined by <c>_</c>, as the Rust frontend names them
+  /// (<c>util_bits_mix</c>), is called by the rest of its name. A function placed nowhere, or in the
+  /// IR module's own module, stays in that module's file with everything that is no function.
+  /// Empty: every function there.
+  /// </summary>
+  public IReadOnlyDictionary<string, string> Modules { get; init; } = new Dictionary<string, string>();
+
+  /// <summary>
+  /// Whether the IR module is the crate root, as a Rust crate's <c>lib.rs</c> is: what stays in it is
+  /// written in <c>src/lib.rs</c> itself. Also so where the module's name is <c>lib</c> or <c>main</c>,
+  /// whose file would be the crate root's or a program's.
+  /// </summary>
+  public bool CrateRoot { get; init; }
+
+  /// <summary>The functions that are tests, by IR name: <c>#[test]</c> functions of the <c>#[cfg(test)]</c> module, a test passing where the function returns.</summary>
+  public IReadOnlyList<string> TestFunctions { get; init; } = [];
+
 }
 
 /// <summary>
@@ -50,7 +71,18 @@ public sealed record RustEmitOptions {
 /// <param name="Root">The crate root.</param>
 /// <param name="ModuleName">The name of the module, which is also its file's name.</param>
 /// <param name="Module">The module.</param>
-public sealed record RustCrate(string PackageName, string Manifest, RsFile Root, string ModuleName, RsFile Module);
+public sealed record RustCrate(string PackageName, string Manifest, RsFile Root, string ModuleName, RsFile Module) {
+
+  /// <summary><c>src/error.rs</c>, the crate's <c>Error</c> enum under the trap policy <c>result</c>, or <see langword="null"/> where the crate has none.</summary>
+  public RsFile? Errors { get; init; }
+
+  /// <summary>The modules the functions placed elsewhere are written into (<see cref="RustEmitOptions.Modules"/>), by name; empty where every function is in <see cref="Module"/>.</summary>
+  public IReadOnlyList<RustModule> Modules { get; init; } = [];
+
+  /// <summary>Whether <see cref="Module"/>'s items are written in the crate root, <c>src/lib.rs</c>, rather than a file of their own.</summary>
+  public bool InRoot { get; init; }
+
+}
 
 /// <summary>
 /// Emits an IR module as a Cargo package of safe Rust for a <see cref="RustProfile"/>: <c>Cargo.toml</c>
@@ -130,13 +162,14 @@ public static partial class RustEmitter {
     ArgumentNullException.ThrowIfNull(profile);
     ArgumentNullException.ThrowIfNull(passes);
     var problems = IrVerifier.Verify(module);
-    var writer = new Writer(profile, capabilities ?? RustCapabilities.Default, options ?? RustEmitOptions.Default);
-    var crate = problems.Count > 0 ? null : writer.Crate(module);
-    if (problems.Concat(writer.Problems).FirstOrDefault() is { } problem)
+    var (writer, crate) = problems.Count > 0 ? (null, null) : Written(module, profile, capabilities ?? RustCapabilities.Default, options ?? RustEmitOptions.Default);
+    if (problems.Concat(writer?.Problems ?? []).FirstOrDefault() is { } problem)
       throw new ArgumentException($"The module '{module.Name}' cannot be emitted: {problem.Message}.", nameof(module));
 
     var result = RustTargetPasses.Pipeline.Run(crate!, profile, passes);
-    return (result with { Tree = Lints.Allowed(result.Tree) }, writer.Helpers);
+    // The modules are made after the passes, which see one module; Check refused what cannot be placed.
+    var placed = Modules.Split(Lints.Allowed(result.Tree), writer!.Placement, writer.InRoot);
+    return (result with { Tree = placed }, writer.Helpers);
   }
 
   /// <summary>Says why a module cannot be emitted for a profile; empty when it can.</summary>
@@ -151,9 +184,7 @@ public static partial class RustEmitter {
     if (problems.Count > 0)
       return problems;
 
-    var writer = new Writer(profile, capabilities ?? RustCapabilities.Default, options ?? RustEmitOptions.Default);
-    writer.Crate(module);
-    return writer.Problems;
+    return Written(module, profile, capabilities ?? RustCapabilities.Default, options ?? RustEmitOptions.Default).Writer.Problems;
   }
 
   /// <summary>The files of a crate: <c>Cargo.toml</c>, <c>src/lib.rs</c>, <c>src/&lt;module&gt;.rs</c>.</summary>
@@ -163,11 +194,19 @@ public static partial class RustEmitter {
   public static IReadOnlyList<GeneratedFile> Files(RustCrate crate, IReadOnlyList<HelperText>? helpers = null) {
     ArgumentNullException.ThrowIfNull(crate);
     var module = RustPrinter.Print(crate.Module);
-    return [
+    List<GeneratedFile> files = [
       new GeneratedFile("Cargo.toml", crate.Manifest),
-      new GeneratedFile("src/lib.rs", RustPrinter.Print(crate.Root)),
-      new GeneratedFile($"src/{crate.ModuleName}.rs", module) { Helpers = Measured(crate.Module, helpers ?? []) }
+      new GeneratedFile("src/lib.rs", RustPrinter.Print(crate.Root))
     ];
+    // Where every function went into a module of its own, the IR module's file has nothing left.
+    if (!crate.InRoot && (crate.Modules.Count == 0 || crate.Module.Items.Count > 0))
+      files.Add(new GeneratedFile($"src/{crate.ModuleName}.rs", module) { Helpers = Measured(crate.Module, helpers ?? []) });
+
+    files.AddRange(crate.Modules.Select(placed => new GeneratedFile(placed.FilePath, RustPrinter.Print(placed.File))));
+    if (crate.Errors is { } errors)
+      files.Add(new GeneratedFile("src/error.rs", RustPrinter.Print(errors)));
+
+    return files;
   }
 
   /// <summary>The helpers of a module's file, measured in it, each printed on its own; one inlined everywhere and removed is listed with no text.</summary>
@@ -213,7 +252,7 @@ public static partial class RustEmitter {
     return intrinsic.Op switch {
       IrIntrinsicOp.Sqrt or IrIntrinsicOp.Floor or IrIntrinsicOp.Ceiling or IrIntrinsicOp.Truncate or IrIntrinsicOp.RoundAway or IrIntrinsicOp.Abs
         or IrIntrinsicOp.FusedMultiplyAdd or IrIntrinsicOp.IsNaN or IrIntrinsicOp.IsInfinity or IrIntrinsicOp.IsFinite
-        or IrIntrinsicOp.IsNegative or IrIntrinsicOp.IsNormal => true,
+        or IrIntrinsicOp.IsNegative or IrIntrinsicOp.IsNormal or IrIntrinsicOp.ToInt32 or IrIntrinsicOp.ToUint32 => true,
       IrIntrinsicOp.RoundEven => table.Has(RustCapabilities.RoundTiesEven, profile),
       IrIntrinsicOp.CopySign => table.Has(RustCapabilities.CopySign, profile),
       IrIntrinsicOp.IsSubnormal => table.Has(RustCapabilities.IsSubnormal, profile),
@@ -227,7 +266,7 @@ public static partial class RustEmitter {
   /// a floating-point operation by its portable implementation, an integer or bit operation by its
   /// helper of the IR library (<see cref="IntegerLibrary"/>), the floating-point operations Rust has no
   /// method of the IR's meaning for - the IEEE minimum and maximum, the sign that traps on a NaN, the
-  /// rounding to even below Rust 1.77, ECMAScript's rounding and <c>ToInt32</c>, the clamp and the
+  /// rounding to even below Rust 1.77, ECMAScript's rounding, the clamp and the
   /// rounding to digits that trap - by theirs. Each helper is copied into the module.
   /// </summary>
   /// <param name="module">The module.</param>
@@ -259,8 +298,6 @@ public static partial class RustEmitter {
       IrIntrinsicOp.Sign => "SignOf",
       IrIntrinsicOp.RoundEven => "RoundEven",
       IrIntrinsicOp.RoundHalfUp => "RoundHalfUp",
-      IrIntrinsicOp.ToInt32 => "ToInt32",
-      IrIntrinsicOp.ToUint32 => "ToUint32",
       IrIntrinsicOp.Clamp => single ? "ClampF" : "Clamp",
       IrIntrinsicOp.RoundDigits => single ? "RoundDigitsF" : "RoundDigits",
       _ => null
@@ -357,16 +394,39 @@ public static partial class RustEmitter {
   /// <param name="module">The module.</param>
   /// <param name="profile">The profile, whose keywords are escaped.</param>
   /// <returns>The path of each exported function by its IR name.</returns>
-  public static IReadOnlyDictionary<string, string> Exports(IrModule module, RustProfile profile) {
+  public static IReadOnlyDictionary<string, string> Exports(IrModule module, RustProfile profile) => Exports(module, profile, null);
+
+  /// <summary>The path of each exported function in the crate of a module whose functions are placed in modules as the options say.</summary>
+  /// <param name="module">The module.</param>
+  /// <param name="profile">The profile, whose keywords are escaped.</param>
+  /// <param name="options">The placement of the functions (<see cref="RustEmitOptions.Modules"/>); none when <see langword="null"/>.</param>
+  /// <returns>The path of each exported function by its IR name.</returns>
+  public static IReadOnlyDictionary<string, string> Exports(IrModule module, RustProfile profile, RustEmitOptions? options) {
     ArgumentNullException.ThrowIfNull(module);
     ArgumentNullException.ThrowIfNull(profile);
     var moduleName = ModuleName(module.Name, profile);
+    var placement = options?.Modules ?? RustEmitOptions.Default.Modules;
     var exports = new Dictionary<string, string>(StringComparer.Ordinal);
     var taken = new HashSet<string>(StringComparer.Ordinal);
+    var generalized = GeneralizedExports(module, profile.Edition);
+    var root = options?.CrateRoot == true || moduleName is "lib" or "main";
+    var names = module.Functions.Select(function => RustNames.Snake(function.Name, profile.Edition)).ToHashSet(StringComparer.Ordinal);
     foreach (var function in module.Functions.Where(function => function.IsPublic)) {
+      if (generalized.TryGetValue(function.Name, out var generic)) {
+        exports[function.Name] = root ? generic : $"{moduleName}::{generic}";
+        continue;
+      }
+
       var name = RustNames.Snake(function.Name, profile.Edition);
-      if (taken.Add(name))
-        exports[function.Name] = $"{moduleName}::{name}";
+      if (!taken.Add(name))
+        continue;
+
+      if (placement.TryGetValue(function.Name, out var placed)) {
+        var path = PlacedPath(placed, profile);
+        exports[function.Name] = $"{path}::{(Unprefixed(name, path) is { } own && !names.Contains(own) ? own : name)}";
+      } else {
+        exports[function.Name] = root ? name : $"{moduleName}::{name}";
+      }
     }
 
     return exports;
@@ -385,6 +445,20 @@ public static partial class RustEmitter {
     var lowered = Polypiler.Core.Backends.Rust.Emit.ObjectLowering.Run(Polypiler.Core.Backends.Rust.Emit.BindHoisting.Run(module));
     var local = lowered.Functions.First(candidate => candidate.Name == function).Parameters[parameter];
     return local.Type.IsOptional || local.Type.IsArray && Polypiler.Core.Backends.Rust.Emit.ArrayNullness.Of(lowered).MayBeNull(function, local);
+  }
+
+  /// <summary>A module's path as Rust names it, each segment a module's name: <c>Util::Bits</c> as <c>util::bits</c>.</summary>
+  /// <param name="path">The path from the crate root, segments separated by <c>::</c>.</param>
+  /// <param name="profile">The profile, whose keywords are avoided.</param>
+  public static string PlacedPath(string path, RustProfile profile) {
+    ArgumentNullException.ThrowIfNull(path);
+    return string.Join("::", path.Split("::").Select(segment => ModuleName(segment, profile)));
+  }
+
+  /// <summary>A function's Rust name without the path of its module in front, <c>util_bits_mix</c> in <c>util::bits</c> as <c>mix</c>; <see langword="null"/> where it has no such prefix.</summary>
+  private static string? Unprefixed(string name, string path) {
+    var prefix = path.Replace("::", "_", StringComparison.Ordinal) + "_";
+    return name.StartsWith(prefix, StringComparison.Ordinal) && name.Length > prefix.Length ? name[prefix.Length..] : null;
   }
 
   /// <summary>The name of a package or module of an IR module's name, as Cargo and the guidelines want it.</summary>

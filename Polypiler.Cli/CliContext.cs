@@ -70,6 +70,9 @@ public sealed class CliContext : IDiagnosticSink {
   /// <summary>The directory relative paths of the command line are resolved against.</summary>
   public string WorkingDirectory { get; }
 
+  /// <summary>How the source of a translation is laid out where it has modules and tests of its own, as a Rust crate has; <see langword="null"/> for a source of one module.</summary>
+  internal TranslateCommand.CrateLayout? Layout { get; set; }
+
   /// <summary>
   /// Keeps a diagnostic, with <see cref="CommandLine"/> as its command, and writes it to
   /// <see cref="Error"/> in <see cref="Format"/>; with <see cref="Quiet"/> only an error is written.

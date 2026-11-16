@@ -123,7 +123,7 @@ public static partial class RustEmitter {
 
     /// <summary>The place a field of which is read or written: a variable, an array element or a field of a place.</summary>
     private RsExpression Place(IrExpr target, bool write) => target switch {
-      IrArrayLoad load => new RsIndex(this.ArrayTarget(load.Array, write), this.Index(load.Index)) { Type = load.Type },
+      IrArrayLoad load => this.Element(this.ArrayTarget(load.Array, write), this.Index(load.Index), load.Type, write),
       IrFieldLoad load => new RsField(this.Place(load.Target, write), this.FieldName(load.Field)) { Type = load.Type },
       IrLocalRef reference when IsBuffer(reference.Type) => new RsPath(this._locals[reference.Local]) { Type = reference.Type },
       _ => this.Operand(this.Expression(target), 15)

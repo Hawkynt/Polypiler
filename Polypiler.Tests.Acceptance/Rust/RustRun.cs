@@ -170,24 +170,33 @@ internal static class RustRun {
 
   /// <summary>
   /// What every call does in the crate the backend writes for a module, built with the switches given:
-  /// one outcome per call, in order. The module is translated as <c>translate --to rust</c> would.
+  /// one outcome per call, in order. The module is translated as <c>translate --to rust</c> would. An
+  /// error an export returns under the trap policy <c>result</c> is read as the trap it displays, and
+  /// under that policy no call may panic.
   /// </summary>
-  public static async Task<IReadOnlyList<string>> OutcomesAsync(IrModule module, IReadOnlyList<PrototypeCall> calls, OverflowChecks checks, RustProfile? profile = null) {
+  public static async Task<IReadOnlyList<string>> OutcomesAsync(IrModule module, IReadOnlyList<PrototypeCall> calls, OverflowChecks checks, RustProfile? profile = null, RustEmitOptions? options = null) {
     profile ??= RustProfile.Default;
     var prepared = RustCrates.Prepared(module, profile);
-    var files = RustCrates.Emit(module, profile);
-    var exports = RustEmitter.Exports(prepared, profile);
+    var files = RustCrates.Emit(module, profile, options);
+    var exports = RustEmitter.Exports(prepared, profile, options);
     var called = calls.Select(call => call.Method).ToHashSet(StringComparer.Ordinal);
     var functions = prepared.Functions.Where(function => exports.ContainsKey(function.Name) && called.Contains(function.Name)).ToList();
     var signatures = functions.ToDictionary(function => function.Name, function => SignatureOf(function, index => RustEmitter.TakesNull(prepared, function.Name, index)), StringComparer.Ordinal);
     var index = functions.Select((function, position) => (function.Name, position)).ToDictionary(pair => pair.Name, pair => pair.position, StringComparer.Ordinal);
-    var crate = RustEmitter.ModuleName(module.Name, profile);
+    var crate = options?.PackageName ?? RustEmitter.ModuleName(module.Name, profile);
+    var fallible = RustEmitter.Fallible(prepared, profile);
     var execution = await Runner(checks).ExecuteAsync(RustCrates.Package(files), crate,
-      [.. functions.Select(function => new RustExport(exports[function.Name], signatures[function.Name]) { Converted = function.ReturnType.IsEnum || function.Parameters.Any(parameter => parameter.Type.IsEnum) })],
+      [.. functions.Select(function => new RustExport(exports[function.Name], signatures[function.Name]) {
+        Converted = function.ReturnType.IsEnum || function.Parameters.Any(parameter => parameter.Type.IsEnum),
+        Fallible = fallible.Contains(function.Name)
+      })],
       [.. calls.Select(call => (index[call.Method], call.Arguments.SelectMany((argument, position) => Bytes(argument, signatures[call.Method].Parameters[position].Type)).ToArray()))]);
     Assert.That(execution.Diagnostics, Is.Empty, () => string.Join("\n", execution.Diagnostics.Select(diagnostic => $"{diagnostic}: {diagnostic.Cause}")) + "\n" + RustCrates.ModuleText(files));
+    if (profile.TrapPolicy == RustTrapPolicy.Result)
+      Assert.That(calls.Zip(execution.Outcomes!).Where(pair => pair.Second.Panic is not null).Select(pair => $"{pair.First}: {pair.Second.Panic}"), Is.Empty, "no call panics under the trap policy result");
+
     return [.. calls.Zip(execution.Outcomes!).Select(pair => {
-      if (pair.Second.Panic is { } panic)
+      if ((pair.Second.Panic ?? pair.Second.Error) is { } panic)
         return Trap(panic);
 
       var (result, arguments) = Values(functions[index[pair.First.Method]], signatures[pair.First.Method], pair.First.Arguments, pair.Second.Image!);

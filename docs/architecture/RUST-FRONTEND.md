@@ -147,7 +147,8 @@ A crate is the source file and the modules it declares: inline `mod m { ... }` a
 groups, globs, `self`, `super`, `crate`, renames and `pub use` re-exports resolves names across
 them, as do `std::cmp::{min, max}` and `std::mem::swap`. The exported surface is every item reachable
 by a public path; its IR name is that shortest public path joined by `_`. Modules are emitted in
-dependency order (`ImportResult.ModuleOrder`), test-only modules last.
+dependency order (`ImportResult.ModuleOrder`), test-only modules last; `ImportResult.Modules` gives the module of
+each free function outside the root (`util::bits`), which the Rust backend writes back as files of their own.
 
 Inherent `impl` blocks give structs and enums associated functions, constants and methods with
 `self`, `&self` and `&mut self`. `#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]` is
@@ -355,9 +356,9 @@ mode, for the calls of `RustCases`; `RustDifferentialTests` in `Polypiler.Tests`
 interpreter to the recordings, `RustFrontendDifferentialTests` in `Polypiler.Tests.Acceptance`
 (layer `rust`) holds the recordings to rustc and the emitted C# and JavaScript to the recordings, and
 `RustRoundTripTests` there holds the Rust the Rust backend writes back from the IR to them, its crate
-built with overflow checks on and off. Ten of the fifteen fixtures make the round trip; the five
-the backend cannot write yet - `memory`, `types`, `edges`, `objects` and `reassign`, for arrays as
-struct fields, one array held by two variables, a view copied onto another and lists of classes - are
+built with overflow checks on and off. Eleven of the fifteen fixtures make the round trip (`memory` since
+#460); the four the backend cannot write yet - `types`, `edges`, `objects` and `reassign`, for arrays as
+struct fields, one array held by two variables and lists of classes - are
 listed in `RustFixture.BackendPending`, and a unit test holds that the backend refuses each of them
 with `PLY1550`, naming the construct. The unit tests under `Polypiler.Tests/Frontends/Rust/` hold every
 refusal and every rustc error the frontend reports to its code. Run the acceptance test

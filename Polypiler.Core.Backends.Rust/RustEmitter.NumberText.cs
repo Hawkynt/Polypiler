@@ -28,8 +28,9 @@ public static partial class RustEmitter {
           return Text(new RsMethodCall(this.Receiver(this.Expression(value)), "to_string", []));
         case IrIntrinsicOp.FormatDotNet when value!.Type == IrType.F32:
           return Call("ply_format_f32", this.Expression(value));
+        // A single is formatted by .NET's rules above; the verifier gives FormatEcma doubles only.
         case IrIntrinsicOp.FormatDotNet or IrIntrinsicOp.FormatEcma when value!.Type.IsFloat:
-          return Call("ply_format_f64", value.Type == IrType.F32 ? new RsCall(new RsPath("f64::from"), [this.Expression(value)]) : this.Expression(value),
+          return Call("ply_format_f64", this.Expression(value),
             new RsLiteral(operation.Op == IrIntrinsicOp.FormatEcma ? "true" : "false"));
         case IrIntrinsicOp.FormatBoolDotNet or IrIntrinsicOp.FormatBoolEcma: {
           var dotNet = operation.Op == IrIntrinsicOp.FormatBoolDotNet;

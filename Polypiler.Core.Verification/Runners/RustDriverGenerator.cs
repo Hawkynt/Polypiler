@@ -19,6 +19,13 @@ public sealed record RustExport(string Path, CallSignature Signature) {
   /// </summary>
   public bool Converted { get; init; }
 
+  /// <summary>
+  /// Whether the export returns a <c>Result</c>, as every function a trap can leave does under the
+  /// Rust backend's trap policy <c>result</c>: an <c>Err</c> is the outcome <c>?</c> and the error's
+  /// <c>Display</c>, the value of an <c>Ok</c> the result.
+  /// </summary>
+  public bool Fallible { get; init; }
+
 }
 
 /// <summary>
@@ -29,7 +36,9 @@ public sealed record RustExport(string Path, CallSignature Signature) {
 /// a panic hook that prints nothing. It writes one line per call: the output image in hex, or
 /// <c>!</c> and the first line of the panic message. Since each argument is declared with the type the
 /// signature names, a signature that does not fit the declaration does not compile, with the error in
-/// the driver. A line it cannot read ends it with exit code 2. A <c>seq</c> of scalars is a vector,
+/// the driver. A line it cannot read ends it with exit code 2. An export that returns a <c>Result</c>
+/// (<see cref="RustExport.Fallible"/>) writes the value of an <c>Ok</c> as any other result, and
+/// <c>?</c> with what its error displays for an <c>Err</c>. A <c>seq</c> of scalars is a vector,
 /// passed borrowed as <c>&amp;v</c>, or as <c>&amp;mut v</c> where it is <c>inout</c>, whose contents
 /// after the call follow the result in the output image; a <c>seq</c> result is read as a slice. An
 /// <c>opt&lt;T&gt;</c> is an <c>Option</c>: of a scalar <c>Option&lt;T&gt;</c>, of a <c>seq</c>
@@ -83,7 +92,9 @@ public static class RustDriverGenerator {
         offset += size;
       }
 
-      text.Append(CultureInfo.InvariantCulture, $"            let result{Converted(export, signature.Result)} = {crate}::{export.Path}({string.Join(", ", arguments)}){(export.Converted && signature.Result is not null ? ".into()" : "")};\n");
+      var call = $"{crate}::{export.Path}({string.Join(", ", arguments)})";
+      var into = export.Converted && signature.Result is not null ? ".into()" : "";
+      text.Append(CultureInfo.InvariantCulture, $"            let result{Converted(export, signature.Result)} = {(export.Fallible ? Unwrapped(call, into, "            ") : call + into)};\n");
       text.Append("            ").Append(Encode(signature.Result)).Append('\n');
       text.Append("        }\n");
     }
@@ -169,7 +180,8 @@ public static class RustDriverGenerator {
     }
 
     text.Append(Pad).Append("if at != input.len() {\n").Append(Pad).Append("    std::process::exit(2);\n").Append(Pad).Append("}\n");
-    text.Append(CultureInfo.InvariantCulture, $"{Pad}let result = {crate}::{export.Path}({string.Join(", ", arguments)});\n");
+    var call = $"{crate}::{export.Path}({string.Join(", ", arguments)})";
+    text.Append(CultureInfo.InvariantCulture, $"{Pad}let result = {(export.Fallible ? Unwrapped(call, "", Pad) : call)};\n");
     text.Append(Pad).Append("let mut image: Vec<u8> = Vec::new();\n");
     if (export.Signature.Result is { } result)
       Written(text, Pad, "result", result.Kind == ImageKind.Optional ? result : Counted(result) ?? result);
@@ -181,6 +193,10 @@ public static class RustDriverGenerator {
 
     text.Append(Pad).Append("hex(&image)\n");
   }
+
+  /// <summary>The value of a call that returns a <c>Result</c>: the <c>Ok</c>'s, an <c>Err</c> ending the arm with <c>?</c> and its <c>Display</c>.</summary>
+  private static string Unwrapped(string call, string into, string pad)
+    => $"match {call} {{\n{pad}    Ok(value) => value{into},\n{pad}    Err(error) => return format!(\"?{{}}\", error),\n{pad}}}";
 
   /// <summary>The type a converted scalar result is declared with, <c>: T</c>, or nothing.</summary>
   private static string Converted(RustExport export, ImageType? result)

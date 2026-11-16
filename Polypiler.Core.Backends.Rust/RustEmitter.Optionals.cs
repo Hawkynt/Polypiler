@@ -31,7 +31,8 @@ public static partial class RustEmitter {
         case IrUnwrap { IsTested: true } unwrap:
           return this.Bound(unwrap.Value, value => new RsMethodCall(this.Receiver(value), "unwrap_or_default", []) { Type = unwrap.Type });
         case IrUnwrap unwrap:
-          return this.Bound(unwrap.Value, value => new RsCall(new RsPath(this.StringHelper("ply_value")), [new RsReference(false, value)]) { Type = unwrap.Type });
+          return this.Bound(unwrap.Value, value => this.Results ? this.Checked(value, IrTrap.MissingValue)
+            : new RsCall(new RsPath(this.StringHelper("ply_value")), [new RsReference(false, value)]) { Type = unwrap.Type });
         case IrCoalesce coalesce: {
           var optional = coalesce.Type.IsOptional;
           var value = this.Expression(coalesce.Value);

@@ -29,10 +29,13 @@ public static class RustRunnerDiagnostics {
 
 }
 
-/// <summary>What a call of an export did: its output image, or the panic it ended in.</summary>
-/// <param name="Image">The output image, or <see langword="null"/> where the call panicked.</param>
+/// <summary>What a call of an export did: its output image, or the panic it ended in, or the error it returned.</summary>
+/// <param name="Image">The output image, or <see langword="null"/> where the call panicked or returned an error.</param>
 /// <param name="Panic">The first line of the panic message, or <see langword="null"/>.</param>
 public sealed record RustCallOutcome(byte[]? Image, string? Panic) {
+
+  /// <summary>What the <c>Err</c> of an export that returns a <c>Result</c> displays, or <see langword="null"/>.</summary>
+  public string? Error { get; init; }
 
   /// <summary>The trap class of the panic, or <see langword="null"/> for a call that returned.</summary>
   public TrapClass? Trap => this.Panic is null ? null : RustTraps.Classify(this.Panic);
@@ -242,6 +245,8 @@ public sealed partial class RustRunner {
     foreach (var line in lines) {
       if (line.StartsWith('!'))
         outcomes.Add(new(null, line[1..]));
+      else if (line.StartsWith('?'))
+        outcomes.Add(new(null, null) { Error = line[1..] });
       else if (line.All(char.IsAsciiHexDigitLower) && line.Length % 2 == 0)
         outcomes.Add(new(Convert.FromHexString(line), null));
       else
