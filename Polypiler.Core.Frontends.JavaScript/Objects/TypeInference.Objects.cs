@@ -23,9 +23,15 @@ internal sealed partial class TypeInference {
 
         var value = Binder.Compound(store.Operator) is null ? this.Of(store.Right) : this.Combined(store);
         if (owner.Field(key) is { } field) {
+          // A new Array the store makes, which nothing else holds, is one of the integers the field states where its own fit them (#1413);
+          // one the program grows joins the field as a list all the same.
+          if (IsFresh(store.Right) && value is { Kind: JsKind.Array, IsPlain: true, IsView: false, Element: { Kind: JsKind.Number } made }
+              && field.Variable.Type is { Kind: JsKind.Array, IsView: false, Element: { AdmitsWhole: true } element } && JsType.Join(element, made) == element)
+            value = JsType.ArrayOf(element, true);
+
           var origin = value.IsView && Origin(store.Right) is Identifier read && model.Bindings.GetValueOrDefault(read) is Variable { Type.IsView: true } source
             && this.Reach(source, value.Stored(), store.Right);
-          return this.Reach(field.Variable, value.Stored(), store.Right) | origin;
+          return this.Reach(field.Variable, value.Stored(), store.Right) | origin | this.Fit(model, store.Right, field.Variable.Type);
         }
 
         return owner.Member(MemberKind.Setter, key) is { } setter && this.ModelOf(setter).Parameters.ElementAtOrDefault(0) is { } parameter
@@ -45,6 +51,14 @@ internal sealed partial class TypeInference {
           && (argument.Declared is null ? this.Pass(argument, this.Of(flow.Node), flow.Node) : argument.Declared.IsStated && this.Shape(argument, this.Of(flow.Node), flow.Node));
     }
   }
+
+  /// <summary>Whether an expression makes a new Array: a literal, <c>new Array(…)</c>, or the <c>fill</c> of one.</summary>
+  private static bool IsFresh(Expression made) => made switch {
+    ArrayExpression => true,
+    NewExpression { Callee: Identifier { Name: "Array" } } => true,
+    CallExpression { Callee: MemberExpression { Computed: false, Object: var filled, Property: Identifier { Name: "fill" } } } => IsFresh(filled),
+    _ => false
+  };
 
   /// <summary>What a view is made of: the receiver of <c>subarray</c>, as often as it is called, and the expression itself otherwise.</summary>
   private static Expression Origin(Expression view)
@@ -88,6 +102,13 @@ internal sealed partial class TypeInference {
     var changed = this.UnifyShapes();
     foreach (var slot in this._slots ??= Inheritance.Slots(this.Classes.Values)) {
       var models = slot.Select(this.ModelOf).ToList();
+      // A method that states no result returns what the one it overrides, or one that overrides it, states (#1413).
+      if (models.Select(model => model.StatedResult).FirstOrDefault(stated => stated is not null) is { } statedResult)
+        foreach (var model in models.Where(model => model.StatedResult is null)) {
+          model.StatedResult = statedResult;
+          changed = true;
+        }
+
       var result = models.Select(model => model.Result).Aggregate(JsType.Join);
       foreach (var model in models.Where(model => model.Result != result)) {
         model.ResultEvidence ??= models.Select(other => other.ResultEvidence).FirstOrDefault(evidence => evidence is not null);
@@ -136,6 +157,8 @@ internal sealed partial class TypeInference {
 
   /// <summary>The type of what a call of a function yields, as its result type in the IR says once it has one.</summary>
   private JsType ResultOf(FunctionModel model)
-    => model.Result.Kind is JsKind.Unknown or JsKind.Array or JsKind.Record or JsKind.Conflict or JsKind.Object or JsKind.Function or JsKind.Sequence || model.Result.Ir is null ? model.Result : JsType.Of(model.ReturnType).AbsentAs(model.Result);
+    // A whole double stays one: its range is what the IR type of a double does not say (#1413).
+    => model.Result.IsWhole ? model.Result
+    : model.Result.Kind is JsKind.Unknown or JsKind.Array or JsKind.Record or JsKind.Conflict or JsKind.Object or JsKind.Function or JsKind.Sequence || model.Result.Ir is null ? model.Result : JsType.Of(model.ReturnType).AbsentAs(model.Result);
 
 }

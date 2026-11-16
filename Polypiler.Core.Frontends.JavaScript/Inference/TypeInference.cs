@@ -117,6 +117,7 @@ internal sealed partial class TypeInference(string path, string source, List<Can
     }
 
     model.DeclaredResult = JsDoc.ResultType(candidate.Documentation);
+    model.StatedResult = JsDoc.StatedResult(candidate.Documentation, this.Named);
     return null;
   }
 
@@ -313,8 +314,8 @@ internal sealed partial class TypeInference(string path, string source, List<Can
       case FlowKind.Return:
         var argument = Returned(flow);
         var result = JsType.Join(model.Result, argument is null ? JsType.UndefinedValue : this.Of(argument));
-        // A returned variable is the list the result is (#1328).
-        var aliased = argument is not null && this.Alias(model, argument, result);
+        // A returned variable is the list the result is (#1328), of the integers JSDoc states where its whole doubles fit them (#1413).
+        var aliased = argument is not null && (this.Alias(model, argument, result) | this.Fit(model, argument, model.StatedResult));
         if (result == model.Result)
           return aliased;
 
@@ -434,11 +435,12 @@ internal sealed partial class TypeInference(string path, string source, List<Can
     }
 
     foreach (var model in models) {
+      this.Enter(model);
       foreach (var flow in model.Flows) {
         if (flow.Kind == FlowKind.Argument && this.ModelOf(flow.Callee!).Parameters.ElementAtOrDefault(flow.Index) is { Type.Kind: JsKind.Unknown } parameter)
           promoted |= this.Pass(parameter, JsType.F64, flow.Node);
         else if (flow.Kind is FlowKind.Assign or FlowKind.Compound or FlowKind.Step && flow.Target!.Type.Kind == JsKind.Unknown)
-          promoted |= this.Reach(flow.Target, JsType.F64, flow.Node);
+          promoted |= this.Reach(flow.Target, this.StatedCall(flow.Node) ?? JsType.F64, flow.Node);
         else if (flow.Kind == FlowKind.Return && model.Result.Kind == JsKind.Unknown && Returned(flow) is { } argument) {
           model.Result = JsType.F64;
           model.ResultEvidence = argument;
@@ -450,6 +452,20 @@ internal sealed partial class TypeInference(string path, string source, List<Can
 
     return promoted;
   }
+
+  /// <summary>
+  /// The type JSDoc states for the result of a call no value comes out of - of a method whose every
+  /// implementation only throws (#1389), alone or as a branch of a <c>?:</c> - or <see langword="null"/>:
+  /// a local that takes it is of that type rather than a double, which a stated place of the code
+  /// after it, never run, would refuse (#1413).
+  /// </summary>
+  private JsType? StatedCall(Node node) => node switch {
+    ConditionalExpression choice => this.StatedCall(choice.Consequent) ?? this.StatedCall(choice.Alternate),
+    CallExpression { Callee: MemberExpression { Computed: false } invoked } when this.Of(invoked.Object).Class is { } owner && Binder.KeyOf(invoked) is { } key
+      && owner.Member(MemberKind.Method, key) is { } called && this.ModelOf(called) is { Result.Kind: JsKind.Unknown, StatedResult: { Ir: not null } stated }
+      => stated.Decided,
+    _ => null
+  };
 
   /// <summary>Why every parameter, local and result of a function has its type.</summary>
   public IEnumerable<TypeExplanation> Explain(FunctionModel model) {

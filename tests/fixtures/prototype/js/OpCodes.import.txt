@@ -61,14 +61,14 @@ Combine64	imported
 AnsiToBytes	imported
 BytesToAnsi	imported
 AsciiToBytes	imported
-BytesToChars	OpCodes.js(2293,16): error PLY1102: 'a call of String.fromCharCode.apply' is not supported yet
+BytesToChars	OpCodes.js(2297,52): error PLY1102: 'a part of a typed array whose array or positions are more than variables, constants and arithmetic of them' is not supported yet
 DoubleToBytes	imported
 BytesToDouble	imported
-Hex4ToBytes	OpCodes.js(2347,12): error PLY1102: 'a call of /^[0-9A-Fa-f]*$/.test' is not supported yet
+Hex4ToBytes	OpCodes.js(2354,52): error PLY1102: 'float64 where int32 is expected' is not supported yet
 HexCharCodeToValue	imported
-Hex8ToBytes	OpCodes.js(2384,12): error PLY1102: 'a call of /^[0-9A-Fa-f]*$/.test' is not supported yet
-Hex16ToWords	OpCodes.js(2409,12): error PLY1102: 'a call of /^[0-9A-Fa-f]*$/.test' is not supported yet
-Hex32ToDWords	OpCodes.js(2434,12): error PLY1102: 'a call of /^[0-9A-Fa-f]*$/.test' is not supported yet
+Hex8ToBytes	imported
+Hex16ToWords	imported
+Hex32ToDWords	imported
 XorArrays	imported
 CopyArray	imported
 ClearArray	OpCodes.js(2489,26): error PLY1101: parameter 'arr' of 'ClearArray' is used as an array and needs a JSDoc type
@@ -119,15 +119,15 @@ BitMask	imported
 LFSRStepGeneric	OpCodes.js(3170,36): error PLY1102: 'uint32 where int32 is expected' is not supported yet
 XorArrayWithByte	imported
 GFMulGeneric	imported
-CreateUint32ArrayFromHex	OpCodes.js(3236,14): error PLY1102: 'a call of /^[0-9A-Fa-f]+$/.test' is not supported yet
-CreateByteArrayFromHex	OpCodes.js(2384,12): error PLY1102: 'a call of /^[0-9A-Fa-f]*$/.test' is not supported yet
-CreateByteArrayFromHex	OpCodes.js(3259,14): error PLY1102: 'a call of /^[0-9A-Fa-f]+$/.test' is not supported yet
+CreateUint32ArrayFromHex	imported
+CreateByteArrayFromHex	imported
 CreateUint64ArrayFromHex	OpCodes.js(3278,22): error PLY1102: 'float64[] where uint32[] list is expected' is not supported yet
 Mul32	imported
 MulHi32	imported
 Add32	imported
 Sub32	imported
 CreateBitStream	OpCodes.js(3387,14): error PLY1102: 'new OpCodes._BitStream' is not supported yet
+CreateBitStream	OpCodes.js(3399,7): error PLY1102: 'this.buffer' is not supported yet
 _BitStream	OpCodes.js(3399,7): error PLY1102: 'this.buffer' is not supported yet
 GHashMul	imported
 GCMIncrement	imported

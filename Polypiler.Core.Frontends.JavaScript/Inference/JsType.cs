@@ -86,6 +86,28 @@ internal sealed record JsType {
   /// <summary>Whether the range comes from literals only, which fit any type that holds them.</summary>
   public bool IsLiteral { get; private init; }
 
+  /// <summary>
+  /// Whether a double is proven whole (#1413): every value but a NaN is an integer from <see cref="Low"/>
+  /// to <see cref="High"/> - what <c>parseInt</c> yields of a text of a bounded length and proven digits.
+  /// </summary>
+  public bool IsWhole { get; private init; }
+
+  /// <summary>
+  /// Whether an integer element JSDoc states as <c>T[]</c> takes a whole double of its range (#1413): the
+  /// store converts it, trapping on a NaN, which the Array JavaScript fills would keep.
+  /// </summary>
+  public bool AdmitsWhole { get; private init; }
+
+  /// <summary>A double whose every value but a NaN is an integer of a range (#1413).</summary>
+  /// <param name="low">The smallest integer.</param>
+  /// <param name="high">The largest integer.</param>
+  /// <returns>The type.</returns>
+  public static JsType Whole(Int128 low, Int128 high) => new(JsKind.Number) { Float = 64, Low = low, High = high, IsWhole = true };
+
+  /// <summary>The stated array as one whose integer elements take whole doubles of their range (#1413); any other type as it is.</summary>
+  public JsType AdmittingWhole()
+    => this.Element is { IsInteger: true } element ? this with { Element = element with { AdmitsWhole = true } } : this;
+
   /// <summary>Whether a <c>BigInt</c> has no bound, so that no type of the IR holds it.</summary>
   public bool IsUnbounded { get; private init; }
 
@@ -415,8 +437,20 @@ internal sealed record JsType {
           ? new(JsKind.Number) { Low = Int128.Min(first.Low, second.Low), High = Int128.Max(first.High, second.High), IsLiteral = first.IsLiteral && second.IsLiteral, Enum = named }
           : Join(first.Plain, second.Plain);
       case JsKind.Number:
-        if (first.Float != 0 || second.Float != 0)
+        // An integer element JSDoc states holds a whole double or an integer of its range as it is (#1413).
+        if (first.AdmitsWhole || second.AdmitsWhole) {
+          var (admitting, other) = first.AdmitsWhole ? (first, second) : (second, first);
+          return (other.IsWhole || other.IsInteger) && other.Enum is null && admitting.Within(admitting.Ir!) && other.Within(admitting.Ir!)
+            ? admitting : Join(admitting with { AdmitsWhole = false }, other with { AdmitsWhole = false });
+        }
+
+        if (first.Float != 0 || second.Float != 0) {
+          // Whole doubles and integers join to the whole doubles of both ranges.
+          if ((first.IsWhole || second.IsWhole) && (first.IsWhole || first.IsInteger) && (second.IsWhole || second.IsInteger))
+            return Whole(Int128.Min(first.Low, second.Low), Int128.Max(first.High, second.High));
+
           return first.Float == 32 && second.Float == 32 ? F32 : F64;
+        }
 
         return Hull(first, second, _words) ?? F64;
       case JsKind.BigInt:
@@ -424,9 +458,11 @@ internal sealed record JsType {
       case JsKind.Array:
         // An array JSDoc states and nothing has decided yet is whatever array the program gives it (#1374);
         // one of elements no value has reached yet - new Array(n), [] - takes the stated elements (#1406).
+        // One of whole doubles the stated integer elements hold takes them as well (#1413).
         if (first.IsStated != second.IsStated && !first.IsView && !second.IsView) {
           var (stated, given) = first.IsStated ? (first, second) : (second, first);
-          return given.Element!.Kind != JsKind.Unknown ? given
+          var fits = given.IsPlain && given.Element!.IsWhole && stated.Element!.AdmitsWhole && Join(stated.Element, given.Element) == stated.Element;
+          return given.Element!.Kind != JsKind.Unknown && !fits ? given
             : (given.IsGrowable ? ListOf(stated.Element!) : ArrayOf(stated.Element!, true)) with { MayBeNull = given.MayBeNull, MayBeUndefined = given.MayBeUndefined };
         }
 
