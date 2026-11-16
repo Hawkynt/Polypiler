@@ -61,10 +61,11 @@ internal sealed partial class Lowering {
   /// fraction, at a NaN and at -1 alike.
   /// </summary>
   private (IrExpr Inside, IrArrayLoad Element) Guard(IrExpr array, IrExpr index) {
+    // A total index is computed again rather than bound to a temporary: the access stays one expression without an effect.
     var (first, again) = Fixed(array) ? (array, array) : this.Bound(array);
     IrExpr Length(IrExpr of) => new IrConvert(IrType.U32, of.Type.IsView ? new IrIntrinsic(IrIntrinsicOp.ViewLength, IrType.I32, [of]) : new IrArrayLength(of));
     if (index is IrConvert { Contract: IrConversion.Trap, Operand: { Type.Kind: IrTypeKind.F64 } number }) {
-      var (tested, held) = this.Bound(number);
+      var (tested, held) = Total(number) ? (number, number) : this.Bound(number);
       IrExpr Whole(IrExpr of) => new IrConvert(IrType.I32, of, IrConversion.Saturate);
       var inside = new IrBinary(IrBinaryOp.LogicalAnd,
         new IrBinary(IrBinaryOp.Greater, Length(first), new IrConvert(IrType.U32, Whole(tested))),
@@ -72,10 +73,23 @@ internal sealed partial class Lowering {
       return (inside, new IrArrayLoad(again, Whole(held)));
     }
 
-    var (at, atAgain) = this.Bound(index);
+    var (at, atAgain) = Total(index) ? (index, index) : this.Bound(index);
     // The length is compared first: the array is evaluated before the index.
     return (new IrBinary(IrBinaryOp.Greater, Length(first), at.Type == IrType.U32 ? at : new IrConvert(IrType.U32, at)), new IrArrayLoad(again, atAgain));
   }
+
+  /// <summary>
+  /// Whether an expression has no effect and a value for every operand: variables, constants, wrapping
+  /// conversions of integers, the integer operators that never trap, and <c>+ - *</c> of doubles.
+  /// </summary>
+  private static bool Total(IrExpr value) => value switch {
+    IrLocalRef or IrConst => true,
+    IrConvert { Contract: IrConversion.Wrap, Operand: var operand } => operand.Type.IsInteger && Total(operand),
+    IrBinary { Op: IrBinaryOp.Add or IrBinaryOp.Subtract or IrBinaryOp.Multiply } binary when binary.Type == IrType.F64 => Total(binary.Left) && Total(binary.Right),
+    IrBinary { Op: IrBinaryOp.And or IrBinaryOp.Or or IrBinaryOp.Xor or IrBinaryOp.ShiftLeft or IrBinaryOp.ShiftRight or IrBinaryOp.ShiftRightLogical
+      or IrBinaryOp.Add or IrBinaryOp.Subtract or IrBinaryOp.Multiply } binary => binary.Type.IsInteger && Total(binary.Left) && Total(binary.Right),
+    _ => false
+  };
 
   /// <summary>Whether an array expression is the same array wherever it is read: a variable, a constant table or an array of the module.</summary>
   private static bool Fixed(IrExpr array) => array is IrLocalRef or IrConstRef or IrGlobalRef { Type.IsArray: true };
@@ -135,8 +149,10 @@ internal sealed partial class Lowering {
   private void TypedStore(IrExpr array, IrExpr index, IrExpr value, List<IrStmt> into) {
     array = Fixed(array) ? array : this.Once(array, into);
     index = this.Once(index is IrConvert { Contract: IrConversion.Trap, Operand.Type.Kind: IrTypeKind.F64 } number ? number.Operand : index, into);
-    value = this.Once(value, into);
-    // Each is a variable now, which the guard reads again without a temporary of its own.
+    // A value that can neither trap nor have an effect is computed where it is stored: whether it is
+    // computed before the test or after it is the same, and the store reads as JavaScript wrote it.
+    value = Total(value) ? value : this.Once(value, into);
+    // The array and the index are variables now, which the guard reads again without a temporary of their own.
     var (inside, store) = this.Guard(array, index.Type == IrType.F64 ? new IrConvert(IrType.I32, index, IrConversion.Trap) : index);
     into.Add(new IrIf(inside, new IrBlock([new IrStore(store.Array, store.Index, value)]), null));
   }

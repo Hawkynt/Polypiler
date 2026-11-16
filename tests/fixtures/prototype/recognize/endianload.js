@@ -1,4 +1,4 @@
-// O0140: byte loads joined by shifts as JavaScript writes them, and a near miss. Written for this
+// O0140: byte loads joined by shifts as JavaScript writes them, and a near miss (gap). Written for this
 // repository.
 
 // expect: O0140
@@ -19,7 +19,10 @@ export function big32(b, i) {
   return (b[i] << 24) | (b[i + 1] << 16) | (b[i + 2] << 8) | b[i + 3];
 }
 
-// expect: -
+// The bytes read from the last to the first: every read is 0 outside the array, as JavaScript's
+// undefined under the coercion, so no read traps before another and one load behind a test of the
+// whole range is the same value (#1367).
+// expect: O0140
 /**
  * @param {Uint8Array} b
  * @param {int32} i

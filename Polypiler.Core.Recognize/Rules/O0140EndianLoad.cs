@@ -24,6 +24,14 @@ namespace Polypiler.Core.Recognize.Rules;
 /// are accepted only when the load at the base itself is evaluated first and no offset is negative,
 /// so that an index that large has already failed as out of range.
 /// </para>
+/// <para>
+/// A byte read JavaScript's frontend guards (<see cref="Guards"/>) is 0 outside the array, as
+/// JavaScript's <c>undefined</c> is under the coercion (#1367), so the bytes inside still count where
+/// the others do not: one load is the same only where every byte lies inside. Where a read is guarded
+/// the combined load stands behind one test of the whole range, computed in 64 bits -
+/// <c>i + lo &gt;= 0 &amp;&amp; i + lo + n &lt;= b.Length ? LoadLittle(b, i + lo) : the byte reads</c> - and the
+/// byte reads kept for the rest test their index first, a form this rule does not take again.
+/// </para>
 /// </summary>
 public sealed class O0140EndianLoad : ExpressionRule {
 
@@ -43,8 +51,11 @@ public sealed class O0140EndianLoad : ExpressionRule {
       return null;
 
     var loads = new List<(IrArrayLoad Load, Offset Index, int Slot)>();
+    var guarded = false;
     foreach (var (atom, index) in atoms) {
-      if (atom is not IrArrayLoad { Array: IrLocalRef, Array.Type.Element.Kind: IrTypeKind.U8 } load || Slot(image, index) is not { } slot)
+      var read = atom as IrArrayLoad ?? Guards.Read(atom);
+      guarded |= read is not null && read != atom;
+      if (read is not { Array: IrLocalRef, Array.Type.Element.Kind: IrTypeKind.U8 } load || Slot(image, index) is not { } slot)
         return null;
 
       loads.Add((load, Offset.Of(load.Index), slot));
@@ -61,8 +72,9 @@ public sealed class O0140EndianLoad : ExpressionRule {
     if (!little && !big || loads.Select(entry => entry.Index.Amount).Distinct().Count() != count)
       return null;
 
-    // An index that can trap on overflow is safe only behind the load at the base, which fails first.
-    if (loads.Any(entry => entry.Index.Traps) && (lowest != 0 || first.Index.Amount != 0 || first.Index.Traps))
+    // An index that can trap on overflow is safe only behind the load at the base, which fails first;
+    // behind the test of the range no index traps.
+    if (!guarded && loads.Any(entry => entry.Index.Traps) && (lowest != 0 || first.Index.Amount != 0 || first.Index.Traps))
       return null;
 
     var type = count switch {
@@ -70,8 +82,18 @@ public sealed class O0140EndianLoad : ExpressionRule {
       4 => expression.Type.IsSigned ? IrType.I32 : IrType.U32,
       _ => expression.Type.IsSigned ? IrType.I64 : IrType.U64
     };
-    var loaded = Images.Call(little ? IrIntrinsicOp.LoadLittle : IrIntrinsicOp.LoadBig, type, first.Load.Array, Offset.At(first.Index.Base, lowest));
-    return Images.Fit(loaded, expression.Type);
+    var loaded = Images.Fit(Images.Call(little ? IrIntrinsicOp.LoadLittle : IrIntrinsicOp.LoadBig, type, first.Load.Array, Offset.At(first.Index.Base, lowest)), expression.Type);
+    if (!guarded)
+      return loaded;
+
+    // Every byte inside: base + lowest >= 0 and base + lowest + count <= length, in 64 bits, where neither wraps.
+    var start = new IrBinary(IrBinaryOp.Add, new IrConvert(IrType.I64, first.Index.Base), Images.Constant(IrType.I64, lowest));
+    var array = first.Load.Array;
+    IrExpr length = array.Type.IsView ? Images.Call(IrIntrinsicOp.ViewLength, IrType.I32, array) : new IrArrayLength(array);
+    var inside = new IrBinary(IrBinaryOp.LogicalAnd,
+      new IrBinary(IrBinaryOp.GreaterOrEqual, start, Images.Constant(IrType.I64, 0)),
+      new IrBinary(IrBinaryOp.LessOrEqual, new IrBinary(IrBinaryOp.Add, start, Images.Constant(IrType.I64, count)), new IrConvert(IrType.I64, length)));
+    return new IrConditional(inside, loaded, IrShape.Map(expression, Guards.Kept));
   }
 
   /// <summary>The byte slot of an atom when its eight bits stand there in order, or <see langword="null"/>.</summary>

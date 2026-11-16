@@ -19,6 +19,13 @@ namespace Polypiler.Core.Recognize.Rules;
 /// same everywhere it is reached. Where the table does not say so, both divisions stay as they are:
 /// their operands are variables already, read once each.
 /// </para>
+/// <para>
+/// JavaScript's frontend writes a quotient and a remainder under a coercion with their divisor tested
+/// (#1367): <c>b == 0 ? 0 : b == -1 ? 0 - a : a / b</c> and <c>b == 0 ? 0 : b == -1 ? 0 : a % b</c>,
+/// without the -1 test where <c>b</c> cannot be -1. Such a quotient is <c>a / b</c> for every <c>b</c>
+/// but 0, with wrapping at -1, so <c>a - q * b</c> is the remainder wherever <c>b</c> is not 0: the
+/// remainder is taken only inside the branch of a test of the same divisor against 0.
+/// </para>
 /// </summary>
 public sealed class O0127QuotientRemainder : IrRule {
 
@@ -31,11 +38,16 @@ public sealed class O0127QuotientRemainder : IrRule {
     if (!context.Target.RemainderFromQuotient)
       return false;
 
-    var (quotient, division) = statements[index] switch {
-      IrDeclare { Initializer: IrBinary { Op: IrBinaryOp.Divide } value } declare => (declare.Local, value),
-      IrAssign { Value: IrBinary { Op: IrBinaryOp.Divide } value } assign => (assign.Local, value),
+    var (quotient, computed) = statements[index] switch {
+      IrDeclare { Initializer: { } value } declare => (declare.Local, value),
+      IrAssign assign => (assign.Local, assign.Value),
       _ => (null, null)
     };
+    var division = computed as IrBinary ?? Tested(computed);
+    var tested = division is not null && !ReferenceEquals(division, computed);
+    if (division is { Op: not IrBinaryOp.Divide })
+      return false;
+
     if (quotient is null || division is null || !division.Type.IsWideInteger || quotient.Type != division.Type
       || !IrShape.IsTrapFree(division.Left) || !IrShape.IsTrapFree(division.Right))
       return false;
@@ -44,7 +56,9 @@ public sealed class O0127QuotientRemainder : IrRule {
     if (IrShape.Reads(division.Left, quotient) || IrShape.Reads(division.Right, quotient))
       return false;
 
-    bool Matches(IrExpr node) => node is IrBinary { Op: IrBinaryOp.Remainder } remainder && IrShape.Same(remainder.Left, division.Left) && IrShape.Same(remainder.Right, division.Right);
+    bool Remainder(IrExpr node) => node is IrBinary { Op: IrBinaryOp.Remainder } remainder && IrShape.Same(remainder.Left, division.Left) && IrShape.Same(remainder.Right, division.Right);
+    // A tested quotient is the quotient only where the divisor is not 0: the remainder is taken in the branch where it is not.
+    bool Matches(IrExpr node) => tested ? NonZero(node, division.Right) is { } branch && IrShape.Nodes(branch).Any(Remainder) : Remainder(node);
     for (var position = index + 1; position < statements.Count; ++position) {
       var statement = statements[position];
       var own = IrStatements.Expressions(statement);
@@ -54,7 +68,10 @@ public sealed class O0127QuotientRemainder : IrRule {
           return false;
 
         var from = new IrBinary(IrBinaryOp.Subtract, division.Left, new IrBinary(IrBinaryOp.Multiply, new IrLocalRef(quotient), division.Right));
-        var replaced = Replace(statement, node => Matches(node) ? from : null);
+        IrExpr? Rewritten(IrExpr node) => !Matches(node) ? null
+          : tested ? ((IrConditional)node) with { WhenFalse = IrShape.Map(((IrConditional)node).WhenFalse, inner => Remainder(inner) ? from : null) }
+          : from;
+        var replaced = Replace(statement, Rewritten);
         rewrite = new(position - index + 1, [.. statements.Skip(index).Take(position - index), replaced]);
         return true;
       }
@@ -65,6 +82,24 @@ public sealed class O0127QuotientRemainder : IrRule {
 
     return false;
   }
+
+  /// <summary>
+  /// The division of a quotient whose divisor is tested - <c>b == 0 ? 0 : (b == -1 ? 0 - a : a / b)</c>,
+  /// or without the -1 test - or <see langword="null"/>.
+  /// </summary>
+  private static IrBinary? Tested(IrExpr? value) {
+    if (value is not IrConditional { WhenTrue: IrConst { Value: 0 } } choice || NonZero(choice, null) is not { } rest)
+      return null;
+
+    var division = rest is IrConditional { Condition: IrBinary { Op: IrBinaryOp.Equal, Right: IrConst { Value: -1 } } minusOne, WhenTrue: IrBinary { Op: IrBinaryOp.Subtract, Left: IrConst { Value: 0 } } negated, WhenFalse: IrBinary inner }
+      && IrShape.Same(minusOne.Left, inner.Right) && IrShape.Same(negated.Right, inner.Left) ? inner : rest as IrBinary;
+    return division is { Op: IrBinaryOp.Divide } && NonZero(choice, division.Right) is not null ? division : null;
+  }
+
+  /// <summary>The branch of <c>d == 0 ? 0 : branch</c> for the divisor (any divisor where it is <see langword="null"/>), or <see langword="null"/>.</summary>
+  private static IrExpr? NonZero(IrExpr node, IrExpr? divisor)
+    => node is IrConditional { Condition: IrBinary { Op: IrBinaryOp.Equal, Left: var tested, Right: IrConst { Value: 0 } }, WhenTrue: IrConst { Value: 0 }, WhenFalse: var branch }
+      && (divisor is null || IrShape.Same(tested, divisor)) ? branch : null;
 
   private static IrStmt Replace(IrStmt statement, System.Func<IrExpr, IrExpr?> replace) => statement switch {
     IrDeclare declare => declare with { Initializer = IrShape.Map(declare.Initializer!, replace) },
