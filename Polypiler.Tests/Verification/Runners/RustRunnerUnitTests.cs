@@ -208,6 +208,25 @@ public sealed class RustRunnerUnitTests {
   }
 
   [Test]
+  public async Task Execute_ReadsTheErrorOfAFallibleExport() {
+    var runner = new RustRunner(new Replay(Result(RunOutcome.Completed, 0, Finished + "?DivideByZero\n!IntegerOverflow\n05000000\n")), RustBuildOptions.Dev);
+    var execution = await runner.ExecuteAsync(_package, "fixture_package", [_add with { Fallible = true }], [(0, new byte[8]), (0, new byte[8]), (0, new byte[8])]);
+    Assert.That(execution.Outcomes!.Select(outcome => (outcome.Error, outcome.Panic, outcome.Image is null)),
+      Is.EqualTo(new (string?, string?, bool)[] { ("DivideByZero", null, true), (null, "IntegerOverflow", true), (null, null, false) }));
+  }
+
+  [Test]
+  public void Driver_UnwrapsTheResultOfAFallibleExport() {
+    var scalar = RustDriverGenerator.Generate("k", [_add with { Fallible = true }]);
+    Assert.That(scalar, Does.Contain("let result = match k::fixture::add(a0, a1) {\n                Ok(value) => value,\n                Err(error) => return format!(\"?{}\", error),\n            };"));
+    var converted = RustDriverGenerator.Generate("k", [_add with { Fallible = true, Converted = true }]);
+    Assert.That(converted, Does.Contain("let result: u32 = match k::fixture::add(a0.into(), a1.into()) {\n                Ok(value) => value.into(),"));
+    var sequence = RustDriverGenerator.Generate("k", [new RustExport("m::f", new CallSignature([new CallParameter("x", ImageType.Seq(ImageType.U32), ParameterMode.InOut)], null)) { Fallible = true }]);
+    Assert.That(sequence, Does.Contain("let result = match k::m::f(&mut a0) {\n                Ok(value) => value,\n                Err(error) => return format!(\"?{}\", error),\n            };"));
+    Assert.That(RustDriverGenerator.Generate("k", [_add]), Does.Contain("let result = k::fixture::add(a0, a1);"));
+  }
+
+  [Test]
   public async Task Execute_ReportsAnAnswerThatIsNoImage() {
     var runner = new RustRunner(new Replay(Result(RunOutcome.Completed, 0, Finished + "hello\n")), RustBuildOptions.Dev);
     var execution = await runner.ExecuteAsync(_package, "fixture_package", [_add], [(0, new byte[8])]);
