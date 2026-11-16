@@ -529,15 +529,23 @@ internal sealed partial class Lowering {
 
   /// <summary>An array literal as an array of the given element type.</summary>
   private IrExpr ArrayLiteral(ArrayExpression literal, IrType element) {
-    // [...list] where an array goes: the elements of the list, copied into a new array (#1329).
-    if (literal.Elements is [SpreadElement spread] && this.Expression(spread.Argument) is { Type: { IsList: true } list } copied && list.Element == element)
-      return ListOp(IrCollectionOp.ListCopyToArray, list, copied);
+    if (literal.Elements.Any(item => item is null))
+      throw this.Unsupported(literal, "an array literal with a hole");
+
+    // [x, ...a]: the parts joined, each spread copied (#1405).
+    if (literal.Elements.Any(item => item is SpreadElement))
+      return this.Spread(literal, element);
 
     return new IrIntrinsic(IrIntrinsicOp.ArrayOf, IrType.Array(element), this.Elements(literal).Select(item => this.Value(item, element)).ToList());
   }
 
+  /// <summary>The elements of a literal that has neither a hole nor a spread element, which a typed array and a <c>Map</c> or a <c>Set</c> are made of.</summary>
   private List<Node> Elements(ArrayExpression literal)
-    => literal.Elements.Select(item => item is null or SpreadElement ? throw this.Unsupported(literal, "an array literal with a hole or a spread element") : (Node)item).ToList();
+    => literal.Elements.Select(item => item switch {
+      null => throw this.Unsupported(literal, "an array literal with a hole"),
+      SpreadElement spread => throw this.Unsupported(spread, "a spread element in the elements of a typed array, a Map or a Set"),
+      _ => (Node)item
+    }).ToList();
 
   /// <summary>
   /// A condition. A truth value is one; a number counts as true unless it is a zero or a NaN, a

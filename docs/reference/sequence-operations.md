@@ -142,6 +142,16 @@ the array - `new Array(n).fill(0)` is an array of the type of the place it goes 
 the module per element type. A list, a typed array or a single value given to `concat`, `subarray` and
 `set` of an Array and `fill` of a part as a value are refused by name.
 
+An array literal with spread elements (#1405) is a new Array, distinct from every source:
+`[...a]` copies the elements of an Array, a list, a typed array or a view, and `[x, ...a, ...b]` joins
+its parts in order through the `concat` function of the module. The copy of a typed array is an Array,
+whose element type is the join of everything the literal holds and the program stores into it, so that
+a store into the copy no longer wraps (`[...new Uint8Array([200])]` then `c[0] + 100` holds 300); a
+source of other elements is widened by a function of the module per pair of element types. A hole
+(`[1, , 2]`) is refused as 'an array literal with a hole', a spread of a string, a `Map`, a `Set`, a
+generator or a number as 'a spread of X', a spread into the elements of a typed array, a `Map` or a
+`Set`, and into a literal of a list of objects, arrays or collections, by name.
+
 Refused with `PLY1102`: `sort()` without a comparator (it orders by the text of the elements), a
 comparator with effects - one that writes anything but its own locals, or calls a function, whose call
 order ECMA-262 leaves to the engine - and one that is no function expression, `findLast`,
