@@ -106,7 +106,7 @@ internal sealed record JsType {
 
   /// <summary>The stated array as one whose integer elements take whole doubles of their range (#1413); any other type as it is.</summary>
   public JsType AdmittingWhole()
-    => this.Element is { IsInteger: true, IsAbsent: false, Enum: null } element ? this with { Element = element with { AdmitsWhole = true } } : this;
+    => this.Element is { IsInteger: true } element ? this with { Element = element with { AdmitsWhole = true } } : this;
 
   /// <summary>Whether a <c>BigInt</c> has no bound, so that no type of the IR holds it.</summary>
   public bool IsUnbounded { get; private init; }

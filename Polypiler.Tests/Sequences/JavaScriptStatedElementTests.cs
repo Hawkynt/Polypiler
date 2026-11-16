@@ -373,4 +373,242 @@ public sealed class JavaScriptStatedElementTests {
     => Assert.That(JavaScriptFrontend.Import("m.mjs", Guarded.Replace("GUARD", "if (!/^[0-9a-f]*$/.test(s)) throw new Error('x');").Replace("VALUE", "parseInt(s.substr(i, 2), 16.5)") + Consumer)
       .Diagnostics.Select(diagnostic => diagnostic.Message), Is.EquivalentTo(new[] { "'parseInt with a radix that is no integer literal' is not supported yet", Refused }));
 
+  private const string Wholes = """
+    /**
+     * @param {number} value
+     * @returns {int} 0..255
+     */
+    function toByte(value) {
+      const reduced = Math.trunc(value) % 256;
+      return reduced < 0 ? reduced + 256 : reduced;
+    }
+    class Absorber {
+      /** @param {int} size */
+      constructor(size) {
+        /** @type {byte[]} */
+        this.held = new Array(size).fill(0);
+        /** @type {uint8[]} */
+        this.literal = [1, 2];
+      }
+      /** @param {byte[]} data */
+      absorb(data) {
+        for (let i = 0; i < data.length; i++)
+          this.held[i] = toByte(data[i]);
+      }
+    }
+    /**
+     * @param {uint8[]} b
+     * @returns {number}
+     */
+    function total(b) {
+      let t = 0;
+      for (let i = 0; i < b.length; i++) t = t * 256 + b[i];
+      return t;
+    }
+    /**
+     * @param {number} v
+     * @returns {uint8[]}
+     */
+    function variants(v) {
+      const r = Math.floor(v) % 256;
+      const c = Math.ceil(v) % -256;
+      const n = r < 0 ? r : -1;
+      const out = [];
+      out.push(r < 0 ? r + 256 : r, r <= -1 ? r - -256 : r, r >= 0 ? r : 256 + r, r > -1 ? r : r + 256);
+      out.push(c < 0 ? c + 256 : c, (n % 7) + 6, (r < 0 ? r + 256 : r) % 16, Math.round(v) % 100 < 0 ? 0 : 1);
+      return out;
+    }
+    export function absorbed() { const a = new Absorber(4); a.absorb([1, 255, 0, 7]); return total(a.held) * 1000 + total(a.literal); }
+    /** @param {number} v */
+    function digest(v) {
+      const b = variants(v);
+      let t = 0;
+      for (let i = 0; i < b.length; i++) t = (t * 1000 + b[i]) % 1000000007;
+      return t * 100 + b.length;
+    }
+    export function wholes() { return digest(-1.5); }
+    export function positive() { return digest(300.25); }
+    export function byte() { return toByte(-1) * 1000 + toByte(300.7); }
+    """;
+
+  /// <summary>
+  /// Equivalence of the whole doubles: <c>Math.trunc(v) % 256</c> brought to 0..255 by a conditional of each
+  /// comparison, <c>floor</c>, <c>ceil</c> and <c>round</c>, a remainder by a negative divisor, of a dividend
+  /// never positive and of one never negative; a new Array a stated field is given - <c>new Array(n).fill(0)</c>
+  /// and a literal - holds the stated elements. Values: node's.
+  /// </summary>
+  [TestCase("absorbed", 33488903258.0)]
+  [TestCase("byte", 255044.0)]
+  [TestCase("wholes", 23669267508.0)]
+  [TestCase("positive", 69886184908.0)]
+  public void WholeDoubles_HoldWhatNodeHolds(string function, double expected) {
+    var module = Import(Wholes);
+    Assert.That(Convert.ToDouble(IrInterpreter.Call(module, function, [])), Is.EqualTo(expected));
+    var text = LegalizedCSharp.Emit(module, CSharpProfile.Default)[0].Content;
+    Assert.That(text, Does.Contain("public byte[] held;").And.Contain("public byte[] literal;"));
+    Assert.That(Convert.ToDouble(GeneratedCSharp.Compile(text, false).Method(function).Invoke(null, [])), Is.EqualTo(expected), text);
+  }
+
+  private const string Narrowing = """
+    /**
+     * @param {number} v
+     * @returns {uint8[]}
+     */
+    function f(v) {
+      const r = Math.trunc(v) % 256;
+      let s = r;
+      s = s + 0;
+      const out = [];
+      out.push(VALUE);
+      return out;
+    }
+    /**
+     * @param {uint8[]} b
+     * @returns {number}
+     */
+    function count(b) { return b.length; }
+    /** @param {number} v */
+    export function g(v) { return count(f(v)); }
+    """;
+
+  /// <summary>
+  /// Exception: what no proof bounds to a byte stays a double, which the stated place refuses: the remainder
+  /// itself, a variable that is assigned, a bound that is no literal or of a fraction, a test that leaves a
+  /// branch nothing, a remainder by 0 or by a computed divisor, a sum of no bound, a product, a test of no
+  /// ordering or with the variable on the right.
+  /// </summary>
+  [TestCase("r")]
+  [TestCase("s < 0 ? s + 256 : s")]
+  [TestCase("r < v ? r + 256 : r")]
+  [TestCase("r < 0.5 ? r + 256 : r")]
+  [TestCase("r < -300 ? r + 256 : r")]
+  [TestCase("r >= -300 ? r : r + 256")]
+  [TestCase("Math.trunc(v) % 0")]
+  [TestCase("Math.trunc(v) % v")]
+  [TestCase("Math.trunc(v) + 1")]
+  [TestCase("(r < 0 ? r + 256 : r) * 1")]
+  [TestCase("r === 0 ? r + 256 : r")]
+  [TestCase("0 > r ? r + 256 : r")]
+  public void UnboundedWhole_IsRefused(string value)
+    => Assert.That(Refusal(Narrowing.Replace("VALUE", value)).Message, Is.EqualTo(Refused));
+
+  /// <summary>Exception: a rounding of no number and one of two arguments make no whole double; the lowering refuses them by name.</summary>
+  [TestCase("Math.trunc('7') % 256", "'string as a number' is not supported yet")]
+  [TestCase("Math.trunc(v, 1) % 256", "'Math.trunc with 2 arguments' is not supported yet")]
+  public void RoundingOfNoNumber_IsRefused(string value, string refusal)
+    => Assert.That(JavaScriptFrontend.Import("m.mjs", Narrowing.Replace("VALUE", value)).Diagnostics.Select(diagnostic => diagnostic.Message),
+      Is.EquivalentTo(new[] { refusal, Refused }));
+
+  /// <summary>Boundary: a new Array of elements past the stated ones keeps them, which the stated place refuses.</summary>
+  [Test]
+  public void FreshArrayPastTheElements_IsRefused() {
+    var refusal = Refusal("""
+      class K {
+        constructor() {
+          /** @type {uint8[]} */
+          this.k = [1, 256];
+        }
+      }
+      /**
+       * @param {uint8[]} b
+       * @returns {number}
+       */
+      function count(b) { return b.length; }
+      export function f() { return count(new K().k); }
+      """);
+    Assert.That(refusal.Message, Is.EqualTo("'int32[] where uint8[] is expected' is not supported yet"));
+  }
+
+  private const string Places = """
+    class Base {
+      constructor() { /** @type {boolean} */ this.inverse = false; }
+      /**
+       * @param {uint8[]} block
+       * @returns {byte[]}
+       */
+      Encrypt(block) { throw new Error('not implemented'); }
+      /**
+       * @param {uint8[]} block
+       * @returns {byte[]}
+       */
+      Decrypt(block) { throw new Error('not implemented'); }
+      /** @param {uint8[]} block */
+      Plain(block) { throw new Error('not implemented'); }
+
+      /** @returns {byte[]} */
+      Run() {
+        /** @type {byte[]} */
+        const output = [];
+        const processed = this.inverse ? this.Decrypt([1, 2]) : this.Encrypt([1, 2]);
+        for (let i = 0; i < processed.length; i++) output.push(processed[i]);
+        const plain = this.Plain([3]);
+        output.push(plain & 0xFF);
+        return output;
+      }
+    }
+    class Derived extends Base {
+      /** @returns {byte[]} */
+      Run() { return [9]; }
+    }
+    /**
+     * @param {string} s
+     * @returns {uint8[]}
+     */
+    function pair(s) {
+      if (!/^[0-9a-f]*$/.test(s)) throw new Error('x');
+      const out = [parseInt(s.substr(0, 2), 16), parseInt(s.substr(2, 2), 16)];
+      return out;
+    }
+    /**
+     * @param {string} s
+     * @returns {float64[]}
+     */
+    function doubles(s) {
+      if (!/^[0-9a-f]*$/.test(s)) throw new Error('x');
+      const out = [];
+      out.push(parseInt(s.substr(0, 2), 16));
+      return out;
+    }
+    export function run() { return new Derived().Run()[0]; }
+    export function pairs() { const p = pair('0aff'); return p[0] * 1000 + p[1]; }
+    export function floats() { return doubles('ff')[0]; }
+    """;
+
+  /// <summary>
+  /// Places: a local taking either of two methods that only throw is of the result they state, one that
+  /// states none a double; an Array that never grows is an array of the stated bytes; a stated
+  /// <c>float64[]</c> keeps the doubles. Values: node's.
+  /// </summary>
+  [TestCase("run", 9.0)]
+  [TestCase("pairs", 10255.0)]
+  [TestCase("floats", 255.0)]
+  public void OtherPlaces_HoldWhatNodeHolds(string function, double expected) {
+    var module = Import(Places);
+    Assert.That(Convert.ToDouble(IrInterpreter.Call(module, function, [])), Is.EqualTo(expected));
+    var text = LegalizedCSharp.Emit(module, CSharpProfile.Default)[0].Content;
+    Assert.That(text, Does.Contain("static byte[] pair(string s)").And.Contain("List<double> doubles(string s)"));
+    Assert.That(Convert.ToDouble(GeneratedCSharp.Compile(text, false).Method(function).Invoke(null, [])), Is.EqualTo(expected), text);
+  }
+
+  /// <summary>Exception: a text no guard of the function proves - of a field, of a module constant, read by an arrow of an expression body - stays a double.</summary>
+  [TestCase("class H { constructor() { /** @type {string} */ this.s = '00'; } }", "parseInt(new H().s.substr(0, 2), 16)")]
+  [TestCase("const T = '00';", "parseInt(T.substr(0, 2), 16)")]
+  [TestCase("", "(t => parseInt(s.substr(t, 2), 16))(0)")]
+  public void TextOfNoGuard_IsRefused(string declarations, string value) {
+    var refusal = Refusal($$"""
+      {{declarations}}
+      /**
+       * @param {string} s
+       * @returns {uint8[]}
+       */
+      function f(s) {
+        if (!/^[0-9a-f]*$/.test(s)) throw new Error('x');
+        const b = [];
+        b.push({{value}});
+        return b;
+      }
+      """ + Consumer);
+    Assert.That(refusal.Message, Is.EqualTo(Refused));
+  }
+
 }

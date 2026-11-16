@@ -167,7 +167,13 @@ or an integer from 0 to `r^n - 1`. The text is a string literal, or `s.substr(i,
 - a parameter nothing assigns to, or a constant - that a statement of the function's body before the
 read proves of digits only: `if (!/^[class]*$/.test(s)) throw …` (or `return`), the class a list of
 characters and ranges without an escape or a flag. `OpCodes.Hex8ToBytes` is such a function: its
-`@returns {uint8[]}` list of `parseInt(hexString.substr(i, 2), 16)` is a list of bytes. The places are
+`@returns {uint8[]}` list of `parseInt(hexString.substr(i, 2), 16)` is a list of bytes. `Math.trunc`,
+`floor`, `ceil` and `round` of a number are whole doubles of no bound, which `x % d` by an integer
+literal bounds below `|d|` with the sign of `x`, `+` and `-` of an integer shift, and the branches of
+`r < c ? … : …` (also `<=`, `>`, `>=`) of a constant `r` read as the part the test leaves them: the
+framework's `_byte(v)`, `const reduced = Math.trunc(v) % 256; return reduced < 0 ? reduced + 256 :
+reduced;`, is a NaN or an integer from 0 to 255. A new Array a field of stated integers is given -
+`new Array(n).fill(0)`, a literal - holds the stated elements where its own fit them. The places are
 a result, a parameter, a field and the result of an override of a method that states it; a local that
 takes the value of a call of a method whose every implementation only throws is of the type the method
 states. A store of such a value converts it with a check: where the text is empty, `parseInt` is a NaN,

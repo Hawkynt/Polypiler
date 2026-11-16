@@ -440,7 +440,7 @@ internal sealed partial class TypeInference(string path, string source, List<Can
         if (flow.Kind == FlowKind.Argument && this.ModelOf(flow.Callee!).Parameters.ElementAtOrDefault(flow.Index) is { Type.Kind: JsKind.Unknown } parameter)
           promoted |= this.Pass(parameter, JsType.F64, flow.Node);
         else if (flow.Kind is FlowKind.Assign or FlowKind.Compound or FlowKind.Step && flow.Target!.Type.Kind == JsKind.Unknown)
-          promoted |= this.Reach(flow.Target, (flow.Kind == FlowKind.Assign ? this.StatedCall(flow.Node) : null) ?? JsType.F64, flow.Node);
+          promoted |= this.Reach(flow.Target, this.StatedCall(flow.Node) ?? JsType.F64, flow.Node);
         else if (flow.Kind == FlowKind.Return && model.Result.Kind == JsKind.Unknown && Returned(flow) is { } argument) {
           model.Result = JsType.F64;
           model.ResultEvidence = argument;

@@ -124,7 +124,7 @@ internal sealed partial class TypeInference {
         return JsType.Boolean;
       case Identifier identifier:
         return this._scope!.Bindings.GetValueOrDefault(identifier) switch {
-          Variable variable => variable.Type,
+          Variable variable => this._narrowed.GetValueOrDefault(variable) ?? variable.Type,
           ModuleConstant constant => constant.Type,
           _ => identifier.Name == "undefined" ? JsType.UndefinedValue
             : this._scope.FunctionValues.TryGetValue(identifier, out var function) ? JsType.Function(function.Shape) : JsType.Unknown
@@ -166,7 +166,7 @@ internal sealed partial class TypeInference {
         // The branch that reads what the test proves present reads it present (#1409).
         var proven = this.PresentBranch(choice);
         JsType Branch(Node branch) => branch == proven ? this.Of(branch).Present : this.Of(branch);
-        var either = JsType.Join(Branch(choice.Consequent), Branch(choice.Alternate));
+        var either = this.Narrowed(choice, Branch);
         return either.Kind == JsKind.Conflict ? JsType.Unknown : either;
       case ThisExpression:
         return this._scope!.Candidate.ThisClass is { } owner ? JsType.Object(owner) : JsType.Unknown;
@@ -282,6 +282,9 @@ internal sealed partial class TypeInference {
         return JsType.Boolean;
       case "Math.fround":
         return JsType.F32;
+      // A number rounded to an integer is a whole double of no bound, which % of a literal bounds (#1413).
+      case "Math.trunc" or "Math.floor" or "Math.ceil" or "Math.round" when call.Arguments is [var rounded] && this.Of(rounded).Kind == JsKind.Number:
+        return JsType.Whole(System.Int128.MinValue, System.Int128.MaxValue);
       case "Math.trunc" or "Math.floor" or "Math.ceil" or "Math.round" or "Math.abs" or "Math.sign" or "Math.sqrt" or "Math.min" or "Math.max":
         return JsType.F64;
       case "BigInt.asUintN":
@@ -392,7 +395,7 @@ internal sealed partial class TypeInference {
       case Operator.Remainder when a.Low >= 0 && b.Low >= 0 && Unify(a, b, IrType.I32, IrType.U32) is { } unsigned:
         return new(Plan.IntegerDivide, JsType.Of(unsigned), unsigned);
       case Operator.Addition or Operator.Subtraction or Operator.Multiplication or Operator.Division or Operator.Remainder:
-        return a.Kind == JsKind.Number && b.Kind == JsKind.Number ? new(Plan.Float, JsType.F64, IrType.F64) : new(Plan.Invalid, JsType.Unknown);
+        return a.Kind == JsKind.Number && b.Kind == JsKind.Number ? new(Plan.Float, WholeResult(op, a, b, right) ?? JsType.F64, IrType.F64) : new(Plan.Invalid, JsType.Unknown);
       case Operator.Exponentiation:
         return a.Kind == JsKind.Number && b.Kind == JsKind.Number ? new(Plan.Power, JsType.F64, IrType.F64) : new(Plan.Invalid, JsType.Unknown);
       case Operator.StrictEquality or Operator.StrictInequality when a.Kind is JsKind.Object or JsKind.Null && b.Kind is JsKind.Object or JsKind.Null:
