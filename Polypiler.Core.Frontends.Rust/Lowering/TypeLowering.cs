@@ -23,6 +23,14 @@ internal sealed partial class FunctionLowering {
       return null;
 
     var type = this._typed.TypeOf(tuple);
+    // A tuple made as a value is an IR struct, which holds no optional value, list, view or string;
+    // one destructured where it is made never gets here (TupleItemOf).
+    // A `&mut` held in it is refused as a place held other than as an argument.
+    if (TypeChecker.TuplePart(type) is { } held && held is not { Kind: RKind.Reference, Mutable: true }) {
+      this.Refuse(RustFrontend.Unsupported, $"tuple holding {held}", tuple.At);
+      return this.Zero(IrType.I32);
+    }
+
     var values = this.Operands([.. tuple.Elements], [.. type.Elements]);
     return new IrStructNew(this.Ir(type), values);
   }

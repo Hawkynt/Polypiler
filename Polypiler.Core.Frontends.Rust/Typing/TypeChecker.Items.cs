@@ -328,15 +328,33 @@ internal sealed partial class TypeChecker {
     return ok;
   }
 
-  /// <summary>The refusal a field of a type gets, as the IR's structs hold no list, map, set, string, function, object or array of anything but numbers; <see langword="null"/> for a field they hold.</summary>
+  /// <summary>
+  /// The refusal a field of a type gets, as the IR's structs hold no optional value, list, map, set,
+  /// string, function, object, or array of anything but numbers, and no tuple of one;
+  /// <see langword="null"/> for a field they hold.
+  /// </summary>
   private static string? FieldProblem(RType type) {
     var resolved = type.Resolved;
     if (resolved.IsTraitObject)
       return RustFrontend.UnsupportedTrait;
 
-    return resolved.Kind is RKind.Vec or RKind.Function or RKind.Map or RKind.Set || resolved.IsText || resolved.Kind == RKind.Array && !resolved.Element!.IsNumber
+    return resolved.Kind is RKind.Vec or RKind.Function or RKind.Map or RKind.Set or RKind.Option || resolved.IsText || resolved.Kind == RKind.Array && !resolved.Element!.IsNumber
+        || resolved.Kind == RKind.Tuple && resolved.Elements.Any(element => TuplePart(element) is not null)
       ? RustFrontend.UnsupportedElement
       : null;
+  }
+
+  /// <summary>
+  /// The part of a tuple no IR struct holds - a reference (a view or a place) or what <see cref="FieldProblem"/>
+  /// names - which a tuple made as a value cannot hold; <see langword="null"/> when it holds every part.
+  /// A tuple destructured where it is made is its parts and holds nothing.
+  /// </summary>
+  public static RType? TuplePart(RType type) {
+    var resolved = type.Resolved;
+    if (resolved.Kind == RKind.Tuple)
+      return resolved.Elements.Select(TuplePart).FirstOrDefault(part => part is not null);
+
+    return resolved.Kind == RKind.Reference || FieldProblem(resolved) is not null ? resolved : null;
   }
 
   private readonly HashSet<string> _checkedInstances = new(System.StringComparer.Ordinal);

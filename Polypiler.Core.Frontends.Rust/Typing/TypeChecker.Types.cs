@@ -282,8 +282,8 @@ internal sealed partial class TypeChecker {
       case RKind.Tuple:
         foreach (var element in resolved.Elements) {
           var part = element.Resolved;
-          if (part.Kind is RKind.Vec or RKind.Function or RKind.Reference || part.IsText || (part.Kind == RKind.Array && !part.Element!.IsNumber))
-            return this.Unsupported(RustFrontend.Unsupported, $"tuple holding {part}", at.At) is not null;
+          if (TuplePart(part) is { } held)
+            return this.Unsupported(RustFrontend.Unsupported, $"tuple holding {held}", at.At) is not null;
 
           if (!this.Representable(part, at))
             return false;

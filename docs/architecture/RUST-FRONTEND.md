@@ -112,7 +112,7 @@ Rust's types map onto the IR's by what a value is, not by how it is stored:
 | `[T; N]` | an array; a read of an array place by value is a copy (`Duplicate`), so the arrays never alias |
 | `&[T]`, `&mut [T]` | a read-only view and a view of the array, the `Vec` or the range of either it borrows |
 | `Vec<T>` | a list; `vec![a, b]`, `vec![v; n]`, `Vec::new`, `with_capacity`, `push`, `pop`, `clear`, `to_vec` |
-| tuples | a struct `Tuple_<types>` with the fields `item0`, `item1`, ... |
+| tuples | a struct `Tuple_<types>` with the fields `item0`, `item1`, ...; a tuple destructured where it is made (`let (a, b) = (x, y)`, a `match` on one) is its parts and no struct |
 | `struct` | an IR struct; a tuple struct's fields are `_0`, `_1`, ... |
 | field-less `enum` | an IR enum with its discriminants; `as` casts read them |
 | `Option<T>` | an optional; `Some`, `None`, `?`, `if let`, `match`, `unwrap`, `expect`, `unwrap_or`, `ok_or`, `copied` |
@@ -309,14 +309,14 @@ assignment before its place.
 | --- | --- |
 | `PLY1500` | source rustc rejects: a syntax error, a type error with its code, a borrow error the subset sees (`E0382`, `E0384`, `E0594`), a denied lint |
 | `PLY1501` | `i128`, `u128`, `f16`, `f128`, `!` as a parameter, and every type outside the subset |
-| `PLY1502` | any other construct: a range as a value, `()` as a value, a type alias, a constructor or a library function as a value, a `&mut` to a value held other than as an argument, other methods (`floor`, `to_be`, ...) |
+| `PLY1502` | any other construct: a range as a value, `()` as a value, a type alias, a constructor or a library function as a value, a `&mut` to a value held other than as an argument, a tuple made as a value or named as a type that holds an `Option`, a `Vec`, a map, a set, a reference, text or a trait object, which no IR struct holds, other methods (`floor`, `to_be`, ...) |
 | `PLY1503` | an overflow mode the Cargo profile cannot give: an undefined profile, no `inherits`, a circle, a manifest that is no TOML |
 | `PLY1504` | a local or an expression whose type nothing decides (rustc's `E0282`) |
 | `PLY1510` | let chains (`if let ... && ...`) |
 | `PLY1511` | `@` bindings, `ref` bindings, const block patterns, a binding in an or-pattern, a variable in a range pattern, a `&mut` binding into an `Option` or a `Result`, a `match` on a float |
 | `PLY1512` | a `for` or a chain over `..` or `a..` |
 | `PLY1513` | `async`, `.await`, `try`, `gen`, `yield` |
-| `PLY1520` | nested arrays, a slice or a `Vec` of anything but numbers, `bool`, tuples and structs of them, a slice pattern, an array length no constant gives |
+| `PLY1520` | nested arrays, a slice or a `Vec` of anything but numbers, `bool`, tuples and structs of them, a struct field (of an instance of a generic struct too) of an `Option`, a `Vec`, a map, a set, text or such a tuple, a slice pattern, an array length no constant gives |
 | `PLY1521` | `&mut str`, `&mut String` parameters |
 | `PLY1522` | `unsafe` blocks, `unsafe trait`, `unsafe impl`, raw pointers and borrows, `static mut`, `union`, `ManuallyDrop` |
 | `PLY1523` | `Box` and `Rc` of anything but a trait object, `Arc`, `Cell`, `RefCell`, `Mutex` |

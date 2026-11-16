@@ -241,4 +241,32 @@ public sealed class RustTypeTests {
   public void CompilerError_IsRejected(string source, string text)
     => Assert.That(Import(source).Diagnostics.Select(diagnostic => diagnostic.Message), Has.Some.Contains(text));
 
+  // ---------------------------------------------------------------- tuples and fields the IR's structs cannot hold
+
+  /// <summary>A tuple destructured where it is made is its parts: no struct holds the optional value or the list.</summary>
+  [TestCase("pub fn f(x: u8) -> u8 { let (a, b) = (Some(x), vec![1u8]); a.unwrap() + b[0] }", "5")]
+  [TestCase("pub fn f(x: u8) -> u8 { let (a, (b, c)) = (Some(x), (vec![2u8], 1u8)); a.unwrap() + b[0] + c }", "7")]
+  [TestCase("pub fn f(x: u8) -> u8 { match (Some(x), vec![x]) { (Some(v), w) => v + w[0], (None, _) => 0 } }", "8")]
+  [TestCase("pub fn f(x: u8) -> u8 { let (_, b) = (Some(x), 3u8); b }", "3")]
+  public void Tuple_DestructuredWhereItIsMade_IsImported(string source, string expected) {
+    var module = Module(source, OverflowChecks.Panic);
+    Assert.That(IrVerifier.Verify(module), Is.Empty);
+    Assert.That(RustFixture.Interpreted(module, new PrototypeCall("f", [(byte)4])), Is.EqualTo(expected));
+  }
+
+  /// <summary>A tuple or a field the IR's structs cannot hold - an optional value, a list, a view - is refused by name, never left to the IR verifier.</summary>
+  [TestCase("pub fn f(a: i32) -> i32 { let t = (Some(a), 2); t.1 }", "tuple holding Option<i32>")]
+  [TestCase("pub fn f(a: i32) -> i32 { let t = (vec![a], 2); t.0[0] }", "tuple holding Vec<i32>")]
+  [TestCase("pub fn f(a: &[i32]) -> i32 { let t = (a, 2); t.1 }", "tuple holding &[i32]")]
+  [TestCase("pub fn f(a: i32) -> i32 { let t = ((Some(a), 1), 2); t.1 }", "tuple holding Option<i32>")]
+  [TestCase("fn g(a: i32) -> (Option<i32>, i32) { (Some(a), a) } pub fn f(a: i32) -> i32 { g(a).1 }", "tuple holding Option<i32>")]
+  [TestCase("pub fn f(t: (Option<u8>, u8)) -> u8 { t.1 }", "tuple holding Option<u8>")]
+  [TestCase("struct S { a: Option<u8> } pub fn f() -> u8 { 1 }", "field 'a' of type 'Option<u8>'")]
+  [TestCase("struct W<T> { a: T } pub fn f(x: u8) -> u8 { let w = W { a: Some(x) }; 1 }", "field 'a' of type 'Option<u8>' of W<Option<u8>>")]
+  public void Tuple_HoldingWhatNoIrStructHolds_IsRefused(string source, string expected) {
+    var result = Import(source);
+    Assert.That(result.Module, Is.Null);
+    Assert.That(result.Diagnostics.Select(diagnostic => diagnostic.Code + " " + diagnostic.Message), Has.Some.Contains(expected));
+  }
+
 }

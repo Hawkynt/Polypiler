@@ -22,11 +22,31 @@ internal sealed partial class FunctionLowering {
   /// <summary>One arm, lowered: its test (<see langword="null"/> for always), its guard and its body.</summary>
   private sealed record LoweredArm(IrExpr? Test, (List<IrStmt> Statements, IrExpr? Value, bool Diverged) Guard, (List<IrStmt> Statements, IrExpr? Value, bool Diverged) Body);
 
+  /// <summary>
+  /// A tuple expression as its parts, a tuple in it as its parts too, each read once left to right:
+  /// the tuple is never a value of its own, so no IR struct has to hold what it holds.
+  /// </summary>
+  private TupleItem TupleItemOf(TupleExpr tuple, bool binds) {
+    var leaves = new List<Expr>();
+    void Collect(Expr expression) {
+      if (expression is TupleExpr { Elements.Count: > 0 } inner)
+        inner.Elements.ToList().ForEach(Collect);
+      else
+        leaves.Add(expression);
+    }
+
+    Collect(tuple);
+    var values = this.Operands([.. leaves]).Select(value => (Item)new ValueItem(binds && value is not IrConst ? this.Temporary(value, "scrutinee") : this.Stable(value, "scrutinee"))).ToList();
+    var next = 0;
+    TupleItem Build(TupleExpr expression) => new([.. expression.Elements.Select(element => element is TupleExpr { Elements.Count: > 0 } inner ? Build(inner) : values[next++])]);
+    return Build(tuple);
+  }
+
   /// <summary>The scrutinee of a pattern test, read once: a tuple expression stays its parts; a value a pattern binds is a local of its own.</summary>
   private Item Scrutinee(Expr expression, params Pattern[] patterns) {
     var binds = patterns.Any(this.Binds);
     if (expression is TupleExpr { Elements.Count: > 0 } tuple)
-      return new TupleItem([.. this.Operands([.. tuple.Elements]).Select(value => (Item)new ValueItem(binds && value is not IrConst ? this.Temporary(value, "scrutinee") : this.Stable(value, "scrutinee")))]);
+      return this.TupleItemOf(tuple, binds);
 
     if (this.IsExclusiveScrutinee(expression) is { } place)
       return new PlaceItem(place);

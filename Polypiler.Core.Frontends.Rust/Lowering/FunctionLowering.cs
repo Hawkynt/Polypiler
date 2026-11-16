@@ -372,6 +372,12 @@ internal sealed partial class FunctionLowering {
       return;
 
     var initializerType = this._typed.TypeOf(let.Initializer);
+    // `let (a, b) = (x, y);` binds the parts: the tuple is never a value of its own.
+    if (let is { Pattern: TuplePattern, Initializer: TupleExpr { Elements.Count: > 0 } }) {
+      this.Bind(let.Pattern, this.Scrutinee(let.Initializer, let.Pattern), initializerType);
+      return;
+    }
+
     var lowered = this.Lower(let.Initializer);
     if (let.Pattern is WildcardPattern) {
       if (lowered is not null && !this._diverged && !IsSimple(lowered))
