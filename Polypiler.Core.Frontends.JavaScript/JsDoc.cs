@@ -61,7 +61,8 @@ internal static class JsDoc {
     if (spelling.EndsWith("[]", System.StringComparison.Ordinal))
       return Declared(spelling[..^2], classes) is { } element && element.Kind is JsKind.Object or JsKind.Array ? JsType.ArrayOf(element, true) : null;
 
-    return TypeOf(spelling) is { } scalar ? JsType.Of(scalar) : classes(spelling) is { } owner ? JsType.Object(owner) : null;
+    // int64 and uint64 state a range, which Numbers or BigInts fill as the values decide (#1401).
+    return TypeOf(spelling) is { } scalar ? (scalar.IsLong ? JsType.Of(scalar).AsStated() : JsType.Of(scalar)) : classes(spelling) is { } owner ? JsType.Object(owner) : null;
   }
 
   private static IrType? TypeOf(string spelling) {

@@ -27,6 +27,10 @@ internal sealed partial class TypeInference(string path, string source, List<Can
   private readonly Dictionary<Candidate, FunctionModel> _models = [];
   private readonly Dictionary<FunctionModel, Binder> _binders = [];
   private readonly Dictionary<(FunctionModel?, Node, Coercion), JsType> _known = [];
+  private readonly List<(Variable Place, JsType Stated, bool IsParameter)> _statedLongs = [];
+
+  /// <summary>Whether a stated type is a 64-bit integer, which the values decide to be a Number or a <c>BigInt</c> (#1401).</summary>
+  private static bool IsStatedLong(JsType stated) => stated is { Kind: JsKind.BigInt, IsStated: true };
 
   /// <summary>The copy of a function each call that the import gave one calls instead of the function, by the callee of the call.</summary>
   public IReadOnlyDictionary<Node, Candidate> Redirects { get; init; } = new Dictionary<Node, Candidate>();
@@ -128,9 +132,14 @@ internal sealed partial class TypeInference(string path, string source, List<Can
   /// <returns>The functions, the called ones after their callers.</returns>
   public List<FunctionModel> Solve(IEnumerable<Candidate> roots, System.Func<Candidate, bool> isPublic) {
     // A field JSDoc states the type of holds values of it, whatever else reaches it: null alone is then that reference absent.
+    // A stated 64-bit integer is left to the values that reach it, and a BigInt only where none does (#1401).
     foreach (var field in this.Classes.Values.Distinct().SelectMany(owner => owner.Fields).Where(field => field.Stated is not null))
       if (JsDoc.Stated(field.Stated!, key => this.Classes.GetValueOrDefault(key) is { IsLibrary: false } owner ? owner : null) is { } stated && stated.Ir is not null) {
-        field.Variable.Type = JsType.Join(field.Variable.Type, stated);
+        if (IsStatedLong(stated))
+          this._statedLongs.Add((field.Variable, stated, false));
+        else
+          field.Variable.Type = JsType.Join(field.Variable.Type, stated);
+
         field.Variable.Reason ??= $"@type {{{field.Stated}}}";
       }
 
@@ -149,10 +158,13 @@ internal sealed partial class TypeInference(string path, string source, List<Can
     }
 
     var called = this.Flowing(models).SelectMany(model => model.Flows).Where(flow => flow.Kind == FlowKind.Argument).Select(flow => flow.Callee).ToHashSet();
+    // A function no call of the file can pass anything: not called, no method, no function value, no nested function.
+    var values = this.Flowing(models).SelectMany(model => model.FunctionValues.Values).ToHashSet();
     // A nested function is called through its values only: its parameters take what those calls pass.
     foreach (var model in models)
       foreach (var parameter in model.Parameters)
-        this.Seed(model, parameter, !model.Candidate.IsNested && (model.IsPublic || !called.Contains(model.Candidate)));
+        this.Seed(model, parameter, !model.Candidate.IsNested && (model.IsPublic || !called.Contains(model.Candidate)),
+          model.Candidate.IsNested || model.Candidate.Class is not null || called.Contains(model.Candidate) || values.Contains(model.Candidate));
 
     do {
       for (var changed = true; changed;) {
@@ -185,8 +197,11 @@ internal sealed partial class TypeInference(string path, string source, List<Can
   /// <c>ToUint32</c> only, or re-assigns it coerced before anything else: then it is that integer.
   /// A parameter whose callers are all known starts with nothing and takes what they pass, and so
   /// does one that is used as an array: a double it cannot be, and what array it is only a call says.
+  /// A stated <c>int64</c> or <c>uint64</c> that a call of the file may pass (<paramref name="passed"/>)
+  /// starts with nothing as well: a Number where the calls pass Numbers, a <c>BigInt</c> where they pass
+  /// BigInts or nothing (#1401); one no call of the file can pass is the <c>BigInt</c> it states.
   /// </summary>
-  private void Seed(FunctionModel model, Variable parameter, bool external) {
+  private void Seed(FunctionModel model, Variable parameter, bool external, bool passed) {
     // A parameter with a default holds that literal too; without JSDoc an exported one is of its kind (a number a double).
     if (parameter.Default is { } given) {
       var literal = given switch {
@@ -202,9 +217,15 @@ internal sealed partial class TypeInference(string path, string source, List<Can
     }
 
     if (parameter.Declared is { } declared) {
+      parameter.Reason = $"@param {{{JsType.Spell(declared.Ir!)}}}";
+      // A stated 64-bit integer that a call of the file may pass starts with nothing: those calls decide what it is (#1401).
+      if (IsStatedLong(declared) && passed) {
+        this._statedLongs.Add((parameter, declared, true));
+        return;
+      }
+
       // A stated T[] that the function tests with Array.isArray is an Array, unless a call of the file passes another (#1374).
       parameter.Type = parameter.Entry = declared is { IsStated: true } && parameter.TestedAsArray is not null ? declared.ShapedAs(JsType.ArrayOf(declared.Element!, true))! : declared;
-      parameter.Reason = $"@param {{{JsType.Spell(declared.Ir!)}}}";
       // An integer the function only coerces to 32 bits sees the low 32 bits of any integer. A 32-bit one takes the other
       // 32-bit integer wrapped; a narrower one of a function only the file calls is widened to the 32 bits the coercion sees,
       // while one called from outside keeps the contract it states.
@@ -378,7 +399,22 @@ internal sealed partial class TypeInference(string path, string source, List<Can
   /// itself, as the result of a recursion without an end is. Says whether there was such a place.
   /// </summary>
   private bool Promote(List<FunctionModel> models) {
+    // A stated 64-bit integer no Number and no BigInt reached is the BigInt it states, before anything it feeds is promoted.
     var promoted = false;
+    // What enters a parameter decides it, what a field holds decides the field.
+    foreach (var (place, stated, isParameter) in this._statedLongs.Where(item => (item.IsParameter ? item.Place.Entry : item.Place.Type).Kind is JsKind.Unknown or JsKind.Null)) {
+      if (isParameter)
+        place.Entry = JsType.Join(place.Entry, stated.Decided);
+
+      place.Type = JsType.Join(place.Type, stated.Decided);
+      promoted = true;
+    }
+
+    if (promoted) {
+      this._known.Clear();
+      return true;
+    }
+
     foreach (var model in models) {
       foreach (var flow in model.Flows) {
         if (flow.Kind == FlowKind.Argument && this.ModelOf(flow.Callee!).Parameters.ElementAtOrDefault(flow.Index) is { Type.Kind: JsKind.Unknown } parameter)
