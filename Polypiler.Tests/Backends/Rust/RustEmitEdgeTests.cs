@@ -67,8 +67,9 @@ public sealed class RustEmitEdgeTests {
   public void ConversionOfAConstantOrToItsOwnType_IsNoCast() {
     Assert.That(Returned(new IrConvert(IrType.I32, Ref(_a), IrConversion.Wrap), _a), Does.Contain("pub fn f(a: i32) -> i32 {\n    a\n}"));
     Assert.That(Returned(new IrConvert(IrType.U8, new IrConst(IrType.I32, 300), IrConversion.Wrap)), Does.Contain("    44\n"));
-    // TryFrom is generic over its argument: an unsuffixed literal would be an i32, which 5000000000 is not.
-    Assert.That(Returned(new IrConvert(IrType.U8, new IrConst(IrType.I32, 30), IrConversion.Trap)), Does.Contain("u8::try_from(30i32).expect(\"IntegerOverflow\")"));
+    // A constant that fits cannot trap: it is the literal; one that does not keeps the conversion,
+    // whose TryFrom is generic over its argument: an unsuffixed literal would be an i32, which 5000000000 is not.
+    Assert.That(Returned(new IrConvert(IrType.U8, new IrConst(IrType.I32, 30), IrConversion.Trap)), Does.Contain("    30\n"));
     Assert.That(Returned(new IrConvert(IrType.U32, new IrConst(IrType.I64, 5000000000), IrConversion.Trap)), Does.Contain("u32::try_from(5000000000i64).expect(\"IntegerOverflow\")"));
   }
 

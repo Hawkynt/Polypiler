@@ -38,6 +38,12 @@ public sealed class RustCapabilities {
   /// <summary>A labelled block that <c>break 'label</c> leaves, <c>label_break_value</c> (Rust 1.65).</summary>
   public const string LabeledBlock = "label_break_value";
 
+  /// <summary><c>Mutex::new</c> as a constant, so that a <c>static</c> holds a <c>Mutex</c> (Rust 1.63).</summary>
+  public const string ConstMutex = "const_mutex_new";
+
+  /// <summary><c>std::sync::LazyLock</c>, a static made on first use (Rust 1.80).</summary>
+  public const string LazyLock = "LazyLock";
+
   /// <summary>The key <c>rust-version</c> of <c>Cargo.toml</c>, which Cargo reads from Rust 1.56.</summary>
   public const string RustVersionKey = "rust-version";
 
@@ -50,8 +56,10 @@ public sealed class RustCapabilities {
     [ReverseBits] = new(1, 37),
     [IsSubnormal] = new(1, 53),
     [RustVersionKey] = new(1, 56),
+    [ConstMutex] = new(1, 63),
     [LabeledBlock] = new(1, 65),
-    [RoundTiesEven] = new(1, 77)
+    [RoundTiesEven] = new(1, 77),
+    [LazyLock] = new(1, 80)
   });
 
   private readonly IReadOnlyDictionary<string, Version?> _rows;

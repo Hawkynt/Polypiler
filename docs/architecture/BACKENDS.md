@@ -123,6 +123,7 @@ and why:
 | `Polypiler.Core.Backends.Python/Helpers/PythonHelpers.Views.cs` | A view is a `_PlyView` of a list, its first element and a length, or of the bytes of a list read with a `struct` format: the representation of the IR's span and memory, which Python has no type for, with the bounded copies, fills and comparisons and the bytes of the endian accesses. |
 | `Polypiler.Core.Backends.Python/Helpers/PythonHelpers.Pointers.cs` | A pointer is a `_PlyPointer` of a region and a byte offset, its loads and stores of another type go through the bytes of the elements they cover: a representation of the IR's bounded pointer, like the view's. |
 | `Polypiler.Core.Backends.Python/Helpers/PythonHelpers.NumberText.cs` | The numbers to text and back of .NET and of ECMA-262 in Python: operations of the IR, not yet carried into the library (a follow-up of #1353). |
+| `Polypiler.Core.Backends.Rust/Helpers/Strings.cs` | A string of Rust is its UTF-16 code units, `Vec<u16>` or `&[u16]`, since `str` is UTF-8 and holds no lone surrogate: the searches, the split, the trim with the IR's white-space tables, the padding and the replacements work on that representation, which the IR has no type for (`ply_utf16`, `ply_position`, `ply_index_of`, `ply_last_index_of`, `ply_replace`, `ply_replace_first`, `ply_split`, `ply_trim`, `ply_pad`). The same file holds the other forms of Rust's own the backend writes once: `ply_non_null` and `ply_value` read an `Option` that a test before has to hold a value, `ply_with` holds the `Mutex` of a global for one access, the `ply_list_*`, `ply_map_*`, `ply_set_*` and `ply_slot_*` functions keep a list's checked indices and the order of the slots of .NET's `Dictionary` and `HashSet` on a vector. |
 
 Outside the folders the emitters keep a few more of the same kind: the C# `Throw<T>` of a throw
 expression before C# 7, the C# `SinglePass<T>` that makes the one cursor of an iterator a sequence
@@ -130,7 +131,9 @@ enumerated once (a `yield return` over an `IEnumerator<T>`, which the IR has no 
 JavaScript `$sameValueZero` and `$compare` of the generic equality and order, and the Rust spelling
 functions, built as trees by the emitter: `ply_div_<t>` and `ply_rem_<t>`, the IR's division with its
 traps named as every generated panic is, `ply_f2i_trap_<t>`, the checked conversion from floating
-point Rust has no method for, and `ply_i2i_trap_<from>_<to>`, the checked narrowing below Rust 1.34.
+point Rust has no method for, `ply_i2i_trap_<from>_<to>`, the checked narrowing below Rust 1.34, and
+`ply_range`, `ply_copy` and `ply_copy_within`, the range of a copy or an endian access checked before
+anything is read or written, which a slice's own panics would report as an overflow or not at all.
 
 ## Target passes
 

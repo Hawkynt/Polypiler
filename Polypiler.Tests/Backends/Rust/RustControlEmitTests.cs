@@ -51,9 +51,16 @@ public sealed class RustControlEmitTests {
 
   [Test]
   public void ForWithContinue_RunsTheStepBeforeEveryContinue() {
+    var text = Emitted("public static int Odd(int n) { int s = 0; for (int i = 0; i < n; i += 2) { if (i % 3 == 0) continue; s += i; } return s; }");
+    Assert.That(text, Does.Contain("if i % 3 == 0 {\n            i = i.wrapping_add(2);\n            continue;\n        }"));
+    Assert.That(text, Does.Contain("s = s.wrapping_add(i);\n        i = i.wrapping_add(2);\n    }"));
+  }
+
+  /// <summary>A counted loop with a continue is a for loop too: the range steps the counter on every continue.</summary>
+  [Test]
+  public void CountedForWithContinue_IsARangeLoop() {
     var text = Emitted("public static int Odd(int n) { int s = 0; for (int i = 0; i < n; i++) { if (i % 2 == 0) continue; s += i; } return s; }");
-    Assert.That(text, Does.Contain("if i % 2 == 0 {\n            i = i.wrapping_add(1);\n            continue;\n        }"));
-    Assert.That(text, Does.Contain("s = s.wrapping_add(i);\n        i = i.wrapping_add(1);\n    }"));
+    Assert.That(text, Does.Contain("for i in 0..n {\n        if i % 2 == 0 {\n            continue;\n        }"));
   }
 
   [Test]
@@ -189,7 +196,7 @@ public sealed class RustControlEmitTests {
   public void ExceptionRegion_IsRefused() {
     var problems = RustCrates.Check(RustCrates.Import("public static int F(int a, int b) { try { return a / b; } catch (System.DivideByZeroException) { return 0; } }"));
     Assert.That(problems.Select(problem => problem.Code), Does.Contain(RustEmitter.ExceptionRegion));
-    Assert.That(problems.First(problem => problem.Code == RustEmitter.ExceptionRegion).Message, Does.Contain("'exception handling'"));
+    Assert.That(problems.First(problem => problem.Code == RustEmitter.ExceptionRegion).Message, Does.Contain("'a catch of a class a trap belongs to, around code that may trap'"));
   }
 
   [Test]

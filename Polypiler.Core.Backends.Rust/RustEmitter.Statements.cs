@@ -42,9 +42,73 @@ public static partial class RustEmitter {
           this.Statements(block.Statements, into);
           return into.Count > before && Diverges(into[^1]);
         }
+        case IrExprStmt { Expression: IrCollection { Op: IrCollectionOp.ListSet } set }:
+          this.ListSet(set, into);
+          return false;
+        case IrExprStmt { Expression: IrCollection operation } when this.Expression(operation) is RsBlockExpression { Block: { Tail: { } change } settled }:
+          into.AddRange(settled.Statements);
+          into.Add(new RsExpressionStatement(change));
+          return false;
+        case IrDeclare declare when this._nested.ContainsKey(declare.Local):
+          return false;
+        case IrAssign assign when this._nested.ContainsKey(assign.Local):
+          return false;
+        case IrDeclare declare when this._shared.Contains(declare.Local):
+          into.Add(this.SharedDeclaration(declare.Local, declare.Initializer is null ? null : this.Expression(declare.Initializer)));
+          return false;
+        case IrAssign assign when this._shared.Contains(assign.Local):
+          into.Add(new RsExpressionStatement(this.SharedWrite(assign.Local, this.Expression(assign.Value))));
+          return false;
+        case IrExprStmt { Expression: IrStep { Target: IrLocalRef { Local: var stepped } } step } when this._shared.Contains(stepped):
+          into.Add(new RsExpressionStatement(this.SharedStep(stepped, step, true)));
+          return false;
+        case IrReturn result when this._closureResults.Count > 0:
+          into.Add(new RsExpressionStatement(new RsReturn(result.Value is null ? null : this.Argument(result.Value))));
+          return true;
         case IrDeclare declare:
-          into.Add(new RsLet(this._locals[declare.Local], this._mutable.Contains(declare), this.Type(declare.Local.Type),
-            declare.Initializer is null ? null : this.Expression(declare.Initializer)));
+          into.Add(new RsLet(this._locals[declare.Local], this._mutable.Contains(declare) || this.IsWrittenVector(declare.Local) || this._fieldWritten.Contains(declare.Local) || this.IsChangedCollection(declare.Local)
+            || this.IsFieldAlias(declare.Local) && this._arrayFacts.MutableLocals.Contains(declare.Local), this.LocalType(declare.Local),
+            declare.Initializer switch {
+              null => null,
+              var value when declare.Local.Type.IsArray => this.ArrayInitial(declare.Local, value),
+              var value when declare.Local.Type.IsString => this.StringValue(value),
+              var value when IsError(declare.Local.Type) => this.ErrorValue(value),
+              var value when declare.Local.Type.IsObject => this.ObjectValue(value, this.MayBeNull(declare.Local)),
+              var value when declare.Local.Type.IsView => this.ViewSource(value, this.WritesView(declare.Local)),
+              var value when declare.Local.Type.IsFunction => this.FunctionValue(value),
+              var value when declare.Local.Type.IsCollection => this.CollectionValue(value),
+              var value => this.Expression(value)
+            }));
+          return false;
+        case IrStore { Array: IrGlobalRef { Global: var locked } } store when IsLocked(locked):
+          this.LockedStore(store, locked, into);
+          return false;
+        case IrStore store:
+          this.Store(store, into);
+          return false;
+        case IrGlobalAssign assign when IsLocked(assign.Global):
+          this.LockedAssign(assign, into);
+          return false;
+        case IrExprStmt { Expression: IrStep { Target: IrArrayLoad { Array: IrGlobalRef { Global: var steppedGlobal } } load } step } when IsLocked(steppedGlobal):
+          into.Add(new RsExpressionStatement(this.LockedStep(step, load, steppedGlobal, true, into)));
+          return false;
+        case IrFieldStore store when store.Target.Type.IsStruct:
+          this.FieldStore(store, into);
+          return false;
+        case IrFieldStore store when store.Target.Type.IsObject:
+          this.ObjectFieldStore(store, into);
+          return false;
+        case IrGlobalAssign assign:
+          into.Add(new RsExpressionStatement(this.GlobalStore(assign)));
+          return false;
+        case IrExprStmt { Expression: IrStep { Target: IrArrayLoad load } step }:
+          into.AddRange(((RsBlockExpression)this.ElementStep(load, step, true)).Block.Statements);
+          return false;
+        case IrExprStmt { Expression: IrIntrinsic { Op: IrIntrinsicOp.StoreLittle or IrIntrinsicOp.StoreBig } store }:
+          into.AddRange(((RsBlockExpression)this.EndianStore(store)).Block.Statements);
+          return false;
+        case IrAssign { Local.Type.IsString: true } assign when this.Appended(assign.Local, assign.Value) is { } appended:
+          into.AddRange(appended);
           return false;
         case IrAssign assign:
           into.Add(new RsExpressionStatement(this.Assignment(assign.Local, assign.Value)));
@@ -59,6 +123,14 @@ public static partial class RustEmitter {
         }
         case IrIf choice:
           into.Add(new RsExpressionStatement(this.If(choice)));
+          return false;
+        case IrForEachCollection loop:
+          this.ForEachCollection(loop, into);
+          return false;
+        case IrWhile loop when loop.Body.Statements.Count > 0 && loop.Body.Statements[^1] is IrReturn or IrThrow
+          && !ContinuesLoop(loop.Body.Statements) && !BreaksLoop(loop.Body.Statements):
+          // A loop whose first pass always leaves the function is an if (clippy's never_loop).
+          into.Add(new RsExpressionStatement(this.If(new IrIf(loop.Condition, loop.Body, null))));
           return false;
         case IrWhile loop:
           into.Add(new RsExpressionStatement(this.Loop(loop.Condition, loop.Body.Statements, null)));
@@ -78,16 +150,35 @@ public static partial class RustEmitter {
         case IrContinue:
           into.AddRange(this.Continue());
           return true;
+        case IrReturn { Value: { } thrower } result when this._tries.Count > 0 && IrTree.Nodes(thrower).Any(node => node is IrThrowExpression thrown && IsCatchable(thrown.Exception.Type)):
+          // A value that may throw is bound before the return, which may not hold what leaves (clippy's diverging_sub_expression).
+          var held = new IrLocal("$" + this._labels++ + ":returned", thrower.Type);
+          this._locals[held] = this.Temporary("value");
+          this.Statement(new IrDeclare(held, thrower), into);
+          return this.Statement(result with { Value = new IrLocalRef(held) }, into);
         case IrReturn result:
-          into.Add(new RsExpressionStatement(new RsReturn(result.Value is null ? null : this.Expression(result.Value))));
+          into.Add(new RsExpressionStatement(this.Leaving(result.Value switch {
+            null => null,
+            { Type.IsArray: true } value => this.ArrayResult(this._function, value),
+            { Type.IsString: true } value => this.StringValue(value, true),
+            { Type.IsObject: true } value => this.ObjectValue(value, this._nullness.ReturnsNull(this._function.Name)),
+            { Type.IsFunction: true } value => this.FunctionValue(value),
+            { Type.IsCollection: true } value => this.CollectionValue(value),
+            var value => this.Expression(value)
+          })));
+          return true;
+        case IrRethrow:
+          into.Add(new RsExpressionStatement(this._caught.Count == 0 ? this.Refuse("a rethrow outside a catch clause") : this.Escape(this.Cloned(new RsReference(false, new RsPath(this._caught[^1]))))));
           return true;
         case IrThrow thrown:
           into.Add(new RsExpressionStatement(this.Throw(thrown.Exception)));
           return true;
-        case IrTry:
-          if (this._refused.Add("exception handling"))
-            this._problems.Add(ExceptionRegionDescriptor.At($"exception region in {this._construct} cannot be emitted under the trap policy 'panic': 'exception handling' is not supported by the Rust backend"));
+        case IrYield or IrYieldBreak or IrYieldFrom or IrForEachSequence:
+          into.Add(new RsExpressionStatement(this.Refuse(LazySequence)));
           return false;
+        case IrTry attempt:
+          this.Try(attempt, into);
+          return into.Count > 0 && Diverges(into[^1]);
         default:
           into.Add(new RsExpressionStatement(this.Refuse(statement.GetType().Name[2..])));
           return false;
@@ -96,7 +187,10 @@ public static partial class RustEmitter {
 
     /// <summary>Whether a statement ends the path it is on: a <c>return</c>, <c>break</c>, <c>continue</c> or a panic.</summary>
     internal static bool Diverges(RsStatement statement)
-      => statement is RsExpressionStatement { Expression: RsReturn or RsBreak or RsContinue or RsMacro { Name: "panic" or "unreachable" } };
+      => statement is RsExpressionStatement { Expression: RsReturn or RsBreak or RsContinue or RsMacro { Name: "panic" or "unreachable" } or RsCall { Callee: RsPath { Name: "ply_unhandled" } } };
+
+    /// <summary>A <c>return</c>: inside the body of a <c>finally</c> the break out of it, in a function that propagates <c>return Ok(v)</c>.</summary>
+    private RsExpression Leaving(RsExpression? value) => this.FinallyReturn(value) ?? this.Returned(value);
 
     /// <summary>
     /// An assignment; where the value is an operator on the variable itself that Rust has a compound
@@ -105,6 +199,18 @@ public static partial class RustEmitter {
     /// </summary>
     private RsExpression Assignment(IrLocal local, IrExpr value) {
       var place = new RsPath(this._locals[local]) { Type = local.Type };
+      if (local.Type.IsEnum)
+        return new RsAssign(place, "=", this.Expression(value));
+      if (local.Type.IsArray)
+        return new RsAssign(place, "=", this.ArrayInitial(local, value));
+      if (local.Type.IsString)
+        return new RsAssign(place, "=", this.StringValue(value));
+      if (local.Type.IsObject)
+        return new RsAssign(place, "=", this.ObjectValue(value, this.MayBeNull(local)));
+      if (local.Type.IsFunction)
+        return new RsAssign(place, "=", this.FunctionValue(value));
+      if (local.Type.IsCollection)
+        return new RsAssign(place, "=", this.CollectionValue(value));
       if (value is IrBinary { Left: IrLocalRef self } binary && self.Local == local && Compound(binary) is { } op)
         return new RsAssign(place, op + "=", this.Operand(this.Expression(binary.Right), 2));
       if (value is IrBinary { Right: IrLocalRef other } swapped && other.Local == local && Compound(swapped) is { } bitwise && bitwise is "&" or "|" or "^")
@@ -215,6 +321,9 @@ public static partial class RustEmitter {
 
       // A switch is left through its labelled block; a loop by its label where a switch or a labelled
       // block stands between, since Rust refuses an unlabelled break inside a labelled block (E0695).
+      if (this._tries.Count > 0 && this._breakables.IndexOf(target) < this._tries[^1].Breakables)
+        return this.Refuse("a break out of a try");
+
       var crossed = this._breakables.Count - 1 > this._breakables.IndexOf(target);
       if (target.Kind == BreakableKind.Loop && !crossed)
         return new RsBreak(null, null);
@@ -233,6 +342,9 @@ public static partial class RustEmitter {
         return [new RsExpressionStatement(this.Refuse("continue outside a loop"))];
 
       var target = this._breakables[index];
+      if (this._tries.Count > 0 && index < this._tries[^1].Breakables)
+        return [new RsExpressionStatement(this.Refuse("a continue out of a try"))];
+
       if (target.Kind == BreakableKind.ContinueBlock) {
         target.Used = true;
         return [new RsExpressionStatement(new RsBreak(target.Label, null))];
@@ -253,8 +365,9 @@ public static partial class RustEmitter {
     /// the <c>match</c>. One section without a default is an <c>if</c>, only a default its body alone.
     /// </summary>
     private IEnumerable<RsStatement> Switch(IrSwitch choice) {
-      var value = this.Expression(choice.Value);
-      var type = choice.Value.Type;
+      // A switch on an enum is one on its integer, whose labels are the members' values.
+      var value = choice.Value.Type.IsEnum ? this.Inner(choice.Value) : this.Expression(choice.Value);
+      var type = choice.Value.Type.IsEnum ? choice.Value.Type.EnumType!.Underlying : choice.Value.Type;
       var label = this.NewLabel("s");
       var breakable = new Breakable(BreakableKind.Switch, label);
       this._breakables.Add(breakable);
@@ -331,19 +444,36 @@ public static partial class RustEmitter {
 
     /// <summary>
     /// A counted loop as <c>for i in a..b</c>: the declaration of an integer variable and a
-    /// <c>while</c> that tests it against a bound with <c>&lt;</c> and whose body ends with the step by one.
-    /// The bound is a constant or a variable the body does not assign, the body assigns the counter
-    /// nowhere else and has no <c>continue</c> of the loop, and nothing after the loop reads the counter,
-    /// which the <c>for</c> keeps to itself. <see langword="null"/> for any other pair of statements.
+    /// <c>while</c> that tests it against a bound with <c>&lt;</c> and whose body ends with the step by
+    /// one, or a <c>for</c> whose step is that step alone. The bound is a constant, a variable the body
+    /// does not assign or the length of an array the body does not assign, the body assigns the
+    /// counter nowhere else and, where it is a <c>while</c>, has no <c>continue</c> of the loop, and
+    /// nothing after the loop reads the counter, which the <c>for</c> keeps to itself. A loop from 0 to
+    /// the length of an array that reads only its elements with the counter and writes none of them is
+    /// an element loop (<see cref="ElementLoop"/>). <see langword="null"/> for any other pair of statements.
     /// </summary>
     private RsStatement? CountedLoop(IReadOnlyList<IrStmt> statements, int index) {
-      if (index + 1 >= statements.Count || statements[index] is not IrDeclare { Initializer: { } start } declare
-        || statements[index + 1] is not IrWhile { Condition: IrBinary { Op: IrBinaryOp.Less, Left: IrLocalRef counter, Right: var bound } } loop
-        || counter.Local != declare.Local || !counter.Type.IsInteger || loop.Body.Statements.Count == 0)
+      if (index + 1 >= statements.Count || statements[index] is not IrDeclare { Initializer: { } start } declare)
         return null;
 
-      var body = loop.Body.Statements;
-      var stepsByOne = body[^1] switch {
+      IrExpr condition;
+      List<IrStmt> rest;
+      IrStmt step;
+      switch (statements[index + 1]) {
+        case IrWhile { Body.Statements.Count: > 0 } loop when !ContinuesLoop(loop.Body.Statements.Take(loop.Body.Statements.Count - 1)):
+          (condition, rest, step) = (loop.Condition, [.. loop.Body.Statements.Take(loop.Body.Statements.Count - 1)], loop.Body.Statements[^1]);
+          break;
+        case IrFor { Step.Statements: [var only] } loop:
+          (condition, rest, step) = (loop.Condition, [.. loop.Body.Statements], only);
+          break;
+        default:
+          return null;
+      }
+
+      if (condition is not IrBinary { Op: IrBinaryOp.Less, Left: IrLocalRef counter, Right: var bound } || counter.Local != declare.Local || !counter.Type.IsInteger || this._shared.Contains(counter.Local))
+        return null;
+
+      var stepsByOne = step switch {
         IrAssign { Value: IrBinary { Op: IrBinaryOp.Add or IrBinaryOp.AddChecked, Left: IrLocalRef self, Right: IrConst { Value: 1 } } } assign => assign.Local == declare.Local && self.Local == declare.Local,
         IrExprStmt { Expression: IrStep { Target: IrLocalRef self, Increment: true } } => self.Local == declare.Local,
         _ => false
@@ -351,10 +481,13 @@ public static partial class RustEmitter {
       if (!stepsByOne)
         return null;
 
-      var rest = body.Take(body.Count - 1).ToList();
-      var invariant = bound is IrConst || bound is IrConstRef || (bound is IrLocalRef limit && limit.Local != declare.Local && !Assigns(rest, limit.Local));
-      if (!invariant || Assigns(rest, declare.Local) || ContinuesLoop(rest) || statements.Skip(index + 2).Any(after => Mentions(after, declare.Local)))
+      var invariant = bound is IrConst || bound is IrConstRef || (bound is IrLocalRef limit && limit.Local != declare.Local && !Assigns(rest, limit.Local))
+        || (bound is IrArrayLength { Array: IrConstRef or IrLocalRef } length && (length.Array is not IrLocalRef array || !Assigns(rest, array.Local)));
+      if (!invariant || Assigns(rest, declare.Local) || statements.Skip(index + 2).Any(after => Mentions(after, declare.Local)))
         return null;
+
+      if (start is IrConst { Value: 0 } && bound is IrArrayLength { Array: var iterated } && this.ElementLoop(declare.Local, iterated, rest) is { } elements)
+        return elements;
 
       var label = this.NewLabel("l");
       var breakable = new Breakable(BreakableKind.Loop, label);
@@ -370,6 +503,57 @@ public static partial class RustEmitter {
       return new RsExpressionStatement(new RsFor(breakable.Used ? label : null, pattern, new RsRange(this.Operand(from, 3), this.Operand(to, 3), false), block));
     }
 
+    /// <summary>The element of an array an element loop reads in place of <c>a[i]</c>, by the loop's counter.</summary>
+    private readonly Dictionary<IrLocal, string> _elements = [];
+
+    /// <summary>
+    /// An element loop, <c>for &amp;x in data { … }</c>: a counted loop from 0 to the length of an array
+    /// whose body uses the counter only to read elements of that array and writes none of them. The
+    /// element is the variable the body's first statement declares with it, unless the body assigns
+    /// that variable; otherwise a binding of its own. <see langword="null"/> for any other loop.
+    /// </summary>
+    private RsStatement? ElementLoop(IrLocal counter, IrExpr array, List<IrStmt> body) {
+      var nodes = body.SelectMany(IrTree.Nodes).ToList();
+      var loads = nodes.Count(node => node is IrArrayLoad { Index: IrLocalRef index } load && index.Local == counter && SameArray(load.Array, array));
+      var uses = nodes.Count(node => node is IrLocalRef reference && reference.Local == counter);
+      if (loads == 0 || loads != uses || body.SelectMany(Walk).Any(statement => statement is IrStore store && SameArray(store.Array, array)
+          || statement is IrFieldStore field && ElementArray(field.Target) is { } written && SameArray(written, array))
+        || nodes.Any(node => node is IrStep { Target: IrArrayLoad stepped } && SameArray(stepped.Array, array)
+          || node is IrIntrinsic { Op: IrIntrinsicOp.ArrayCopy } copy && SameArray(copy.Arguments[2], array)
+          || node is IrIntrinsic { Op: IrIntrinsicOp.ArrayFill or IrIntrinsicOp.ArrayClear } fill && SameArray(fill.Arguments[0], array)
+          || node is IrCall call && this._arrays.TryGetValue(call.Function, out var callee) && callee.MutableParameters.Any(position => SameArray(call.Arguments[position], array)))
+        || array is IrLocalRef { Local: var variable } && Assigns(body, variable))
+        return null;
+
+      // Only an element that is a value is copied out of the array by the loop's pattern.
+      if (array.Type.Element is not { } elementType || !IsValue(elementType))
+        return null;
+
+      string element;
+      if (body.Count > 0 && body[0] is IrDeclare { Initializer: IrArrayLoad { Index: IrLocalRef first } } named && first.Local == counter && named.Local.Type == array.Type.Element && !Assigns(body, named.Local) && !this._shared.Contains(named.Local)) {
+        element = this._locals[named.Local];
+        body = body.Skip(1).ToList();
+      } else {
+        element = this.Temporary("element");
+      }
+
+      this._elements[counter] = element;
+      var label = this.NewLabel("l");
+      var breakable = new Breakable(BreakableKind.Loop, label);
+      this._breakables.Add(breakable);
+      var block = this.Block(body);
+      this._breakables.RemoveAt(this._breakables.Count - 1);
+      this._elements.Remove(counter);
+      return new RsExpressionStatement(new RsFor(breakable.Used ? label : null, "&" + element, this.Iterated(array), block));
+    }
+
+    /// <summary>Whether two expressions name the same array: one variable or one table.</summary>
+    private static bool SameArray(IrExpr first, IrExpr second) => (first, second) switch {
+      (IrLocalRef a, IrLocalRef b) => a.Local == b.Local,
+      (IrConstRef a, IrConstRef b) => a.Constant == b.Constant,
+      _ => false
+    };
+
     /// <summary>Whether statements assign a variable, also by a step.</summary>
     private static bool Assigns(IEnumerable<IrStmt> statements, IrLocal local)
       => statements.SelectMany(Walk).Any(statement => statement is IrAssign assign && assign.Local == local)
@@ -384,6 +568,14 @@ public static partial class RustEmitter {
       _ => false
     });
 
+    /// <summary>Whether statements have a <c>break</c> of the loop they are the body of, not of a loop or a switch inside them.</summary>
+    private static bool BreaksLoop(IEnumerable<IrStmt> statements) => statements.Any(statement => statement switch {
+      IrBreak => true,
+      IrBlock block => BreaksLoop(block.Statements),
+      IrIf choice => BreaksLoop(choice.Then.Statements) || (choice.Else is not null && BreaksLoop(choice.Else.Statements)),
+      _ => false
+    });
+
     /// <summary>Whether a statement names a variable anywhere.</summary>
     private static bool Mentions(IrStmt statement, IrLocal local)
       => Walk(statement).Any(item => item is IrDeclare declare && declare.Local == local || item is IrAssign assign && assign.Local == local)
@@ -392,46 +584,29 @@ public static partial class RustEmitter {
     /// <summary>A statement and every statement inside it.</summary>
     private static IEnumerable<IrStmt> Walk(IrStmt statement) {
       yield return statement;
-      IEnumerable<IrStmt> children = statement switch {
-        IrBlock block => block.Statements,
-        IrIf choice => [choice.Then, .. choice.Else is null ? [] : new IrStmt[] { choice.Else }],
-        IrWhile loop => [loop.Body],
-        IrDoWhile loop => [loop.Body],
-        IrFor loop => [loop.Body, loop.Step],
-        IrSwitch choice => choice.Sections.Select(section => (IrStmt)section.Body),
-        IrTry attempt => [attempt.Body, .. attempt.Catches.Select(clause => (IrStmt)clause.Body), .. attempt.Finally is null ? [] : new IrStmt[] { attempt.Finally }],
-        _ => []
-      };
-      foreach (var child in children)
-        foreach (var item in Walk(child))
-          yield return item;
+      foreach (var block in IrTree.Blocks(statement).Where(block => !ReferenceEquals(block, statement)))
+        foreach (var inner in block.Statements.SelectMany(Walk))
+          yield return inner;
+
+      if (statement is IrBlock own)
+        foreach (var inner in own.Statements.SelectMany(Walk))
+          yield return inner;
     }
 
     /// <summary>The expressions a statement holds directly.</summary>
-    private static IEnumerable<IrExpr> ExpressionsOf(IrStmt statement) => statement switch {
-      IrDeclare { Initializer: { } initializer } => [initializer],
-      IrAssign assign => [assign.Value],
-      IrStore store => [store.Array, store.Index, store.Value],
-      IrExprStmt expression => [expression.Expression],
-      IrIf choice => [choice.Condition],
-      IrWhile loop => [loop.Condition],
-      IrDoWhile loop => [loop.Condition],
-      IrFor loop => [loop.Condition],
-      IrSwitch choice => [choice.Value],
-      IrReturn { Value: { } value } => [value],
-      IrThrow thrown => [thrown.Exception],
-      _ => []
-    };
+    private static IEnumerable<IrExpr> ExpressionsOf(IrStmt statement) => IrTree.Expressions(statement);
 
     /// <summary>
     /// A throw of a new exception of the IR's library as the panic of its trap; a panic carries no
     /// object, so a throw of anything else, and a handler, cannot be written.
     /// </summary>
     private RsExpression Throw(IrExpr exception) {
+      if (IsCatchable(exception.Type))
+        return this.Escape(this.ErrorValue(exception));
       if (exception is IrNew { Type.Declaration: IrClassType type } && TrapOf(type) is { } trap)
         return Panic(trap);
 
-      return this.Refuse("exception handling");
+      return this.Refuse("the throw of an exception that is no new object");
     }
 
     /// <summary>The trap whose class an exception class of the library is; the first one where several share it.</summary>

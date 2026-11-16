@@ -1087,11 +1087,20 @@ codes:
     severity: error
     exit: UnsupportedConstruct
     title: exception region under the panic trap policy
-    message: "exception region in <function> cannot be emitted under the trap policy 'panic': 'exception handling' is not supported by the Rust backend"
+    message: "exception region in <function> cannot be emitted under the trap policy 'panic': '<construct>' is not supported by the Rust backend"
     rule: rust.backend.exceptions
     area: rust
     owner: "#458"
     surfaces: standard error of polypiler translate --to rust
+  - code: PLY1566
+    severity: error
+    exit: UnsupportedConstruct
+    title: aliasing views in safe Rust
+    message: "views '<first>' and '<second>' may alias and '<second>' is written in <place>; safe Rust cannot express this - provide a no-alias fact or select a copying target profile"
+    rule: rust.backend.aliasing
+    area: rust
+    owner: "#460"
+    surfaces: standard error of polypiler translate --to rust, for one array passed to a call twice where it is written
   - code: PLY1574
     severity: error
     exit: UnsupportedConstruct

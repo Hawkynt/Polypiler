@@ -299,9 +299,12 @@ and `step_by(0)` `InvalidOperationException` with Rust's message; `clamp` with `
 `Clamp` trap (`ArithmeticException`). The class is compared with rustc's panic, the message is not
 ([the Rust frontend](../architecture/RUST-FRONTEND.md)).
 
-**Backend.** Generated Rust has no exception objects: a trap is a panic whose message is the name of the IR trap,
-in every build mode, and a crate has no handler for it. The verification classifies the panic by its
-first line (`RustTraps`), which also reads the messages of Rust's own panics.
+**Backend.** A trap is a panic whose message is the name of the IR trap, in every build mode, and a
+crate has no handler for it. The verification classifies the panic by its first line (`RustTraps`),
+which also reads the messages of Rust's own panics. An exception of a class of the module is an
+object, `Rc<PlyError>` (its class as a number, its message, its inner exception), handed back as the
+`Err` of a `Result` by every function between the throw and the handler; see
+[the Rust backend](../architecture/RUST-BACKEND.md#exceptions).
 
 | IR trap | Rust | Message |
 | --- | --- | --- |
@@ -309,8 +312,19 @@ first line (`RustTraps`), which also reads the messages of Rust's own panics.
 | `DivideByZero` | `ply_div_<t>`, `ply_rem_<t>` | `DivideByZero` |
 | any trap a library helper throws | `panic!("<trap>")` for the throw of a library exception | the trap's name; for a class several traps share, the first of them (`InvalidOperationException` is `MissingValue`, `ArgumentException` `DuplicateKey`) |
 
-An `IrTry` is refused with `PLY1560` ("exception handling"): catching needs `Result` propagation,
-which the trap policy `result` of phase 2 brings. Rust's own messages (`attempt to divide by zero`,
+| IR | Rust |
+| --- | --- |
+| `throw new X(…)` of a class of the module | `break 't0 e` inside a `try` body, `return Err(e)` from a function that propagates, `ply_unhandled(&e)` - a panic with the class's name - from a public one |
+| `catch (X e) when (f)` | `if ply_is(error.class, <X>) && f { … }`, the next clause in the `else`, the exception going on after the last |
+| `throw;` | the caught exception going on, `Rc::clone(&error)` |
+| `e.Message`, `e.InnerException` | `e.message.clone()`, `e.inner.clone()` |
+| `finally` around a body that always returns and throws nothing | the body a labelled block its `return` leaves, then the `finally`, then the return |
+
+A catch clause of a class a trap belongs to stands only around code that cannot trap, since a trap is a
+panic no clause sees; catching a trap (`exceptions/Traps`) is refused with `PLY1560`, as are a filter with
+a `finally` between it and the throw (.NET runs the filter first, `exceptions/order`), a `try` with both
+catch clauses and a `finally`, any other `finally`, and a jump out of a `try`, each naming why. Catching a
+trap would need every operation that may trap to return a `Result`. Rust's own messages (`attempt to divide by zero`,
 `index out of bounds`, `called Option::unwrap() on a None value`, …) map to the traps their class
 stands for.
 

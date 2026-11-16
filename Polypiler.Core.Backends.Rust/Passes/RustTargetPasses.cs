@@ -101,8 +101,10 @@ public sealed class RustHelperInlining : ITargetPass<RustCrate, RustProfile> {
   }
 
   private static RsFunction Inline(RsFunction function, Dictionary<string, (RsFunction Function, RsExpression Body)> helpers, Action<string> applied) {
-    var locals = RustSyntaxRewriter.DescendantsAndSelf(function).OfType<RsLet>().Select(binding => binding.Name)
-      .Concat(function.Parameters.Select(parameter => parameter.Name)).ToHashSet(StringComparer.Ordinal);
+    var nodes = RustSyntaxRewriter.DescendantsAndSelf(function).ToList();
+    var locals = nodes.OfType<RsLet>().Select(binding => binding.Name)
+      .Concat(nodes.OfType<RsFunction>().SelectMany(inner => inner.Parameters).Concat(nodes.OfType<RsClosure>().SelectMany(closure => closure.Parameters)).Select(parameter => parameter.Name))
+      .ToHashSet(StringComparer.Ordinal);
     return RustSyntaxRewriter.Rewrite(function, node => {
       if (node is not RsCall { Callee: RsPath { Name: var name } } call || !helpers.TryGetValue(name, out var helper) || Substituted(helper.Function, helper.Body, call, locals) is not { } inlined)
         return node;
@@ -132,11 +134,35 @@ public sealed class RustHelperInlining : ITargetPass<RustCrate, RustProfile> {
       replacements[parameters[index]] = Precedence(argument) >= 15 ? argument : new RsParenthesized(argument) { Type = argument.Type };
     }
 
-    var substituted = RustSyntaxRewriter.Rewrite(body, node => node is RsPath { Name: var name } && replacements.TryGetValue(name, out var argument) ? argument : node);
+    var substituted = RustSyntaxRewriter.Rewrite(body, node => node switch {
+      RsPath { Name: var name } when replacements.TryGetValue(name, out var argument) => argument,
+      // A literal put in for a parameter that is cast: the literal of the type, which clippy's unnecessary_cast asks for.
+      RsCast { Operand: RsLiteral { Text: var digits } literal, Target: var target } when Fits(digits, target) => literal with { Text = digits },
+      _ => node
+    });
     return RustEmitter.Precedence(substituted) >= 15 ? substituted : new RsParenthesized(substituted) { Type = call.Type };
   }
 
   private static int Precedence(RsExpression expression) => RustEmitter.Precedence(expression);
+
+  /// <summary>Whether an integer literal is a value of an integer type, so that it may stand for its cast.</summary>
+  private static bool Fits(string digits, string type) {
+    if (!System.Int128.TryParse(digits, System.Globalization.NumberStyles.AllowLeadingSign, System.Globalization.CultureInfo.InvariantCulture, out var value))
+      return false;
+
+    var (low, high) = type switch {
+      "i8" => (sbyte.MinValue, sbyte.MaxValue),
+      "u8" => (byte.MinValue, byte.MaxValue),
+      "i16" => (short.MinValue, short.MaxValue),
+      "u16" => (ushort.MinValue, ushort.MaxValue),
+      "i32" => (int.MinValue, int.MaxValue),
+      "u32" => (uint.MinValue, uint.MaxValue),
+      "i64" => (long.MinValue, long.MaxValue),
+      "u64" or "usize" => ((System.Int128)ulong.MinValue, (System.Int128)ulong.MaxValue),
+      _ => ((System.Int128)1, (System.Int128)0)
+    };
+    return value >= low && value <= high;
+  }
 
 }
 

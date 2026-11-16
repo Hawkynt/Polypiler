@@ -52,18 +52,63 @@ public static partial class RustEmitter {
       this._construct = $"the function '{function.Name}'";
       this._labels = 0;
       this._breakables.Clear();
-      this.Analyse(function);
-      var name = this._functions[function.Name];
-      var parameters = function.Parameters.Select(parameter => new RsParameter(this._locals[parameter], this.Type(parameter.Type))).ToList();
-      var returns = function.ReturnType == IrType.Void ? null : this.Type(function.ReturnType);
-      var statements = new List<RsStatement>();
-      foreach (var parameter in function.Parameters.Where(this._reassigned.Contains))
-        statements.Add(new RsLet(this._locals[parameter], true, null, new RsPath(this._locals[parameter])));
+      this._function = function;
+      this._arrayFacts = this._arrays.GetValueOrDefault(function.Name) ?? new();
+      this._arrayParameters = function.Parameters.Select((parameter, index) => (parameter, index)).Where(pair => pair.parameter.Type.IsArray).ToDictionary(pair => pair.parameter, pair => pair.index);
+      if (this._arrayFacts.Problem is { } problem)
+        this.Refuse(problem);
 
+      this.Analyse(function);
+      this.FieldAliases(function);
+      var name = this._functions[function.Name];
+      var member = this._members.GetValueOrDefault(function.Name);
+      if (member is { Kind: MemberKind.Instance })
+        this._locals[function.Parameters[0]] = "self";
+
+      if (this._bodiless.Contains(function.Name))
+        return new RsFunction(name, "", [], null, RsBlock.Empty);
+
+      var parameters = function.Parameters.Select((parameter, index) => new RsParameter(this._locals[parameter], this.ParameterType(function, index))).ToList();
+      var generics = "";
+      if (this._free.TryGetValue(function.Name, out var owner)) {
+        // The object of a method of a hierarchy: a reference to its struct, or to any type of its class's trait.
+        var polymorphic = this._traits.Contains(owner);
+        parameters[0] = parameters[0] with { TypeName = polymorphic ? "&T" : "&" + this.StructName(owner) };
+        generics = polymorphic ? $"<T: {this._types[owner]} + ?Sized>" : "";
+      }
+
+      if (member is { Kind: MemberKind.Maker })
+        return this.Maker(new RsFunction(name, "pub", parameters, null, new RsBlock([], null)), member);
+
+      var returns = this.ResultType(function);
+      if (this._throwing.Contains(function.Name))
+        returns = Fallible(returns);
+      var statements = new List<RsStatement>();
+      foreach (var parameter in function.Parameters.Where(this._reassigned.Contains)) {
+        // A parameter given a string or a new array of its own holds a copy it owns from the start.
+        var copied = parameter.Type.IsString || parameter.Type.IsArray && !this.IsReference(parameter);
+        var nullable = copied && this.IsNullableArray(parameter);
+        var type = parameter.Type.IsString ? OwnedString : nullable ? this.NullableArrayType(parameter.Type, false) : parameter.Type.IsArray && copied ? $"Vec<{this.ElementType(parameter.Type)}>" : null;
+        var own = parameter.Type.IsObject && !this.MayBeNull(parameter);
+        statements.Add(new RsLet(this._locals[parameter], true, type,
+          nullable ? new RsMethodCall(new RsPath(this._locals[parameter]), "map", [new RsPath($"<[{this.ElementType(parameter.Type)}]>::to_vec")])
+          : copied ? new RsMethodCall(new RsPath(this._locals[parameter]), "to_vec", [])
+          : own ? this.Cloned(new RsPath(this._locals[parameter]))
+          : new RsPath(this._locals[parameter])));
+      }
+
+      foreach (var parameter in function.Parameters.Where(this._shared.Contains))
+        statements.Add(this.SharedDeclaration(parameter, new RsPath(this._locals[parameter]) { Type = parameter.Type }));
+      statements.AddRange(this.NestedFunctions());
       this.Statements(function.Body.Statements, statements);
-      var body = Tidy.Function(new RsBlock(statements, null), function.ReturnType == IrType.Void);
-      return new RsFunction(name, function.IsPublic ? "pub" : "", parameters, returns, body);
+      if (this._throwing.Contains(function.Name) && function.ReturnType == IrType.Void && !(statements.Count > 0 && Diverges(statements[^1])))
+        statements.Add(new RsExpressionStatement(this.Returned(null)));
+      var body = Tidy.Function(new RsBlock(statements, null), function.ReturnType == IrType.Void && !this._throwing.Contains(function.Name));
+      return new RsFunction(name, function.IsPublic || this._free.ContainsKey(function.Name) ? "pub" : "", parameters, returns, body) { Generics = generics.Length > 0 ? generics : Lifetime(function, this._arrayFacts).Length > 0 ? "<'a>" : "" };
     }
+
+    /// <summary>The function being written.</summary>
+    private IrFunction _function = new("", false, IrType.Void, [], [], new IrBlock([]));
 
     /// <summary>The parameters the body assigns.</summary>
     private HashSet<IrLocal> _reassigned = [];
@@ -88,13 +133,35 @@ public static partial class RustEmitter {
         if (binding.Count > 1 || binding.Looped)
           this._reassigned.Add(parameter);
 
+      // The bodies of the lambdas, whose own bindings need mut as a function's do.
+      this._lambdaReassigned = [];
+      foreach (var lambda in Lambdas(function.Body)) {
+        var lambdaParameters = lambda.Parameters.ToDictionary(parameter => parameter, _ => new Binding(null, 0) { Count = 1 });
+        foreach (var (parameter, binding) in lambdaParameters)
+          bindings[parameter] = binding;
+
+        this.Count(lambda.Body.Statements, bindings, 0);
+        foreach (var (parameter, binding) in lambdaParameters)
+          if (binding.Count > 1 || binding.Looped)
+            this._lambdaReassigned.Add(parameter);
+      }
+
+      this.Closures(function);
+      this._reassigned.ExceptWith(this._shared);
+
+      this._ownedStringParameters = [.. this._reassigned.Where(parameter => parameter.Type.IsString)];
+      this._fieldWritten = FieldWrites(function);
+      foreach (var parameter in function.Parameters.Where(this._fieldWritten.Contains))
+        this._reassigned.Add(parameter);
+
       var taken = new HashSet<string>(StringComparer.Ordinal);
       this._locals = [];
-      var declared = function.Parameters.Concat(function.Locals).Distinct().ToList();
+      var declared = function.Parameters.Concat(function.Locals).Concat(Lambdas(function.Body).SelectMany(lambda => lambda.Parameters.Concat(lambda.Locals))).Distinct().ToList();
       foreach (var local in declared)
         this._locals[local] = RustNames.Unique([local.Name], name => (this._read.Contains(local) ? "" : "_") + RustNames.Snake(name, this.Edition).Replace("r#", "", StringComparison.Ordinal), taken)[0];
 
       this._locals = this._locals.ToDictionary(pair => pair.Key, pair => RustNames.IsKeyword(pair.Value, this.Edition) ? "r#" + pair.Value : pair.Value);
+      this._taken = taken;
     }
 
     /// <summary>One binding of a variable: its declaration and how often it is assigned on the worst path.</summary>
@@ -140,6 +207,10 @@ public static partial class RustEmitter {
           this.CountIn(store.Index, bindings, depth);
           this.CountIn(store.Value, bindings, depth);
           break;
+        case IrFieldStore store:
+          this.CountIn(store.Target, bindings, depth);
+          this.CountIn(store.Value, bindings, depth);
+          break;
         case IrIf choice: {
           this.CountIn(choice.Condition, bindings, depth);
           var before = Snapshot(bindings);
@@ -182,6 +253,30 @@ public static partial class RustEmitter {
           break;
         case IrThrow thrown:
           this.CountIn(thrown.Exception, bindings, depth);
+          break;
+        case IrGlobalAssign assign:
+          this.CountIn(assign.Value, bindings, depth);
+          break;
+        case IrTry attempt: {
+          // A catch clause or a finally may run after any part of the body: every path is taken as the worst.
+          this.Count(attempt.Body.Statements, bindings, depth);
+          foreach (var clause in attempt.Catches) {
+            if (clause.Filter is { } filter)
+              this.CountIn(filter, bindings, depth);
+            this.Count(clause.Body.Statements, bindings, depth);
+          }
+
+          if (attempt.Finally is { } final)
+            this.Count(final.Statements, bindings, depth);
+          break;
+        }
+        case IrForEachCollection loop:
+          this.CountIn(loop.Collection, bindings, depth);
+          if (loop.Element is { } loopElement)
+            bindings[loopElement] = new Binding(null, depth + 1) { Count = 1 };
+          if (loop.Value is { } loopValue)
+            bindings[loopValue] = new Binding(null, depth + 1) { Count = 1 };
+          this.Count(loop.Body.Statements, bindings, depth + 1);
           break;
       }
     }
@@ -231,29 +326,13 @@ public static partial class RustEmitter {
           this._read.Add(reference.Local);
         if (node is IrStep { Target: IrLocalRef target })
           this.Assigned(target.Local, bindings, depth);
+        if (node is IrBind bind)
+          this.Assigned(bind.Local, bindings, depth);
       }
     }
 
     /// <summary>Every expression below an expression and the expression itself.</summary>
-    private static IEnumerable<IrExpr> Nodes(IrExpr expression) {
-      yield return expression;
-      IEnumerable<IrExpr> children = expression switch {
-        IrUnary unary => [unary.Operand],
-        IrBinary binary => [binary.Left, binary.Right],
-        IrConvert convert => [convert.Operand],
-        IrConditional choice => [choice.Condition, choice.WhenTrue, choice.WhenFalse],
-        IrArrayLoad load => [load.Array, load.Index],
-        IrArrayLength length => [length.Array],
-        IrNewArray array => [array.Length],
-        IrCall call => call.Arguments,
-        IrStep step => [step.Target],
-        IrIntrinsic intrinsic => intrinsic.Arguments,
-        _ => []
-      };
-      foreach (var child in children)
-        foreach (var node in Nodes(child))
-          yield return node;
-    }
+    private static IEnumerable<IrExpr> Nodes(IrExpr expression) => IrTree.Nodes(expression);
 
     /// <summary>A new label of the function, <c>l0</c>, <c>s1</c>, …</summary>
     private string NewLabel(string prefix) => prefix + this._labels++;

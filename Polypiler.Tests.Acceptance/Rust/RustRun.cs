@@ -36,8 +36,11 @@ internal static class RustRun {
     return new RustRunner(new CrossLanguageRunner(RustLayerRun.Sandbox, Toolchains), new RustBuildOptions(checks, debugAssertions), environment);
   }
 
-  /// <summary>The image type of an IR scalar.</summary>
+  /// <summary>The image type of an IR scalar, or of an array of scalars as a <c>seq</c>.</summary>
   public static ImageType ImageOf(IrType type) => type.Kind switch {
+    IrTypeKind.Optional => ImageType.Opt(ImageOf(type.Underlying!)),
+    IrTypeKind.Array => ImageType.Seq(ImageOf(type.Element!)),
+    IrTypeKind.String => ImageType.Utf16,
     IrTypeKind.Bool => ImageType.Bool,
     IrTypeKind.I8 => ImageType.I8,
     IrTypeKind.U8 => ImageType.U8,
@@ -52,13 +55,27 @@ internal static class RustRun {
     _ => throw new ArgumentException($"{type} is no scalar.", nameof(type))
   };
 
-  /// <summary>The signature of an IR function whose parameters and result are scalars, every parameter <c>in</c>.</summary>
-  public static CallSignature SignatureOf(IrFunction function)
-    => new([.. function.Parameters.Select(parameter => new CallParameter(parameter.Name, ImageOf(parameter.Type), ParameterMode.In))],
+  /// <summary>
+  /// The signature of an IR function whose parameters and result are scalars or arrays of them: a
+  /// scalar <c>in</c>, an array <c>inout</c>, since the outcome shows every array after the call.
+  /// </summary>
+  public static CallSignature SignatureOf(IrFunction function, Func<int, bool>? takesNull = null)
+    => new([.. function.Parameters.Select((parameter, index) => new CallParameter(parameter.Name,
+        parameter.Type.IsArray && takesNull?.Invoke(index) == true ? ImageType.Opt(ImageOf(parameter.Type)) : ImageOf(parameter.Type),
+        parameter.Type.IsArray ? ParameterMode.InOut : ParameterMode.In))],
       function.ReturnType == IrType.Void ? null : ImageOf(function.ReturnType));
 
-  /// <summary>An argument as the little-endian bytes of its image.</summary>
+  /// <summary>An argument as the little-endian bytes of its image type: an optional one as its presence byte and its value.</summary>
+  public static byte[] Bytes(object? value, ImageType type) => type.Kind switch {
+    ImageKind.Optional when value is null => [0],
+    ImageKind.Optional => [1, .. Bytes(value!, type.Element!)],
+    _ => Bytes(value!)
+  };
+
+  /// <summary>An argument as the little-endian bytes of its image; an array as its count and its elements.</summary>
   public static byte[] Bytes(object value) => value switch {
+    Array array => [.. BitConverter.GetBytes((uint)array.Length), .. array.Cast<object>().SelectMany(Bytes)],
+    string text => [.. BitConverter.GetBytes((uint)text.Length), .. text.SelectMany(BitConverter.GetBytes)],
     bool truth => [truth ? (byte)1 : (byte)0],
     sbyte number => [unchecked((byte)number)],
     byte number => [number],
@@ -72,6 +89,63 @@ internal static class RustRun {
     float number => BitConverter.GetBytes(number),
     double number => BitConverter.GetBytes(number),
     _ => throw new ArgumentException($"{value.GetType()} is no scalar.", nameof(value))
+  };
+
+  /// <summary>The values an output image holds: the result, then the contents of every array argument, each as the .NET value of its IR type.</summary>
+  public static (object? Result, object[] Arguments) Values(IrFunction function, CallSignature signature, object[] arguments, byte[] image) {
+    var at = 0;
+    var result = Present(signature.Result, image, ref at) ? Read(function.ReturnType.Underlying ?? function.ReturnType, image, ref at) : null;
+    var after = arguments.Select((argument, index) => function.Parameters[index].Type.IsArray
+      ? Present(signature.Parameters[index].Type, image, ref at) ? Read(function.Parameters[index].Type, image, ref at)! : argument
+      : argument).ToArray();
+    Assert.That(at, Is.EqualTo(image.Length), "the output image holds more than the result and the arrays");
+    return (result, after);
+  }
+
+  /// <summary>Whether the value at a position of an image is there: the presence byte of an optional one, which the position moves past; always for any other.</summary>
+  private static bool Present(ImageType? type, byte[] image, ref int at) {
+    if (type?.Kind != ImageKind.Optional)
+      return true;
+
+    return image[at++] != 0;
+  }
+
+  /// <summary>The value at a position of an image, which moves past it.</summary>
+  private static object? Read(IrType type, byte[] image, ref int at) {
+    if (type.IsString) {
+      var length = BitConverter.ToInt32(image, at);
+      var units = new char[length];
+      for (var index = 0; index < length; ++index)
+        units[index] = (char)BitConverter.ToUInt16(image, at + 4 + 2 * index);
+
+      at += 4 + 2 * length;
+      return new string(units);
+    }
+
+    if (type.IsArray) {
+      var count = BitConverter.ToInt32(image, at);
+      at += 4;
+      var element = type.Element!;
+      var array = Array.CreateInstance(Value(element, new byte[Width(element)])!.GetType(), count);
+      for (var index = 0; index < count; ++index)
+        array.SetValue(Read(element, image, ref at), index);
+
+      return array;
+    }
+
+    var width = Width(type);
+    var value = Value(type, image[at..(at + width)]);
+    at += width;
+    return value;
+  }
+
+  /// <summary>The bytes of a scalar's image.</summary>
+  private static int Width(IrType type) => type.Kind switch {
+    IrTypeKind.Void => 0,
+    IrTypeKind.Bool or IrTypeKind.I8 or IrTypeKind.U8 => 1,
+    IrTypeKind.I16 or IrTypeKind.U16 => 2,
+    IrTypeKind.I32 or IrTypeKind.U32 or IrTypeKind.F32 => 4,
+    _ => 8
   };
 
   /// <summary>An output image as the .NET value of its IR type, as the interpreter gives it.</summary>
@@ -103,16 +177,22 @@ internal static class RustRun {
     var prepared = RustCrates.Prepared(module, profile);
     var files = RustCrates.Emit(module, profile);
     var exports = RustEmitter.Exports(prepared, profile);
-    var functions = prepared.Functions.Where(function => exports.ContainsKey(function.Name)).ToList();
+    var called = calls.Select(call => call.Method).ToHashSet(StringComparer.Ordinal);
+    var functions = prepared.Functions.Where(function => exports.ContainsKey(function.Name) && called.Contains(function.Name)).ToList();
+    var signatures = functions.ToDictionary(function => function.Name, function => SignatureOf(function, index => RustEmitter.TakesNull(prepared, function.Name, index)), StringComparer.Ordinal);
     var index = functions.Select((function, position) => (function.Name, position)).ToDictionary(pair => pair.Name, pair => pair.position, StringComparer.Ordinal);
     var crate = RustEmitter.ModuleName(module.Name, profile);
     var execution = await Runner(checks).ExecuteAsync(RustCrates.Package(files), crate,
-      [.. functions.Select(function => new RustExport(exports[function.Name], SignatureOf(function)))],
-      [.. calls.Select(call => (index[call.Method], call.Arguments.SelectMany(Bytes).ToArray()))]);
+      [.. functions.Select(function => new RustExport(exports[function.Name], signatures[function.Name]) { Converted = function.ReturnType.IsEnum || function.Parameters.Any(parameter => parameter.Type.IsEnum) })],
+      [.. calls.Select(call => (index[call.Method], call.Arguments.SelectMany((argument, position) => Bytes(argument, signatures[call.Method].Parameters[position].Type)).ToArray()))]);
     Assert.That(execution.Diagnostics, Is.Empty, () => string.Join("\n", execution.Diagnostics.Select(diagnostic => $"{diagnostic}: {diagnostic.Cause}")) + "\n" + RustCrates.ModuleText(files));
-    return [.. calls.Zip(execution.Outcomes!).Select(pair => pair.Second.Panic is { } panic
-      ? Trap(panic)
-      : PrototypeFixture.Outcome(Value(functions[index[pair.First.Method]].ReturnType, pair.Second.Image!), pair.First.Arguments))];
+    return [.. calls.Zip(execution.Outcomes!).Select(pair => {
+      if (pair.Second.Panic is { } panic)
+        return Trap(panic);
+
+      var (result, arguments) = Values(functions[index[pair.First.Method]], signatures[pair.First.Method], pair.First.Arguments, pair.Second.Image!);
+      return PrototypeFixture.Outcome(result, arguments);
+    })];
   }
 
 }

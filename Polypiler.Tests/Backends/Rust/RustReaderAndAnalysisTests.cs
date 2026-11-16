@@ -38,6 +38,9 @@ public sealed class RustReaderAndAnalysisTests {
   [TestCase("fn f() {\n    a = b..c;\n}\n")]
   [TestCase("fn f() {\n    for i in 0..n as usize {}\n}\n")]
   [TestCase("fn f() -> u32 {\n    (a = b) as u32\n}\n")]
+  [TestCase("fn f() -> i32 {\n    fn g(m: i32) -> i32 {\n        m\n    }\n    g(1)\n}\n")]
+  [TestCase("fn f() -> i32 {\n    let g: Rc<dyn Fn(i32, i32) -> i32> = Rc::new(move |a: i32, b: i32| a + b);\n    g(1, 2)\n}\n")]
+  [TestCase("fn f() -> i32 {\n    let g: Option<Rc<dyn Fn() -> i32>> = Some(Rc::new(|| 1));\n    ply_non_null(&g)() + h()() + t[0]() + (u)()\n}\n")]
   public void Reader_ReadsWhatThePrinterWritesBack(string text) => Assert.That(RustPrinter.Print(RustSyntaxReader.Read(text)), Is.EqualTo(text));
 
   [TestCase("pub(crate fn f() {}", "Expected ')'")]
@@ -70,6 +73,14 @@ public sealed class RustReaderAndAnalysisTests {
     Assert.That(RustLiveness.DeadStores(function), Is.Empty);
     var dead = Function(new RsLet("x", true, null, L("1")), new RsExpressionStatement(new RsAssign(P("x"), "=", L("2"))), new RsExpressionStatement(new RsReturn(P("x"))));
     Assert.That(RustLiveness.DeadStores(dead), Is.EqualTo(new[] { "x" }));
+  }
+
+  [Test]
+  public void Liveness_CountsWhatAClosureNamesAsRead() {
+    // The closure returns from itself, not from the function: the value it reads stays live.
+    var closure = new RsClosure(true, [], new RsBlockExpression(new RsBlock([new RsExpressionStatement(new RsReturn(P("x")))], null)));
+    var function = Function(new RsLet("x", true, null, L("1")), new RsLet("g", false, null, closure), new RsExpressionStatement(new RsCall(P("g"), [])));
+    Assert.That(RustLiveness.DeadStores(function), Is.Empty);
   }
 
   [Test]

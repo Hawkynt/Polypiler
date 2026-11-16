@@ -23,8 +23,8 @@ public static partial class RustEmitter {
   /// </summary>
   public static int Precedence(RsExpression expression) => expression switch {
     RsLiteral literal when literal.Text.StartsWith('-') => 13,
-    RsLiteral or RsString or RsPath or RsParenthesized or RsCall or RsMethodCall or RsMacro or RsIndex or RsArray => 15,
-    RsUnary => 13,
+    RsLiteral or RsString or RsPath or RsParenthesized or RsCall or RsMethodCall or RsMacro or RsIndex or RsArray or RsField or RsStructLiteral or RsTuple or RsTry => 15,
+    RsUnary or RsReference => 13,
     RsCast => 12,
     RsBinary binary => RustPrinter.Precedence(binary.Operator),
     RsRange => 2,
@@ -91,25 +91,114 @@ public static partial class RustEmitter {
     /// <summary>An IR expression.</summary>
     private RsExpression Expression(IrExpr expression) => expression switch {
       IrConst constant when TypeName(constant.Type) is not null => Literal(constant),
+      IrConst { Type.IsEnum: true } constant => this.EnumConstant(constant),
+      IrIntrinsic operation when EnumOperations.IsEnum(operation.Op) => this.EnumOperation(operation),
+      IrIntrinsic operation when NumberTextOperations.IsNumberText(operation.Op) => this.NumberText(operation),
+      IrIntrinsic { Op: IrIntrinsicOp.ViewOf or IrIntrinsicOp.Slice or IrIntrinsicOp.ViewLength or IrIntrinsicOp.ViewToArray or IrIntrinsicOp.ViewEqual or IrIntrinsicOp.ViewFill } operation
+        => this.ViewOperation(operation),
+      IrStrConst or IrConstRef { Type.IsString: true } or IrConditional { Type.IsString: true } => this.StringValue(expression),
+      IrArrayLoad { Array: IrConstRef table, Type.IsString: true } load => this.TableText(table, load.Index),
+      IrIntrinsic operation when StringOperations.IsString(operation.Op) => this.StringOperation(operation),
+      IrLocalRef reference when this._shared.Contains(reference.Local) => this.SharedRead(reference.Local),
+      IrLocalRef { Type.IsFunction: true } reference when this._nested.ContainsKey(reference.Local) => this.FunctionValue(reference),
       IrLocalRef reference => new RsPath(this._locals[reference.Local]) { Type = reference.Type },
+      IrLambda lambda => this.Closure(lambda),
+      IrSome or IrNone or IrIsNone or IrUnwrap or IrCoalesce or IrBind => this.Optional(expression),
+      IrCollection operation => this.Settled(operation, this.Collection),
+      IrInvoke invoke => this.Invoke(invoke),
+      IrFunctionRef reference => this.FunctionReference(reference),
+      IrBoundMethod bound => this.BoundMethod(bound),
+      IrNull { Type.IsFunction: true } => new RsPath("None") { Type = expression.Type },
+      IrReferenceEquals equality when equality.Left.Type.IsFunction || equality.Right.Type.IsFunction => this.FunctionEquals(equality.Left, equality.Right),
+      IrIsNull test when test.Value.Type.IsFunction => this.FunctionIsNull(test.Value),
+      IrIsNull test when test.Value.Type.IsArray => this.ArrayIsNull(test.Value, false),
       IrConstRef constant when !constant.Type.IsArray && this._constants.TryGetValue(constant.Constant.Name, out var name) => new RsPath(name) { Type = constant.Type },
       IrUnary unary => this.Unary(unary),
       IrBinary binary => this.Binary(binary),
       IrConvert convert => this.Convert(convert),
       IrConditional choice => this.Conditional(choice),
+      IrCall call when this._throwing.Contains(call.Function)
+        => this.Propagated(this._members.TryGetValue(call.Function, out var thrower) ? this.MemberCall(call, thrower) : new RsCall(new RsPath(this._functions[call.Function]), this.Arguments(call)) { Type = call.Type }),
+      IrNew creation when IsError(creation.Type) => this.ErrorNew(creation),
+      IrFieldLoad load when IsError(load.Target.Type) => this.ErrorField(load),
+      IrCall call when this._members.TryGetValue(call.Function, out var member) => this.MemberCall(call, member),
       IrCall call when this._functions.TryGetValue(call.Function, out var callee)
-        => new RsCall(new RsPath(callee), [.. call.Arguments.Select(this.Expression)]) { Type = call.Type },
+        => new RsCall(new RsPath(callee), this.Arguments(call)) { Type = call.Type },
+      IrStep { Target: IrLocalRef target } step when this._shared.Contains(target.Local) => this.SharedStep(target.Local, step, false),
       IrStep { Target: IrLocalRef target } step => this.StepExpression(target, step),
-      IrArrayLoad { Array: IrConstRef table } load when this._constants.TryGetValue(table.Constant.Name, out var tableName)
-        => new RsIndex(new RsPath(tableName), this.Index(load.Index)) { Type = load.Type },
-      IrArrayLength { Array: IrConstRef table } when this._constants.TryGetValue(table.Constant.Name, out var tableName)
-        => this.Cast(new RsMethodCall(new RsPath(tableName), "len", []), IrType.I32),
+      IrStep { Target: IrGlobalRef global } step when Atomic(global.Type) is not null => this.GlobalStep(step, global),
+      IrStep { Target: IrArrayLoad { Array: IrGlobalRef { Global: var locked } } load } step when IsLocked(locked) => this.LockedStep(step, load, locked),
+      IrStep { Target: IrArrayLoad load } step => this.ElementStep(load, step, false),
+      IrArrayLoad { Index: IrLocalRef counter } when this._elements.TryGetValue(counter.Local, out var element) => new RsPath(element) { Type = expression.Type },
+      IrArrayLoad { Array: IrGlobalRef { Global: var locked } } load when IsLocked(locked) => this.LockedElement(locked, load.Index),
+      IrArrayLoad load => new RsIndex(this.ArrayTarget(load.Array), this.Index(load.Index)) { Type = load.Type },
+      IrArrayLength { Array: IrGlobalRef { Global: var locked } } when this._globalLengths.TryGetValue(locked.Name, out var count)
+        => Literal(new IrConst(IrType.I32, count)),
+      IrArrayLength length => this.ArrayLength(length),
+      IrNewArray or IrIntrinsic { Op: IrIntrinsicOp.ArrayOf } => this.Vector(expression),
+      IrIntrinsic { Op: IrIntrinsicOp.ArrayCopy } copy => this.ArrayCopy(copy),
+      IrIntrinsic { Op: IrIntrinsicOp.ArrayFill or IrIntrinsicOp.ArrayClear } fill => this.ArrayFill(fill),
+      IrIntrinsic { Op: IrIntrinsicOp.LoadLittle or IrIntrinsicOp.LoadBig } load => this.EndianLoad(load),
+      IrIntrinsic { Op: IrIntrinsicOp.StoreLittle or IrIntrinsicOp.StoreBig } store => this.EndianStore(store),
       IrIntrinsic intrinsic => this.Intrinsic(intrinsic),
+      IrStructNew creation when creation.Type.StructType is not null => this.StructNew(creation),
+      IrStructDefault creation when creation.Type.StructType is not null => new RsCall(new RsPath(this.Type(creation.Type) + "::default"), []) { Type = creation.Type },
+      IrFieldLoad load when load.Target.Type.IsStruct => new RsField(this.Place(load.Target, false), this.FieldName(load.Field)) { Type = load.Type },
+      IrFieldLoad load when load.Target.Type.IsObject => this.ObjectField(load),
+      IrMethodCall { Kind: IrMethodCallKind.Virtual or IrMethodCallKind.Interface, Target: not null } call => this.VirtualCall(call),
+      IrTypeTest test => this.TypeTest(test.Value, test.Target),
+      IrCast { Type.IsObject: true } or IrAsCast { Type.IsObject: true } => this.Object(expression).Expression,
+      IrStructEquals equality when equality.Left.Type.IsObject || equality.Right.Type.IsObject => this.ObjectEquals(equality.Left, equality.Right),
+      IrReferenceEquals equality => this.SameObject(equality.Left, equality.Right),
+      IrGenericEquals equality => this.GenericEquals(equality),
+      IrGenericCompare comparison => this.GenericCompare(comparison),
+      IrIsNull test when test.Value.Type.IsObject => this.IsNull(test.Value),
+      IrNull { Type.IsObject: true } => new RsPath("None") { Type = expression.Type },
+      IrGlobalRef global when !global.Type.IsArray && IsLocked(global.Global) => this.LockedValue(global.Global),
+      IrGlobalRef global when !global.Type.IsArray => this.GlobalValue(global),
+      IrStructEquals equality when equality.Left.Type.IsStruct => this.Binary(this.Expression(equality.Left), "==", this.Expression(equality.Right), IrType.Bool),
       IrThrowExpression thrown => this.Throw(thrown.Exception),
-      IrArrayLoad or IrArrayLength or IrNewArray => this.Refuse("arrays and views"),
-      IrStrConst => this.Refuse("strings"),
       _ => this.Refuse(expression.GetType().Name[2..])
     };
+
+    /// <summary>
+    /// The equality of a generic definition at its instantiated type: the operator of integers and
+    /// truth values; of floating-point numbers <c>ply_same_value</c>, under which a NaN equals a NaN
+    /// and the zeros are equal; identity of objects, the fields of a record.
+    /// </summary>
+    private RsExpression GenericEquals(IrGenericEquals equality) {
+      var type = equality.Left.Type;
+      if (type.IsObject)
+        return type.ClassType is { IsRecord: true } ? this.ObjectEquals(equality.Left, equality.Right) : this.SameObject(equality.Left, equality.Right);
+      if (type.IsFloat)
+        return new RsCall(new RsPath(this.StringHelper(type == IrType.F32 ? "ply_same_value_f32" : "ply_same_value_f64")), [this.Expression(equality.Left), this.Expression(equality.Right)]) { Type = IrType.Bool };
+      if (TypeName(type) is null)
+        return this.Refuse($"the equality of a generic definition at {type}");
+
+      return this.Binary(this.Expression(equality.Left), "==", this.Expression(equality.Right), IrType.Bool);
+    }
+
+    /// <summary>
+    /// The order of a generic definition at its instantiated type, as .NET's <c>CompareTo</c> gives it:
+    /// the difference of two values of a type narrower than <c>int</c>; -1, 0 or 1 of a wider integer
+    /// or a truth value, <c>Ordering as i32</c>; of floating-point numbers <c>ply_compare</c>, which puts a NaN below every number.
+    /// </summary>
+    private RsExpression GenericCompare(IrGenericCompare comparison) {
+      var type = comparison.Left.Type;
+      var left = this.Expression(comparison.Left);
+      var right = this.Expression(comparison.Right);
+      if (type.IsInteger && type.Bits < 32) {
+        RsExpression Wide(RsExpression value) => new RsCall(new RsPath("i32::from"), [Suffixed(value)]) { Type = IrType.I32 };
+        return this.Binary(Wide(left), "-", Wide(right), IrType.I32);
+      }
+
+      if (type.IsFloat)
+        return new RsCall(new RsPath(this.StringHelper(type == IrType.F32 ? "ply_compare_f32" : "ply_compare_f64")), [left, right]) { Type = IrType.I32 };
+      if (TypeName(type) is null)
+        return this.Refuse($"the order of a generic definition at {type}");
+
+      return new RsCast(new RsMethodCall(this.Receiver(left), "cmp", [new RsReference(false, right)]), "i32") { Type = IrType.I32 };
+    }
 
     /// <summary>An index into a table: <c>usize</c>, a negative one becoming one no table reaches.</summary>
     private RsExpression Index(IrExpr index) => index is IrConst { Value: >= 0 } constant
@@ -121,6 +210,8 @@ public static partial class RustEmitter {
       switch (unary.Op) {
         case IrUnaryOp.LogicalNot:
           return this.Not(unary.Operand);
+        case IrUnaryOp.BitNot when type.IsEnum:
+          return this.Wrapped(type, new RsUnary("!", this.Inner(unary.Operand)) { Type = type.EnumType!.Underlying });
         case IrUnaryOp.BitNot:
           return new RsUnary("!", this.Operand(this.Expression(unary.Operand), 13)) { Type = type };
         case IrUnaryOp.Negate when type.IsFloat: {
@@ -145,8 +236,22 @@ public static partial class RustEmitter {
       switch (condition) {
         case IrUnary { Op: IrUnaryOp.LogicalNot } inner:
           return this.Expression(inner.Operand);
+        case IrIsNone test:
+          return this.Bound(test.Value, value => new RsMethodCall(this.Receiver(value), "is_some", []) { Type = IrType.Bool });
+        case IrIsNull { Value.Type.IsArray: true } test:
+          return this.ArrayIsNull(test.Value, true);
         case IrConst { Type.Kind: IrTypeKind.Bool } constant:
           return Literal(new IrConst(IrType.Bool, constant.Value == 0 ? 1 : 0));
+        case IrTypeTest test when test.Value.Type.IsAssignableTo(test.Target) && this.MayBeNull(test.Value):
+          return this.IsNull(test.Value);
+        case IrReferenceEquals equality when (equality.Left is IrNull || equality.Right is IrNull) && (equality.Left.Type.IsFunction || equality.Right.Type.IsFunction):
+          return this.FunctionIsSome(equality.Left is IrNull ? equality.Right : equality.Left);
+        case IrConditional choice when Lazy(choice) is { } lazy && !(KnownTruth(choice.WhenTrue) is { } a && KnownTruth(choice.WhenFalse) is { } b && a != b):
+          return this.Not(lazy);
+        case IrBinary { Op: IrBinaryOp.LogicalAnd or IrBinaryOp.LogicalOr } logical:
+          // De Morgan: the negation moves onto the operands, where a comparison or a test turns around.
+          return this.Binary(new IrBinary(logical.Op == IrBinaryOp.LogicalAnd ? IrBinaryOp.LogicalOr : IrBinaryOp.LogicalAnd,
+            new IrUnary(IrUnaryOp.LogicalNot, logical.Left), new IrUnary(IrUnaryOp.LogicalNot, logical.Right)));
         case IrBinary { Op: IrBinaryOp.Equal or IrBinaryOp.NotEqual } equality:
           return this.Binary(equality with { Op = equality.Op == IrBinaryOp.Equal ? IrBinaryOp.NotEqual : IrBinaryOp.Equal });
         case IrBinary { Op: >= IrBinaryOp.Less and <= IrBinaryOp.GreaterOrEqual } order when !order.Left.Type.IsFloat:
@@ -158,8 +263,12 @@ public static partial class RustEmitter {
               _ => IrBinaryOp.Less
             }
           });
-        default:
-          return new RsUnary("!", this.Operand(this.Expression(condition), 13)) { Type = IrType.Bool };
+        default: {
+          var operand = this.Expression(condition);
+          return operand is RsLiteral { Text: "true" or "false" } truth
+            ? new RsLiteral(truth.Text == "true" ? "false" : "true") { Type = IrType.Bool }
+            : new RsUnary("!", this.Operand(operand, 13)) { Type = IrType.Bool };
+        }
       }
     }
 
@@ -174,8 +283,26 @@ public static partial class RustEmitter {
           return (left.Value != 0) == (binary.Op == IrBinaryOp.Equal) ? this.Expression(binary.Right) : this.Not(binary.Right);
       }
 
+      // The bitwise operators of an enum work on its integer; equality is the newtype's own.
+      if (operandType.IsEnum && binary.Op is IrBinaryOp.And or IrBinaryOp.Or or IrBinaryOp.Xor)
+        return this.Wrapped(type, this.Binary(this.Inner(binary.Left), binary.Op switch { IrBinaryOp.And => "&", IrBinaryOp.Or => "|", _ => "^" }, this.Inner(binary.Right), operandType.EnumType!.Underlying));
+
+      // An operand that decides a lazy operator alone: false && x and true || x are the constant; so are
+      // x && false and x || true where x has no effect (clippy's overly_complex_bool_expr).
+      if (binary.Op is IrBinaryOp.LogicalAnd or IrBinaryOp.LogicalOr) {
+        var absorbing = binary.Op == IrBinaryOp.LogicalOr ? 1 : 0;
+        if (binary.Left is IrConst { Type.Kind: IrTypeKind.Bool } leading && (leading.Value != 0 ? 1 : 0) == absorbing
+          || binary.Right is IrConst { Type.Kind: IrTypeKind.Bool } trailing && (trailing.Value != 0 ? 1 : 0) == absorbing && Polypiler.Core.Backends.Rust.Emit.BindHoisting.Pure(binary.Left))
+          return new RsLiteral(absorbing == 1 ? "true" : "false") { Type = IrType.Bool };
+      }
+
       var a = this.Expression(binary.Left);
       var b = this.Expression(binary.Right);
+      // A truth value an operand is known to be: true and x, false or x are x (a test of a reference that is never null).
+      var neutral = binary.Op == IrBinaryOp.LogicalAnd ? "true" : "false";
+      if (binary.Op is IrBinaryOp.LogicalAnd or IrBinaryOp.LogicalOr && (a is RsLiteral { Text: var first } && first == neutral || b is RsLiteral { Text: var second } && second == neutral))
+        return a is RsLiteral { Text: var known } && known == neutral ? b : a;
+
       string Infix() => binary.Op switch {
         IrBinaryOp.Add => "+",
         IrBinaryOp.Subtract => "-",
@@ -230,21 +357,60 @@ public static partial class RustEmitter {
       return this.Method(value, "wrapping_shr", type, amount);
     }
 
+    /// <summary>
+    /// The value a truth value always has where it has no effect: a constant, or a lazy operator with
+    /// the operand that decides it alone and another without an effect; <see langword="null"/> otherwise.
+    /// </summary>
+    private static bool? KnownTruth(IrExpr value) => value switch {
+      IrConst { Type.Kind: IrTypeKind.Bool } constant => constant.Value != 0,
+      IrBinary { Op: IrBinaryOp.LogicalOr } or IrBinary { Op: IrBinaryOp.LogicalAnd } when value is IrBinary lazy
+        && (KnownTruth(lazy.Left) == (lazy.Op == IrBinaryOp.LogicalOr)
+          || KnownTruth(lazy.Right) == (lazy.Op == IrBinaryOp.LogicalOr) && Polypiler.Core.Backends.Rust.Emit.BindHoisting.Pure(lazy.Left))
+        => lazy.Op == IrBinaryOp.LogicalOr,
+      _ => null
+    };
+
+    /// <summary>
+    /// A choice of a truth value with one constant branch as the lazy operator that is evaluated the same
+    /// way: <c>c ? true : x</c> is <c>c || x</c>, <c>c ? false : x</c> <c>!c &amp;&amp; x</c>, <c>c ? x : true</c>
+    /// <c>!c || x</c>, <c>c ? x : false</c> <c>c &amp;&amp; x</c>; <see langword="null"/> for any other choice.
+    /// </summary>
+    private static IrBinary? Lazy(IrConditional choice) {
+      if (choice.Type != IrType.Bool)
+        return null;
+
+      var negated = new IrUnary(IrUnaryOp.LogicalNot, choice.Condition);
+      return (KnownTruth(choice.WhenTrue), KnownTruth(choice.WhenFalse)) switch {
+        (true, _) => new IrBinary(IrBinaryOp.LogicalOr, choice.Condition, choice.WhenFalse),
+        (false, _) => new IrBinary(IrBinaryOp.LogicalAnd, negated, choice.WhenFalse),
+        (_, true) => new IrBinary(IrBinaryOp.LogicalOr, negated, choice.WhenTrue),
+        (_, false) => new IrBinary(IrBinaryOp.LogicalAnd, choice.Condition, choice.WhenTrue),
+        _ => null
+      };
+    }
+
     /// <summary><c>if c { a } else { b }</c>; with constant truth values the condition itself or its negation.</summary>
     private RsExpression Conditional(IrConditional choice) {
-      if (choice is { WhenTrue: IrConst { Type.Kind: IrTypeKind.Bool } yes, WhenFalse: IrConst { Type.Kind: IrTypeKind.Bool } no } && yes.Value != no.Value)
-        return yes.Value != 0 ? this.Expression(choice.Condition) : this.Not(choice.Condition);
+      var yes = KnownTruth(choice.WhenTrue);
+      var no = KnownTruth(choice.WhenFalse);
+      if (yes is { } always && no is { } never && always != never)
+        return always ? this.Expression(choice.Condition) : this.Not(choice.Condition);
 
-      // A choice in the second branch is an else if (clippy's collapsible_else_if).
+      if (Lazy(choice) is { } lazy)
+        return this.Binary(lazy);
+
+      // A choice in the second branch is an else if (clippy's collapsible_else_if); a branch that leaves is a statement of its block.
+      static RsBlock Branch(RsExpression value) => value is RsReturn or RsBreak or RsContinue || value is RsCall { Callee: RsPath { Name: "ply_unhandled" } }
+        ? new RsBlock([new RsExpressionStatement(value)], null) : new RsBlock([], value);
       var otherwise = this.Expression(choice.WhenFalse);
-      return new RsIf(this.Expression(choice.Condition), new RsBlock([], this.Expression(choice.WhenTrue)),
-        otherwise is RsIf nested ? nested : new RsBlockExpression(new RsBlock([], otherwise))) { Type = choice.Type };
+      return new RsIf(this.Expression(choice.Condition), Branch(this.Expression(choice.WhenTrue)),
+        otherwise is RsIf nested ? nested : new RsBlockExpression(Branch(otherwise))) { Type = choice.Type };
     }
 
     /// <summary>A step of a variable as an expression: a block that steps it and yields the old or the new value.</summary>
     private RsExpression StepExpression(IrLocalRef target, IrStep step) {
       var place = new RsPath(this._locals[target.Local]) { Type = target.Type };
-      var assign = new RsExpressionStatement(new RsAssign(place, "=", this.Stepped(place, step)));
+      var assign = new RsExpressionStatement(this.StepAssignment(target, step));
       if (!step.Postfix)
         return new RsBlockExpression(new RsBlock([assign], place)) { Type = target.Type };
 
@@ -263,6 +429,10 @@ public static partial class RustEmitter {
     private RsExpression Convert(IrConvert convert) {
       var source = convert.Operand.Type;
       var target = convert.Type;
+      if (source.IsEnum)
+        return this.Inner(convert.Operand);
+      if (target.IsEnum)
+        return this.Wrapped(target, this.Expression(convert.Operand));
       if (TypeName(source) is null || TypeName(target) is null || source == IrType.Bool || target == IrType.Bool)
         return this.Refuse($"conversion from {source} to {target}");
 
@@ -270,10 +440,16 @@ public static partial class RustEmitter {
         return this.Expression(convert.Operand);
 
       // A constant integer is converted here: a cast of a literal is what clippy's unnecessary_cast warns about.
-      if (convert.Operand is IrConst constant && source.IsInteger && target.IsInteger && convert.Contract == IrConversion.Wrap)
+      if (convert.Operand is IrConst constant && source.IsInteger && target.IsInteger
+        && (convert.Contract == IrConversion.Wrap || IrOperators.Number(source, constant.Value) is var number && number >= IrOperators.Minimum(target) && number <= IrOperators.Maximum(target)))
         return Literal(new IrConst(target, IrOperators.Wrap(target, (long)(ulong)IrOperators.Number(source, constant.Value))));
 
       var operand = this.Expression(convert.Operand);
+      // A literal the conversions before made of a constant: the literal of the target type where it fits.
+      if (operand is RsLiteral { Text: var digits } && source.IsInteger && target.IsInteger && Int128.TryParse(digits, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var value)
+        && value >= IrOperators.Minimum(target) && value <= IrOperators.Maximum(target))
+        return new RsLiteral(digits) { Type = target };
+
       if (source.IsInteger && target.IsInteger) {
         if (IrOperators.Contains(target, source))
           return new RsCall(new RsPath(TypeName(target)! + "::from"), [Suffixed(operand)]) { Type = target };

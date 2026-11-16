@@ -1,0 +1,316 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Polypiler.Core.IR;
+
+namespace Polypiler.Core.Backends.Rust.Emit;
+
+/// <summary>Who holds an array a variable or a result of a function names.</summary>
+internal enum ArrayHolder {
+
+  /// <summary>Not an array.</summary>
+  None,
+
+  /// <summary>The variable owns it: a <c>Vec&lt;T&gt;</c>, created in the function or given back by a call that created it.</summary>
+  Owned,
+
+  /// <summary>The variable borrows it from a parameter: <c>&amp;[T]</c> or <c>&amp;mut [T]</c>.</summary>
+  Borrowed
+
+}
+
+/// <summary>What one function does with arrays: which parameters it writes, what its result is, and who holds the array of each local.</summary>
+internal sealed class FunctionArrays {
+
+  /// <summary>The indices of the array parameters the function writes, directly or through a callee: <c>&amp;mut [T]</c>.</summary>
+  public SortedSet<int> MutableParameters { get; } = [];
+
+  /// <summary>The indices of the array parameters the function assigns a new array to: never written, they are copied into a vector of their own.</summary>
+  public SortedSet<int> CopiedParameters { get; } = [];
+
+  /// <summary>Who holds the array the function returns.</summary>
+  public ArrayHolder Result { get; set; }
+
+  /// <summary>The indices of the parameters a borrowed result may borrow from.</summary>
+  public SortedSet<int> ResultParameters { get; } = [];
+
+  /// <summary>Who holds the array of each array local.</summary>
+  public Dictionary<IrLocal, ArrayHolder> Locals { get; } = [];
+
+  /// <summary>The array locals that are written: a <c>let mut</c> vector or a <c>&amp;mut</c> borrow.</summary>
+  public HashSet<IrLocal> MutableLocals { get; } = [];
+
+  /// <summary>The array locals that name the array a field of an object holds, each with the load it is declared with.</summary>
+  public Dictionary<IrLocal, IrFieldLoad> FieldAliases { get; } = [];
+
+  /// <summary>Why the arrays of the function have no safe Rust form, or <see langword="null"/>.</summary>
+  public string? Problem { get; set; }
+
+  /// <summary>The same facts, for the fixed point to compare.</summary>
+  public string Key => $"{string.Join(",", this.MutableParameters)}|{this.Result}|{string.Join(",", this.ResultParameters)}";
+
+}
+
+/// <summary>
+/// The ownership analysis of arrays, which decides the Rust form of every array a module names. An
+/// array of the IR is a reference that several variables may share; Rust lets one owner hold it and
+/// others borrow it. The variables of a function that one array may flow into are grouped (an
+/// assignment, a declaration, a return, a call that gives back a borrowed parameter join their
+/// groups); a group holds a new array (<c>Vec&lt;T&gt;</c>), a parameter's (<c>&amp;[T]</c>, or
+/// <c>&amp;mut [T]</c> where any variable of the group is written), never both. A group that is
+/// written and has more than one owner, or an owned and a borrowed array, is refused: safe Rust has
+/// no shared mutable array; one nothing writes is a value, copied where it changes hands. A constant table is never in a group: the IR reads its elements only, and lets no variable
+/// hold it. Parameters written by a callee are written by the caller, and a borrowed result a caller
+/// writes through is exclusive; the facts of the functions are computed to their fixed point.
+/// </summary>
+internal static class ArrayOwnership {
+
+  /// <summary>The array a view of it is made of, through views of views, or <see langword="null"/>.</summary>
+  private static IrExpr? ViewRoot(IrExpr view) => view switch {
+    IrIntrinsic { Op: IrIntrinsicOp.ViewOf or IrIntrinsicOp.Slice } operation => operation.Arguments[0].Type.IsArray ? operation.Arguments[0] : ViewRoot(operation.Arguments[0]),
+    _ => null
+  };
+
+  /// <summary>Whether a function writes the elements of a writable view variable: a store, a step, a copy into it or a fill of it.</summary>
+  internal static bool WritesView(IrFunction function, IrLocal local) => local.Type.Kind == IrTypeKind.Span && Statements(function.Body).Any(statement => statement switch {
+    IrStore { Array: IrLocalRef target } => target.Local == local,
+    IrExprStmt { Expression: IrStep { Target: IrArrayLoad { Array: IrLocalRef target } } } => target.Local == local,
+    _ => false
+  } || IrTree.Expressions(statement).SelectMany(IrTree.Nodes).Any(node => node is IrIntrinsic { Op: IrIntrinsicOp.ViewCopy or IrIntrinsicOp.ViewTryCopy or IrIntrinsicOp.ViewFill } operation
+    && operation.Arguments[operation.Op == IrIntrinsicOp.ViewFill ? 0 : 1] is IrLocalRef target && target.Local == local));
+
+  private static readonly object _result = new();
+
+  /// <summary>The facts of every function of a module, by name.</summary>
+  public static IReadOnlyDictionary<string, FunctionArrays> Of(IrModule module) {
+    ArgumentNullException.ThrowIfNull(module);
+    var facts = module.Functions.ToDictionary(function => function.Name, _ => new FunctionArrays(), StringComparer.Ordinal);
+    // The functions whose borrowed result a caller writes through: their result is an exclusive borrow.
+    var writtenResults = new HashSet<string>(StringComparer.Ordinal);
+    var byName = module.Functions.ToDictionary(function => function.Name, StringComparer.Ordinal);
+    for (var round = 0; round <= 2 * module.Functions.Count + 1; ++round) {
+      var changed = false;
+      foreach (var function in module.Functions) {
+        var before = facts[function.Name].Key;
+        var results = writtenResults.Count;
+        facts[function.Name] = Analyse(function, facts, writtenResults, byName);
+        changed |= facts[function.Name].Key != before || writtenResults.Count != results;
+      }
+
+      if (!changed)
+        break;
+    }
+
+    return facts;
+  }
+
+  /// <summary>Every statement of a block and of the blocks inside it, outer ones first.</summary>
+  public static IEnumerable<IrStmt> Statements(IrBlock block) {
+    foreach (var statement in block.Statements) {
+      yield return statement;
+      foreach (var inner in IrTree.Blocks(statement))
+        foreach (var nested in Statements(inner))
+          yield return nested;
+    }
+  }
+
+  private static FunctionArrays Analyse(IrFunction function, IReadOnlyDictionary<string, FunctionArrays> facts, HashSet<string> writtenResults, IReadOnlyDictionary<string, IrFunction> byName) {
+    var result = new FunctionArrays();
+    var groups = new Groups();
+    var written = new List<object>();
+    var created = new List<object>();
+    var problems = new List<string>();
+
+    void Link(object node, IrExpr value) {
+      switch (value) {
+        case IrLocalRef reference:
+          groups.Union(node, reference.Local);
+          break;
+        case IrNewArray:
+        case IrIntrinsic { Op: IrIntrinsicOp.ArrayOf or IrIntrinsicOp.StrToCodeUnits or IrIntrinsicOp.StrSplit or IrIntrinsicOp.ViewToArray or IrIntrinsicOp.EnumNames or IrIntrinsicOp.EnumValues }:
+          created.Add(node);
+          break;
+        case IrCall call when facts.TryGetValue(call.Function, out var callee):
+          if (callee.Result == ArrayHolder.Borrowed)
+            foreach (var index in callee.ResultParameters)
+              Link(node, call.Arguments[index]);
+          else
+            created.Add(node);
+          break;
+        case IrConditional choice:
+          Link(node, choice.WhenTrue);
+          Link(node, choice.WhenFalse);
+          break;
+        case IrCollection { Op: IrCollectionOp.ListCopyToArray }:
+          created.Add(node);
+          break;
+        case IrFieldLoad { Target.Type.IsObject: true } load when node is IrLocal alias:
+          // A variable that names a field's array, as `var s = this._s;`: it borrows the field's cell.
+          if (!result.FieldAliases.TryAdd(alias, load))
+            problems.Add($"the variable '{alias.Name}' given the arrays of two fields");
+          break;
+        case IrNull:
+          // Null holds no array: the variable is an Option, which ArrayNullness finds.
+          break;
+        case IrBind bind:
+          Link(bind.Local, bind.Value);
+          groups.Union(node, bind.Local);
+          break;
+        default:
+          problems.Add($"an array of the form {value.GetType().Name[2..]}");
+          break;
+      }
+    }
+
+    void Write(IrExpr array) {
+      switch (array) {
+        case IrLocalRef reference:
+          written.Add(reference.Local);
+          break;
+        case IrCall call when facts.TryGetValue(call.Function, out var callee) && callee.Result == ArrayHolder.Borrowed:
+          writtenResults.Add(call.Function);
+          foreach (var index in callee.ResultParameters)
+            Write(call.Arguments[index]);
+          break;
+        case IrConditional choice:
+          Write(choice.WhenTrue);
+          Write(choice.WhenFalse);
+          break;
+      }
+    }
+
+    foreach (var local in function.Parameters.Concat(function.Locals).Where(local => local.Type.IsArray))
+      groups.Add(local);
+
+    foreach (var statement in Statements(function.Body)) {
+      switch (statement) {
+        case IrDeclare { Local.Type.IsArray: true, Initializer: { } initializer } declare:
+          Link(declare.Local, initializer);
+          break;
+        case IrAssign { Local.Type.IsArray: true } assign:
+          Link(assign.Local, assign.Value);
+          break;
+        case IrReturn { Value: { Type.IsArray: true } value }:
+          Link(_result, value);
+          break;
+        case IrStore store:
+          Write(store.Array);
+          break;
+        case IrFieldStore store when RustEmitter.ElementOf(store.Target) is { } array:
+          Write(array);
+          break;
+      }
+
+      foreach (var node in IrTree.Expressions(statement).SelectMany(IrTree.Nodes)) {
+        switch (node) {
+          case IrStep { Target: IrArrayLoad load }:
+            Write(load.Array);
+            break;
+          case IrBind { Local.Type.IsArray: true } bind:
+            Link(bind.Local, bind.Value);
+            break;
+          case IrIntrinsic { Op: IrIntrinsicOp.ArrayCopy } copy:
+            Write(copy.Arguments[2]);
+            break;
+          case IrIntrinsic { Op: IrIntrinsicOp.ArrayFill or IrIntrinsicOp.ArrayClear or IrIntrinsicOp.StoreLittle or IrIntrinsicOp.StoreBig } fill:
+            Write(fill.Arguments[0]);
+            break;
+          case IrCall call when facts.TryGetValue(call.Function, out var callee):
+            foreach (var index in callee.MutableParameters)
+              Write(call.Arguments[index]);
+            // A writable view of an array the callee writes through writes the array.
+            if (byName.TryGetValue(call.Function, out var target))
+              for (var index = 0; index < call.Arguments.Count && index < target.Parameters.Count; ++index)
+                if (ViewRoot(call.Arguments[index]) is { } viewed && WritesView(target, target.Parameters[index]))
+                  Write(viewed);
+            break;
+          case IrIntrinsic { Op: IrIntrinsicOp.ViewFill or IrIntrinsicOp.ViewCopy or IrIntrinsicOp.ViewTryCopy } operation
+            when ViewRoot(operation.Arguments[operation.Op == IrIntrinsicOp.ViewFill ? 0 : 1]) is { } viewed:
+            Write(viewed);
+            break;
+        }
+      }
+
+      if (statement is IrDeclare { Local.Type.IsView: true, Initializer: { } view } viewDeclare && ViewRoot(view) is { } root && WritesView(function, viewDeclare.Local))
+        Write(root);
+    }
+
+    if (writtenResults.Contains(function.Name))
+      written.Add(_result);
+
+    // A group that holds an array the function made: each new array is one group of its own. An
+    // array nothing writes is a value: who holds it cannot be told apart, so a group of a parameter
+    // and a new array, or of two owners, copies it where it changes hands.
+    var owned = created.Select(groups.Find).ToHashSet(ReferenceEqualityComparer.Instance);
+    var writtenRoots = written.Select(groups.Find).ToHashSet(ReferenceEqualityComparer.Instance);
+    for (var index = 0; index < function.Parameters.Count; ++index) {
+      var parameter = function.Parameters[index];
+      if (!parameter.Type.IsArray)
+        continue;
+
+      var root = groups.Find(parameter);
+      if (owned.Contains(root) && writtenRoots.Contains(root))
+        problems.Add($"the parameter '{parameter.Name}' and a new array in one variable");
+      else if (owned.Contains(root))
+        result.CopiedParameters.Add(index);
+      if (writtenRoots.Contains(root))
+        result.MutableParameters.Add(index);
+    }
+
+    foreach (var local in function.Locals.Where(local => local.Type.IsArray)) {
+      var root = groups.Find(local);
+      var holder = !owned.Contains(root) && function.Parameters.Any(parameter => groups.Find(parameter) == root) ? ArrayHolder.Borrowed : ArrayHolder.Owned;
+      result.Locals[local] = result.FieldAliases.ContainsKey(local) ? ArrayHolder.Borrowed : holder;
+      if (writtenRoots.Contains(root))
+        result.MutableLocals.Add(local);
+    }
+
+    // Two owners of one array: Rust moves a vector, where the IR shares it.
+    var owners = function.Locals.Where(local => result.Locals.GetValueOrDefault(local) == ArrayHolder.Owned).GroupBy(groups.Find)
+      .FirstOrDefault(group => group.Count() > 1 && writtenRoots.Contains(group.Key));
+    if (owners is not null)
+      problems.Add($"one array shared by the variables {string.Join(" and ", owners.Select(local => $"'{local.Name}'"))}");
+
+    if (function.ReturnType.IsArray) {
+      var root = groups.Find(_result);
+      var borrowed = function.Parameters.Select((parameter, index) => (parameter, index)).Where(pair => pair.parameter.Type.IsArray && groups.Find(pair.parameter) == root).ToList();
+      result.Result = !owned.Contains(root) && borrowed.Count > 0 ? ArrayHolder.Borrowed : ArrayHolder.Owned;
+      if (result.Result == ArrayHolder.Borrowed)
+        foreach (var (_, index) in borrowed)
+          result.ResultParameters.Add(index);
+    }
+
+    result.Problem = problems.FirstOrDefault();
+    return result;
+  }
+
+  /// <summary>Unions of the variables of a function and of the sentinel of its result.</summary>
+  private sealed class Groups {
+
+    private readonly Dictionary<object, object> _parents = new(ReferenceEqualityComparer.Instance);
+
+    public void Add(object node) => this._parents.TryAdd(node, node);
+
+    public bool Contains(object node) => this._parents.ContainsKey(node);
+
+    public object Find(object node) {
+      this.Add(node);
+      var parent = this._parents[node];
+      if (ReferenceEquals(parent, node))
+        return node;
+
+      var root = this.Find(parent);
+      this._parents[node] = root;
+      return root;
+    }
+
+    public void Union(object first, object second) {
+      var a = this.Find(first);
+      var b = this.Find(second);
+      if (!ReferenceEquals(a, b))
+        this._parents[b] = a;
+    }
+
+  }
+
+}
