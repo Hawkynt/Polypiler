@@ -49,6 +49,13 @@ public sealed record ImportResult(IrModule? Module, IReadOnlyList<Diagnostic> Di
   /// </summary>
   public IReadOnlyDictionary<string, string> Instances { get; init; } = new Dictionary<string, string>();
 
+  /// <summary>
+  /// The module of the crate each free function outside the crate root is declared in, by IR name:
+  /// its path from the root as Rust writes it, <c>util::bits</c> for <c>crate::util::bits</c>. A
+  /// backend that writes modules places the functions back into them.
+  /// </summary>
+  public IReadOnlyDictionary<string, string> Modules { get; init; } = new Dictionary<string, string>();
+
 }
 
 /// <summary>How a Rust source is imported: the build settings the source does not state, and where the other files of its crate are.</summary>
@@ -338,7 +345,7 @@ public static class RustFrontend {
       return new(null, diagnostics);
 
     var module = new IrModule(Path.GetFileNameWithoutExtension(path), lowered.Functions, lowered.Constants) { Types = lowered.Types };
-    return new(module, []) { Tests = lowered.Tests, ModuleOrder = lowered.ModuleOrder, Instances = lowered.Instances };
+    return new(module, []) { Tests = lowered.Tests, ModuleOrder = lowered.ModuleOrder, Instances = lowered.Instances, Modules = lowered.Modules };
   }
 
 }

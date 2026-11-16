@@ -147,7 +147,8 @@ A crate is the source file and the modules it declares: inline `mod m { ... }` a
 groups, globs, `self`, `super`, `crate`, renames and `pub use` re-exports resolves names across
 them, as do `std::cmp::{min, max}` and `std::mem::swap`. The exported surface is every item reachable
 by a public path; its IR name is that shortest public path joined by `_`. Modules are emitted in
-dependency order (`ImportResult.ModuleOrder`), test-only modules last.
+dependency order (`ImportResult.ModuleOrder`), test-only modules last; `ImportResult.Modules` gives the module of
+each free function outside the root (`util::bits`), which the Rust backend writes back as files of their own.
 
 Inherent `impl` blocks give structs and enums associated functions, constants and methods with
 `self`, `&self` and `&mut self`. `#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]` is

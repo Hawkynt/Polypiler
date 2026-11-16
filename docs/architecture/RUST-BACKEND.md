@@ -18,6 +18,7 @@ Related: [backends](BACKENDS.md) · [pipeline](PIPELINE.md) · [exceptions](../r
 | `Cargo.toml` | `[package]` with `name` (the module's name in `snake_case`), `version = "0.1.0"`, the `edition` and, from Rust 1.56, `rust-version`; no dependencies |
 | `src/lib.rs` | the header (`//!`: profile, helper licences, floating-point record, caveats, notices, the unsafe ledger), `#![forbid(unsafe_code)]` (`#![deny(unsafe_code)]` where the one unsafe lowering is used, see [Unsafe code](#unsafe-code)), the lints the code needs allowed, `pub mod <module>;` |
 | `src/<module>.rs` | the constants, the spelling functions and helpers, the functions; a `#[cfg(test)] mod tests` when tests are asked for |
+| `src/<placed>.rs` | the functions `RustEmitOptions.Modules` places in a module of their own, `src/util/bits.rs` for `util::bits` (see [Modules](#modules)) |
 
 The backend builds a Rust syntax tree from the IR (`Polypiler.Core.Backends.Rust/Syntax/RustSyntax.cs`),
 runs the target passes over it - helper inlining (O0500), removal of what nothing names (O0501) -
@@ -80,9 +81,9 @@ name escapes as a raw identifier (`r#gen`). The MSRV decides the rows of `RustCa
 | `Negate`, `BitNot`, `LogicalNot` | `a.wrapping_neg()` (`-a` for floating point), `!a`, `!c` - a negated comparison of integers turned around (`a >= b`) |
 | arithmetic and comparisons of floating point | the operators; a compound assignment where clippy's `assign_op_pattern` asks |
 | conversions between integers | `i64::from(a)` where every value fits (a literal in it, also in the arms of an `if`, carries its type: `u64::from(if c { 1u32 } else { 0u32 })`), `a as u8` wrapping, `u8::try_from(a).expect("IntegerOverflow")` trapping |
-| conversions to and from floating point | `a as f64`, `f64::from(a)` for `f32` to `f64`, `a as i32` saturating (Rust's `as`), `ply_f2i_trap_<t>(a)` trapping |
+| conversions to and from floating point | `a as f64`, `f64::from(a)` for `f32` to `f64`, `a as i32` saturating (Rust's `as`), `ply_f2i_trap_<t>(a)` trapping; ECMA-262's wrapping `ToInt32`/`ToUint32` (4294967301.0 to 5) the spelling function `ply_rs_f2i_wrap_i32(a)`, `(x.trunc() % 4294967296.0) as i64 as i32`, the IR library's `ToInt32` in Rust's casts (#461) |
 | intrinsics with a method | `rotate_left`, `count_ones`, `leading_zeros`, `trailing_zeros`, `swap_bytes`, `reverse_bits`, `is_power_of_two`, `min`, `max`, `saturating_*`, `checked_abs`, `wrapping_abs`, `sqrt`, `floor`, `ceil`, `trunc`, `round`, `round_ties_even`, `abs`, `mul_add`, `copysign`, `is_nan`, `is_infinite`, `is_finite`, `is_sign_negative`, `is_normal`, `is_subnormal`, `to_bits`, `from_bits` |
-| every other intrinsic | the helper of the IR library (`IntegerLibrary`, `MinimumDouble`, `SignOf`, `RoundHalfUp`, `ToInt32`, `Clamp`, …) or the portable floating-point implementation, copied into the module |
+| every other intrinsic | the helper of the IR library (`IntegerLibrary`, `MinimumDouble`, `SignOf`, `RoundHalfUp`, `Clamp`, …) or the portable floating-point implementation, copied into the module |
 | `if`, `while`, `do`-`while`, `for` | `if`/`else if`, `while c` (`loop` for `while true`), `loop { …; if !c { break; } }`, a `while` whose step precedes every `continue`; a counted loop `for i in a..b` where its counter and bound allow |
 | `switch` | `match` with or-patterns and ranges of three or more consecutive labels, `_` last; one section an `if`; a `break` inside a section leaves `'s<n>: { match … }` |
 | `return` | the tail of the function, `return v;` elsewhere |
@@ -157,6 +158,9 @@ name escapes as a raw identifier (`r#gen`). The MSRV decides the rows of `RustCa
 | an array or a string an iterator takes | borrowed for the struct's lifetime: `fn evens(a: &[i32]) -> Evens<'_>`, `fn pairs<'a>(a: &'a [i32], b: &'a [i32]) -> Pairs<'a>` |
 | an iterator method of a class | the struct keeps the object, `counter: Rc<Counter>`; the method takes `self: &Rc<Self>` and makes it with `Rc::clone(self)` |
 | a loop over a sequence, a sequence passed or held | `for v in up(3)`, `if let Some(v) = up(3).next()` where the first pass always leaves; `sum(s.clone())`, `let s = up(2);`; an array as a sequence `a.iter().copied()` |
+| a loop without a condition left only by `break`s of it, right before the `return` of a scalar (#458) | the value of that return, each `break` carrying it: `loop { if p >= x { break p; } p = p.wrapping_shl(1); }` as the function's tail |
+| a counted loop `i <= c` to a constant below the type's maximum; a loop over an inclusive range as the Rust frontend imports it - a flag that the range is done, the counter moved on modulo its width after the flag is set (#458) | `for i in 0..=100i32`, `for _ in 0..=255u8`, `for i in start..=end` - Rust's `RangeInclusive`, which ends at the type's maximum without overflowing; `i <= n` of a variable stays a `while`, since at the maximum the source's loop never ends |
+| a reduction: a binding made right before an element loop whose only statement combines it with a value of the element by `wrapping_add`, `wrapping_mul`, `^`, `\|` or `&` (#459) | an iterator fold, `data.iter().map(\|&b\| u32::from(b)).fold(0u32, \|acc, x\| acc.wrapping_add(x))`, the map left out for the element itself - never `sum` or `product`, whose overflow follows the build mode; not where the value names the binding, can leave the function (`?`) or the start is computed |
 | `c ? true : x`, `c ? false : x`, `c ? x : true`, `c ? x : false` of truth values | `c \|\| x`, `!c && x`, `!c \|\| x`, `c && x`, which evaluate the same way; `!(a && b)` as `!a \|\| !b` |
 | the arbitrary-precision integer `bigint` (#1390) | `PlyBigInt`, a struct of the crate (see [Arbitrary-precision integers](#arbitrary-precision-integers)); a parameter or a result by value, a variable whose value a place takes `x.clone()`, a returned one moved |
 | a `bigint` constant | `ply_big(5)`, an `i128` literal, up to 2^127 - 1 either side; beyond, its digits `ply_big_parse("…")` |
@@ -203,6 +207,32 @@ instantiation. An instantiation is replaced only where it is the template instan
 arguments, as the C# backend checks before it writes a definition back. Generic classes have no
 template in the IR and stay one struct per instantiation (`RingI64`); the Rust frontend records no
 template of the generics it monomorphises, so a Rust source round-trips per instantiation too.
+
+## Modules
+
+`RustEmitOptions.Modules` places functions, by IR name, in modules of the crate (#459), each given as
+its path from the crate root: `util` is the file `src/util.rs`, `util::bits` the file
+`src/util/bits.rs`, each declared by its parent (`src/lib.rs` for a module below the root; a parent
+without functions of its own is a file of declarations), `pub mod` where it or a module below it has a
+public item, else `mod`, sorted by name. A function named after its module's path, as the Rust
+frontend names them (`util_bits_mix`), is called by the rest of its name there (`mix`), unless another
+function of the crate has that name. Everything else - functions placed nowhere, helpers and spelling
+functions, constants, globals, types, the tests - stays in the IR module's file, or in `src/lib.rs`
+itself where the IR module is the crate root (`RustEmitOptions.CrateRoot`, and always for a module
+named `lib` or `main`, whose file would be the root's or a program's); a function that names a type of
+the crate stays there too, since a type's fields and methods are private to its module. Each file names
+what it uses of another with one `use crate::<module>::<item>;` per item, sorted, and only what its code
+uses; an item another file uses is `pub(crate)` at least. `RustEmitOptions.TestFunctions` makes
+functions `#[test]` functions of the `#[cfg(test)] mod tests`, which has `use super::*;` where it uses
+what its file declares or imports and `use` lines of its own for the rest. Emission is reproducible: the
+same module and options give the same files. A module below the root named `lib` or `main` is refused
+with `PLY1550`.
+
+`polypiler translate <crate>/src/lib.rs --from rust --to rust` passes the source crate's layout through:
+the Rust frontend reports the module of every free function outside the root (`ImportResult.Modules`)
+and the crate's tests, and the crate is written back with one file per source module, its root in
+`src/lib.rs`, its tests as `#[test]` functions, and the package named after the folder of
+`src/lib.rs`. A Rust source of one file and every source of another language stay one module.
 
 ## Objects
 
@@ -438,7 +468,8 @@ and `clippy::nonminimal_bool` (a negated ordering of floating-point numbers), `c
 `clippy::type_complexity` (a function value that takes or gives another one, a type the source named in one word),
 `clippy::manual_find` (a search the source wrote as a loop that returns `Some(i)`, then `None`),
 `clippy::unnecessary_literal_unwrap` (an optional value made of a value and then read, as the source has it),
-`clippy::manual_swap` (two variables swapped through a third, as `std::mem::swap` lowers).
+`clippy::manual_swap` (two variables swapped through a third, as `std::mem::swap` lowers),
+`clippy::reversed_empty_ranges` (a loop over a range of constants the source wrote empty, `5..=3u8`).
 No group is ever allowed. Every other lint is avoided by the shape the backend writes.
 
 ## Verification
@@ -483,7 +514,11 @@ No group is ever allowed. Every other lint is avoided by the shape the backend w
   outcome is what rustc recorded for the original in the mode of the import.
 - `RustBackendScenarioTests` (layer `rust`): the scenarios of the issues with their hand-checked
   values, clippy with `-D warnings` and `cargo fmt --check` on the crates, the generated tests passing
-  and a mutated one failing.
+  and a mutated one failing; the loops with a value, the inclusive counted loops and the reductions
+  against the C# compiler's build, the inclusive ranges of Rust (to 255u8, over all of i8, empty)
+  against `rustc` in both import modes, the wrapping conversion from floating point against the IR
+  library's `ToInt32`, the saturating addition, and the crate of the modules `util` and `hash`, each
+  with overflow checks on and off.
 - `RustIteratorScenarioTests` (layer `rust`): an infinite counter taken 5 items runs its body 5 times;
   finally blocks around yields run as in .NET on every way out (traced through a global), iterators
   over borrowed arrays and strings, generic sequence parameters and loops that suspend give the C#

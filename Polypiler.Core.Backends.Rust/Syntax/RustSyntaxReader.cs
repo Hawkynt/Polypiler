@@ -709,6 +709,7 @@ public static class RustSyntaxReader {
       if (!this.Accept("||")) {
         this.Expect("|");
         while (!this.Accept("|")) {
+          // A parameter that takes the value a reference points at, |&x|, is written with its pattern.
           var name = (this.Accept("&") ? "&" : "") + this.Identifier();
           parameters.Add(new RsParameter(name, this.Accept(":") ? this.TypeText() : ""));
           this.Accept(",");

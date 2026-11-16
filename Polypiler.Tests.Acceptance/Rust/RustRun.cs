@@ -174,16 +174,16 @@ internal static class RustRun {
   /// error an export returns under the trap policy <c>result</c> is read as the trap it displays, and
   /// under that policy no call may panic.
   /// </summary>
-  public static async Task<IReadOnlyList<string>> OutcomesAsync(IrModule module, IReadOnlyList<PrototypeCall> calls, OverflowChecks checks, RustProfile? profile = null) {
+  public static async Task<IReadOnlyList<string>> OutcomesAsync(IrModule module, IReadOnlyList<PrototypeCall> calls, OverflowChecks checks, RustProfile? profile = null, RustEmitOptions? options = null) {
     profile ??= RustProfile.Default;
     var prepared = RustCrates.Prepared(module, profile);
-    var files = RustCrates.Emit(module, profile);
-    var exports = RustEmitter.Exports(prepared, profile);
+    var files = RustCrates.Emit(module, profile, options);
+    var exports = RustEmitter.Exports(prepared, profile, options);
     var called = calls.Select(call => call.Method).ToHashSet(StringComparer.Ordinal);
     var functions = prepared.Functions.Where(function => exports.ContainsKey(function.Name) && called.Contains(function.Name)).ToList();
     var signatures = functions.ToDictionary(function => function.Name, function => SignatureOf(function, index => RustEmitter.TakesNull(prepared, function.Name, index)), StringComparer.Ordinal);
     var index = functions.Select((function, position) => (function.Name, position)).ToDictionary(pair => pair.Name, pair => pair.position, StringComparer.Ordinal);
-    var crate = RustEmitter.ModuleName(module.Name, profile);
+    var crate = options?.PackageName ?? RustEmitter.ModuleName(module.Name, profile);
     var fallible = RustEmitter.Fallible(prepared, profile);
     var execution = await Runner(checks).ExecuteAsync(RustCrates.Package(files), crate,
       [.. functions.Select(function => new RustExport(exports[function.Name], signatures[function.Name]) {

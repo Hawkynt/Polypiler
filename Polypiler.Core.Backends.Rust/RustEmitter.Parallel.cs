@@ -43,7 +43,7 @@ public static partial class RustEmitter {
       }
 
       if (position + 1 >= statements.Count || statements[position] is not IrDeclare { Initializer: IrConst { Value: 0 } } counter
-          || Counted(counter, statements[position + 1]) is not ( { } bound, { } body))
+          || Counted(counter, statements[position + 1]) is not ( { } bound, { } body, _))
         return null;
 
       // The bound: Min(length of a, length of b), or a variable of the run that holds it.
@@ -127,9 +127,10 @@ public static partial class RustEmitter {
     /// The parts of a counted loop: the declaration of an integer variable, then a <c>while</c> that tests
     /// it against a bound with <c>&lt;</c> and whose body ends with the step by one and has no
     /// <c>continue</c> of its own, or a <c>for</c> whose step is that step alone; its body assigns the counter
-    /// nowhere else. The bound and the body without the step, or <see langword="null"/>.
+    /// nowhere else; with <paramref name="inclusive"/> the test may also be <c>&lt;=</c>. The bound, the body
+    /// without the step and whether the test is <c>&lt;=</c>, or <see langword="null"/>.
     /// </summary>
-    private (IrExpr? Bound, List<IrStmt>? Body) Counted(IrDeclare declare, IrStmt loop) {
+    private (IrExpr? Bound, List<IrStmt>? Body, bool Inclusive) Counted(IrDeclare declare, IrStmt loop, bool inclusive = false) {
       IrExpr condition;
       List<IrStmt> rest;
       IrStmt step;
@@ -141,18 +142,19 @@ public static partial class RustEmitter {
           (condition, rest, step) = (counted.Condition, [.. counted.Body.Statements], only);
           break;
         default:
-          return (null, null);
+          return (null, null, false);
       }
 
-      if (condition is not IrBinary { Op: IrBinaryOp.Less, Left: IrLocalRef counter, Right: var bound } || counter.Local != declare.Local || !counter.Type.IsInteger || this._shared.Contains(counter.Local))
-        return (null, null);
+      if (condition is not IrBinary { Left: IrLocalRef counter, Right: var bound } test || !(test.Op == IrBinaryOp.Less || inclusive && test.Op == IrBinaryOp.LessOrEqual)
+        || counter.Local != declare.Local || !counter.Type.IsInteger || this._shared.Contains(counter.Local))
+        return (null, null, false);
 
       var stepsByOne = step switch {
         IrAssign { Value: IrBinary { Op: IrBinaryOp.Add or IrBinaryOp.AddChecked, Left: IrLocalRef self, Right: IrConst { Value: 1 } } } assign => assign.Local == declare.Local && self.Local == declare.Local,
         IrExprStmt { Expression: IrStep { Target: IrLocalRef self, Increment: true } } => self.Local == declare.Local,
         _ => false
       };
-      return stepsByOne && !Assigns(rest, declare.Local) ? (bound, rest) : (null, null);
+      return stepsByOne && !Assigns(rest, declare.Local) ? (bound, rest, test.Op == IrBinaryOp.LessOrEqual) : (null, null, false);
     }
 
   }
