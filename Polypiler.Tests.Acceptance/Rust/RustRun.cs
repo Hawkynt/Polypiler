@@ -172,11 +172,11 @@ internal static class RustRun {
   /// What every call does in the crate the backend writes for a module, built with the switches given:
   /// one outcome per call, in order. The module is translated as <c>translate --to rust</c> would.
   /// </summary>
-  public static async Task<IReadOnlyList<string>> OutcomesAsync(IrModule module, IReadOnlyList<PrototypeCall> calls, OverflowChecks checks, RustProfile? profile = null) {
+  public static async Task<IReadOnlyList<string>> OutcomesAsync(IrModule module, IReadOnlyList<PrototypeCall> calls, OverflowChecks checks, RustProfile? profile = null, RustEmitOptions? options = null) {
     profile ??= RustProfile.Default;
     var prepared = RustCrates.Prepared(module, profile);
-    var files = RustCrates.Emit(module, profile);
-    var exports = RustEmitter.Exports(prepared, profile);
+    var files = RustCrates.Emit(module, profile, options);
+    var exports = RustEmitter.Exports(prepared, profile, options);
     var called = calls.Select(call => call.Method).ToHashSet(StringComparer.Ordinal);
     var functions = prepared.Functions.Where(function => exports.ContainsKey(function.Name) && called.Contains(function.Name)).ToList();
     var signatures = functions.ToDictionary(function => function.Name, function => SignatureOf(function, index => RustEmitter.TakesNull(prepared, function.Name, index)), StringComparer.Ordinal);

@@ -105,7 +105,32 @@ public static partial class RustEmitter {
       header.AddRange(ImplementationSources.Notices(module.Implementations.Select(pair => pair.Implementation).Concat(module.Inlined)));
       var root = new RsFile(header, ["forbid(unsafe_code)"], [new RsModuleDeclaration(moduleName, "pub")]);
       var file = new RsFile([], [], items);
-      return new RustCrate(package, Manifest(package, this._options.PackageVersion, this._profile, this._capabilities), root, moduleName, file);
+      var crate = new RustCrate(package, Manifest(package, this._options.PackageVersion, this._profile, this._capabilities), root, moduleName, file);
+      this.Place(crate);
+      return crate;
+    }
+
+    /// <summary>The module of each function placed in one (<see cref="RustEmitOptions.Modules"/>), by the function's Rust name.</summary>
+    public IReadOnlyDictionary<string, string> Placement { get; private set; } = new Dictionary<string, string>();
+
+    /// <summary>
+    /// Finds the module of every placed function and refuses what cannot be placed: a module named
+    /// <c>lib</c> or <c>main</c>, whose file is the crate's root or a program's, a function that names
+    /// a type of the crate.
+    /// </summary>
+    private void Place(RustCrate crate) {
+      this._construct = "the modules";
+      var placement = new Dictionary<string, string>(StringComparer.Ordinal);
+      foreach (var (function, module) in this._options.Modules.Where(pair => this._functions.ContainsKey(pair.Key))) {
+        var name = ModuleName(module, this._profile);
+        if (name is "lib" or "main")
+          this.Refuse($"the module name '{name}'");
+        else
+          placement[this._functions[function]] = name;
+      }
+
+      this.Placement = placement;
+      Modules.Split(crate, placement, what => this.Refuse(what));
     }
 
     /// <summary>

@@ -39,6 +39,14 @@ public sealed record RustEmitOptions {
   /// <summary>The unit tests, emitted into a <c>#[cfg(test)]</c> module at the end of the module's file.</summary>
   public IReadOnlyList<RustTestCase> Tests { get; init; } = [];
 
+  /// <summary>
+  /// The module of the crate each function is placed in, by the function's IR name: <c>util</c>
+  /// writes it into <c>src/util.rs</c>, which <c>src/lib.rs</c> declares, and every other file names
+  /// it by <c>use crate::util::f;</c>. A function placed nowhere, or in the IR module's own module,
+  /// stays in that module's file with everything that is no function. Empty: every function there.
+  /// </summary>
+  public IReadOnlyDictionary<string, string> Modules { get; init; } = new Dictionary<string, string>();
+
 }
 
 /// <summary>
@@ -50,7 +58,12 @@ public sealed record RustEmitOptions {
 /// <param name="Root">The crate root.</param>
 /// <param name="ModuleName">The name of the module, which is also its file's name.</param>
 /// <param name="Module">The module.</param>
-public sealed record RustCrate(string PackageName, string Manifest, RsFile Root, string ModuleName, RsFile Module);
+public sealed record RustCrate(string PackageName, string Manifest, RsFile Root, string ModuleName, RsFile Module) {
+
+  /// <summary>The modules the functions placed elsewhere are written into (<see cref="RustEmitOptions.Modules"/>), by name; empty where every function is in <see cref="Module"/>.</summary>
+  public IReadOnlyList<RustModule> Modules { get; init; } = [];
+
+}
 
 /// <summary>
 /// Emits an IR module as a Cargo package of safe Rust for a <see cref="RustProfile"/>: <c>Cargo.toml</c>
@@ -136,7 +149,9 @@ public static partial class RustEmitter {
       throw new ArgumentException($"The module '{module.Name}' cannot be emitted: {problem.Message}.", nameof(module));
 
     var result = RustTargetPasses.Pipeline.Run(crate!, profile, passes);
-    return (result with { Tree = Lints.Allowed(result.Tree) }, writer.Helpers);
+    // The modules are made after the passes, which see one module; Check refused what cannot be placed.
+    var placed = Modules.Split(Lints.Allowed(result.Tree), writer.Placement, _ => { });
+    return (result with { Tree = placed }, writer.Helpers);
   }
 
   /// <summary>Says why a module cannot be emitted for a profile; empty when it can.</summary>
@@ -163,11 +178,16 @@ public static partial class RustEmitter {
   public static IReadOnlyList<GeneratedFile> Files(RustCrate crate, IReadOnlyList<HelperText>? helpers = null) {
     ArgumentNullException.ThrowIfNull(crate);
     var module = RustPrinter.Print(crate.Module);
-    return [
+    List<GeneratedFile> files = [
       new GeneratedFile("Cargo.toml", crate.Manifest),
-      new GeneratedFile("src/lib.rs", RustPrinter.Print(crate.Root)),
-      new GeneratedFile($"src/{crate.ModuleName}.rs", module) { Helpers = Measured(crate.Module, helpers ?? []) }
+      new GeneratedFile("src/lib.rs", RustPrinter.Print(crate.Root))
     ];
+    // Where every function went into a module of its own, the IR module's file has nothing left.
+    if (crate.Modules.Count == 0 || crate.Module.Items.Count > 0)
+      files.Add(new GeneratedFile($"src/{crate.ModuleName}.rs", module) { Helpers = Measured(crate.Module, helpers ?? []) });
+
+    files.AddRange(crate.Modules.Select(placed => new GeneratedFile($"src/{placed.Name}.rs", RustPrinter.Print(placed.File))));
+    return files;
   }
 
   /// <summary>The helpers of a module's file, measured in it, each printed on its own; one inlined everywhere and removed is listed with no text.</summary>
@@ -355,16 +375,24 @@ public static partial class RustEmitter {
   /// <param name="module">The module.</param>
   /// <param name="profile">The profile, whose keywords are escaped.</param>
   /// <returns>The path of each exported function by its IR name.</returns>
-  public static IReadOnlyDictionary<string, string> Exports(IrModule module, RustProfile profile) {
+  public static IReadOnlyDictionary<string, string> Exports(IrModule module, RustProfile profile) => Exports(module, profile, null);
+
+  /// <summary>The path of each exported function in the crate of a module whose functions are placed in modules as the options say.</summary>
+  /// <param name="module">The module.</param>
+  /// <param name="profile">The profile, whose keywords are escaped.</param>
+  /// <param name="options">The placement of the functions (<see cref="RustEmitOptions.Modules"/>); none when <see langword="null"/>.</param>
+  /// <returns>The path of each exported function by its IR name.</returns>
+  public static IReadOnlyDictionary<string, string> Exports(IrModule module, RustProfile profile, RustEmitOptions? options) {
     ArgumentNullException.ThrowIfNull(module);
     ArgumentNullException.ThrowIfNull(profile);
     var moduleName = ModuleName(module.Name, profile);
+    var placement = options?.Modules ?? RustEmitOptions.Default.Modules;
     var exports = new Dictionary<string, string>(StringComparer.Ordinal);
     var taken = new HashSet<string>(StringComparer.Ordinal);
     foreach (var function in module.Functions.Where(function => function.IsPublic)) {
       var name = RustNames.Snake(function.Name, profile.Edition);
       if (taken.Add(name))
-        exports[function.Name] = $"{moduleName}::{name}";
+        exports[function.Name] = $"{(placement.TryGetValue(function.Name, out var placed) ? ModuleName(placed, profile) : moduleName)}::{name}";
     }
 
     return exports;
