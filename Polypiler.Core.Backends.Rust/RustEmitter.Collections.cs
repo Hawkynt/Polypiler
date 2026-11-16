@@ -15,7 +15,6 @@ public static partial class RustEmitter {
   /// generators, and the backend writes no state machine of an iterator function yet. A sequence made
   /// all at once would change what the source does: its effects, the order of a trace, an infinite one.
   /// </summary>
-  private const string LazySequence = "a lazy sequence (yield), which needs a state machine the Rust backend does not write";
 
   private sealed partial class Writer {
 

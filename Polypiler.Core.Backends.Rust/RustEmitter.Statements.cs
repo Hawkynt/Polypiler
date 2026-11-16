@@ -65,6 +65,9 @@ public static partial class RustEmitter {
         case IrReturn result when this._closureResults.Count > 0:
           into.Add(new RsExpressionStatement(new RsReturn(result.Value is null ? null : this.Argument(result.Value))));
           return true;
+        case IrDeclare { Local.Type.IsLazySequence: true } declare:
+          this.SequenceDeclaration(declare, into);
+          return false;
         case IrDeclare declare:
           into.Add(new RsLet(this._locals[declare.Local], this._mutable.Contains(declare) || this.IsWrittenVector(declare.Local) || this._fieldWritten.Contains(declare.Local) || this.IsChangedCollection(declare.Local)
             || this.IsFieldAlias(declare.Local) && this._arrayFacts.MutableLocals.Contains(declare.Local), this.LocalType(declare.Local),
@@ -173,8 +176,8 @@ public static partial class RustEmitter {
         case IrThrow thrown:
           into.Add(new RsExpressionStatement(this.Throw(thrown.Exception)));
           return true;
-        case IrYield or IrYieldBreak or IrYieldFrom or IrForEachSequence:
-          into.Add(new RsExpressionStatement(this.Refuse(LazySequence)));
+        case IrForEachSequence loop:
+          this.ForEachSequence(loop, into);
           return false;
         case IrTry attempt:
           this.Try(attempt, into);
