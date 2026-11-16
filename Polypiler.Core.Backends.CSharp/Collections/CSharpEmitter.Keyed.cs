@@ -235,6 +235,7 @@ public static partial class CSharpEmitter {
       CSharpCollectionClasses.KeyedSlotsName => CSharpCollectionClasses.KeyedSlots,
       CSharpCollectionClasses.FloatKeysName => CSharpCollectionClasses.FloatKeys,
       CSharpCollectionClasses.AssertionExceptionName => CSharpCollectionClasses.AssertionException,
+      CSharpCollectionClasses.UninitializedName => CSharpCollectionClasses.Uninitialized,
       _ => CSharpCollectionClasses.SingleKeys
     })) with { Leading = CsTrivia.Blank });
 

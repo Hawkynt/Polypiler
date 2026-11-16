@@ -38,6 +38,19 @@ internal sealed partial class Lowering {
   }
 
   /// <summary>
+  /// An object literal whose shape meets objects of a class (#1388): a new object of the class made for
+  /// it, by its constructor, which runs none of the lineage; the values in the literal's order, then
+  /// <c>undefined</c> for each field the literal lacks.
+  /// </summary>
+  private IrNew RecordObject(ObjectExpression literal, ClassModel made) {
+    var values = literal.Properties.Select(property => TypeInference.Plain(property)!.Value).ToDictionary(entry => entry.Key, entry => entry.Value);
+    var undefined = new Typed(new IrNull(IrType.Void), JsType.UndefinedValue);
+    return new IrNew(IrType.Object(made.Ir), made.Creator!, [.. Classes.RecordFields(made).Select(field => values.TryGetValue(field.Key, out var value)
+      ? this.Value(value, field.Ir!.Type)
+      : this.To(undefined, field.Ir!.Type, literal))]);
+  }
+
+  /// <summary>
   /// An object literal where a typedef is stated (#1409): a new object of its class, each field the
   /// value of its key converted to the field's type, and none - <c>undefined</c> - for an optional key the
   /// literal leaves out. The values are evaluated in the order of the literal, as JavaScript does, before

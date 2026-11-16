@@ -131,6 +131,12 @@ public static partial class CSharpEmitter {
         foreach (var constructor in type.Constructors)
           members.Add(this.Constructor(type, constructor, functions[constructor.Function]));
 
+      // A class below that skips its base classes' constructors reaches this one through a constructor that runs no code (#1388).
+      if (this._module.Types.OfType<IrClassType>().Any(other => other != type && other.DerivesFrom(type) && other.Constructors.Any(constructor => constructor.SkipsBase)))
+        members.Add(new CsConstructor(["protected"], name, [new CsParameter(new CsType(this.Nested(CSharpCollectionClasses.UninitializedName)), "uninitialized")], new CsBlock([])) {
+          Chained = type.Base is null ? null : [new CsName("uninitialized")], ChainsToBase = type.Base is not null
+        });
+
       foreach (var method in type.Methods.Where(method => method.Kind == IrMethodKind.Method)) {
         var function = functions[method.Function];
         this._receiver = method.IsStatic ? null : function.Parameters[0];
@@ -250,6 +256,10 @@ public static partial class CSharpEmitter {
         return Expressions(argument).Any(this.Wraps) && !Traps(Promoted(argument)) ? new CsCheckedExpression(false, value) { Type = value.Type } : value;
       })];
       this._receiver = null;
+      // A constructor that skips its base classes reaches them through the constructors that run no code (#1388).
+      if (constructor.SkipsBase && type.Base is not null)
+        (chained, toBase) = (new CsExpression[] { new CsCast(new CsType(this.Nested(CSharpCollectionClasses.UninitializedName)), new CsNullLiteral()) }, true);
+
       // : base() is what C# calls without being asked.
       return new CsConstructor(Unsafe([Visibility(constructor.Visibility)], function), this._typeNames[type.Name], parameters, body!) {
         Chained = toBase && chained is [] ? null : chained, ChainsToBase = toBase && chained is not []

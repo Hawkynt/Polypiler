@@ -21,6 +21,9 @@ public static partial class JavaScriptEmitter {
     /// <summary>Whether a class of the module has a private member that is written as a property with a leading underscore.</summary>
     private bool _underscored;
 
+    /// <summary>Whether the constructor being written skips its base classes and makes its object in <see cref="Self"/>, as a derived class cannot through <c>this</c> (#1388).</summary>
+    private bool _detached;
+
     /// <summary>Whether a function of the module is the body of a member of a class.</summary>
     private bool IsMember(IrFunction function) => this._owners.ContainsKey(function.Name) || this._signatures.Contains(function.Name);
 
@@ -112,7 +115,9 @@ public static partial class JavaScriptEmitter {
       // The constructor of JavaScript; a derived class of ECMAScript 2015 reaches this only after super(…).
       var parameters = new List<string>();
       var body = new List<JsStatement>(type.Base is not null && classes ? [] : defaults);
-      if (type.Constructors.Count == 1) {
+      if (type.Constructors.Any(constructor => constructor.SkipsBase) && type.Base is not null) {
+        (parameters, body) = this.Detached(type, name, functions, classes);
+      } else if (type.Constructors.Count == 1) {
         var (written, block) = this.Member(functions[type.Constructors[0].Function], type);
         parameters = written;
         body.AddRange(block.Statements);
@@ -222,6 +227,35 @@ public static partial class JavaScriptEmitter {
         this._exported.Add(name);
 
       return [(exported ? new JsExport(declaration) : declaration) with { Leading = new JsTrivia(1, [$"class {name}"]) }, .. after];
+    }
+
+    /// <summary>
+    /// The constructor of a class whose constructor skips its base classes (#1388): no base constructor
+    /// runs, and every field of the lineage first holds its default, as the IR says. A class of ECMAScript
+    /// 2015 makes the object from its prototype and returns it - a derived class has no <c>this</c>
+    /// before <c>super(…)</c> - a constructor function writes into its <c>this</c>.
+    /// </summary>
+    private (List<string> Parameters, List<JsStatement> Body) Detached(IrClassType type, string name, Dictionary<string, IrFunction> functions, bool classes) {
+      // A private name of a base class is out of reach of the class below it.
+      if (type.AllFields.Any(field => this.MemberName(field).StartsWith('#') && !type.Fields.Contains(field)) && this._refused.Add("a constructor that skips a base class with private fields"))
+        this._problems.Add(InexpressibleDescriptor.At($"'a constructor that skips a base class with private fields' of the class '{type.Name}' cannot be expressed in JavaScript profile '{this._profile.LevelName}'"));
+
+      JsExpression self = classes ? Id(Self) : new JsThis();
+      this._detached = classes;
+      var (parameters, block) = this.Member(functions[type.Constructors[0].Function], type);
+      this._detached = false;
+      var body = new List<JsStatement>();
+      if (classes) {
+        this.Native("Object.create");
+        body.Add(new JsVariableDeclaration(this.Let, [new JsDeclarator(Self, Invoke("Object.create", new JsMember(Id(name), "prototype")))]));
+      }
+
+      body.AddRange(type.AllFields.Select(field => (JsStatement)new JsExpressionStatement(new JsAssignment(new JsMember(self, this.MemberName(field)), "=", this.FieldDefault(field.Type)))));
+      body.AddRange(block.Statements);
+      if (classes)
+        body.Add(new JsReturn(Id(Self)));
+
+      return (parameters, body);
     }
 
     /// <summary>Whether a constructor begins with the call of another constructor of its own class, <c>: this(…)</c>.</summary>

@@ -35,7 +35,8 @@ public enum IrDispatch {
 /// An object is constructed base first: its fields hold their defaults; a constructor of a derived
 /// class calls a constructor of its base class as its first statement (or chains to another of its
 /// own, see <see cref="IrConstructor"/>), then writes the field initializers of its class and runs
-/// the rest of its body. A C# source, whose derived field initializers run before the base
+/// the rest of its body. A constructor that <see cref="IrConstructor.SkipsBase"/> runs no constructor
+/// of its lineage at all, and is the only constructor of its class. A C# source, whose derived field initializers run before the base
 /// constructor, is lowered so only where the initializers have no effect a base constructor could
 /// observe. While any constructor of an object runs, no virtual or interface call is made on it,
 /// directly or through a callee: that is where C# and JavaScript differ, since an override would see

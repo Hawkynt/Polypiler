@@ -25,7 +25,7 @@ namespace Polypiler.Core.IR;
 public static partial class IrModuleFormat {
 
   /// <summary>The version of the layout; bytes of another version are refused.</summary>
-  public const int Version = 11;
+  public const int Version = 12;
 
   /// <summary>The byte that stands for the kind of an enum type, followed by its declaration: the kind of an enum type is that of its underlying type.</summary>
   private const byte EnumType = 0xFF;
@@ -170,6 +170,7 @@ public static partial class IrModuleFormat {
           this._constructors.Add(constructor, this._constructors.Count);
           writer.Write(constructor.Function);
           this.Count((int)constructor.Visibility);
+          writer.Write(constructor.SkipsBase);
         }
 
         this.Properties(type.Properties);
@@ -1044,7 +1045,7 @@ public static partial class IrModuleFormat {
       var constructors = new Dictionary<IrClassType, IReadOnlyList<IrConstructor>>(ReferenceEqualityComparer.Instance);
       foreach (var type in classes) {
         constructors[type] = this.List(() => {
-          var constructor = new IrConstructor(reader.ReadString()) { Visibility = this.Enum<IrVisibility>() };
+          var constructor = new IrConstructor(reader.ReadString()) { Visibility = this.Enum<IrVisibility>(), SkipsBase = reader.ReadBoolean() };
           this._constructors.Add(constructor);
           return constructor;
         });
