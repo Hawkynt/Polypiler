@@ -178,7 +178,7 @@ public static partial class JavaScriptFrontend {
 
   private static readonly ImportCaveat _statedInteger = new(
     StatedInteger,
-    "an integer computed with +, -, * or Math.min/max is stored, passed or returned where JSDoc states an integer type: JavaScript "
+    "an integer computed with +, -, * or Math.min/max is stored or passed where JSDoc states an integer type: JavaScript "
     + "keeps a value outside that type as it is, the imported code traps with 'integer overflow'");
 
   private static readonly ImportCaveat _sortOrder = new(
