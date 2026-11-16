@@ -35,6 +35,10 @@ internal sealed partial class TypeInference {
         if (receiver.Kind == JsKind.String)
           return StringResult(method);
 
+        // String.fromCharCode.apply(null, codes) (#1400).
+        if (method == "apply" && callee.Object is MemberExpression applied && this.Names.Library(applied) == "String.fromCharCode")
+          return JsType.String;
+
         return this.Names.Library(callee) == "String.fromCharCode" ? JsType.String : null;
       default:
         return null;

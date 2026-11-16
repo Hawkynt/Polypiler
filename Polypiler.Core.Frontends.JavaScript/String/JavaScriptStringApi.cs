@@ -53,6 +53,7 @@ public static class JavaScriptStringApi {
     new("s.repeat(n)", "StrRepeat"),
     new("String.fromCharCode(...)", "StrFromCodeUnit, StrConcat"),
     new("/pattern/flags.test(s)", "RegexTest"),
+    new("String.fromCharCode.apply(null, a), String.fromCharCode(...a)", "StrFromCodeUnits"),
     new("s.codePointAt(i)", "StrCodePointAt"),
     new("for (const ch of s)", "StrLength, StrNextCodePoint, StrSubstring"),
     new("switch on a string", "StrEquals"),
