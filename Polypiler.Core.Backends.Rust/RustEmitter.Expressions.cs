@@ -496,6 +496,28 @@ public static partial class RustEmitter {
     }
 
     /// <summary>
+    /// The spelling function of the wrapping conversion from <c>f64</c> to a 32-bit integer, ECMA-262's
+    /// <c>ToInt32</c> and <c>ToUint32</c> (the IR's <see cref="IrIntrinsicOp.ToInt32"/>): the number
+    /// without its fraction modulo 2^32, a NaN and an infinity 0. Rust has no such conversion - its
+    /// <c>as</c> saturates - so the spelling is the one of the IR library's <c>ToInt32</c>, in Rust's
+    /// casts: the remainder of the truncated number by 2^32 is exact and lies strictly within ±2^32,
+    /// so <c>as i64</c> keeps it whole, and the last <c>as</c> keeps its low 32 bits. A NaN stays one
+    /// through <c>trunc</c> and <c>%</c>, as an infinity becomes one under <c>%</c>, and <c>as</c>
+    /// makes 0 of it.
+    /// </summary>
+    private string WrappingFloatToInteger(IrType target) {
+      var typeName = TypeName(target)!;
+      var name = "ply_rs_f2i_wrap_" + typeName;
+      this.Spell(name, () => {
+        var x = new RsPath("x") { Type = IrType.F64 };
+        var whole = this.Method(x, "trunc", IrType.F64);
+        var remainder = this.Binary(whole, "%", Literal(new IrConst(IrType.F64, IrOperators.Bits(IrType.F64, 4294967296.0))), IrType.F64);
+        return new RsFunction(name, "", [new RsParameter("x", "f64")], typeName, new RsBlock([], this.Cast(this.Cast(remainder, IrType.I64), target)));
+      });
+      return name;
+    }
+
+    /// <summary>
     /// The spelling function of an integer division or remainder, whose traps carry the IR's names as
     /// every generated panic does: a zero divisor panics with <c>DivideByZero</c>, the one signed
     /// quotient that does not fit (<c>MIN / -1</c>, and the remainder beside it) with
@@ -580,6 +602,7 @@ public static partial class RustEmitter {
         IrIntrinsicOp.IsNormal => Call("is_normal"),
         IrIntrinsicOp.IsSubnormal => Call("is_subnormal"),
         IrIntrinsicOp.FloatBits => As(Call("to_bits"), operand == IrType.F32 ? IrType.U32 : IrType.U64),
+        IrIntrinsicOp.ToInt32 or IrIntrinsicOp.ToUint32 => new RsCall(new RsPath(this.WrappingFloatToInteger(type)), [first]) { Type = type },
         _ => new RsCall(new RsPath(TypeName(type)! + "::from_bits"), [operand.IsSigned ? this.Cast(first, operand == IrType.I32 ? IrType.U32 : IrType.U64) : first]) { Type = type }
       };
     }

@@ -213,7 +213,7 @@ public static partial class RustEmitter {
     return intrinsic.Op switch {
       IrIntrinsicOp.Sqrt or IrIntrinsicOp.Floor or IrIntrinsicOp.Ceiling or IrIntrinsicOp.Truncate or IrIntrinsicOp.RoundAway or IrIntrinsicOp.Abs
         or IrIntrinsicOp.FusedMultiplyAdd or IrIntrinsicOp.IsNaN or IrIntrinsicOp.IsInfinity or IrIntrinsicOp.IsFinite
-        or IrIntrinsicOp.IsNegative or IrIntrinsicOp.IsNormal => true,
+        or IrIntrinsicOp.IsNegative or IrIntrinsicOp.IsNormal or IrIntrinsicOp.ToInt32 or IrIntrinsicOp.ToUint32 => true,
       IrIntrinsicOp.RoundEven => table.Has(RustCapabilities.RoundTiesEven, profile),
       IrIntrinsicOp.CopySign => table.Has(RustCapabilities.CopySign, profile),
       IrIntrinsicOp.IsSubnormal => table.Has(RustCapabilities.IsSubnormal, profile),
@@ -227,7 +227,7 @@ public static partial class RustEmitter {
   /// a floating-point operation by its portable implementation, an integer or bit operation by its
   /// helper of the IR library (<see cref="IntegerLibrary"/>), the floating-point operations Rust has no
   /// method of the IR's meaning for - the IEEE minimum and maximum, the sign that traps on a NaN, the
-  /// rounding to even below Rust 1.77, ECMAScript's rounding and <c>ToInt32</c>, the clamp and the
+  /// rounding to even below Rust 1.77, ECMAScript's rounding, the clamp and the
   /// rounding to digits that trap - by theirs. Each helper is copied into the module.
   /// </summary>
   /// <param name="module">The module.</param>
@@ -259,8 +259,6 @@ public static partial class RustEmitter {
       IrIntrinsicOp.Sign => "SignOf",
       IrIntrinsicOp.RoundEven => "RoundEven",
       IrIntrinsicOp.RoundHalfUp => "RoundHalfUp",
-      IrIntrinsicOp.ToInt32 => "ToInt32",
-      IrIntrinsicOp.ToUint32 => "ToUint32",
       IrIntrinsicOp.Clamp => single ? "ClampF" : "Clamp",
       IrIntrinsicOp.RoundDigits => single ? "RoundDigitsF" : "RoundDigits",
       _ => null
