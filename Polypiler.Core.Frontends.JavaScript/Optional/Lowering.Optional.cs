@@ -120,9 +120,9 @@ internal sealed partial class Lowering {
       test = new IrConst(IrType.Bool, !strict || (other is NullLiteral) == isNull ? 1 : 0);
     else if (value.Type.IsOptional)
       test = strict && !(isNull ? type.MayBeNull : type.MayBeUndefined) ? this.Never(value, other) : new IrIsNone(value);
-    else if (value.Type.IsString)
-      // A string tells which absent value reaches it as a number does (#1370).
-      test = strict && !(isNull ? type.MayBeNull : type.MayBeUndefined) ? this.Never(value, other) : new IrIsNull(value);
+    else if (value.Type.IsString || value.Type.IsList)
+      // A string tells which absent value reaches it as a number does (#1370), and so does a list (#1403).
+      test = (strict && !(isNull ? type.MayBeNull : type.MayBeUndefined)) || (value.Type.IsList && !type.IsAbsent) ? this.Never(value, other) : new IrIsNull(value);
     else if (value.Type.IsNullable)
       test = new IrIsNull(value);
     else
