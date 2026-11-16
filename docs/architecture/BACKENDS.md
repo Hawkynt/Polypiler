@@ -134,6 +134,8 @@ traps named as every generated panic is, `ply_f2i_trap_<t>`, the checked convers
 point Rust has no method for, `ply_i2i_trap_<from>_<to>`, the checked narrowing below Rust 1.34, and
 `ply_range`, `ply_copy` and `ply_copy_within`, the range of a copy or an endian access checked before
 anything is read or written, which a slice's own panics would report as an overflow or not at all.
+Under the trap policy `result` these return a `Result` instead of panicking, and `ply_trap(class)` makes
+the exception a trap of a class throws, with the class's default message (ADR 0008).
 
 ## Target passes
 
