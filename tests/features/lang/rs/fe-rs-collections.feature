@@ -16,3 +16,10 @@ Feature: Rust frontend: maps and sets
     When it is imported with overflowChecks panic
     Then the import fails with diagnostic PLY1525 at line 1
     And the message names "whose order is unspecified"
+
+  Scenario: collect builds a map whose later key replaces the value of an earlier one
+    Given the Rust source "use std::collections::HashMap; pub fn f(n: u32) -> u32 { let m: HashMap<u32, u32> = (0..n).map(|i| (i % 3, i)).collect(); m[&0] * 10 + m.len() as u32 }"
+    When it is imported with overflowChecks panic
+    And "f" is called with 7
+    Then the result is 63
+    And rustc does the same
