@@ -28,9 +28,9 @@ public sealed class ExceptionEmitTests {
   public void CatchOfAThrow_IsABlockThatGivesTheException() {
     var text = Emitted("public static int F(int k) { try { if (k == 0) throw new Y(\"y\"); throw new X(\"x\"); } catch (Y) { return 1; } catch (X e) { return e.Message.Length; } }");
     Assert.That(text, Does.Contain("pub struct PlyError {\n    pub class: usize,\n    pub message: Vec<u16>,\n    pub inner: Option<Rc<PlyError>>,\n}"));
-    Assert.That(text, Does.Contain("let error: Rc<PlyError> = 't0: {\n        if k == 0 {\n            break 't0 ply_error(13, ply_utf16(\"y\"), None);\n        }\n        ply_error(12, ply_utf16(\"x\"), None)\n    };"));
-    Assert.That(text, Does.Contain("if ply_is(error.class, 13) {\n        1\n    } else if ply_is(error.class, 12) {\n        error.message.clone().len() as i32\n    } else {\n        ply_unhandled(&error);\n    }"));
-    Assert.That(text, Does.Contain("pub static PLY_ERROR_NAMES: [&str; 14] = ["));
+    Assert.That(text, Does.Contain("let error: Rc<PlyError> = 't0: {\n        if k == 0 {\n            break 't0 ply_error(14, ply_utf16(\"y\"), None);\n        }\n        ply_error(13, ply_utf16(\"x\"), None)\n    };"));
+    Assert.That(text, Does.Contain("if ply_is(error.class, 14) {\n        1\n    } else if ply_is(error.class, 13) {\n        error.message.clone().len() as i32\n    } else {\n        ply_unhandled(&error);\n    }"));
+    Assert.That(text, Does.Contain("pub static PLY_ERROR_NAMES: [&str; 15] = ["));
     Assert.That(text, Does.Contain("fn ply_is(class: usize, target: usize) -> bool {"));
   }
 
@@ -46,7 +46,7 @@ public sealed class ExceptionEmitTests {
   public void FunctionThatLetsAnExceptionOut_ReturnsAResult() {
     var text = Emitted("static int Check(int k) { if (k < 0) throw new X(\"negative\"); return k; } static void Touch(int k) { Check(k); } "
       + "public static int F(int k) { try { Touch(k); return Check(k) * 2; } catch (X) { return -1; } }");
-    Assert.That(text, Does.Contain("fn check(k: i32) -> Result<i32, Rc<PlyError>> {\n    if k < 0 {\n        return Err(ply_error(12, ply_utf16(\"negative\"), None));\n    }\n    Ok(k)\n}"));
+    Assert.That(text, Does.Contain("fn check(k: i32) -> Result<i32, Rc<PlyError>> {\n    if k < 0 {\n        return Err(ply_error(13, ply_utf16(\"negative\"), None));\n    }\n    Ok(k)\n}"));
     Assert.That(text, Does.Contain("fn touch(k: i32) -> Result<(), Rc<PlyError>> {\n    check(k)?;\n    Ok(())\n}"));
     Assert.That(text, Does.Contain("match touch(k) {\n            Ok(value) => value,\n            Err(error) => break 't0 error,\n        }\n        return (match check(k) {"));
   }
@@ -54,7 +54,7 @@ public sealed class ExceptionEmitTests {
   [Test]
   public void PublicFunctionThatLetsAnExceptionOut_PanicsWithTheClass() {
     var text = Emitted("static int Check(int k) { if (k < 0) throw new X(\"negative\"); return k; } public static int F(int k) => k > 9 ? throw new Y(\"big\") : Check(k);");
-    Assert.That(text, Does.Contain("ply_unhandled(&ply_error(13, ply_utf16(\"big\"), None));"));
+    Assert.That(text, Does.Contain("ply_unhandled(&ply_error(14, ply_utf16(\"big\"), None));"));
     Assert.That(text, Does.Contain("check(k).unwrap_or_else(|error| ply_unhandled(&error))"));
     Assert.That(text, Does.Contain("fn ply_unhandled(error: &PlyError) -> ! {\n    panic!(\"{}\", PLY_ERROR_NAMES[error.class])\n}"));
   }
@@ -63,7 +63,7 @@ public sealed class ExceptionEmitTests {
   public void FilterAndRethrowAndInner_AreWritten() {
     var text = Emitted("public static string F(string m) { try { try { throw new X(m); } catch (X e) when (e.Message == \"a\") { throw new X(\"b\", e); } catch (X) { throw; } } "
       + "catch (X outer) { return outer.InnerException == null ? outer.Message : outer.InnerException.Message; } }");
-    Assert.That(text, Does.Contain("if ply_is(error.class, 12) && error.message.clone() == ply_utf16(\"a\") {"));
+    Assert.That(text, Does.Contain("if ply_is(error.class, 13) && error.message.clone() == ply_utf16(\"a\") {"));
     Assert.That(text, Does.Contain("Some(Rc::clone(&error))"));
     Assert.That(text, Does.Contain("break 't0 Rc::clone(&error);").Or.Contain("break 't0 Err(Rc::clone(&error));"));
     Assert.That(text, Does.Contain("ply_non_null(&error1.inner).message.clone()"));

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using Polypiler.Backends.Testing;
@@ -14,7 +15,12 @@ namespace Polypiler.Tests.Backends.Rust;
 [TestFixture]
 public sealed class ClosureEmitTests {
 
-  private static string Emitted(string source) => RustCrates.ModuleText(RustCrates.Emit(PrototypeFixture.Import("Snippet.cs", "using System; " + source)));
+  /// <summary>
+  /// The module's file of a snippet, written without lambda specialisation (O0463), which would make
+  /// plain loops of the function values these tests are about.
+  /// </summary>
+  private static string Emitted(string source)
+    => RustCrates.ModuleText(RustCrates.Emit(PrototypeFixture.Import("Snippet.cs", "using System; " + source), disabled: new HashSet<string> { "O0463" }));
 
   private static string Methods(string methods) => Emitted(PrototypeFixture.Wrap(methods));
 
@@ -137,7 +143,7 @@ public sealed class ClosureEmitTests {
 
   [Test]
   public void FunctionValueThatTakesAFunction_AllowsTheComplexType() {
-    var files = RustCrates.Emit(PrototypeFixture.Import("Snippet.cs", "using System; " + PrototypeFixture.Wrap("public static int F(int x) { Func<Func<int>> outer = () => () => x + 1; return outer()(); }")));
+    var files = RustCrates.Emit(PrototypeFixture.Import("Snippet.cs", "using System; " + PrototypeFixture.Wrap("public static int F(int x) { Func<Func<int>> outer = () => () => x + 1; return outer()(); }")), disabled: new HashSet<string> { "O0463" });
     Assert.That(RustCrates.ModuleText(files), Does.Contain("let outer: Rc<dyn Fn() -> Rc<dyn Fn() -> i32>> =\n        Rc::new(move || Rc::new(move || x.wrapping_add(1)));"));
     Assert.That(RustCrates.Text(files, "src/lib.rs"), Does.Contain("clippy::type_complexity"));
   }
