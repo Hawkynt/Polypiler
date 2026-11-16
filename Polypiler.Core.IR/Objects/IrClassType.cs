@@ -96,6 +96,14 @@ public sealed record IrConstructor(string Function) {
   /// <summary>Who may create objects with the constructor.</summary>
   public IrVisibility Visibility { get; init; } = IrVisibility.Public;
 
+  /// <summary>
+  /// Whether the constructor runs no constructor of a base class, as a JavaScript object literal that
+  /// meets objects of a class runs none (#1388): it neither chains nor calls a base constructor, so the
+  /// fields of the base classes hold their defaults until its own body stores them. No class of its
+  /// lineage is one of the library's.
+  /// </summary>
+  public bool SkipsBase { get; init; }
+
 }
 
 /// <summary>

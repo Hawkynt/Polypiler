@@ -47,6 +47,9 @@ public static partial class JavaScriptEmitter {
           return this.BinaryBig(big);
         case IrIntrinsic intrinsic:
           return this.Intrinsic(intrinsic);
+        case IrLocalRef reference when reference.Local == this._receiver && this._detached:
+          // The constructor that skips its base classes makes its object itself (#1388).
+          return (Id(Self), true);
         case IrLocalRef reference when reference.Local == this._receiver && this._functionDepth > 0 && !this.Arrows:
           // A function expression has a this of its own; the method's is kept in a variable.
           this._self = true;
