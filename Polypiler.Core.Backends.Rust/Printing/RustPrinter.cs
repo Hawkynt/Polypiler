@@ -97,7 +97,14 @@ public static class RustPrinter {
         text.Append(pad).Append(Visibility(module.Visibility)).Append("mod ").Append(module.Name).Append(";\n");
         break;
       case RsUse use:
-        text.Append(pad).Append("use ").Append(use.Path).Append(";\n");
+        text.Append(pad).Append(Visibility(use.Visibility)).Append("use ").Append(use.Path).Append(";\n");
+        break;
+      case RsEnum enumeration:
+        text.Append(pad).Append(Visibility(enumeration.Visibility)).Append("enum ").Append(enumeration.Name).Append(enumeration.Variants.Count == 0 ? " {}\n" : " {\n");
+        foreach (var variant in enumeration.Variants)
+          text.Append(pad).Append(' ', Indent).Append(variant.Name).Append(variant.Discriminant is { } value ? " = " + value : "").Append(",\n");
+        if (enumeration.Variants.Count > 0)
+          text.Append(pad).Append("}\n");
         break;
       case RsInlineModule module:
         text.Append(pad).Append("mod ").Append(module.Name).Append(" {\n");
@@ -468,7 +475,7 @@ public static class RustPrinter {
         if (callee.Contains('\n') && Arguments(call.Arguments) is { } after && callee.Length - callee.LastIndexOf('\n') - 1 + after.Length + 2 + trailing <= MaxWidth)
           return callee + "(" + after + ")";
 
-        return callee + "(" + (Overflowed(call.Arguments, indent, column + callee.Length + 1) ?? VerticalArguments(call.Arguments, indent)) + ")";
+        return callee + "(" + (Overflowed(call.Arguments, indent, column + callee.Length + 1, true) ?? VerticalArguments(call.Arguments, indent)) + ")";
       }
       case RsMacro { Bracketed: true } macro:
         return macro.Name + "!" + Expression(macro.Arguments[0], indent, column + macro.Name.Length + 1, trailing);
@@ -576,6 +583,10 @@ public static class RustPrinter {
         return Expression(field.Target, indent, column) + "." + field.Name;
       case RsRange range:
         return (range.Start is null ? "" : Expression(range.Start, indent, column)) + (range.Inclusive ? "..=" : "..") + (range.End is null ? "" : Expression(range.End, indent, column));
+      case RsArray { Count: { } count } repeated:
+        // [value; count] over several lines: the value and the count each on a line of their own.
+        return "[\n" + inner + Expression(repeated.Elements[0], indent + Indent, indent + Indent, 1) + ";\n"
+          + inner + Expression(count, indent + Indent, indent + Indent, 0) + "\n" + pad + "]";
       case RsArray array: {
         var text = new StringBuilder("[");
         var flat = array.Elements.Select(Flat).ToList();
@@ -709,8 +720,8 @@ public static class RustPrinter {
   /// overflows the call, starting on its line and closing at the call's indentation, as rustfmt lets
   /// it; <see langword="null"/> for any other arguments.
   /// </summary>
-  private static string? Overflowed(IReadOnlyList<RsExpression> arguments, int indent, int column) {
-    if (arguments.Count == 0 || !Overflows(arguments[^1], arguments.Count))
+  private static string? Overflowed(IReadOnlyList<RsExpression> arguments, int indent, int column, bool function = false) {
+    if (arguments.Count == 0 || !Overflows(arguments[^1], arguments.Count, function))
       return null;
 
     var others = arguments.Take(arguments.Count - 1).Select(Flat).ToList();
@@ -739,15 +750,18 @@ public static class RustPrinter {
 
   /// <summary>
   /// Whether the last of some arguments may overflow the call (rustfmt's <c>can_be_overflowed_expr</c>):
-  /// a block or a control-flow expression; a call, a macro or an array only as the one argument, never a method chain; a
-  /// prefix operator, a borrow or a cast as its operand may.
+  /// a block or a control-flow expression; a call, a macro or an array only as the one argument; a
+  /// method chain only as the one argument of a function's call, never of a method's or a macro's; a
+  /// prefix operator, a borrow, a cast or a <c>?</c> as its operand may.
   /// </summary>
-  private static bool Overflows(RsExpression last, int count) => last switch {
+  private static bool Overflows(RsExpression last, int count, bool function = false) => last switch {
     RsIf or RsMatch or RsWhile or RsLoop or RsFor or RsLabeledBlock or RsBlockExpression or RsClosure => true,
     RsCall or RsMacro or RsArray or RsStructLiteral => count == 1,
-    RsUnary unary => Overflows(unary.Operand, count),
-    RsReference reference => Overflows(reference.Operand, count),
-    RsCast cast => Overflows(cast.Operand, count),
+    RsMethodCall or RsField => function && count == 1,
+    RsTry attempt => Overflows(attempt.Operand, count, function),
+    RsUnary unary => Overflows(unary.Operand, count, function),
+    RsReference reference => Overflows(reference.Operand, count, function),
+    RsCast cast => Overflows(cast.Operand, count, function),
     _ => false
   };
 

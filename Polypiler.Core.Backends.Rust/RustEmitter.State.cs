@@ -128,10 +128,12 @@ public static partial class RustEmitter {
     private RsExpression LockedElement(IrGlobal global, IrExpr index) {
       var before = new List<RsStatement>();
       var at = this.Settled(index, "index", before, this.Index);
-      var read = this.WithLocked(global, value => {
-        RsExpression element = new RsIndex(value, at) { Type = global.Type.Element };
-        return global.Type.Element!.IsString ? new RsMethodCall(element, "clone", []) { Type = global.Type.Element } : element;
-      });
+      var read = this.Results
+        ? this.Checked(this.WithLocked(global, value => new RsMethodCall(new RsMethodCall(value, "get", [at]), global.Type.Element!.IsString ? "cloned" : "copied", [])), IrTrap.IndexOutOfRange)
+        : this.WithLocked(global, value => {
+          RsExpression element = new RsIndex(value, at) { Type = global.Type.Element };
+          return global.Type.Element!.IsString ? new RsMethodCall(element, "clone", []) { Type = global.Type.Element } : element;
+        });
       return before.Count == 0 ? read : new RsBlockExpression(new RsBlock(before, read)) { Type = global.Type.Element };
     }
 
@@ -145,6 +147,14 @@ public static partial class RustEmitter {
     private void LockedStore(IrStore store, IrGlobal global, List<RsStatement> into) {
       var at = this.Settled(store.Index, "index", into, this.Index);
       var value = this.Settled(store.Value, "value", into, this.ElementValue);
+      if (this.Results) {
+        var element = this.Fresh("element");
+        into.Add(new RsExpressionStatement(this.Checked(this.WithLocked(global, place => new RsMethodCall(new RsMethodCall(place, "get_mut", [at]), "map", [
+          new RsClosure(false, [new RsParameter(element, "")], new RsAssign(new RsUnary("*", new RsPath(element)), "=", value))
+        ])), IrTrap.IndexOutOfRange)));
+        return;
+      }
+
       into.Add(new RsExpressionStatement(this.WithLocked(global, place => new RsAssign(new RsIndex(place, at) { Type = store.Value.Type }, "=", value))));
     }
 
@@ -156,6 +166,9 @@ public static partial class RustEmitter {
     }
 
     private RsExpression LockedStep(IrStep step, IrArrayLoad load, IrGlobal global, bool statement, List<RsStatement> before) {
+      if (this.Results)
+        return this.LimitResult("a step of an element of module state behind a lock");
+
       var at = this.Settled(load.Index, "index", before, this.Index);
       var stepped = this.WithLocked(global, place => {
         var element = new RsIndex(place, at) { Type = load.Type };

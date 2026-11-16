@@ -213,7 +213,7 @@ public static partial class RustEmitter {
         case IrCollectionOp.ListCopyToArray:
           return new RsMethodCall(place, "to_vec", []) { Type = type };
         case IrCollectionOp.MapGet:
-          return Expect(this.Helper("ply_map_get", type, this.CollectionArgument(collection, false), this.Key(arguments[1])), IrTrap.KeyNotFound);
+          return this.Checked(this.Helper("ply_map_get", type, this.CollectionArgument(collection, false), this.Key(arguments[1])), IrTrap.KeyNotFound);
         case IrCollectionOp.MapTryGet when IsOptionalValue(type):
           return this.Helper("ply_map_get", type, this.CollectionArgument(collection, false), this.Key(arguments[1]));
         case IrCollectionOp.MapContainsKey:

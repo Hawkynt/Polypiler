@@ -65,6 +65,8 @@ public static partial class RustEmitter {
         items.Add(this.Constant(constant));
       items.AddRange(this.Globals(module));
       items.AddRange(this.ErrorItems());
+      if (this.Results && this._types.Values.Contains(TrapErrorType))
+        this.LimitResult($"a type of the module named '{TrapErrorType}'");
       var written = module.Functions.Select(function => (Source: function, Written: this.Function(function) with { IsHelper = copied.Contains(function.Name) })).ToList();
       var members = written.Where(pair => this._members.ContainsKey(pair.Source.Name))
         .ToDictionary(pair => pair.Source.Name, pair => this.AsMember(pair.Written, pair.Source, this._members[pair.Source.Name]), StringComparer.Ordinal);
@@ -80,14 +82,22 @@ public static partial class RustEmitter {
 
       items.AddRange(this.HierarchyItems());
 
+      var tests = this._options.Tests.Count > 0 ? this.Tests(module) : null;
       this._construct = "the module";
+      foreach (var spelling in this._spellings.Values)
+        this.PanicFree(spelling);
+      var errors = this.ErrorFile();
+      if (errors is not null)
+        this._uses.Add("crate::" + TrapErrorType);
+      if (this.Results && this.PlyErrors)
+        items.AddRange(this.ErrorDisplay());
       items.InsertRange(0, this._uses.Select(path => new RsUse(path)));
       items.AddRange(this._enumTableItems);
       items.AddRange(this._whitespace.Values);
       items.AddRange(this._spellings.Values);
       items.AddRange(functions);
-      if (this._options.Tests.Count > 0)
-        items.Add(this.Tests(module));
+      if (tests is not null)
+        items.Add(tests);
 
       var helpers = module.Implementations.Select(pair => ImplementationSources.Helper(this._functions[pair.Function], pair.Implementation, "")).ToList();
       helpers.AddRange(this._spellings.Keys.Select(name => new HelperText(name, name, EmittedHelper.OwnLicence, EmittedHelper.OriginOf(Folder), "")));
@@ -103,9 +113,11 @@ public static partial class RustEmitter {
       header.AddRange(FloatManifest.Lines(module, this._options.Mode, "rust"));
       header.AddRange(module.Caveats.Select(caveat => $"Caveat: {caveat}."));
       header.AddRange(ImplementationSources.Notices(module.Implementations.Select(pair => pair.Implementation).Concat(module.Inlined)));
-      var root = new RsFile(header, ["forbid(unsafe_code)"], [new RsModuleDeclaration(moduleName, "pub")]);
+      RsItem[] declarations = errors is null ? [new RsModuleDeclaration(moduleName, "pub")]
+        : [new RsModuleDeclaration("error", ""), new RsModuleDeclaration(moduleName, "pub"), new RsUse("error::" + TrapErrorType) { Visibility = "pub" }];
+      var root = new RsFile(header, ["forbid(unsafe_code)"], declarations);
       var file = new RsFile([], [], items);
-      return new RustCrate(package, Manifest(package, this._options.PackageVersion, this._profile, this._capabilities), root, moduleName, file);
+      return new RustCrate(package, Manifest(package, this._options.PackageVersion, this._profile, this._capabilities), root, moduleName, file) { Errors = errors };
     }
 
     /// <summary>

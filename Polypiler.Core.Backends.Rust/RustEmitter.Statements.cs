@@ -118,6 +118,9 @@ public static partial class RustEmitter {
           return false;
         case IrExprStmt expression: {
           var written = this.Expression(expression.Expression);
+          // A call that propagates inside a try body, its value unused: the error alone, if let Err(error) = f(x) { break 't0 error; }.
+          if (written is RsMatch { Arms: [{ Patterns: ["Ok(value)"] }, { Patterns: ["Err(error)"] } failure] } propagated && expression.Expression.Type != IrType.Void)
+            written = new RsIf(new RsLetCondition("Err(error)", propagated.Scrutinee), new RsBlock([new RsExpressionStatement(failure.Body)], null), null);
           into.Add(new RsExpressionStatement(written));
           return Diverges(into[^1]);
         }
@@ -250,7 +253,7 @@ public static partial class RustEmitter {
       if (!step.Trap)
         return new RsMethodCall(place, step.Increment ? "wrapping_add" : "wrapping_sub", [one]) { Type = place.Type };
 
-      return Expect(new RsMethodCall(place, step.Increment ? "checked_add" : "checked_sub", [one]) { Type = place.Type }, IrTrap.IntegerOverflow);
+      return this.Checked(new RsMethodCall(place, step.Increment ? "checked_add" : "checked_sub", [one]) { Type = place.Type }, IrTrap.IntegerOverflow);
     }
 
     /// <summary><c>if</c>; an <c>else</c> that is one <c>if</c> becomes <c>else if</c>; an empty branch is turned around.</summary>
@@ -597,14 +600,16 @@ public static partial class RustEmitter {
     private static IEnumerable<IrExpr> ExpressionsOf(IrStmt statement) => IrTree.Expressions(statement);
 
     /// <summary>
-    /// A throw of a new exception of the IR's library as the panic of its trap; a panic carries no
-    /// object, so a throw of anything else, and a handler, cannot be written.
+    /// A throw: of an exception of the module, the exception leaving; of a new exception of the IR's
+    /// library, the panic of its trap - under the trap policy <c>result</c> the trap's error, or, where
+    /// the module has exceptions, the exception itself. A panic carries no object, so a throw of
+    /// anything else cannot be written.
     /// </summary>
     private RsExpression Throw(IrExpr exception) {
-      if (IsCatchable(exception.Type))
-        return this.Escape(this.ErrorValue(exception));
+      if (IsCatchable(exception.Type) || this.Results && this.PlyErrors && exception is IrNew && IsError(exception.Type))
+        return this.Fail(this.ErrorValue(exception));
       if (exception is IrNew { Type.Declaration: IrClassType type } && TrapOf(type) is { } trap)
-        return Panic(trap);
+        return this.Trap(trap);
 
       return this.Refuse("the throw of an exception that is no new object");
     }

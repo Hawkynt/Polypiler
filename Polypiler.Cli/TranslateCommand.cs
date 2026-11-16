@@ -36,8 +36,9 @@ namespace Polypiler.Cli;
 /// own way: for C# it names the target framework, and <c>--langversion</c> raises the version of the
 /// language above the one the profile brings; for JavaScript it names the language level, and
 /// <c>--module</c>, <c>--global</c> and <c>--typed-arrays</c> say how the file is packaged and what
-/// an ECMAScript 5 engine has; for Rust it names the edition, and <c>--rust-version</c> raises the
-/// minimum supported Rust version above the one the edition brings. The pipeline options <c>--opt</c>, <c>--disable-opt</c> and
+/// an ECMAScript 5 engine has; for Rust it names the edition, <c>--rust-version</c> raises the
+/// minimum supported Rust version above the one the edition brings, and <c>--trap-policy</c> chooses
+/// whether a trap panics or is an error value (ADR 0008). The pipeline options <c>--opt</c>, <c>--disable-opt</c> and
 /// <c>--explain-opt</c> (ADR 0004) apply to every pair: the optimizer runs between the frontend and
 /// the backend, and the target passes between the backend's syntax tree and its printer (#1336),
 /// unless <c>--opt none</c> says otherwise; the rules of the one and the passes of the other share
@@ -84,6 +85,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   private const string OverflowChecksOption = "--overflow-checks";
   private const string CargoProfileOption = "--cargo-profile";
   private const string DebugAssertionsOption = "--debug-assertions";
+  private const string TrapPolicyOption = "--trap-policy";
 
   /// <summary>The caveat that records the overflow mode of a Rust import and where it came from.</summary>
   public const string RustOverflowCaveat = "rs-overflow-checks";
@@ -115,6 +117,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     [DebugAssertionsOption] = "Rust: whether debug_assert! asserts, as rustc -C debug-assertions: on (debug) or off (release); a source with one needs it",
     [LangVersion] = "C#: the language version, above the one of the profile",
     [RustVersion] = "Rust: the minimum supported Rust version, above the one of the edition",
+    [TrapPolicyOption] = "Rust: what a trap is: a panic (the default) or an error value, every function a trap can leave returning a Result (ADR 0008)",
     [Bind] = "JavaScript: the binding module or global object of a native library, repeatable"
   };
 
@@ -631,7 +634,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     "rust",
     options => RustProfileOf(options).Profile!.ToString(),
     new RuleTarget(false),
-    [new(Profile, "<name>"), new(RustVersion, "<version>"), new(Float, FloatChoice)],
+    [new(Profile, "<name>"), new(RustVersion, "<version>"), new(TrapPolicyOption, Choice(RustProfile.TrapPolicies)), new(Float, FloatChoice)],
     options => FloatMisuse(options) ?? RustProfileOf(options).Error,
     (module, options) => RustEmitter.Legalize(module, implementations, RustProfileOf(options).Profile!, capabilities),
     (module, options) => RustEmitter.Check(module, RustProfileOf(options).Profile!, capabilities),
@@ -639,7 +642,7 @@ public sealed partial class TranslateCommand : ICliCommand {
 
   /// <summary>The Rust profile the options of a command line name, or what is wrong with them.</summary>
   private static (RustProfile? Profile, string? Error) RustProfileOf(IReadOnlyDictionary<string, string> options) {
-    RustProfile.TryParse(options.GetValueOrDefault(Profile), options.GetValueOrDefault(RustVersion), out var profile, out var error);
+    RustProfile.TryParse(options.GetValueOrDefault(Profile), options.GetValueOrDefault(RustVersion), options.GetValueOrDefault(TrapPolicyOption), out var profile, out var error);
     return (profile, error);
   }
 

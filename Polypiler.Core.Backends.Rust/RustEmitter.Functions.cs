@@ -83,7 +83,7 @@ public static partial class RustEmitter {
 
       var returns = this.ResultType(function);
       if (this._throwing.Contains(function.Name))
-        returns = Fallible(returns);
+        returns = Fallible(returns, this.FailureType);
       var statements = new List<RsStatement>();
       foreach (var parameter in function.Parameters.Where(this._reassigned.Contains)) {
         // A parameter given a string or a new array of its own holds a copy it owns from the start.
@@ -105,7 +105,9 @@ public static partial class RustEmitter {
       if (this._throwing.Contains(function.Name) && function.ReturnType == IrType.Void && !(statements.Count > 0 && Diverges(statements[^1])))
         statements.Add(new RsExpressionStatement(this.Returned(null)));
       var body = Tidy.Function(new RsBlock(statements, null), function.ReturnType == IrType.Void && !this._throwing.Contains(function.Name));
-      return new RsFunction(name, function.IsPublic || this._free.ContainsKey(function.Name) ? "pub" : "", parameters, returns, body) { Generics = generics.Length > 0 ? generics : Lifetime(function, this._arrayFacts).Length > 0 ? "<'a>" : "" };
+      var written = new RsFunction(name, function.IsPublic || this._free.ContainsKey(function.Name) ? "pub" : "", parameters, returns, body) { Generics = generics.Length > 0 ? generics : Lifetime(function, this._arrayFacts).Length > 0 ? "<'a>" : "" };
+      this.PanicFree(written);
+      return written;
     }
 
     /// <summary>The function being written.</summary>

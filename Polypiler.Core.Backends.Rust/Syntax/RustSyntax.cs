@@ -292,9 +292,25 @@ public sealed record RsTrait(string Name, string Visibility, IReadOnlyList<strin
 /// <param name="Visibility">The visibility as written, or empty.</param>
 public sealed record RsModuleDeclaration(string Name, string Visibility) : RsItem;
 
-/// <summary><c>use path;</c>.</summary>
+/// <summary><c>use path;</c>, a re-export <c>pub use path;</c>.</summary>
 /// <param name="Path">The path.</param>
-public sealed record RsUse(string Path) : RsItem;
+public sealed record RsUse(string Path) : RsItem {
+
+  /// <summary>The visibility as written, <c>pub</c> for a re-export, or empty.</summary>
+  public string Visibility { get; init; } = "";
+
+}
+
+/// <summary>A variant of a field-less enum: <c>Name</c>, or <c>Name = 2</c> with its discriminant.</summary>
+/// <param name="Name">The name.</param>
+/// <param name="Discriminant">The discriminant as written, or <see langword="null"/>.</param>
+public sealed record RsVariant(string Name, string? Discriminant) : RsNode;
+
+/// <summary><c>pub enum Name { A = 1, B = 2 }</c>, an enum without fields.</summary>
+/// <param name="Name">The name.</param>
+/// <param name="Visibility">The visibility as written, or empty.</param>
+/// <param name="Variants">The variants, in declaration order.</param>
+public sealed record RsEnum(string Name, string Visibility, IReadOnlyList<RsVariant> Variants) : RsItem;
 
 /// <summary><c>mod name { items }</c>, a module written in place, such as the <c>#[cfg(test)]</c> module of the tests.</summary>
 /// <param name="Name">The module.</param>

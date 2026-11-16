@@ -55,11 +55,43 @@ public sealed class TranslateToRustTests {
   [TestCase("--rust-version", "1.2", "Rust 1.2 is older than the 2024 edition")]
   [TestCase("--rust-version", "two", "'two' is not a Rust version")]
   [TestCase("--float", "fast", "unknown floating-point mode 'fast'")]
+  [TestCase("--trap-policy", "unwind", "unknown trap policy 'unwind'; the trap policies are panic and result")]
   [TestCase("--namespace", "A.B", "the option '--namespace' does not apply to the target language 'rust'")]
   public void Misuse_IsRefused(string option, string value, string message) {
     var (exitCode, _, error) = Invoke("translate", PrototypeFixture.PathOf("Numbers"), "--from", "csharp", "--to", "rust", "--output", this._out, option, value);
     Assert.That(exitCode, Is.EqualTo((int)ExitCode.UsageError));
     Assert.That(error, Does.Contain("PLY0003").And.Contain(message));
+  }
+
+  [Test]
+  public void TrapPolicyResult_WritesTheErrorModule() {
+    var (exitCode, output, error) = Invoke("translate", PrototypeFixture.PathOf("Numbers"), "--from", "csharp", "--to", "rust", "--output", this._out, "--trap-policy", "result");
+    Assert.That((exitCode, error), Is.EqualTo(((int)ExitCode.Success, "")));
+    Assert.That(output.Trim().Split('\n').Select(line => Path.GetRelativePath(this._out, line.Trim()).Replace('\\', '/')), Does.Contain("src/error.rs"));
+    Assert.That(File.ReadAllText(Path.Combine(this._out, "src", "lib.rs")), Does.Contain("pub use error::Error;").And.Contain("trap policy result"));
+    Assert.That(File.ReadAllText(Path.Combine(this._out, Manifest.FileName)), Does.Contain("rust2024 (Rust 1.85, trap policy result)"));
+  }
+
+  [Test]
+  public void TrapPolicyPanic_IsTheDefault() {
+    var (exitCode, _, error) = Invoke("translate", PrototypeFixture.PathOf("Numbers"), "--from", "csharp", "--to", "rust", "--output", this._out, "--trap-policy", "panic");
+    Assert.That((exitCode, error), Is.EqualTo(((int)ExitCode.Success, "")));
+    Assert.That(File.Exists(Path.Combine(this._out, "src", "error.rs")), Is.False);
+  }
+
+  [Test]
+  public void TrapPolicyResult_RefusesWhatWouldStillPanic() {
+    var source = Path.Combine(this._directory, "Lists.cs");
+    File.WriteAllText(source, "public static class Lists { public static int At(System.Collections.Generic.List<int> l, int i) => l[i]; }");
+    var (exitCode, _, error) = Invoke("translate", source, "--from", "csharp", "--to", "rust", "--output", this._out, "--trap-policy", "result");
+    Assert.That(exitCode, Is.EqualTo((int)ExitCode.UnsupportedConstruct));
+    Assert.That(error, Does.Contain("PLY1552").And.Contain("'the helper ply_list_index, which panics'"));
+  }
+
+  [Test]
+  public void TrapPolicy_DoesNotApplyToCSharp() {
+    var (exitCode, _, error) = Invoke("translate", PrototypeFixture.PathOf("Numbers"), "--from", "csharp", "--to", "csharp", "--output", this._out, "--trap-policy", "result");
+    Assert.That((exitCode, error.Contains("the option '--trap-policy' does not apply to the target language 'csharp'", StringComparison.Ordinal)), Is.EqualTo(((int)ExitCode.UsageError, true)));
   }
 
   [Test]

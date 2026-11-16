@@ -170,7 +170,8 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY1545](PLY1545.md) | error | 3 (UnsupportedConstruct) | `'<method or type>' is not supported on Option or Result` | #467 |
 | [PLY1546](PLY1546.md) | error | 3 (UnsupportedConstruct) | `destructors are not supported: 'impl Drop for <type>'` | #467 |
 | [PLY1550](PLY1550.md) | error | 3 (UnsupportedConstruct) | `'<construct>' cannot be expressed in Rust profile '<profile>' (in <place>)` | #461 |
-| [PLY1560](PLY1560.md) | error | 3 (UnsupportedConstruct) | `exception region in <function> cannot be emitted under the trap policy 'panic': '<construct>' is not supported by the Rust backend` | #458 |
+| [PLY1552](PLY1552.md) | error | 3 (UnsupportedConstruct) | `trap policy 'result' is not available for '<construct>' (in <place>)` | #1392 |
+| [PLY1560](PLY1560.md) | error | 3 (UnsupportedConstruct) | `exception region in <function> cannot be emitted under the trap policy '<panic\|result>': '<construct>' is not supported by the Rust backend` | #458 |
 | [PLY1566](PLY1566.md) | error | 3 (UnsupportedConstruct) | `views '<first>' and '<second>' may alias and '<second>' is written in <place>; safe Rust cannot express this - provide a no-alias fact or select a copying target profile` | #460 |
 | [PLY1574](PLY1574.md) | error | 3 (UnsupportedConstruct) | `exported names '<first>' and '<second>' both map to '<rust name>'` | #459 |
 | [PLY1591](PLY1591.md) | error | 6 (TargetBuildFailure) | `the Rust compiler rejected the input: <every error with its code, text and location>` | #468 |
