@@ -149,8 +149,11 @@ A crate is the source file and the modules it declares: inline `mod m { ... }` a
 `mod m;` read from `m.rs` or `m/mod.rs` beside their declarer (`Typing/CrateScope.cs`). `use` with
 groups, globs, `self`, `super`, `crate`, renames and `pub use` re-exports resolves names across
 them, as do `std::cmp::{min, max}` and `std::mem::swap`. The exported surface is every item reachable
-by a public path; its IR name is that shortest public path joined by `_`. Modules are emitted in
-dependency order (`ImportResult.ModuleOrder`), test-only modules last.
+by a public path; its IR name is that shortest public path joined by `_`, and `ImportResult.Exports`
+maps each IR name to the path itself (`hash_fnv1a` to `crate::hash::fnv1a`, a re-export `rotl` to
+`crate::rotl`). Modules are emitted in dependency order (`ImportResult.ModuleOrder`), test-only
+modules last. A qualified path `<T>::f` of a path type is the path `T::f`; `<T as Tr>::f` is refused
+with `PLY1540`, the qualified path of a type that is no path (`<[u8]>::len`) with `PLY1502`.
 
 Inherent `impl` blocks give structs and enums associated functions, constants and methods with
 `self`, `&self` and `&mut self`. `#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]` is
@@ -366,7 +369,12 @@ with `PLY1550`, naming the construct. The unit tests under `Polypiler.Tests/Fron
 refusal and every rustc error the frontend reports to its code. `RustPackageTests` (layer `rust`)
 builds `modgraph` with rustc in both overflow modes against the import's exports, and runs the package
 through `cargo test` of the pinned toolchain (`RustRunner`): each imported test, interpreted, passes
-or fails as cargo reports it by name. `tests/fixtures/rust/upstream/harness.rs` is a real-world file
+or fails as cargo reports it by name. `RustRandomDifferentialTests` (layer `rust`) calls every public
+function of `functions`, `closures` (seed 1530), `memory` (seed 1520) and `types` (seed 1540) whose
+parameters are scalars or slices of them with 2 000 seeded random argument tuples (`RustRandomCalls`:
+boundaries, small numbers, any bit pattern, slices of 0 to 64 elements; a tuple whose call does not
+end within 200 000 interpreter steps is drawn again), in both overflow modes, one rustc driver per
+fixture and mode, and holds every interpreted outcome to rustc's. `tests/fixtures/rust/upstream/harness.rs` is a real-world file
 outside the subset, Cipher's validation harness pinned to a commit with its licence and notice; the
 import refuses it with `PLY1500` and no IR, never with an exception. Run the acceptance test
 `Recording_IsWhatRustcDoes` with `POLYPILER_RECORD=1` after a fixture or its calls changed.

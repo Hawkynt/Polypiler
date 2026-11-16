@@ -57,6 +57,8 @@ public sealed class RustPackageTests {
     Assert.That(result.Diagnostics, Is.Empty);
     var module = result.Module!;
     Assert.That(module.Functions.Where(function => function.IsPublic).Select(function => function.Name), Is.EquivalentTo(_entries.Select(entry => entry.Name)));
+    // The export set by crate paths is the one the driver below calls through, which rustc resolves.
+    Assert.That(result.Exports, Is.EquivalentTo(_entries.ToDictionary(entry => entry.Name, entry => "crate" + entry.Path["modgraph".Length..])));
 
     var flag = $"overflow-checks={(mode == OverflowChecks.Panic ? "on" : "off")}";
     var library = Path.Combine(this._directory, "libmodgraph.rlib");

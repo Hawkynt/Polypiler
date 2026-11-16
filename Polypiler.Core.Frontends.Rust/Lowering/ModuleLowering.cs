@@ -13,6 +13,9 @@ internal sealed record LoweredCrate(IReadOnlyList<IrFunction> Functions, IReadOn
   /// <summary>The exported instances of public generic functions, by IR name: the Rust path with the type arguments.</summary>
   public IReadOnlyDictionary<string, string> Instances { get; init; } = new Dictionary<string, string>();
 
+  /// <summary>The exported functions, by IR name: the path from the crate root that reaches each (<c>crate::hash::fnv1a</c>).</summary>
+  public IReadOnlyDictionary<string, string> Exports { get; init; } = new Dictionary<string, string>();
+
 }
 
 /// <summary>
@@ -68,11 +71,12 @@ internal sealed partial class ModuleLowering {
     if (failed)
       return null;
 
-    checker.CheckExportedGenerics(new HashSet<FunctionItem>(Exports(crate).Keys, ReferenceEqualityComparer.Instance));
+    var exports = Exports(crate);
+    checker.CheckExportedGenerics(new HashSet<FunctionItem>(exports.Keys, ReferenceEqualityComparer.Instance));
     if (failed)
       return null;
 
-    lowering.Name(crate);
+    lowering.Name(exports);
     lowering.Declare();
     var all = lowering._typed.Functions.ToList();
     var order = Order(crate, checker.ModuleUses);
@@ -91,18 +95,18 @@ internal sealed partial class ModuleLowering {
     var tests = all.Where(signature => signature.Item.IsTest).Select(signature => signature.IrName).ToList();
     var instances = all.Where(signature => signature.IsExported && signature.Template is not null)
       .ToDictionary(signature => signature.IrName, signature => $"{signature.Template!.CratePath["crate::".Length..]}::<{string.Join(", ", signature.Template.Generics.Select(parameter => signature.Substitution![parameter.Name]))}>");
-    return new LoweredCrate([.. functions, .. lowering._objectFunctions, .. helpers], lowering._types, lowering._tables, tests, [.. order.Select(module => module.CratePath)]) { Instances = instances };
+    var paths = all.Where(signature => signature.IsExported && signature.Template is null).ToDictionary(signature => signature.IrName, signature => exports[signature.Item].Path);
+    return new LoweredCrate([.. functions, .. lowering._objectFunctions, .. helpers], lowering._types, lowering._tables, tests, [.. order.Select(module => module.CratePath)]) { Instances = instances, Exports = paths };
   }
 
   /// <summary>Gives every function its IR name - its crate path, unique in the module - and marks the exported ones.</summary>
-  private void Name(CrateScope crate) {
-    var exported = Exports(crate);
+  private void Name(Dictionary<FunctionItem, (string Name, string Path)> exported) {
     foreach (var signature in this._typed.Functions) {
-      var wanted = exported.TryGetValue(signature.Item, out var export) ? export : signature.IrName;
+      var wanted = exported.TryGetValue(signature.Item, out var export) ? export.Name : signature.IrName;
       signature.IsExported = exported.ContainsKey(signature.Item);
       // An instance of an exported generic function is exported by its public path and its type arguments: larger_u8.
       if (signature.Template is { } template && exported.TryGetValue(template.Item, out var generic)) {
-        wanted = generic + signature.IrName[template.IrName.Length..];
+        wanted = generic.Name + signature.IrName[template.IrName.Length..];
         signature.IsExported = true;
       }
 
@@ -116,24 +120,25 @@ internal sealed partial class ModuleLowering {
 
   /// <summary>
   /// The functions the crate exports - every function reachable as <c>pub</c> from the root, through
-  /// <c>pub</c> modules and <c>pub use</c> - each by the shortest path that reaches it, ties by path.
+  /// <c>pub</c> modules and <c>pub use</c> - each by the shortest path that reaches it, ties by path:
+  /// its IR name (<c>hash_fnv1a</c>) and its crate path (<c>crate::hash::fnv1a</c>).
   /// </summary>
-  private static Dictionary<FunctionItem, string> Exports(CrateScope crate) {
-    var exports = new Dictionary<FunctionItem, string>(ReferenceEqualityComparer.Instance);
-    var queue = new Queue<(ModuleScope Module, string Prefix)>([(crate.Root, "")]);
+  private static Dictionary<FunctionItem, (string Name, string Path)> Exports(CrateScope crate) {
+    var exports = new Dictionary<FunctionItem, (string Name, string Path)>(ReferenceEqualityComparer.Instance);
+    var queue = new Queue<(ModuleScope Module, string Prefix, string Path)>([(crate.Root, "", "crate::")]);
     var seen = new HashSet<ModuleScope>(ReferenceEqualityComparer.Instance) { crate.Root };
     while (queue.Count > 0) {
-      var (module, prefix) = queue.Dequeue();
+      var (module, prefix, modulePath) = queue.Dequeue();
       foreach (var (name, symbol) in module.Items.Concat(module.Imported).OrderBy(pair => pair.Key, StringComparer.Ordinal)) {
         if (!symbol.IsPublic)
           continue;
 
         if (symbol.Target is FunctionItem function) {
           var path = prefix + name;
-          if (!exports.TryGetValue(function, out var known) || path.Count(character => character == '_') < known.Count(character => character == '_'))
-            exports[function] = path;
+          if (!exports.TryGetValue(function, out var known) || path.Count(character => character == '_') < known.Name.Count(character => character == '_'))
+            exports[function] = (path, modulePath + name);
         } else if (symbol.Target is ModuleScope child && !child.TestOnly && seen.Add(child)) {
-          queue.Enqueue((child, prefix + name + "_"));
+          queue.Enqueue((child, prefix + name + "_", modulePath + name + "::"));
         }
       }
     }
