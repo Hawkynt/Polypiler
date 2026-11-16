@@ -17,7 +17,7 @@ Related: [backends](BACKENDS.md) · [pipeline](PIPELINE.md) · [exceptions](../r
 | `Cargo.toml` | `[package]` with `name` (the module's name in `snake_case`), `version = "0.1.0"`, the `edition` and, from Rust 1.56, `rust-version`; no dependencies |
 | `src/lib.rs` | the header (`//!`: profile, helper licences, floating-point record, caveats, notices), `#![forbid(unsafe_code)]`, the lints the code needs allowed, `pub mod <module>;` |
 | `src/<module>.rs` | the constants, the spelling functions and helpers, the functions; a `#[cfg(test)] mod tests` when tests are asked for |
-| `src/<placed>.rs` | the functions `RustEmitOptions.Modules` places in a module of their own (see [Modules](#modules)) |
+| `src/<placed>.rs` | the functions `RustEmitOptions.Modules` places in a module of their own, `src/util/bits.rs` for `util::bits` (see [Modules](#modules)) |
 
 The backend builds a Rust syntax tree from the IR (`Polypiler.Core.Backends.Rust/Syntax/RustSyntax.cs`),
 runs the target passes over it - helper inlining (O0500), removal of what nothing names (O0501) -
@@ -142,17 +142,29 @@ name escapes as a raw identifier (`r#gen`). The MSRV decides the rows of `RustCa
 
 ## Modules
 
-`RustEmitOptions.Modules` places functions, by IR name, in modules of the crate (#459): each such
-module is a file `src/<module>.rs` that `src/lib.rs` declares (`pub mod` where it has a public item,
-else `mod`, sorted by name). Everything else - functions placed nowhere, helpers and spelling
-functions, constants, globals, types, the tests - stays in the IR module's file, which is left out
-where nothing remains. Each file names what it uses of another with one `use crate::<module>::<item>;`
-per item, sorted, and only what its code uses; an item another file uses is `pub(crate)` at least,
-and the tests module has `use` lines of its own for the placed functions it calls. Emission is
-reproducible: the same module and options give the same files. A placed function that names a type
-of the crate (whose fields and methods are private to its module) and a module named `lib` or `main`
-are refused with `PLY1550`. The IR holds one module and calls only within it, and the command line
-has no option for a placement yet, so a crate of several modules comes from this option alone.
+`RustEmitOptions.Modules` places functions, by IR name, in modules of the crate (#459), each given as
+its path from the crate root: `util` is the file `src/util.rs`, `util::bits` the file
+`src/util/bits.rs`, each declared by its parent (`src/lib.rs` for a module below the root; a parent
+without functions of its own is a file of declarations), `pub mod` where it or a module below it has a
+public item, else `mod`, sorted by name. A function named after its module's path, as the Rust
+frontend names them (`util_bits_mix`), is called by the rest of its name there (`mix`), unless another
+function of the crate has that name. Everything else - functions placed nowhere, helpers and spelling
+functions, constants, globals, types, the tests - stays in the IR module's file, or in `src/lib.rs`
+itself where the IR module is the crate root (`RustEmitOptions.CrateRoot`, and always for a module
+named `lib` or `main`, whose file would be the root's or a program's); a function that names a type of
+the crate stays there too, since a type's fields and methods are private to its module. Each file names
+what it uses of another with one `use crate::<module>::<item>;` per item, sorted, and only what its code
+uses; an item another file uses is `pub(crate)` at least. `RustEmitOptions.TestFunctions` makes
+functions `#[test]` functions of the `#[cfg(test)] mod tests`, which has `use super::*;` where it uses
+what its file declares or imports and `use` lines of its own for the rest. Emission is reproducible: the
+same module and options give the same files. A module below the root named `lib` or `main` is refused
+with `PLY1550`.
+
+`polypiler translate <crate>/src/lib.rs --from rust --to rust` passes the source crate's layout through:
+the Rust frontend reports the module of every free function outside the root (`ImportResult.Modules`)
+and the crate's tests, and the crate is written back with one file per source module, its root in
+`src/lib.rs`, its tests as `#[test]` functions, and the package named after the folder of
+`src/lib.rs`. A Rust source of one file and every source of another language stay one module.
 
 ## Objects
 

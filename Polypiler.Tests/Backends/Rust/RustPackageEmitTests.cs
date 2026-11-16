@@ -3,6 +3,7 @@ using NUnit.Framework;
 using Polypiler.Backends.Testing;
 using Polypiler.Core.Backends.Rust;
 using Polypiler.Core.IR;
+using Polypiler.Prototype.Testing;
 
 namespace Polypiler.Tests.Backends.Rust;
 
@@ -141,7 +142,7 @@ public sealed class RustPackageEmitTests {
     Assert.That(lookup, Does.StartWith("use crate::snippet::TABLE;\nuse crate::snippet::base;\n\npub(crate) fn pick(i: i32) -> u32 {"));
     var snippet = RustCrates.Text(files, "src/snippet.rs");
     Assert.That(snippet, Does.StartWith("use crate::lookup::pick;\n\npub(crate) static TABLE: [u32; 3] = [1, 2, 3];"));
-    Assert.That(snippet, Does.Contain("mod tests {\n    use super::*;\n    use crate::lookup::pick;\n\n    #[test]"));
+    Assert.That(snippet, Does.Contain("mod tests {\n    use super::*;\n\n    #[test]"));
   }
 
   /// <summary>The tests module names a placed function its module's code does not call.</summary>
@@ -152,7 +153,7 @@ public sealed class RustPackageEmitTests {
       Tests = [new RustTestCase("rotates", "Rotl", [new IrConst(IrType.U32, 1), new IrConst(IrType.I32, 1)], new IrConst(IrType.U32, 2))]
     };
     var text = RustCrates.Text(Placed("public static uint Rotl(uint x, int n) => System.Numerics.BitOperations.RotateLeft(x, n); public static uint Other(uint x) => x;", options), "src/snippet.rs");
-    Assert.That(text, Does.StartWith("pub fn other(").And.Contain("mod tests {\n    use super::*;\n    use crate::util::rotl;\n"));
+    Assert.That(text, Does.StartWith("pub fn other(").And.Contain("mod tests {\n    use crate::util::rotl;\n\n    #[test]"));
   }
 
   /// <summary>A placed function names the standard library's items it uses itself; the parameters of its closures are no items.</summary>
@@ -164,11 +165,75 @@ public sealed class RustPackageEmitTests {
     Assert.That(RustCrates.Text(files, "src/snippet.rs"), Does.StartWith("pub(crate) fn base() -> i32 {").And.Not.Contain("use "));
   }
 
+  /// <summary>A function that names a type of the crate stays with the types, whose fields are private to their module.</summary>
   [Test]
-  public void PlacedFunctionThatNamesAType_IsRefused() {
-    var options = new RustEmitOptions { Modules = new System.Collections.Generic.Dictionary<string, string> { ["Get"] = "util" } };
-    var problems = RustEmitter.Check(RustCrates.Prepared(RustCrates.Import("public struct P { public int X; } public static int Get(P p) => p.X;")), RustProfile.Default, null, options);
-    Assert.That(problems.Single().Message, Does.Contain("'a function placed in the module 'util' that names the type 'P' of the crate'"));
+  public void PlacedFunctionThatNamesAType_StaysWithTheTypes() {
+    var options = new RustEmitOptions { Modules = new System.Collections.Generic.Dictionary<string, string> { ["Get"] = "util", ["Twice"] = "util" } };
+    var files = Placed("public struct P { public int X; } public static int Get(P p) => p.X; public static int Twice(int a) => a * 2;", options);
+    Assert.That(RustCrates.Text(files, "src/snippet.rs"), Does.Contain("pub fn get(p: P) -> i32 {"));
+    Assert.That(RustCrates.Text(files, "src/util.rs"), Does.Contain("pub fn twice(a: i32) -> i32 {").And.Not.Contain("fn get"));
+  }
+
+  private static System.Collections.Generic.Dictionary<string, string> Layout(params string[] pairs)
+    => Enumerable.Range(0, pairs.Length / 2).ToDictionary(index => pairs[2 * index], index => pairs[2 * index + 1]);
+
+  /// <summary>
+  /// A module below another is a file in its parent's folder, which the parent declares - a parent
+  /// without functions a file of declarations; a function named after its module's path is called
+  /// by the rest of its name there, unless another function of the crate has that name.
+  /// </summary>
+  [Test]
+  public void NestedModules_AreFilesOfTheirParents() {
+    const string Methods = "public static uint UtilBitsRotl(uint x) => x * 3; static uint UtilBitsMix(uint h) => UtilBitsRotl(h) + 1; public static uint Mix(uint h) => h; public static uint HashRun(uint h) => UtilBitsMix(h) + Mix(h);";
+    var options = new RustEmitOptions { Modules = Layout("UtilBitsRotl", "util::bits", "UtilBitsMix", "util::bits", "HashRun", "hash") };
+    var files = Placed(Methods, options);
+    Assert.That(files.Select(file => file.Path), Is.EqualTo(new[] { "Cargo.toml", "src/lib.rs", "src/snippet.rs", "src/hash.rs", "src/util.rs", "src/util/bits.rs" }));
+    Assert.That(RustCrates.Text(files, "src/lib.rs"), Does.EndWith("pub mod hash;\npub mod snippet;\npub mod util;\n"));
+    Assert.That(RustCrates.Text(files, "src/util.rs"), Is.EqualTo("pub mod bits;\n"));
+    Assert.That(RustCrates.Text(files, "src/util/bits.rs"), Does.Contain("pub fn rotl(x: u32) -> u32 {").And.Contain("pub(crate) fn util_bits_mix(h: u32) -> u32 {\n    rotl(h).wrapping_add(1)\n}"));
+    Assert.That(RustCrates.Text(files, "src/hash.rs"), Does.StartWith("use crate::snippet::mix;\nuse crate::util::bits::util_bits_mix;\n\npub fn run(h: u32) -> u32 {"));
+    var exports = RustEmitter.Exports(RustCrates.Prepared(RustCrates.Import(Methods), level: Polypiler.Core.Optimize.OptimizationLevel.None), RustProfile.Default, options);
+    Assert.That(exports, Is.EqualTo(new System.Collections.Generic.Dictionary<string, string> { ["UtilBitsRotl"] = "util::bits::rotl", ["Mix"] = "snippet::mix", ["HashRun"] = "hash::run" }));
+  }
+
+  /// <summary>A module whose parent holds functions declares it in the parent's own file.</summary>
+  [Test]
+  public void ModuleBelowAModuleWithFunctions_IsDeclaredByIt() {
+    var files = Placed("public static uint A(uint x) => x + 1; public static uint B(uint x) => A(x) * 2;", new RustEmitOptions { Modules = Layout("A", "outer", "B", "outer::inner") });
+    Assert.That(RustCrates.Text(files, "src/outer.rs"), Does.StartWith("pub mod inner;\n\npub fn a(x: u32) -> u32 {"));
+    Assert.That(RustCrates.Text(files, "src/outer/inner.rs"), Does.StartWith("use crate::outer::a;\n\npub fn b("));
+  }
+
+  /// <summary>Where the IR module is the crate root, what stays is written in src/lib.rs, its exports at the root; a test function is a #[test].</summary>
+  [Test]
+  public void CrateRoot_HoldsWhatStays() {
+    const string Methods = "public static uint Base(uint x) => x + 1; public static uint Twice(uint x) => Base(x) * 2; static void Checks() { if (Twice(1) != 4) throw new System.InvalidOperationException(); }";
+    var options = new RustEmitOptions { Modules = Layout("Twice", "calc"), CrateRoot = true, TestFunctions = ["Checks"] };
+    var files = Placed(Methods, options);
+    Assert.That(files.Select(file => file.Path), Is.EqualTo(new[] { "Cargo.toml", "src/lib.rs", "src/calc.rs" }));
+    var root = RustCrates.Text(files, "src/lib.rs");
+    Assert.That(root, Does.Contain("#![forbid(unsafe_code)]\n\npub mod calc;\n\npub fn base(x: u32) -> u32 {"));
+    Assert.That(root, Does.Contain("mod tests {\n    use crate::calc::twice;\n\n    #[test]\n    fn checks() {"));
+    Assert.That(RustCrates.Text(files, "src/calc.rs"), Does.StartWith("use crate::base;\n\npub fn twice("));
+    var exports = RustEmitter.Exports(RustCrates.Prepared(RustCrates.Import(Methods), level: Polypiler.Core.Optimize.OptimizationLevel.None), RustProfile.Default, options);
+    Assert.That(exports, Is.EqualTo(new System.Collections.Generic.Dictionary<string, string> { ["Base"] = "base", ["Twice"] = "calc::twice" }));
+  }
+
+  /// <summary>A module named lib is the crate root: its file would be src/lib.rs.</summary>
+  [Test]
+  public void ModuleNamedLib_IsTheCrateRoot() {
+    var module = PrototypeFixture.Import("lib.cs", "public static class Lib { public static int F(int a) => a; }");
+    var files = RustCrates.Emit(module, options: new RustEmitOptions { PackageName = "p" });
+    Assert.That(files.Select(file => file.Path), Is.EqualTo(new[] { "Cargo.toml", "src/lib.rs" }));
+    Assert.That(RustCrates.Text(files, "src/lib.rs"), Does.EndWith("#![forbid(unsafe_code)]\n\npub fn f(a: i32) -> i32 {\n    a\n}\n"));
+    Assert.That(RustEmitter.Exports(module, RustProfile.Default)["F"], Is.EqualTo("f"));
+  }
+
+  /// <summary>O0501: a private function whose every call the optimizer inlined is removed; Rust would call it dead code.</summary>
+  [Test]
+  public void PrivateFunctionInlinedEverywhere_IsRemoved() {
+    var text = RustCrates.ModuleText(RustCrates.Emit(RustCrates.Import("static uint Prime() => 16777619u; public static uint F(uint h) => h * Prime();")));
+    Assert.That(text, Does.Not.Contain("fn prime").And.Contain("h.wrapping_mul(16777619)"));
   }
 
   [TestCase("lib")]

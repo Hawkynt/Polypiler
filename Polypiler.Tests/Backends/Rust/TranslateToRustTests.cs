@@ -76,4 +76,34 @@ public sealed class TranslateToRustTests {
     Assert.That(Directory.Exists(this._out), Is.False);
   }
 
+  private string Written(string path) => File.ReadAllText(Path.Combine(this._out, path));
+
+  /// <summary>#459: a Rust crate of several modules comes back as a crate of the same modules, its root in src/lib.rs, its tests #[test] functions.</summary>
+  [Test]
+  public void RustCrateOfSeveralModules_KeepsItsModules() {
+    var root = Path.Combine(RustFixture.Directory, "modgraph", "src", "lib.rs");
+    var (exitCode, output, _) = Invoke("translate", root, "--from", "rust", "--to", "rust", "--overflow-checks", "panic", "--output", this._out);
+    Assert.That(exitCode, Is.EqualTo((int)ExitCode.Success));
+    Assert.That(output.Trim().Split('\n').Select(line => Path.GetRelativePath(this._out, line.Trim()).Replace('\\', '/')),
+      Is.EqualTo(new[] { "Cargo.toml", "src/lib.rs", "src/hash.rs", "src/util.rs", "src/util/bits.rs" }));
+    Assert.That(this.Written("Cargo.toml"), Does.Contain("name = \"modgraph\""));
+    Assert.That(this.Written("src/lib.rs"), Does.Contain("pub mod hash;\npub mod util;\n\nuse crate::hash::fnv1a;\nuse crate::util::bits::rotl;\n\npub fn checksum(data: &[u8]) -> u32 {"));
+    Assert.That(this.Written("src/lib.rs"), Does.Contain("#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn fnv1a_of_a() {"));
+    Assert.That(this.Written("src/hash.rs"), Does.StartWith("use crate::util::bits::mix;\n\npub fn fnv1a(data: &[u8]) -> u32 {"));
+    Assert.That(this.Written("src/util.rs"), Is.EqualTo("pub mod bits;\n"));
+    Assert.That(this.Written("src/util/bits.rs"), Does.Contain("pub fn rotl(x: u32, n: u32) -> u32 {").And.Contain("pub(crate) fn mix(h: u32, b: u8) -> u32 {"));
+  }
+
+  /// <summary>A Rust source of one file stays one module beside the root; a source of another language too.</summary>
+  [Test]
+  public void RustSourceOfOneFile_IsOneModule() {
+    var source = Path.Combine(this._directory, "single.rs");
+    File.WriteAllText(source, "pub fn twice(a: u32) -> u32 { a.wrapping_mul(2) }\n#[test]\nfn doubles() { assert_eq!(twice(2), 4); }\n");
+    var (exitCode, output, _) = Invoke("translate", source, "--from", "rust", "--to", "rust", "--overflow-checks", "wrap", "--output", this._out);
+    Assert.That(exitCode, Is.EqualTo((int)ExitCode.Success));
+    Assert.That(output.Trim().Split('\n').Select(line => Path.GetRelativePath(this._out, line.Trim()).Replace('\\', '/')), Is.EqualTo(new[] { "Cargo.toml", "src/lib.rs", "src/single.rs" }));
+    Assert.That(this.Written("src/lib.rs"), Does.EndWith("pub mod single;\n"));
+    Assert.That(this.Written("src/single.rs"), Does.Contain("    #[test]\n    fn doubles() {"));
+  }
+
 }

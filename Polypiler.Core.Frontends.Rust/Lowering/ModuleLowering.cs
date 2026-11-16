@@ -13,6 +13,9 @@ internal sealed record LoweredCrate(IReadOnlyList<IrFunction> Functions, IReadOn
   /// <summary>The exported instances of public generic functions, by IR name: the Rust path with the type arguments.</summary>
   public IReadOnlyDictionary<string, string> Instances { get; init; } = new Dictionary<string, string>();
 
+  /// <summary>The module each free function outside the crate root is declared in, by IR name: its path from the root, <c>util::bits</c>.</summary>
+  public IReadOnlyDictionary<string, string> Modules { get; init; } = new Dictionary<string, string>();
+
 }
 
 /// <summary>
@@ -91,7 +94,9 @@ internal sealed partial class ModuleLowering {
     var tests = all.Where(signature => signature.Item.IsTest).Select(signature => signature.IrName).ToList();
     var instances = all.Where(signature => signature.IsExported && signature.Template is not null)
       .ToDictionary(signature => signature.IrName, signature => $"{signature.Template!.CratePath["crate::".Length..]}::<{string.Join(", ", signature.Template.Generics.Select(parameter => signature.Substitution![parameter.Name]))}>");
-    return new LoweredCrate([.. functions, .. lowering._objectFunctions, .. helpers], lowering._types, lowering._tables, tests, [.. order.Select(module => module.CratePath)]) { Instances = instances };
+    var modules = all.Where(signature => signature.Receiver is null && signature.Module is { Path.Count: > 0 })
+      .ToDictionary(signature => signature.IrName, signature => string.Join("::", signature.Module!.Path), StringComparer.Ordinal);
+    return new LoweredCrate([.. functions, .. lowering._objectFunctions, .. helpers], lowering._types, lowering._tables, tests, [.. order.Select(module => module.CratePath)]) { Instances = instances, Modules = modules };
   }
 
   /// <summary>Gives every function its IR name - its crate path, unique in the module - and marks the exported ones.</summary>

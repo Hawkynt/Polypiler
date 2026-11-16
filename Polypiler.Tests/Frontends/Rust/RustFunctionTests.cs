@@ -91,6 +91,11 @@ public sealed class RustFunctionTests {
     Assert.That(IrInterpreter.Call(first.Module, "hash_fnv1a", ["a"u8.ToArray()]), Is.EqualTo(0xE40C292Cu));
     // The tests pass and fail as cargo test reports them.
     Assert.That(first.Tests, Is.EqualTo(new[] { "tests_fnv1a_of_a", "tests_rotl_wraps", "tests_wrong" }));
+    // The module of each function outside the root, for a backend that writes modules (#459).
+    Assert.That(first.Modules, Is.EquivalentTo(new Dictionary<string, string> {
+      ["rotl"] = "util::bits", ["util_bits_mix"] = "util::bits", ["hash_fnv1a"] = "hash",
+      ["tests_fnv1a_of_a"] = "tests", ["tests_rotl_wraps"] = "tests", ["tests_wrong"] = "tests"
+    }));
     Assert.That(first.Tests.Select(test => RustFixture.Interpreted(first.Module, new PrototypeCall(test, []))), Is.EqualTo(new[] { "void", "void", RustFixture.Panic }));
   }
 

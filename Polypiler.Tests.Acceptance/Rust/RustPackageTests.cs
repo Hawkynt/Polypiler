@@ -97,6 +97,38 @@ public sealed class RustPackageTests {
     Assert.That(interpreted, Is.EquivalentTo(reported));
   }
 
+  /// <summary>
+  /// #459, the round trip of the package: imported in each overflow mode and written back by the Rust
+  /// backend with the crate's modules (src/hash.rs, src/util.rs, src/util/bits.rs, the root in
+  /// src/lib.rs) and its tests as #[test] functions, the crate builds with overflow checks on and off,
+  /// passes clippy -D warnings and cargo fmt --check, its exports give what rustc's build of the
+  /// original gives, and its tests pass and fail as the original's.
+  /// </summary>
+  [TestCase(OverflowChecks.Panic)]
+  [TestCase(OverflowChecks.Wrap)]
+  public async System.Threading.Tasks.Task RoundTrip_KeepsTheModulesTheValuesAndTheTests(OverflowChecks mode) {
+    var result = Import(mode);
+    Assert.That(result.Diagnostics, Is.Empty);
+    var module = result.Module!;
+    var options = new Polypiler.Core.Backends.Rust.RustEmitOptions { PackageName = "modgraph", Modules = result.Modules, CrateRoot = true, TestFunctions = result.Tests };
+    var files = Polypiler.Backends.Testing.RustCrates.Emit(module, options: options);
+    Assert.That(files.Select(file => file.Path), Is.EqualTo(new[] { "Cargo.toml", "src/lib.rs", "src/hash.rs", "src/util.rs", "src/util/bits.rs" }));
+    Assert.That(Polypiler.Backends.Testing.RustCrates.Text(files, "src/hash.rs"), Does.Contain("use crate::util::bits::mix;"));
+
+    var calls = _entries.SelectMany(entry => entry.Arguments.Select(call => new PrototypeCall(entry.Name, call))).ToList();
+    var expected = calls.Select(call => RustFixture.Interpreted(module, call)).ToList();
+    foreach (var build in new[] { Polypiler.Core.Verification.Runners.OverflowChecks.Panic, Polypiler.Core.Verification.Runners.OverflowChecks.Wrap })
+      Assert.That(await RustRun.OutcomesAsync(module, calls, build, options: options), Is.EqualTo(expected), $"crate built with overflow checks {build}");
+
+    var runner = RustRun.Runner(Polypiler.Core.Verification.Runners.OverflowChecks.Panic);
+    var package = Polypiler.Backends.Testing.RustCrates.Package(files);
+    Assert.That(await runner.ClippyAsync(package), Is.Empty);
+    Assert.That(await runner.FormatCheckAsync(package), Is.Empty);
+    var report = await runner.RunTestsAsync(package);
+    Assert.That(report.Tests.ToDictionary(test => test.Name, test => test.Outcome == Polypiler.Core.Verification.Runners.RustTestOutcome.Passed),
+      Is.EquivalentTo(new Dictionary<string, bool> { ["tests::fnv1a_of_a"] = true, ["tests::rotl_wraps"] = true, ["tests::wrong"] = false }), report.Output);
+  }
+
   private static string Literal(object value) => value switch {
     byte[] bytes => $"&[{string.Join(", ", bytes.Select(item => item.ToString(CultureInfo.InvariantCulture) + "u8"))}]",
     uint number => number.ToString(CultureInfo.InvariantCulture) + "u32",

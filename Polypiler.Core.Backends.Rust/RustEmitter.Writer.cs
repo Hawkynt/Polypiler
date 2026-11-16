@@ -68,7 +68,9 @@ public static partial class RustEmitter {
       var written = module.Functions.Select(function => (Source: function, Written: this.Function(function) with { IsHelper = copied.Contains(function.Name) })).ToList();
       var members = written.Where(pair => this._members.ContainsKey(pair.Source.Name))
         .ToDictionary(pair => pair.Source.Name, pair => this.AsMember(pair.Written, pair.Source, this._members[pair.Source.Name]), StringComparer.Ordinal);
-      var functions = written.Where(pair => !this._members.ContainsKey(pair.Source.Name) && !this._bodiless.Contains(pair.Source.Name)).Select(pair => pair.Written).ToList();
+      var functions = written.Where(pair => !this._members.ContainsKey(pair.Source.Name) && !this._bodiless.Contains(pair.Source.Name) && !this._options.TestFunctions.Contains(pair.Source.Name)).Select(pair => pair.Written).ToList();
+      // A test function of the source is a #[test] of the tests module, which only a test build compiles.
+      var tests = written.Where(pair => this._options.TestFunctions.Contains(pair.Source.Name)).Select(pair => (RsItem)(pair.Written with { Visibility = "", Attributes = ["test"] })).ToList();
       this._written = members;
       foreach (var type in module.Types)
         items.AddRange(type switch {
@@ -86,8 +88,10 @@ public static partial class RustEmitter {
       items.AddRange(this._whitespace.Values);
       items.AddRange(this._spellings.Values);
       items.AddRange(functions);
-      if (this._options.Tests.Count > 0)
-        items.Add(this.Tests(module));
+      if (this._options.Tests.Count > 0 || tests.Count > 0) {
+        var unit = this.Tests(module);
+        items.Add(unit with { Items = [.. unit.Items, .. tests] });
+      }
 
       var helpers = module.Implementations.Select(pair => ImplementationSources.Helper(this._functions[pair.Function], pair.Implementation, "")).ToList();
       helpers.AddRange(this._spellings.Keys.Select(name => new HelperText(name, name, EmittedHelper.OwnLicence, EmittedHelper.OriginOf(Folder), "")));
@@ -113,24 +117,26 @@ public static partial class RustEmitter {
     /// <summary>The module of each function placed in one (<see cref="RustEmitOptions.Modules"/>), by the function's Rust name.</summary>
     public IReadOnlyDictionary<string, string> Placement { get; private set; } = new Dictionary<string, string>();
 
+    /// <summary>Whether what stays of the IR module is written in the crate root (<see cref="RustEmitOptions.CrateRoot"/>).</summary>
+    public bool InRoot { get; private set; }
+
     /// <summary>
-    /// Finds the module of every placed function and refuses what cannot be placed: a module named
-    /// <c>lib</c> or <c>main</c>, whose file is the crate's root or a program's, a function that names
-    /// a type of the crate.
+    /// Finds the module of every placed function - a test stays with the tests - and refuses a module
+    /// below the root named <c>lib</c> or <c>main</c>, whose file is the crate's root or a program's.
     /// </summary>
     private void Place(RustCrate crate) {
       this._construct = "the modules";
+      this.InRoot = this._options.CrateRoot || crate.ModuleName is "lib" or "main";
       var placement = new Dictionary<string, string>(StringComparer.Ordinal);
-      foreach (var (function, module) in this._options.Modules.Where(pair => this._functions.ContainsKey(pair.Key))) {
-        var name = ModuleName(module, this._profile);
-        if (name is "lib" or "main")
-          this.Refuse($"the module name '{name}'");
+      foreach (var (function, module) in this._options.Modules.Where(pair => this._functions.ContainsKey(pair.Key) && !this._options.TestFunctions.Contains(pair.Key))) {
+        var path = PlacedPath(module, this._profile);
+        if (path.Split("::")[0] is "lib" or "main")
+          this.Refuse($"the module name '{path.Split("::")[0]}'");
         else
-          placement[this._functions[function]] = name;
+          placement[this._functions[function]] = path;
       }
 
       this.Placement = placement;
-      Modules.Split(crate, placement, what => this.Refuse(what));
     }
 
     /// <summary>
@@ -157,6 +163,14 @@ public static partial class RustEmitter {
       var others = module.Functions.Where(function => !this._functions.ContainsKey(function.Name)).ToList();
       foreach (var (function, rust) in others.Zip(RustNames.Unique([.. others.Select(function => function.Name)], name => this.FunctionName(others.First(other => other.Name == name)), taken)))
         this._functions[function.Name] = rust;
+
+      // A function in a module of its own is called by its name in it, util_bits_mix in util::bits by mix, where no other function of the crate has that name.
+      var names = this._functions.Values.ToHashSet(StringComparer.Ordinal);
+      foreach (var function in module.Functions)
+        if (this._options.Modules.TryGetValue(function.Name, out var path) && Unprefixed(this._functions[function.Name], PlacedPath(path, this._profile)) is { } own && names.Add(own)) {
+          names.Remove(this._functions[function.Name]);
+          this._functions[function.Name] = own;
+        }
 
       var constants = module.Constants.Select(constant => constant.Name).ToList();
       foreach (var (name, rust) in constants.Zip(RustNames.Unique(constants, name => RustNames.Screaming(name, this.Edition), new HashSet<string>(StringComparer.Ordinal))))
