@@ -1768,8 +1768,8 @@
     },
     {
       "path": "tests/fixtures/backend/golden/spans/views.mjs.javascript.golden",
-      "sha256": "30ab474cd779ba90c5a213335e45cd885c94b409b919ee5729e585e79dc04f5d",
-      "bytes": 186216
+      "sha256": "2ba5777b2d2694d5ea6c94e68c4df58b1b14ecb7fa6f388e27ac9976a94755f5",
+      "bytes": 189848
     },
     {
       "path": "tests/fixtures/backend/golden/spans/window.mjs.csharp.golden",
