@@ -57,7 +57,7 @@ public static class RustDriverGenerator {
   /// <param name="crate">The name of the library crate, the package name with <c>-</c> as <c>_</c>.</param>
   /// <param name="exports">The functions, numbered in order.</param>
   /// <returns>The source.</returns>
-  /// <exception cref="ArgumentException">A signature has an <c>out</c> parameter, an <c>inout</c> one that is no <c>seq</c>, or an image type that is neither a scalar nor a <c>seq</c> of scalars.</exception>
+  /// <exception cref="ArgumentException">A signature has an <c>out</c> parameter, an <c>inout</c> one that is no <c>seq</c>, or an image type that is neither a scalar nor a <c>seq</c> of scalars, nor as a result a <c>record</c> of scalars.</exception>
   public static string Generate(string crate, IReadOnlyList<RustExport> exports) {
     ArgumentNullException.ThrowIfNull(crate);
     ArgumentNullException.ThrowIfNull(exports);
@@ -242,6 +242,20 @@ public static class RustDriverGenerator {
     text.Append(pad).Append("}\n");
   }
 
+  /// <summary>
+  /// A struct of scalars as the image of a <c>record</c>: the bytes of its fields in order, each named as
+  /// the Rust struct names it, <c>result.item0</c>.
+  /// </summary>
+  private static string Fields(ImageType record) {
+    var text = new StringBuilder("let mut image: Vec<u8> = Vec::new();\n");
+    foreach (var field in record.Fields) {
+      Scalar(field.Type);
+      text.Append("            image.extend_from_slice(&").Append(Bytes(field.Type, "result." + field.Name)).Append(");\n");
+    }
+
+    return text.Append("            hex(&image)").ToString();
+  }
+
   /// <summary>The little-endian bytes of a scalar.</summary>
   private static string Bytes(ImageType type, string value) => type.Kind switch {
     ImageKind.Boolean => $"[u8::from({value})]",
@@ -284,6 +298,7 @@ public static class RustDriverGenerator {
 
   private static string Encode(ImageType? result) => result switch {
     null => "let () = result;\n            String::new()",
+    { Kind: ImageKind.Record } record => Fields(record),
     { Kind: ImageKind.Boolean } => "hex(&[u8::from(result)])",
     { Kind: ImageKind.Float } => "hex(&result.to_bits().to_le_bytes())",
     _ => $"hex(&{RustType(result)}::to_le_bytes(result))"

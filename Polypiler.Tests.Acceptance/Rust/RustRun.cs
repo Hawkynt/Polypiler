@@ -52,6 +52,9 @@ internal static class RustRun {
     IrTypeKind.U64 => ImageType.U64,
     IrTypeKind.F32 => ImageType.F32,
     IrTypeKind.F64 => ImageType.F64,
+    // A struct of scalars, a tuple of the source: the record of its fields as the Rust struct names them.
+    _ when type.StructType is { } declared && declared.Fields.All(field => field.Type.StructType is null)
+      => ImageType.Record([.. declared.Fields.Select(field => new ImageField(Polypiler.Core.Backends.Rust.Naming.RustNames.Snake(field.Name.Trim('_'), RustProfile.Default.Edition), ImageOf(field.Type)))]),
     _ => throw new ArgumentException($"{type} is no scalar.", nameof(type))
   };
 
@@ -131,6 +134,15 @@ internal static class RustRun {
         array.SetValue(Read(element, image, ref at), index);
 
       return array;
+    }
+
+    // A struct: its fields in order, as Show writes a struct.
+    if (type.StructType is { } declared) {
+      var fields = new object?[declared.Fields.Count];
+      for (var index = 0; index < fields.Length; ++index)
+        fields[index] = Read(declared.Fields[index].Type, image, ref at);
+
+      return fields;
     }
 
     var width = Width(type);

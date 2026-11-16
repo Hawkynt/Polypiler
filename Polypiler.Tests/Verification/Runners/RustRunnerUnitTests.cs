@@ -142,6 +142,15 @@ public sealed class RustRunnerUnitTests {
   }
 
   [Test]
+  public void Driver_GivesAStructOfScalarsAsTheBytesOfItsFields() {
+    var record = ImageType.Record(new ImageField("item0", ImageType.U32), new ImageField("ok", ImageType.Bool), new ImageField("x", ImageType.F64));
+    var driver = RustDriverGenerator.Generate("k", [new RustExport("m::f", new CallSignature([new CallParameter("s", ImageType.U32, ParameterMode.In)], record))]);
+    Assert.That(driver, Does.Contain("let mut image: Vec<u8> = Vec::new();\n            image.extend_from_slice(&result.item0.to_le_bytes());\n"
+      + "            image.extend_from_slice(&[u8::from(result.ok)]);\n            image.extend_from_slice(&result.x.to_bits().to_le_bytes());\n            hex(&image)"));
+    Assert.That(() => RustDriverGenerator.Generate("c", [new RustExport("f", new CallSignature([], ImageType.Record(new ImageField("s", ImageType.Utf8))))]), Throws.ArgumentException);
+  }
+
+  [Test]
   public void Driver_RefusesWhatItCannotPass() {
     Assert.Throws<ArgumentException>(() => RustDriverGenerator.Generate("c", [new RustExport("f", new CallSignature([new CallParameter("a", ImageType.Bytes, ParameterMode.In)], null))]));
     Assert.Throws<ArgumentException>(() => RustDriverGenerator.Generate("c", [new RustExport("f", new CallSignature([new CallParameter("a", ImageType.U8, ParameterMode.InOut)], null))]));
