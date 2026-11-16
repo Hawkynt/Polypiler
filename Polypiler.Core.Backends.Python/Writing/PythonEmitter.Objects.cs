@@ -123,8 +123,7 @@ public static partial class PythonEmitter {
           else if (method.Implements.FirstOrDefault(member => this._memberNames.ContainsKey(member)) is { } member) {
             this._memberNames[method] = this._memberNames[member];
             names.Add(this._memberNames[member]);
-          }
-          else
+          } else
             this._memberNames[method] = Named(method.Name, method.Visibility);
         }
 

@@ -34,8 +34,7 @@ internal sealed partial class PythonHelpers {
     { IsOptional: true } => new IrNone(type),
     { IsStruct: true } => new IrStructDefault(type),
     { IsString: true } => new IrStrConst(""),
-    { IsList: true } => NewList(type),
-    { IsNullable: true } or { IsLazySequence: true } => new IrNull(type),
+    { IsList: true } => NewList(type), { IsNullable: true } or { IsLazySequence: true } => new IrNull(type),
     _ when type == IrType.Bool => Bool(false),
     _ when type.IsBigInt => Big(0),
     _ => new IrConst(type, 0)

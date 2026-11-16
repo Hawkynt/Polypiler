@@ -552,7 +552,8 @@ internal sealed partial class FunctionLowering {
       }
 
       return statements;
-    });
+    }
+    );
   }
 
   /// <summary><c>[e for x in it if c]</c>: the generator expression of the same clauses, collected into a new list.</summary>

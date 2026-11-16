@@ -284,7 +284,8 @@ internal sealed partial class FunctionLowering {
       var local = this.Fresh(variable.Name, PyTypes.Ir(variable.Type));
       this._variables[variable] = local;
       return [new IrDeclare(local, new IrCollection(IrCollectionOp.MapGet, local.Type, [dict.Value, Fit(Ref(this._variables[key]), PyTypes.Held(dict.Type.Key!))]))];
-    });
+    }
+    );
   }
 
   /// <summary><c>for i, k in enumerate(d, start)</c>: the keys as the iterator of the dict gives them, numbered from the start, which is evaluated once, after the dict.</summary>
