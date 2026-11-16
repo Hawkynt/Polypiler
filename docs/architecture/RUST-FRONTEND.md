@@ -49,7 +49,7 @@ on rust-analyzer's crates instead. The frontend does not use it:
 
 What the frontend accepts is a subset of what rustc accepts. It reports the compiler's errors the
 subset can produce with rustc's code (`PLY1500`, for example `E0308`, `E0004`, `E0268`, `E0382`,
-`E0384`, `E0594`, `E0599`) and the
+`E0384`, `E0499`, `E0594`, `E0599`) and the
 deny-by-default lints `overflowing_literals`, `arithmetic_overflow` and `unconditional_panic` for
 constant operands; rustc also finds overflows its constant propagation sees through locals
 (`let x: u8 = 255; x + 1`), which the frontend does not.
@@ -131,7 +131,10 @@ it borrows, the caller's included, sees the new value.
 
 The borrow checker is rustc's: a source the frontend imports compiles. Within the subset the
 frontend checks what lowering relies on - a use after a move of a non-`Copy` value is `E0382`
-(`Typing/MoveCheck.cs`), an assignment through `&` or to an immutable binding `E0594`/`E0384` - and
+(`Typing/MoveCheck.cs`), a second `&mut` of a place a `let`-bound `&mut` still holds - the first used
+after the second is taken, in a later statement of the same block; disjoint fields are apart, the
+elements of an index are not - `E0499` (`Typing/BorrowCheck.cs`), an assignment through `&` or to an
+immutable binding `E0594`/`E0384` - and
 refuses the forms whose aliasing the IR cannot express: a `&mut` held in a tuple or a struct, a
 reference result, a `&mut` binding into an `Option` or a `Result`.
 
@@ -146,9 +149,12 @@ A crate is the source file and the modules it declares: inline `mod m { ... }` a
 `mod m;` read from `m.rs` or `m/mod.rs` beside their declarer (`Typing/CrateScope.cs`). `use` with
 groups, globs, `self`, `super`, `crate`, renames and `pub use` re-exports resolves names across
 them, as do `std::cmp::{min, max}` and `std::mem::swap`. The exported surface is every item reachable
-by a public path; its IR name is that shortest public path joined by `_`. Modules are emitted in
-dependency order (`ImportResult.ModuleOrder`), test-only modules last; `ImportResult.Modules` gives the module of
-each free function outside the root (`util::bits`), which the Rust backend writes back as files of their own.
+by a public path; its IR name is that shortest public path joined by `_`, and `ImportResult.Exports`
+maps each IR name to the path itself (`hash_fnv1a` to `crate::hash::fnv1a`, a re-export `rotl` to
+`crate::rotl`). Modules are emitted in dependency order (`ImportResult.ModuleOrder`), test-only
+modules last; `ImportResult.Modules` gives the module of each free function outside the root
+(`util::bits`), which the Rust backend writes back as files of their own. A qualified path `<T>::f` of a path type is the path `T::f`; `<T as Tr>::f` is refused
+with `PLY1540`, the qualified path of a type that is no path (`<[u8]>::len`) with `PLY1502`.
 
 Inherent `impl` blocks give structs and enums associated functions, constants and methods with
 `self`, `&self` and `&mut self`. `#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]` is
@@ -311,7 +317,7 @@ assignment before its place.
 
 | Code | Refused |
 | --- | --- |
-| `PLY1500` | source rustc rejects: a syntax error, a type error with its code, a borrow error the subset sees (`E0382`, `E0384`, `E0594`), a denied lint |
+| `PLY1500` | source rustc rejects: a syntax error, a type error with its code, a borrow error the subset sees (`E0382`, `E0384`, `E0499`, `E0594`), a denied lint |
 | `PLY1501` | `i128`, `u128`, `f16`, `f128`, `!` as a parameter, and every type outside the subset |
 | `PLY1502` | any other construct: a range as a value, `()` as a value, a type alias, a constructor or a library function as a value, a `&mut` to a value held other than as an argument, a tuple made as a value or named as a type that holds an `Option`, a `Vec`, a map, a set, a reference, text or a trait object, which no IR struct holds, other methods (`floor`, `to_be`, ...) |
 | `PLY1503` | an overflow mode the Cargo profile cannot give: an undefined profile, no `inherits`, a circle, a manifest that is no TOML |
@@ -361,5 +367,15 @@ built with overflow checks on and off. Eleven of the fifteen fixtures make the r
 struct fields, one array held by two variables and lists of classes - are
 listed in `RustFixture.BackendPending`, and a unit test holds that the backend refuses each of them
 with `PLY1550`, naming the construct. The unit tests under `Polypiler.Tests/Frontends/Rust/` hold every
-refusal and every rustc error the frontend reports to its code. Run the acceptance test
+refusal and every rustc error the frontend reports to its code. `RustPackageTests` (layer `rust`)
+builds `modgraph` with rustc in both overflow modes against the import's exports, and runs the package
+through `cargo test` of the pinned toolchain (`RustRunner`): each imported test, interpreted, passes
+or fails as cargo reports it by name. `RustRandomDifferentialTests` (layer `rust`) calls every public
+function of `functions`, `closures` (seed 1530), `memory` (seed 1520) and `types` (seed 1540) whose
+parameters are scalars or slices of them with 2 000 seeded random argument tuples (`RustRandomCalls`:
+boundaries, small numbers, any bit pattern, slices of 0 to 64 elements; a tuple whose call does not
+end within 200 000 interpreter steps is drawn again), in both overflow modes, one rustc driver per
+fixture and mode, and holds every interpreted outcome to rustc's. `tests/fixtures/rust/upstream/harness.rs` is a real-world file
+outside the subset, Cipher's validation harness pinned to a commit with its licence and notice; the
+import refuses it with `PLY1500` and no IR, never with an exception. Run the acceptance test
 `Recording_IsWhatRustcDoes` with `POLYPILER_RECORD=1` after a fixture or its calls changed.

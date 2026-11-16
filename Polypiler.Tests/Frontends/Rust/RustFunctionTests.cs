@@ -80,13 +80,15 @@ public sealed class RustFunctionTests {
       ReadFile = path => files.GetValueOrDefault(path.Replace('\\', '/'))
     });
 
-    var first = Package();
-    var second = Package();
+    // The measurement "module-order determinism": 20 imports, one serialized module list and function order.
+    var imports = Enumerable.Range(0, 20).Select(_ => Package()).ToList();
+    var first = imports[0];
     Assert.That(first.Diagnostics, Is.Empty);
     Assert.That(first.ModuleOrder, Is.EqualTo(new[] { "crate::util::bits", "crate::hash", "crate::util", "crate", "crate::tests" }));
-    Assert.That(second.ModuleOrder, Is.EqualTo(first.ModuleOrder));
-    Assert.That(first.Module!.Functions.Select(function => function.Name), Is.EqualTo(second.Module!.Functions.Select(function => function.Name)));
-    Assert.That(first.Module.Functions.Where(function => function.IsPublic).Select(function => function.Name), Is.EquivalentTo(new[] { "hash_fnv1a", "rotl" }));
+    Assert.That(imports.Select(result => string.Join(";", result.ModuleOrder) + "|" + string.Join(";", result.Module!.Functions.Select(function => function.Name))).Distinct().Count(), Is.EqualTo(1));
+    Assert.That(first.Module!.Functions.Where(function => function.IsPublic).Select(function => function.Name), Is.EquivalentTo(new[] { "hash_fnv1a", "rotl" }));
+    // The export set by crate paths: the public module's function and the re-export at the root.
+    Assert.That(first.Exports, Is.EquivalentTo(new Dictionary<string, string> { ["hash_fnv1a"] = "crate::hash::fnv1a", ["rotl"] = "crate::rotl" }));
     Assert.That(IrVerifier.Verify(first.Module), Is.Empty);
     Assert.That(IrInterpreter.Call(first.Module, "hash_fnv1a", ["a"u8.ToArray()]), Is.EqualTo(0xE40C292Cu));
     // The tests pass and fail as cargo test reports them.
@@ -163,6 +165,9 @@ public sealed class RustFunctionTests {
   public void Macro_PanicsWhenItFails(string statement) {
     var source = $"pub fn f(x: u32) -> u32 {{ {statement} x }}";
     Assert.That(Run(source, "f", 1u), Is.EqualTo(RustFixture.Panic));
+    // Every one throws the class of Rust's explicit panics (docs/reference/exceptions.md, Rust).
+    var thrown = Assert.Throws(Is.InstanceOf<IrException>(), () => IrInterpreter.Call(Module(source), "f", [1u]));
+    Assert.That(((IrException)thrown!).Class.Name, Is.EqualTo("InvalidOperationException"));
   }
 
   [Test]
@@ -255,5 +260,24 @@ public sealed class RustFunctionTests {
   [TestCase("pub fn f() -> u32 { let v = vec![1u32]; loop { let w = v; break; } 1 }")]
   [TestCase("pub fn f(c: bool) -> u32 { let v = vec![1u32]; if c { let w = v; return 0; } v.len() as u32 }")]
   public void ValidMove_IsAccepted(string source) => Assert.That(Import(source).Diagnostics, Is.Empty);
+
+  // ---------------------------------------------------------------- qualified paths
+
+  /// <summary><c>&lt;T&gt;::f</c> of a path type is the path <c>T::f</c>, generic arguments of either part included.</summary>
+  [TestCase("struct S; impl S { fn k() -> u32 { 7 } } pub fn f() -> u32 { <S>::k() }", "7")]
+  [TestCase("pub fn f() -> u32 { <u32>::MAX - <u32>::BITS }", "4294967263")]
+  [TestCase("pub fn f() -> u32 { let v: Vec<u32> = <Vec<u32>>::new(); v.len() as u32 + 1 }", "1")]
+  [TestCase("struct S; impl S { fn id<T: Copy>(x: T) -> T { x } } pub fn f() -> u32 { <S>::id::<u32>(5) }", "5")]
+  public void QualifiedPath_OfAPathType_IsThatPath(string source, string expected) => Assert.That(Run(source, "f"), Is.EqualTo(expected));
+
+  /// <summary>A trait-qualified path and the qualified path of a type that is no path are refused by name, not as a syntax error.</summary>
+  [TestCase("trait T { fn k() -> u32; } struct S; impl T for S { fn k() -> u32 { 7 } } pub fn f() -> u32 { <S as T>::k() }", RustFrontend.UnsupportedTrait, "qualified path <S as T>::k")]
+  [TestCase("pub fn f(a: &[u8]) -> usize { <[u8]>::len(a) }", RustFrontend.Unsupported, "qualified path <[u8]>::len")]
+  public void QualifiedPath_OutsideTheSubset_IsRefused(string source, string code, string construct) {
+    var result = Import(source);
+    Assert.That(result.Module, Is.Null);
+    Assert.That(result.Diagnostics.Select(diagnostic => (diagnostic.Code, diagnostic.Line)), Does.Contain((code, 1)));
+    Assert.That(result.Diagnostics.Select(diagnostic => diagnostic.Message), Has.Some.Contains(construct));
+  }
 
 }
