@@ -109,7 +109,8 @@ internal static partial class RustCases {
     double.NaN, double.PositiveInfinity, double.NegativeInfinity
   ];
 
-  private static object Random(IrType type, Random random) {
+  /// <summary>A value of a scalar type with every bit pattern equally likely: any integer of the type, any float, NaNs included.</summary>
+  internal static object Random(IrType type, Random random) {
     if (type == IrType.Bool)
       return random.Next(2) == 1;
 

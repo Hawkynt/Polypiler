@@ -76,15 +76,88 @@ internal static class RustOracle {
   /// <param name="instances">The Rust paths of the exported instances of generic functions, by IR name (<see cref="ImportResult.Instances"/>).</param>
   public static IReadOnlyList<string> Outcomes(string directory, string source, IrModule module, IReadOnlyList<PrototypeCall> calls, OverflowChecks mode, IReadOnlyDictionary<string, string>? instances = null) {
     Directory.CreateDirectory(directory);
+    return Execute(directory, Driver(source, module, calls, instances ?? new Dictionary<string, string>()), calls.Count, mode);
+  }
+
+  /// <summary>
+  /// The outcomes of many calls of functions whose parameters are scalars or slices of scalars, as
+  /// <see cref="Outcomes"/> gives them, with the arguments in input files the driver reads - one per run
+  /// of calls to one function, a line per call - rather than in its source, so that the driver
+  /// compiles in the same time for a hundred calls and for a hundred thousand.
+  /// </summary>
+  /// <param name="directory">A directory for the driver, its inputs and the executable.</param>
+  /// <param name="source">The Rust source file.</param>
+  /// <param name="module">The source imported, whose parameter types say how the arguments are written.</param>
+  /// <param name="calls">The calls, in the order of the outcomes.</param>
+  /// <param name="mode">Whether overflow checks are on.</param>
+  public static IReadOnlyList<string> OutcomesOfInputFiles(string directory, string source, IrModule module, IReadOnlyList<PrototypeCall> calls, OverflowChecks mode) {
+    Directory.CreateDirectory(directory);
+    var text = new StringBuilder(Prelude);
+    text.Append("""
+      fn rd<'a, T: std::str::FromStr>(it: &mut impl Iterator<Item = &'a str>) -> T where T::Err: std::fmt::Debug { it.next().unwrap().parse().unwrap() }
+      fn rb<'a>(it: &mut impl Iterator<Item = &'a str>) -> bool { it.next().unwrap() == "1" }
+      fn rf32<'a>(it: &mut impl Iterator<Item = &'a str>) -> f32 { f32::from_bits(u32::from_str_radix(it.next().unwrap(), 16).unwrap()) }
+      fn rf64<'a>(it: &mut impl Iterator<Item = &'a str>) -> f64 { f64::from_bits(u64::from_str_radix(it.next().unwrap(), 16).unwrap()) }
+
+      """);
+    text.Append(CultureInfo.InvariantCulture, $"#[path = \"{Path.GetFullPath(source).Replace('\\', '/')}\"]\nmod fixture;\nuse fixture::*;\n\nfn main() {{\n");
+    text.Append("  std::panic::set_hook(Box::new(|_| {}));\n  let mut o = String::new();\n");
+    var functions = module.Functions.ToDictionary(function => function.Name);
+    for (int start = 0, run = 0; start < calls.Count; ++run) {
+      var end = start;
+      while (end < calls.Count && calls[end].Method == calls[start].Method)
+        ++end;
+
+      var function = functions[calls[start].Method];
+      var input = Path.Combine(directory, $"run{run}.in");
+      File.WriteAllLines(input, calls.Skip(start).Take(end - start).Select(call => string.Join(' ', call.Arguments.Select(Datum))));
+      text.Append(CultureInfo.InvariantCulture, $"  for line in std::fs::read_to_string(\"{input.Replace('\\', '/')}\").unwrap().lines() {{\n    let mut it = line.split(' ').filter(|part| !part.is_empty());\n");
+      for (var index = 0; index < function.Parameters.Count; ++index) {
+        var type = function.Parameters[index].Type;
+        if (type.IsView)
+          text.Append(CultureInfo.InvariantCulture, $"    let mut a{index}: Vec<{RustType(type.Element!)}> = {{ let n: usize = rd(&mut it); (0..n).map(|_| {Reader(type.Element!)}).collect() }};\n");
+        else
+          text.Append(CultureInfo.InvariantCulture, $"    let a{index}: {RustType(type)} = {Reader(type)};\n");
+      }
+
+      var arguments = function.Parameters.Select((parameter, index) => parameter.Type.Kind switch {
+        IrTypeKind.Span => $"&mut a{index}[..]",
+        IrTypeKind.ReadOnlySpan => $"&a{index}[..]",
+        _ => $"a{index} as _"
+      });
+      var after = function.Parameters.Select((parameter, index) => (parameter, index)).Where(pair => pair.parameter.Type.IsView).Select(pair => $"slice(&a{pair.index})");
+      text.Append(CultureInfo.InvariantCulture, $"    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {function.Name}({string.Join(", ", arguments)})));\n");
+      text.Append(CultureInfo.InvariantCulture, $"    out_with(&mut o, r, &[{string.Join(", ", after)}]);\n  }}\n");
+      start = end;
+    }
+
+    text.Append("  print!(\"{}\", o);\n}\n");
+    return Execute(directory, text.ToString(), calls.Count, mode);
+  }
+
+  /// <summary>The expression of the input-file driver that reads one value of a scalar type.</summary>
+  private static string Reader(IrType type) => type == IrType.Bool ? "rb(&mut it)" : type == IrType.F32 ? "rf32(&mut it)" : type == IrType.F64 ? "rf64(&mut it)" : "rd(&mut it)";
+
+  /// <summary>An argument as the input-file driver reads it: an integer in decimal, a bool as 1 or 0, a float as its bits in hexadecimal, a slice as its length and its elements.</summary>
+  private static string Datum(object value) => value switch {
+    Array array => string.Join(' ', array.Cast<object>().Select(Datum).Prepend(array.Length.ToString(CultureInfo.InvariantCulture))),
+    bool truth => truth ? "1" : "0",
+    float single => BitConverter.SingleToUInt32Bits(single).ToString("x", CultureInfo.InvariantCulture),
+    double number => BitConverter.DoubleToUInt64Bits(number).ToString("x", CultureInfo.InvariantCulture),
+    _ => Convert.ToString(value, CultureInfo.InvariantCulture)!
+  };
+
+  /// <summary>Compiles a driver in a mode and runs it: its outcomes, one per call, a panic as its class.</summary>
+  private static IReadOnlyList<string> Execute(string directory, string source, int calls, OverflowChecks mode) {
     var driver = Path.Combine(directory, "main.rs");
-    File.WriteAllText(driver, Driver(source, module, calls, instances ?? new Dictionary<string, string>()));
+    File.WriteAllText(driver, source);
     var executable = Path.Combine(directory, OperatingSystem.IsWindows() ? "driver.exe" : "driver");
     var (compiled, _, diagnostics) = Run("rustc", directory, "--edition", "2024", "-C", $"overflow-checks={(mode == OverflowChecks.Panic ? "on" : "off")}", "-C", "opt-level=0", "-o", executable, driver);
     Assert.That(compiled, Is.Zero, diagnostics);
     var (exitCode, output, failure) = Run(executable, directory);
     Assert.That(exitCode, Is.Zero, failure);
     var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(line => RustFixture.Normalized(line.TrimEnd('\r'))).ToList();
-    Assert.That(lines, Has.Count.EqualTo(calls.Count), "the driver printed another number of outcomes than there are calls");
+    Assert.That(lines, Has.Count.EqualTo(calls), "the driver printed another number of outcomes than there are calls");
     return lines;
   }
 
