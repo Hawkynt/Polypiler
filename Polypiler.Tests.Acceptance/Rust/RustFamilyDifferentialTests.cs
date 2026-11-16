@@ -98,6 +98,14 @@ public sealed class RustFamilyDifferentialTests {
     yield return new("sequences/ByteMedian", () => LinqFixtures.Imported("ByteMedian"), () => [.. LinqFixtures.Calls("ByteMedian")],
       call => PrototypeFixture.InvokedOutcome(LinqFixtures.Compiled("ByteMedian", call.Method), call));
 
+    yield return new("sequences/Iterators (written part)", () => Written(SequenceFixtures.Imported(), WrittenIterators),
+      () => [.. SequenceFixtures.Calls().Where(call => WrittenIterators.Contains(call.Method))],
+      call => PrototypeFixture.InvokedOutcome(SequenceFixtures.Compiled(call.Method), call));
+
+    yield return new("sequences/Pipelines (written part)", () => Written(LinqFixtures.Imported("Pipelines"), WrittenPipelines),
+      () => [.. LinqFixtures.Calls("Pipelines").Where(call => WrittenPipelines.Contains(call.Method))],
+      call => PrototypeFixture.InvokedOutcome(LinqFixtures.Compiled("Pipelines", call.Method), call));
+
     yield return new("collections/Collections (written part)", () => Written(CollectionFixtures.Imported("Collections"), WrittenCollections),
       () => [.. CollectionFixtures.Calls().Where(call => call.File == "Collections" && WrittenCollections.Contains(call.Call.Method)).Select(call => call.Call)],
       call => PrototypeFixture.InvokedOutcome(CollectionFixtures.Compiled("CollectionsDemo", call.Method), call));
@@ -127,6 +135,28 @@ public sealed class RustFamilyDifferentialTests {
 
   /// <summary>The functions of collections/Collections the backend writes; the others catch traps, hold objects or floating-point keys, or change a collection in a loop over it.</summary>
   private static readonly string[] WrittenCollections = ["ListOps", "Grow", "Write", "RemoveLastOfEmpty", "Search", "Copies", "Words", "Pairs", "Widened", "DictionaryOrder", "SetOrder", "Count", "ClearThenInsert", "MissingKey", "Values"];
+
+  /// <summary>
+  /// The functions of sequences/Iterators the backend writes (#1391); the others write an array their
+  /// iterator takes while it runs, catch a trap or loop over a collection in an iterator.
+  /// </summary>
+  private static readonly string[] WrittenIterators = ["Twice", "FibSum", "Guard", "Nested", "Restarted", "Taken", "FromArray", "Longs", "Floats", "Truths", "Objects", "Method", "Captured", "Widened"];
+
+  /// <summary>
+  /// The functions of sequences/Pipelines the backend writes, the LINQ chains legalization makes
+  /// iterator functions of among them; the others capture a list in a closure, catch a trap or take a
+  /// function value of a sequence.
+  /// </summary>
+  private static readonly string[] WrittenPipelines = ["Deferred", "Recount", "Late", "SumOfSingles", "SumOfDoubles", "Extremes", "Window", "Infinite", "TakeCalls", "LazyTrap",
+    "Zipped", "Indexed", "Escaped", "IndexOfNaN", "Searches", "ContainsNaN"];
+
+  [TestCase("Iterators")]
+  [TestCase("Pipelines")]
+  public void WrittenSequences_AreEveryFunctionTheBackendWrites(string fixture) {
+    var module = fixture == "Iterators" ? SequenceFixtures.Imported() : LinqFixtures.Imported(fixture);
+    var written = module.Functions.Where(function => function.IsPublic && !function.Name.Contains('.') && RustCrates.Check(Written(module, [function.Name])).Count == 0).Select(function => function.Name).ToList();
+    Assert.That(written, Is.EquivalentTo(fixture == "Iterators" ? WrittenIterators : WrittenPipelines), string.Join(", ", written));
+  }
 
   /// <summary>A module with only the public functions named and every function they call.</summary>
   internal static IrModule Written(IrModule module, IReadOnlyCollection<string> names) {
