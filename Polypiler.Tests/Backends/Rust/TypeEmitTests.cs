@@ -93,4 +93,20 @@ public sealed class TypeEmitTests {
     Assert.That(RustPrinter.Print(RustSyntaxReader.Read(text)), Is.EqualTo(text));
   }
 
+  private const string UseOfU = "public static class S { public static int F(int a) { var u = new U(a); return u.A; } }";
+
+  [Test]
+  public void SequentialLayout_IsReprC() {
+    var text = Emitted("[System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)] public struct U { public int A; public byte B; public U(int a) { A = a; B = 1; } } " + UseOfU);
+    Assert.That(text, Does.Contain("#[repr(C)]\n#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]\npub struct U {"));
+    Assert.That(Emitted(Point + "public static class S { public static int F() => new Point(1, 2).X; }"), Does.Not.Contain("repr(C)"));
+  }
+
+  [TestCase("[StructLayout(LayoutKind.Explicit)] public struct U { [FieldOffset(0)] public int A; [FieldOffset(0)] public float B; public U(int a) { B = 0; A = a; } }", "overlapping fields, an untagged union", TestName = "OverlappingFields_AreRefused")]
+  [TestCase("[StructLayout(LayoutKind.Explicit)] public struct U { [FieldOffset(0)] public int A; [FieldOffset(8)] public byte B; public U(int a) { A = a; B = 1; } }", "explicit field offsets", TestName = "ExplicitOffsets_AreRefused")]
+  [TestCase("[StructLayout(LayoutKind.Sequential, Pack = 1)] public struct U { public int A; public byte B; public U(int a) { A = a; B = 1; } }", "packed to 1 bytes", TestName = "PackedLayout_IsRefused")]
+  [TestCase("[StructLayout(LayoutKind.Sequential, Size = 16)] public struct U { public int A; public byte B; public U(int a) { A = a; B = 1; } }", "a size of 16 bytes", TestName = "LayoutOfItsOwnSize_IsRefused")]
+  public void LayoutWithoutASafeForm_IsRefusedByName(string type, string problem)
+    => Assert.That(Problems("using System.Runtime.InteropServices; " + type + " " + UseOfU), Has.Some.EqualTo($"PLY1584 layout of 'U' ({problem}) has no safe Rust representation"));
+
 }

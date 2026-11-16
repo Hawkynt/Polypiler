@@ -1290,6 +1290,15 @@ codes:
     area: rust
     owner: "#459"
     surfaces: standard error of polypiler translate --to rust
+  - code: PLY1584
+    severity: error
+    exit: UnsupportedConstruct
+    title: struct layout without a safe Rust form
+    message: "layout of '<struct>' (<explicit field offsets|overlapping fields, an untagged union|packed to <n> bytes|a size of <n> bytes>) has no safe Rust representation"
+    rule: rust.backend.layout
+    area: rust
+    owner: "#462"
+    surfaces: standard error of polypiler translate --to rust, for a struct whose [StructLayout] states explicit offsets, a packing or a size; a sequential layout is written as repr(C)
   - code: PLY1591
     severity: error
     exit: TargetBuildFailure

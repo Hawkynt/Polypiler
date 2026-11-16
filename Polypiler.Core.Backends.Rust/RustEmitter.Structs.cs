@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Polypiler.Core.Backends.Rust.Emit;
 using Polypiler.Core.Backends.Rust.Naming;
@@ -9,6 +10,13 @@ using Polypiler.Core.IR;
 namespace Polypiler.Core.Backends.Rust;
 
 public static partial class RustEmitter {
+
+  /// <summary>The code for a layout of a struct that safe Rust has no form for (#462).</summary>
+  public const string UnsafeLayout = "PLY1584";
+
+  /// <summary>The registered diagnostic of <see cref="UnsafeLayout"/>.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor UnsafeLayoutDescriptor = new(UnsafeLayout, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "rust.backend.layout");
 
   /// <summary>The array a place of fields is an element of, or <see langword="null"/>.</summary>
   internal static IrExpr? ElementOf(IrExpr place) => Writer.ElementArray(place);
@@ -57,7 +65,7 @@ public static partial class RustEmitter {
       if (!floats)
         derives.AddRange(["PartialEq", "Eq"]);
 
-      yield return new RsStruct(name, "pub", fields) { Attributes = [$"derive({string.Join(", ", derives)})"] };
+      yield return new RsStruct(name, "pub", fields) { Attributes = [.. this.Layout(type), $"derive({string.Join(", ", derives)})"] };
       if (!floats)
         yield break;
 
@@ -77,6 +85,26 @@ public static partial class RustEmitter {
         test = only;
 
       yield return new RsImpl("PartialEq", name, [new RsFunction("eq", "", [new RsParameter("&self", ""), new RsParameter("other", "&Self")], "bool", new RsBlock([], test))]);
+    }
+
+    /// <summary>
+    /// The attribute of the layout the source states for a struct (#462): <c>repr(C)</c> for its fields in
+    /// declaration order, each aligned. Explicit field offsets - overlapping ones an untagged union - a
+    /// packing or a size of its own have no safe Rust form: <c>PLY1584</c>.
+    /// </summary>
+    private IEnumerable<string> Layout(IrStructType type) {
+      if (type.Layout is not { } layout)
+        yield break;
+
+      var problem = layout.Kind == IrLayoutKind.Explicit
+        ? layout.Offsets.Distinct().Count() < layout.Offsets.Count ? "overlapping fields, an untagged union" : "explicit field offsets"
+        : layout.Pack != 0 ? $"packed to {layout.Pack.ToString(CultureInfo.InvariantCulture)} bytes"
+        : layout.Size != 0 ? $"a size of {layout.Size.ToString(CultureInfo.InvariantCulture)} bytes"
+        : null;
+      if (problem is null)
+        yield return "repr(C)";
+      else
+        this._problems.Add(UnsafeLayoutDescriptor.At($"layout of '{type.Name}' ({problem}) has no safe Rust representation"));
     }
 
     /// <summary>Whether a value of a type is copied as a whole: a number, a truth value, or a struct of them.</summary>

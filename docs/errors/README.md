@@ -176,6 +176,7 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY1566](PLY1566.md) | error | 3 (UnsupportedConstruct) | `views '<first>' and '<second>' may alias and '<second>' is written in <place>; safe Rust cannot express this - provide a no-alias fact or select a copying target profile` | #460 |
 | [PLY1567](PLY1567.md) | error | 3 (UnsupportedConstruct) | `mutable overlay view in '<function>' requires unsafe Rust; the target profile sets allowUnsafe to false` | #460 |
 | [PLY1574](PLY1574.md) | error | 3 (UnsupportedConstruct) | `exported names '<first>' and '<second>' both map to '<rust name>'` | #459 |
+| [PLY1584](PLY1584.md) | error | 3 (UnsupportedConstruct) | `layout of '<struct>' (<explicit field offsets\|overlapping fields, an untagged union\|packed to <n> bytes\|a size of <n> bytes>) has no safe Rust representation` | #462 |
 | [PLY1591](PLY1591.md) | error | 6 (TargetBuildFailure) | `the Rust compiler rejected the input: <every error with its code, text and location>` | #468 |
 | [PLY1592](PLY1592.md) | error | 7 (OracleFailure) | `the Rust driver died with exit code <code>: <standard error>` | #468 |
 | [PLY1595](PLY1595.md) | error | 7 (OracleFailure) | `<reason>` | #468 |
