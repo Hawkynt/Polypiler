@@ -5,7 +5,8 @@
 arrays and slices, structs, enums, classes, interfaces and module state since
 [#460](https://github.com/Hawkynt/Polypiler/issues/460) and [#462](https://github.com/Hawkynt/Polypiler/issues/462);
 closures, function values, optional values, module state behind a `Mutex`, lists, maps and sets and
-exceptions as `Result` since phase 2; lazy sequences follow. The runner that builds
+exceptions as `Result` since phase 2; lazy sequences as `Iterator` state machines since
+[#1391](https://github.com/Hawkynt/Polypiler/issues/1391). The runner that builds
 and executes the output is [#468](https://github.com/Hawkynt/Polypiler/issues/468).
 Related: [backends](BACKENDS.md) · [pipeline](PIPELINE.md) · [exceptions](../reference/exceptions.md) ·
 [integer operations](../reference/integer-operations.md).
@@ -134,6 +135,14 @@ name escapes as a raw identifier (`r#gen`). The MSRV decides the rows of `RustCa
 | a loop over a list, a map or a set | `for entry in list.iter()`, `map.iter().flatten()` (which skips the freed slots), the element, key or value copied into the loop's variable |
 | a list, a map or a set passed on | `&[T]` where the callee only reads it, `&mut Vec<T>` where it changes it (a fixed point over the calls); a new one is moved where a variable or a result takes it |
 | a loop whose first pass always returns | an `if` (clippy's `never_loop`) |
+| an iterator function (`yield`) | `#[derive(Clone)] pub struct Up { state: u32, n: i32, i: i32 }`, `impl Iterator for Up { type Item = i32; fn next(&mut self) -> Option<i32> { … } }`, `fn up(n: i32) -> Up { Up { state: 0, n, i: 0 } }` - the struct in its first state is the sequence, a clone a new enumeration; see [Lazy sequences](#lazy-sequences) |
+| `yield v`, `yield break`, the end of the body | `self.state = 2; return Some(v);`; `self.state = 3; return None;` - `Some(v)`, `None` as the value of an arm where no arm goes on (clippy's `never_loop`) |
+| a loop over a sequence or `yield from` inside an iterator, where it suspends | a field `cursor0: Option<Up>`, `self.cursor0 = Some(up(self.n));`, then `let v = match self.cursor0.as_mut().and_then(Iterator::next) { Some(value) => value, None => { self.state = 4; continue; } };` |
+| `try`/`finally` around a `yield` | the `finally` where the body leaves the `try`; `impl Drop` runs it at the states where it is pending, innermost first |
+| a sequence parameter | `impl Iterator<Item = T> + Clone`; of an iterator a generic of its struct, `fn take<S: Iterator<Item = i32> + Clone>(source: S, count: i32) -> Take<S>` |
+| an array or a string an iterator takes | borrowed for the struct's lifetime: `fn evens(a: &[i32]) -> Evens<'_>`, `fn pairs<'a>(a: &'a [i32], b: &'a [i32]) -> Pairs<'a>` |
+| an iterator method of a class | the struct keeps the object, `counter: Rc<Counter>`; the method takes `self: &Rc<Self>` and makes it with `Rc::clone(self)` |
+| a loop over a sequence, a sequence passed or held | `for v in up(3)`, `if let Some(v) = up(3).next()` where the first pass always leaves; `sum(s.clone())`, `let s = up(2);`; an array as a sequence `a.iter().copied()` |
 | `c ? true : x`, `c ? false : x`, `c ? x : true`, `c ? x : false` of truth values | `c \|\| x`, `!c && x`, `!c \|\| x`, `c && x`, which evaluate the same way; `!(a && b)` as `!a \|\| !b` |
 
 ## Objects
@@ -189,6 +198,42 @@ a function capture:
 A closure is `'static`: it borrows nothing, so it may be stored and returned. The object of a method
 (`self`), which a closure would borrow, is refused as a capture.
 
+## Lazy sequences
+
+An iterator function produces its values on demand, and so does its Rust form: a struct holding a
+state number, the function's parameters and the variables it keeps from one `yield` to the next,
+implementing `Iterator`. `next` resumes in the state the struct stopped in - a `loop` over
+`match self.state` - and runs on to the next `yield`, which sets the state it resumes in and returns
+`Some(v)`, or to the end, which returns `None`. The body is cut into states as the JavaScript
+backend's ES5 state machine cuts it (`docs/reference/sequences.md`): a statement that suspends, ends
+the sequence or jumps out of itself becomes jumps between states (`self.state = n; continue;`), every
+other statement is written as it is inside the arm of its state. A state that only goes on to another
+is merged into the one before it, a jump through an empty state goes to its target, and a state that
+only ends the sequence is left out.
+
+A variable named in more than one state is a field of the struct, starting at the zero of its type
+(`0`, `false`, `Vec::new()`, `None`, `T::default()`); any other one is a `let` inside its arm. A
+loop over a sequence that suspends keeps a cursor field, `Option<S>`, set when the loop starts and
+dropped when it ends. A sequence is restartable: the struct in its first state is the sequence, so
+every enumeration of a variable is a clone of it (`s.clone()`), and a single-pass sequence (a
+JavaScript generator object) named once is moved.
+
+A `finally` block around a `yield` runs where the body leaves the `try` - at its end, before a
+`yield break` or a jump out of it - and, when the consumer drops the iterator while it is suspended
+inside, from the struct's `impl Drop`, which runs the blocks pending at that state innermost first
+and drops the cursors inside them before. A `break` out of a loop over the sequence drops the
+iterator at the end of the loop, as .NET's `foreach` disposes it.
+
+What stays refused is named with `PLY1558`: an iterator of a class with a hierarchy, one that takes a
+collection, writes an array it takes or assigns a string it takes, a variable kept across a `yield`
+that is an array, a collection or a sequence or has no first value (an object that is never null),
+a closure capturing a variable kept across a `yield`, a `switch` or a loop over a collection that
+suspends, a jump out of a `try` with a catch clause or out of a `finally` inside an iterator, a
+recursive iterator (its struct would hold itself), a sequence an iterator keeps that borrows an
+array of its own, an array or a string a sequence borrows that is written while a variable holds the
+sequence or used in the loop over it, a sequence variable assigned again, a single-pass sequence
+enumerated twice, and an iterator that lets an exception of the module out.
+
 ## Exceptions
 
 A trap - an overflow, a division by zero, an index outside an array - is a panic, as it is wherever
@@ -218,17 +263,16 @@ memory, a view cast to another element type or made on the stack, an optional va
 is no value, an array that may be null and is written (`an array that may be null and is written`) or
 is a borrowed result, a collection in the order of insertion (JavaScript's `Map` and `Set`), one of
 objects or with floating-point keys, a collection changed in a loop over it, held by two variables or
-passed on where no variable holds it, a lazy sequence (`yield`: Rust has no stable generators, and the
-backend writes no state machine of an iterator function yet; making the sequence all at once would
-change its effects and could not end on an infinite one), a variable that names a field's array where the function touches the field otherwise while it
+passed on where no variable holds it, a variable that names a field's array where the function touches the field otherwise while it
 lives or gives the array away whole, a function value that takes or gives more than values and other function values, two function values
 compared with each other, a closure that captures the object of a method, an array it captures that is
-written, or a variable other than a value that is assigned, collections and sequences (`Collection`, `Yield`), `using`, a global
+written, or a variable other than a value that is assigned, collections (`Collection`), `using`, a global
 array without a first value of a known length or used as a whole (passed on, iterated as a slice),
 a global of another type, a record with a floating-point field,
 a method that passes on the object of a hierarchy; an array safe Rust cannot own (written and shared by two variables, or a parameter and a new
 array in one written variable), a struct with a field that is no value. One array passed to a call
-twice where it is written and the callee swaps its parameters is `PLY1566`. Two exported functions
+twice where it is written and the callee swaps its parameters is `PLY1566`. A lazy sequence outside the form of
+[Lazy sequences](#lazy-sequences) is `PLY1558`, naming the construct. Two exported functions
 whose Rust names are the same are `PLY1574`; an exception region outside the form of
 [Exceptions](#exceptions) `PLY1560`, naming why.
 
@@ -254,7 +298,7 @@ No group is ever allowed. Every other lint is avoided by the shape the backend w
 - `RustPrinterLayoutTests`, `RustEmitEdgeTests`, `RustTargetPassTests`, `RustReaderAndAnalysisTests`:
   the printer, the emitter, the target passes, the reader and the liveness analysis on the forms the
   fixtures do not reach, rule by rule.
-- `MemoryEmitTests`, `TypeEmitTests`, `ObjectEmitTests`, `ClosureEmitTests`, `OptionalEmitTests`, `StateEmitTests`, `CollectionEmitTests`, `FieldAliasEmitTests`, `ExceptionEmitTests`: arrays, ownership and aliasing, structs, classes, traits, module state, function values, optional values and arrays that may be null, their forms and refusals.
+- `MemoryEmitTests`, `TypeEmitTests`, `ObjectEmitTests`, `ClosureEmitTests`, `OptionalEmitTests`, `StateEmitTests`, `CollectionEmitTests`, `FieldAliasEmitTests`, `ExceptionEmitTests`, `IteratorEmitTests`: arrays, ownership and aliasing, structs, classes, traits, module state, function values, optional values and arrays that may be null, lazy sequences, their forms and refusals.
 - `RustDifferentialTests` (layer `rust`): every prototype fixture - all 24 since #460 - is built by the
   pinned toolchain and called on every case of `PrototypeCases`, with overflow checks on and off; every
   outcome, the final contents of every array argument included, equals the C# compiler's and the
@@ -264,7 +308,8 @@ No group is ever allowed. Every other lint is avoided by the shape the backend w
   optional values, a field's array named by a local (classes/Rc4), module state (each sequence of calls in one process, as one load of the class in
   .NET), collections and the LINQ shapes legalization writes as loops (collections/WordFrequency,
   sequences/ByteMedian, and the functions of collections/Collections the backend writes, which a test
-  lists), exceptions of the module's classes (exceptions/Classes), the floating-point view of bytes -
+  lists), the iterator functions and LINQ chains of sequences/Iterators and sequences/Pipelines the
+  backend writes (a test lists them), exceptions of the module's classes (exceptions/Classes), the floating-point view of bytes -
   against .NET in both overflow modes.
 - `RustRoundTripTests` (layer `rust`): every Rust fixture the backend writes (ten of fifteen; the
   others are listed in `RustFixture.BackendPending` and refused by name), imported by the Rust frontend
@@ -273,6 +318,11 @@ No group is ever allowed. Every other lint is avoided by the shape the backend w
 - `RustBackendScenarioTests` (layer `rust`): the scenarios of the issues with their hand-checked
   values, clippy with `-D warnings` and `cargo fmt --check` on the crates, the generated tests passing
   and a mutated one failing.
+- `RustIteratorScenarioTests` (layer `rust`): an infinite counter taken 5 items runs its body 5 times;
+  finally blocks around yields run as in .NET on every way out (traced through a global), iterators
+  over borrowed arrays and strings, generic sequence parameters and loops that suspend give the C#
+  compiler's values in both overflow modes; the crates and the written part of the `sequences`
+  family pass clippy with `-D warnings` and `cargo fmt --check`.
 
 The runner (`Polypiler.Core.Verification/Runners`): `RustRunner` builds (`cargo build`), tests
 (`cargo test`), format-checks (`cargo fmt --check`), lints (`cargo clippy -- -D warnings`) and calls
