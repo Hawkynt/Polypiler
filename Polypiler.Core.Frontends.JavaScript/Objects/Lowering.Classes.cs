@@ -154,6 +154,9 @@ internal sealed partial class Lowering {
     if (owner.Frozen is not null)
       throw this.Unsupported(assignment, $"a write into a member of the frozen object {owner.Name}");
 
+    if (owner.IsTypedef)
+      throw this.Unsupported(assignment, $"a write into the field {key} of the @typedef {owner.Name}");
+
     var field = owner.Field(key);
     var setter = owner.Member(MemberKind.Setter, key);
     if (field is null && setter is null)

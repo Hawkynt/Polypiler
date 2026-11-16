@@ -59,6 +59,13 @@ internal sealed partial class Lowering {
     if (value.Type.MayBeNull)
       return new Typed(new IrCoalesce(value.Expr, new IrConst(underlying, 0)), value.Type.Present);
 
+    // An integer an optional key of a typedef states (#1409) is a double here, a NaN where it is undefined.
+    if (underlying.IsNumeric && underlying != IrType.F64) {
+      var (first, again) = this.Bound(value.Expr);
+      var number = new IrConvert(IrType.F64, new IrUnwrap(again) { IsTested = true });
+      return new Typed(new IrConditional(new IrIsNone(first), new IrConst(IrType.F64, IrOperators.Bits(IrType.F64, double.NaN)), number), JsType.F64);
+    }
+
     // undefined is a NaN, and a truth value false; a number undefined reaches is a double.
     IrExpr fallback = underlying == IrType.Bool ? new IrConst(IrType.Bool, 0) : new IrConst(IrType.F64, IrOperators.Bits(IrType.F64, double.NaN));
     return new Typed(new IrCoalesce(value.Expr, fallback), value.Type.Present);
@@ -129,6 +136,35 @@ internal sealed partial class Lowering {
       test = this.Never(value, other);
 
     return equal ? test : new IrUnary(IrUnaryOp.LogicalNot, test);
+  }
+
+  /// <summary>
+  /// <c>a === b</c>, <c>a !== b</c>, <c>==</c> and <c>!=</c> of an optional truth value or integer and a value
+  /// that is never absent (#1409): an absent value equals no value of these kinds - <c>undefined !== false</c>,
+  /// <c>null != 0</c> - so it is unequal, and a present one is compared as it is. The optional operand is
+  /// evaluated once and first; the other one only where it is present, so it may have no effect. <see langword="null"/> for any
+  /// other comparison.
+  /// </summary>
+  private IrExpr? AbsentOperandEquality(Operator op, Node left, Node right, IrType operand) {
+    var (a, b) = (types.Of(left), types.Of(right));
+    if (op is not (Operator.Equality or Operator.Inequality or Operator.StrictEquality or Operator.StrictInequality) || a.IsAbsent == b.IsAbsent)
+      return null;
+
+    var (absent, present) = a.IsAbsent ? (left, right) : (right, left);
+    if (types.Of(absent).Ir is not { IsOptional: true })
+      return null;
+
+    var value = this.Evaluate(absent);
+    var (first, again) = this.Bound(value.Expr);
+    var other = this.To(this.Evaluate(present), operand, present);
+    // The absent operand is tested first, and the other one is evaluated only where it is present.
+    if (!IrShapeFree(other))
+      throw this.Unsupported(present, $"a comparison with {types.Text(absent)}, which may be absent, of an operand with an effect");
+
+    var held = this.To(new Typed(new IrUnwrap(again) { IsTested = true }, value.Type.Present), operand, absent);
+    var compared = absent == left ? new IrBinary(Operation(op), held, other) : new IrBinary(Operation(op), other, held);
+    var unequal = new IrConst(IrType.Bool, op is Operator.Inequality or Operator.StrictInequality ? 1 : 0);
+    return new IrConditional(new IrIsNone(first), unequal, compared);
   }
 
   /// <summary>The test of a value the absent value it is compared with never reaches: false, where nothing else happens in it.</summary>

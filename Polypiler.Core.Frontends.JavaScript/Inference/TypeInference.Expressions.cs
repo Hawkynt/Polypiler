@@ -154,13 +154,19 @@ internal sealed partial class TypeInference {
 
         // Values of two kinds are no value of the IR: the expression has no type, and the lowering says why.
         // a || b is a only where a counts as true, which an absent value never does (#1370).
+        if (this.Leftmost(logical) is { } leftmost)
+          return leftmost;
+
         var left = this.Of(logical.Left);
         var joined = JsType.Join(logical.Operator == Operator.LogicalOr && left.Kind != JsKind.Null ? left.Present : left, this.Of(logical.Right));
         return joined.Kind == JsKind.Conflict ? JsType.Unknown : joined;
       case BinaryExpression binary:
         return this.Decide(binary.Operator, binary.Left, binary.Right, coercion).Result;
       case ConditionalExpression choice:
-        var either = JsType.Join(this.Of(choice.Consequent), this.Of(choice.Alternate));
+        // The branch that reads what the test proves present reads it present (#1409).
+        var proven = this.PresentBranch(choice);
+        JsType Branch(Node branch) => branch == proven ? this.Of(branch).Present : this.Of(branch);
+        var either = JsType.Join(Branch(choice.Consequent), Branch(choice.Alternate));
         return either.Kind == JsKind.Conflict ? JsType.Unknown : either;
       case ThisExpression:
         return this._scope!.Candidate.ThisClass is { } owner ? JsType.Object(owner) : JsType.Unknown;

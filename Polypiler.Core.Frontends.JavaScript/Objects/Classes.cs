@@ -34,7 +34,7 @@ internal static class Classes {
         // A view stored into a field is a memory (Stored), so every type a field reaches is one the IR lets a field of a class have.
         var ir = type.Kind == JsKind.Conflict ? IrType.F64 : type.Ir ?? IrType.F64;
 
-        field.Ir = new IrField(ClassModel.IrName(field.Key), ir, owner.Frozen is not null) { Visibility = field.IsPrivate ? IrVisibility.Private : IrVisibility.Public };
+        field.Ir = new IrField(ClassModel.IrName(field.Key), ir, owner.IsValue) { Visibility = field.IsPrivate ? IrVisibility.Private : IrVisibility.Public };
         fields.Add(field.Ir);
       }
 
@@ -65,8 +65,8 @@ internal static class Classes {
         var receiver = new IrLocal("this", IrType.Object(owner.Ir));
         List<IrLocal> parameters = owner.Initial is { } initial ? [.. inference.ModelOf(initial).Parameters.Select(parameter => new IrLocal(parameter.Name, parameter.Parameter!.Type))] : [];
         List<IrStmt> inherited = owner.Base is { } @base ? [new IrExprStmt(new IrCall(@base.Creator!.Function, IrType.Void, [new IrLocalRef(receiver), .. parameters.Select(parameter => new IrLocalRef(parameter))]))] : [];
-        // The class of the members of a frozen object takes the value of every field (#1371).
-        if (owner.Frozen is not null) {
+        // The class of the members of a frozen object takes the value of every field (#1371), as does that of a typedef (#1409).
+        if (owner.IsValue) {
           parameters = [.. owner.Fields.Select(field => new IrLocal(field.Ir!.Name, field.Ir.Type))];
           inherited = [.. owner.Fields.Select((field, index) => (IrStmt)new IrFieldStore(new IrLocalRef(receiver), field.Ir!, new IrLocalRef(parameters[index])))];
         }

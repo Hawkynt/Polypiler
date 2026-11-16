@@ -102,7 +102,7 @@ internal sealed partial class TypeInference(string path, string source, List<Can
       if (model.Parameters.Exists(earlier => earlier.Name == name))
         return Unsupported(parameter, $"a second parameter named {name}");
 
-      var (stated, type) = JsDoc.ParameterType(candidate.Documentation, name, key => this.Classes.GetValueOrDefault(key) is { IsLibrary: false } owner ? owner : null);
+      var (stated, type) = JsDoc.ParameterType(candidate.Documentation, name, this.Named);
       if (stated && type is null)
         return this.Diagnose(parameter, JavaScriptFrontend.MissingTypeDescriptor, $"parameter '{name}' of '{candidate.Name}' has no supported JSDoc type");
 
@@ -129,7 +129,7 @@ internal sealed partial class TypeInference(string path, string source, List<Can
   public List<FunctionModel> Solve(IEnumerable<Candidate> roots, System.Func<Candidate, bool> isPublic) {
     // A field JSDoc states the type of holds values of it, whatever else reaches it: null alone is then that reference absent.
     foreach (var field in this.Classes.Values.Distinct().SelectMany(owner => owner.Fields).Where(field => field.Stated is not null))
-      if (JsDoc.Stated(field.Stated!, key => this.Classes.GetValueOrDefault(key) is { IsLibrary: false } owner ? owner : null) is { } stated && stated.Ir is not null) {
+      if (JsDoc.Stated(field.Stated!, this.Named) is { } stated && stated.Ir is not null) {
         field.Variable.Type = JsType.Join(field.Variable.Type, stated);
         field.Variable.Reason ??= $"@type {{{field.Stated}}}";
       }
