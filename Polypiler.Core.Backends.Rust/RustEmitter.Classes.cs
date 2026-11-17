@@ -220,6 +220,8 @@ public static partial class RustEmitter {
     /// class, a base class), which an <c>Rc</c> of a struct is by itself.
     /// </summary>
     private RsExpression ObjectValue(IrExpr value, bool optional, IrType target) {
+      if (this.IsUpcast(value, optional, target))
+        return this.Upcast(this.ObjectValue(value, true), target);
       if (!this.IsPolymorphic(target) || !this.IsPolymorphic(value.Type) || value.Type == target || value is IrNull)
         return this.ObjectValue(value, optional);
       if (optional)
@@ -227,6 +229,23 @@ public static partial class RustEmitter {
 
       return this.Checked(this.Method(this.ObjectValue(value, false), this.Conversion("into_", target), target), IrTrap.InvalidCast);
     }
+
+    /// <summary>A value of a class type as a variable or a result of a type holds it: converted to the type's trait where it is an <c>Option</c> of a struct, else as it is.</summary>
+    private RsExpression ObjectValueAs(IrExpr value, bool optional, IrType target)
+      => this.IsUpcast(value, optional, target) ? this.Upcast(this.ObjectValue(value, true), target) : this.ObjectValue(value, optional);
+
+    /// <summary>Whether a value that may be null is of a struct and goes to a place of a trait, whose <c>Option</c> it is not by itself.</summary>
+    private bool IsUpcast(IrExpr value, bool optional, IrType target)
+      => optional && value is not IrNull && value.Type != target && this.IsPolymorphic(target) && !this.IsPolymorphic(value.Type) && !this.IsPlain(value.Type);
+
+    /// <summary>
+    /// An <c>Option&lt;Rc&lt;B&gt;&gt;</c> of a struct as the <c>Option</c> of a trait it implements:
+    /// <c>b.map(|o| o as Rc&lt;dyn A&gt;)</c>, as an <c>Rc</c> of a struct is converted by itself and an
+    /// <c>Option</c> of one is not; <c>Some(B::new())</c> is left as it is, its <c>Rc</c> converted where it is made.
+    /// </summary>
+    private RsExpression Upcast(RsExpression optional, IrType target) => optional is RsCall { Callee: RsPath { Name: "Some" } }
+      ? optional
+      : this.Method(optional, "map", target, new RsClosure(false, [new RsParameter("o", "")], new RsCast(new RsPath("o"), this.ObjectType(target, false))));
 
     /// <summary>A value of a class type as a place owns it: <c>Rc&lt;T&gt;</c>, or <c>Option&lt;Rc&lt;T&gt;&gt;</c> where it may be null.</summary>
     private RsExpression ObjectValue(IrExpr value, bool optional) {
@@ -530,8 +549,8 @@ public static partial class RustEmitter {
 
     private readonly Dictionary<string, string> _globals = new(StringComparer.Ordinal);
 
-    /// <summary>The atomic type of the standard library a global of a type is, or <see langword="null"/>.</summary>
-    private static string? Atomic(IrType type) => type.Kind switch {
+    /// <summary>The atomic type of the standard library a global of a type is, or <see langword="null"/>: none for an enum, which is a type of its own.</summary>
+    private static string? Atomic(IrType type) => type.IsEnum ? null : type.Kind switch {
       IrTypeKind.Bool => "AtomicBool",
       IrTypeKind.I8 or IrTypeKind.U8 or IrTypeKind.I16 or IrTypeKind.U16 or IrTypeKind.I32 or IrTypeKind.U32 or IrTypeKind.I64 or IrTypeKind.U64
         => "Atomic" + char.ToUpperInvariant(TypeName(type)![0]) + TypeName(type)![1..],
