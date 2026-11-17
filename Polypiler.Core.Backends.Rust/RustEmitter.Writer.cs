@@ -130,7 +130,8 @@ public static partial class RustEmitter {
       // unsafe code instead of forbidding it, so that the one spelling function may allow it.
       header.AddRange(this._unsafe.Select(use => $"Unsafe code: {use.Helper}, for the {use.Construct} in the function '{use.Function}'; the crate passes Miri."));
       RsItem[] declarations = errors is null ? [new RsModuleDeclaration(moduleName, "pub")]
-        : [new RsModuleDeclaration("error", ""), new RsModuleDeclaration(moduleName, "pub"), new RsUse("error::" + TrapErrorType) { Visibility = "pub" }];
+        // The modules in the order of their names, as rustfmt's reorder_modules sorts them.
+        : [.. new[] { new RsModuleDeclaration("error", ""), new RsModuleDeclaration(moduleName, "pub") }.OrderBy(declaration => declaration.Name, StringComparer.Ordinal), new RsUse("error::" + TrapErrorType) { Visibility = "pub" }];
       var root = new RsFile(header, [this._unsafe.Count > 0 ? "deny(unsafe_code)" : "forbid(unsafe_code)"], declarations);
       var file = new RsFile([], [], items);
       var crate = new RustCrate(package, Manifest(package, this._options.PackageVersion, this._profile, this._capabilities), root, moduleName, file) { Errors = errors };

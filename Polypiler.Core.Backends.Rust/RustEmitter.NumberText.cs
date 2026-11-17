@@ -19,7 +19,7 @@ public static partial class RustEmitter {
     /// </summary>
     private RsExpression NumberText(IrIntrinsic operation) {
       var arguments = operation.Arguments;
-      RsExpression Call(string helper, params System.Collections.Generic.IReadOnlyList<RsExpression> values) => new RsCall(new RsPath(this.StringHelper(helper)), values) { Type = operation.Type };
+      RsExpression Call(string helper, params System.Collections.Generic.IReadOnlyList<RsExpression> values) => this.HelperCall(helper, operation.Type, values);
       RsExpression Text(RsExpression text) => Call("ply_utf16", new RsReference(false, text));
       RsExpression Format(string pattern, params System.Collections.Generic.IReadOnlyList<RsExpression> values) => new RsMacro("format", [new RsString(pattern), .. values]) { Type = IrType.String };
       var value = arguments.Count > 0 ? arguments[0] : null;

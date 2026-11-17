@@ -238,7 +238,7 @@ public sealed class TrapPolicyEmitTests {
     => Assert.That(Emitted("public static int F(int? a) => a.Value;"), Does.Contain("pub fn f(a: Option<i32>) -> Result<i32, Error> {\n    a.ok_or(Error::MissingValue)\n}"));
 
   private static IEnumerable<TestCaseData> Limits() {
-    yield return new TestCaseData("public static int F(System.Collections.Generic.List<int> l, int i) => l[i];", "the helper ply_list_index, which panics").SetName("HelperThatPanics");
+    yield return new TestCaseData("public static int F(System.Collections.Generic.List<int> l, int i) { System.Func<int, int> g = x => l[x]; return g(i); }", "a trap inside a closure").SetName("HelperTrapInAClosure");
     yield return new TestCaseData("public static int F(int a) { System.Func<int, int> g = x => checked(x * a); return g(2); }", "a trap inside a closure").SetName("TrapInAClosure");
     yield return new TestCaseData("static int[] t = new int[4]; public static int F(int i) => t[i]++;", "a step of an element of module state behind a lock").SetName("LockedStep");
     yield return new TestCaseData("public struct Error { public int A; } public static int F(Error e) => checked(e.A * 2);", "a type of the module named 'Error'").SetName("TypeNamedError");

@@ -55,7 +55,8 @@ safe Rust, and how does a crate report a trap to a caller that does not want a p
 4. **Tests.** A `#[test]` of a fallible function asserts the `Result`: `assert_eq!(checked_sum(1, 2, 0), Err(Error::DivideByZero));`
    instead of `#[should_panic(expected = "DivideByZero")]`, `Ok(5)` for a value.
 5. **`PLY1552` names what `result` cannot write without a panic:** a call of a helper of the string and collection
-   library that panics (`ply_list_index`, `ply_map_add`, `ply_parse_i32`, …, each named), a trap inside a closure
+   library that panics and has no form of its own for `result` (since #1415 every helper that traps has one: an
+   `Option`, or a `Result` of the errors the call passes, checked at the call), a trap inside a closure
    (a function value cannot hand an error on through `Rc<dyn Fn>`), a step of an element of module state behind a
    lock, and a type of the module named `Error`.
 6. `#![forbid(unsafe_code)]` stays, and no generated crate uses `catch_unwind`.
@@ -81,7 +82,7 @@ under `result` read from the `Err` an export returns. `checked_sum(7, 3, 2)` is 
   with what the error displays (`RustExport.Fallible`); a panic under `result` is a test failure.
 - The `Error` variants are named after the IR's traps (`IntegerOverflow`), not after #461's draft (`Overflow`), so a
   variant and the panic message of the same trap under `panic` are the same word.
-- The helpers that signal traps by panicking are refused by name until they return a `Result` of their own; each one
-  converted shrinks `PLY1552`.
+- The helpers that signal traps by panicking have a form for `result` that returns an `Option` or a `Result` of their
+  own (#1415); a helper added later without one is refused by name.
 - Unwinding (option B) stays possible as a later dialect for code that must keep its plain signatures; nothing here
   depends on its absence.

@@ -602,6 +602,10 @@ public static class RustSyntaxReader {
       }
 
       if (this.Accept("(")) {
+        // The unit value, (), as in Some(()).
+        if (this.Accept(")"))
+          return new RsTuple([]);
+
         // Inside parentheses a struct literal stands again, also in a header: (P { x: 0 }).x.
         var outer = this._noStruct;
         this._noStruct = false;
