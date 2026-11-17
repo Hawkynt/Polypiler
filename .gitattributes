@@ -1,0 +1,3 @@
+# Machine vector files promise a byte-identical round trip through MachineVectorFile.Save, which
+# writes LF; keep them LF in every checkout.
+*.mvec.json text eol=lf
