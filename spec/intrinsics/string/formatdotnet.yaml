@@ -22,6 +22,7 @@ spec:
     algorithm: "ToString(CultureInfo.InvariantCulture) of .NET Core 3.0 and later: the shortest digits that read back (of binary32 for f32); fixed notation while -5 < e < 17 (f64) or -5 < e < 9 (f32), otherwise d.dddE+nn or d.dddE-nn with two exponent digits at least; -0 is -0"
     source: ".NET API reference, Double.ToString(IFormatProvider), Single.ToString(IFormatProvider), Standard numeric format strings"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {N: TYPES.f64}, inputs: ["0x444B1AE4D6E2EF50"], outputs: [[49, 69, 43, 50, 49]]}
     - {types: {N: TYPES.f64}, inputs: ["0x4341C37937E08000"], outputs: [[49, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48]]}

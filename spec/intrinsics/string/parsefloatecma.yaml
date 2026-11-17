@@ -22,6 +22,7 @@ spec:
     algorithm: "without the white space of ECMA-262 at the start, the longest prefix that is a sign and Infinity or a decimal literal, correctly rounded; NaN without one"
     source: "ECMA-262 2022 §19.2.4 (parseFloat)"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {}, inputs: [[49, 50, 112, 120]], outputs: ["0x4028000000000000"]}
     - {types: {}, inputs: [[48, 120, 49, 48]], outputs: ["0x0000000000000000"]}

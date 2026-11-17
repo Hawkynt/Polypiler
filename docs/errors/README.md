@@ -93,6 +93,18 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY0100](PLY0100.md) | error | 70 (InternalError) | `ill-typed IR in '<member>': <reason>` | PROTOTYPE |
 | [PLY0101](PLY0101.md) | error | 70 (InternalError) | `<reason>` | PROTOTYPE |
 
+## PLY0200–PLY0299 · types
+
+| Code | Severity | Exit code | Message | Owner |
+| --- | --- | --- | --- | --- |
+| [PLY0250](PLY0250.md) | error | 70 (InternalError) | `unknown intrinsic '<name>'` | INT-REGISTRY |
+| [PLY0251](PLY0251.md) | error | 70 (InternalError) | `intrinsic contract '<file>': <finding>` | INT-REGISTRY |
+| [PLY0252](PLY0252.md) | error | 70 (InternalError) | `intrinsic '<name>' does not admit <type> as <position>` | INT-REGISTRY |
+| [PLY0253](PLY0253.md) | error | 70 (InternalError) | `intrinsic '<name>' is registered twice` | INT-REGISTRY |
+| [PLY0254](PLY0254.md) | error | 70 (InternalError) | `intrinsic '<name>' has no fallback` | INT-REGISTRY |
+| [PLY0255](PLY0255.md) | error | 70 (InternalError) | `intrinsic '<name>': attribute '<attribute>' = <value> is outside [<low>, <high>]` | INT-REGISTRY |
+| [PLY0256](PLY0256.md) | error | 70 (InternalError) | `intrinsic '<name>' lowers to itself through <path>` | INT-REGISTRY |
+
 ## PLY0800–PLY0899 · permutation
 
 | Code | Severity | Exit code | Message | Owner |

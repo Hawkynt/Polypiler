@@ -22,6 +22,7 @@ spec:
     algorithm: "Enum.GetNames: the names of the members ordered by their values read as unsigned numbers of the underlying type, two members of one value in declaration order; the argument only names the enum. The vectors are of enum S { B = 2, Neg = -1, A = 0, C = 1 }"
     source: ".NET API reference, System.Enum.GetNames(Type)"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {E: TYPES.i32}, inputs: [0], outputs: [[[65], [67], [66], [78, 101, 103]]]}
     - {types: {E: TYPES.i32}, inputs: [1], outputs: [[[65], [67], [66], [78, 101, 103]]]}

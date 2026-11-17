@@ -22,6 +22,7 @@ spec:
     algorithm: "whether the two strings have the same code units in the same order"
     source: "ECMA-262 2022 §7.2.16 (IsStrictlyEqual of strings); the .NET API reference of String.Equals(String, String)"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {}, inputs: [[97], [97]], outputs: [1]}
     - {types: {}, inputs: [[97], [65]], outputs: [0]}

@@ -23,6 +23,7 @@ spec:
     algorithm: "the code units text[start] to text[start + length - 1]; without length, up to the end"
     source: "the .NET API reference of System.String.Substring(Int32, Int32)"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {}, inputs: [[97, 98, 99, 100, 101, 102], 1, 3], outputs: [[98, 99, 100]]}
     - {types: {}, inputs: [[97, 98, 99], 3, 0], outputs: [[]]}

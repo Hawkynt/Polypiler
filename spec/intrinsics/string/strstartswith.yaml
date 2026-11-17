@@ -22,6 +22,7 @@ spec:
     algorithm: "by code unit, a needle that is a string or a code unit"
     source: "ECMA-262 2022 §22.1.3.23 (startsWith); the .NET API reference of System.String.StartsWith(String, StringComparison.Ordinal)"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {N: TYPES.str}, inputs: [[97, 98, 99], [97, 98]], outputs: [1]}
     - {types: {N: TYPES.str}, inputs: [[233], [101]], outputs: [0]}

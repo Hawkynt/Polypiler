@@ -23,6 +23,7 @@ spec:
     algorithm: "the exact value rounded to digits after the point, a tie to the larger magnitude; a minus sign only below zero; from 10^21 on and for a NaN, FormatEcma"
     source: "ECMA-262 2022 §21.1.3.3 (Number.prototype.toFixed)"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {}, inputs: ["0x4004000000000000", 0], outputs: [[51]]}
     - {types: {}, inputs: ["0x3FC0000000000000", 2], outputs: [[48, 46, 49, 51]]}

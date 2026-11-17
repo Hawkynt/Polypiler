@@ -22,6 +22,7 @@ spec:
     algorithm: "a new array of the code units of text, in order"
     source: "the .NET API reference of System.String.ToCharArray()"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {}, inputs: [[97, 98]], outputs: [[97, 98]]}
     - {types: {}, inputs: [[]], outputs: [[]]}
