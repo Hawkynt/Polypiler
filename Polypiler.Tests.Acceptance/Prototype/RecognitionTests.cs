@@ -109,7 +109,7 @@ public sealed class RecognitionTests {
   /// <summary>Both spelled-out algorithms, with optimization on and off, in every profile of both backends.</summary>
   private static IEnumerable<TestCaseData> SpelledAlgorithms()
     => from algorithm in new[] { ("SipHash24Spelled.cs", "SipHash24", 18, 3), ("XxHash32Spelled.cs", "XxHash32", 10, 5) }
-       from level in new[] { "default", "none" }
+       from level in new[] { "balanced", "none" }
        from target in TargetCase.All
        select new TestCaseData(algorithm.Item1, algorithm.Item2, algorithm.Item3, algorithm.Item4, level, target);
 

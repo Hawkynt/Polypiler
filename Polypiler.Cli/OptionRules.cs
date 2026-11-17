@@ -14,6 +14,7 @@ public static class OptionRules {
 
   private static readonly ConditionalWeakTable<Option, string[]> _allowed = [];
   private static readonly ConditionalWeakTable<Command, List<(Option First, Option Second)>> _exclusive = [];
+  private static readonly ConditionalWeakTable<Option, object> _repeatOnly = [];
 
   /// <summary>Restricts an option to a set of values; another value is <c>PLY0003</c> naming them in this order.</summary>
   /// <typeparam name="T">The type of the option.</typeparam>
@@ -45,6 +46,22 @@ public static class OptionRules {
     lock (pairs)
       pairs.Add((first, second));
   }
+
+  /// <summary>
+  /// Declares a list option repeat-only (ADR 0004, "Kinds"): one value per occurrence, never split at a
+  /// comma, the empty value a value like any other; for an option whose values may hold a comma, such as <c>--assume</c>.
+  /// </summary>
+  /// <param name="option">The option.</param>
+  /// <returns>The option.</returns>
+  /// <exception cref="ArgumentNullException"><paramref name="option"/> is <see langword="null"/>.</exception>
+  public static Option<string[]> RepeatOnly(Option<string[]> option) {
+    ArgumentNullException.ThrowIfNull(option);
+    _repeatOnly.AddOrUpdate(option, option);
+    return option;
+  }
+
+  /// <summary>Whether an option was declared <see cref="RepeatOnly"/>.</summary>
+  internal static bool IsRepeatOnly(Option option) => _repeatOnly.TryGetValue(option, out _);
 
   /// <summary>The values an option allows, or <see langword="null"/> when it takes any.</summary>
   internal static IReadOnlyList<string>? Allowed(Option option) => _allowed.TryGetValue(option, out var values) ? values : null;

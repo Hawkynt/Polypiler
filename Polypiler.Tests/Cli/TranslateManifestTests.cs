@@ -112,7 +112,24 @@ public sealed class TranslateManifestTests {
     var (exitCode, _, _) = this.Invoke("translate", source, "--from", "csharp", "--to", "csharp", "--output", this._out, "--disable-opt", "O0100");
     Assert.That(exitCode, Is.EqualTo((int)ExitCode.Success));
     var manifest = this.Read();
-    Assert.That((manifest.Optimization.Level, manifest.Optimization.Disabled.Single(), manifest.Optimization.Passes.Any(pass => pass.Id == "O0100")), Is.EqualTo(("default", "O0100", false)));
+    Assert.That((manifest.Optimization.Level, manifest.Optimization.Disabled.Single(), manifest.Optimization.Passes.Any(pass => pass.Id == "O0100")), Is.EqualTo(("balanced", "O0100", false)));
+  }
+
+  /// <summary>Issue #179: the pipeline options are recorded in their canonical form, and every assumption as a warning.</summary>
+  [Test]
+  public void PipelineOptions_AreRecordedCanonically() {
+    var source = this.Source("Snippet.cs", PrototypeFixture.Wrap("public static uint F(uint x) => (x << 8) | (x >> 24);"));
+    var (exitCode, _, _) = this.Invoke("translate", source, "--from", "csharp", "--to", "csharp", "--output", this._out,
+      "--assume", "F.x != null", "--disable-opt", "O0100,O0006", "--assume", "F.x in[0x0,9]", "--opt", "size");
+    Assert.That(exitCode, Is.EqualTo((int)ExitCode.Success));
+    var manifest = this.Read();
+    Assert.That(manifest.Command.Skip(8), Is.EqualTo(new[] {
+      "--opt", "size", "--disable-opt", "O0006,O0100", "--assume", "F.x != null", "--assume", "F.x in [0, 9]"
+    }));
+    Assert.That(manifest.Optimization.Level, Is.EqualTo("size"));
+    Assert.That(manifest.Warnings.Select(warning => warning.Message), Is.EqualTo(new[] {
+      "assumption 'F.x != null' is trusted without proof", "assumption 'F.x in [0, 9]' is trusted without proof"
+    }));
   }
 
   [Test]

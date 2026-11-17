@@ -111,7 +111,7 @@ does, so `PLY1053` is unreachable for every construct of this page.
 
 ### Functions of a scope after O0463
 
-At `--opt default` [O0463](../optimizations/O0463-lambda-specialisation.md) lifts a lambda or local
+At every level but `--opt none` [O0463](../optimizations/O0463-lambda-specialisation.md) lifts a lambda or local
 function whose value stays in its function and that writes nothing it captures into a function of the
 module (`<function>_<local>`, or `<function>_Lambda` for one passed at a call) - what it reads becomes
 parameters - and classifies one that writes a captured variable as capturing, which stays a closure.

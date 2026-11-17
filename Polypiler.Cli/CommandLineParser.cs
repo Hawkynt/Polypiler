@@ -19,7 +19,10 @@ internal enum OptionKind {
   Single,
 
   /// <summary>An <see cref="Option{T}"/> of <see cref="T:string[]"/>: a comma list, repeatable.</summary>
-  List
+  List,
+
+  /// <summary>An <see cref="Option{T}"/> of <see cref="T:string[]"/> declared <see cref="OptionRules.RepeatOnly"/>: one value per occurrence, repeatable, never split.</summary>
+  RepeatOnly
 
 }
 
@@ -59,7 +62,9 @@ internal sealed class CommandLineParser {
 
   /// <summary>The kind of an option.</summary>
   internal static OptionKind KindOf(Option option)
-    => option.ValueType == typeof(bool) ? OptionKind.Flag : option.ValueType == typeof(string[]) ? OptionKind.List : OptionKind.Single;
+    => option.ValueType == typeof(bool) ? OptionKind.Flag
+      : option.ValueType != typeof(string[]) ? OptionKind.Single
+      : OptionRules.IsRepeatOnly(option) ? OptionKind.RepeatOnly : OptionKind.List;
 
   /// <summary>Whether an argument is an option by rule 1 of the grammar: two or more characters, the first a <c>-</c>.</summary>
   internal static bool IsOptionLike(string argument) => argument.Length > 1 && argument[0] == '-';
@@ -131,6 +136,11 @@ internal sealed class CommandLineParser {
         option.Arity = ArgumentArity.OneOrMore;
         option.AllowMultipleArgumentsPerToken = false;
         ((Option<string[]>)option).CustomParser = result => [.. result.Tokens.SelectMany(token => token.Value.Split(','))];
+        break;
+      case OptionKind.RepeatOnly:
+        option.Arity = ArgumentArity.OneOrMore;
+        option.AllowMultipleArgumentsPerToken = false;
+        ((Option<string[]>)option).CustomParser = result => [.. result.Tokens.Select(token => token.Value)];
         break;
       default:
         option.Arity = ArgumentArity.ExactlyOne;
@@ -210,7 +220,7 @@ internal sealed class CommandLineParser {
         }
 
         counts[name] = counts.GetValueOrDefault(name) + 1;
-        if (kind != OptionKind.List && counts[name] > 1)
+        if (kind is OptionKind.Flag or OptionKind.Single && counts[name] > 1)
           return Grammar(CliDiagnostics.GivenTwice, name);
 
         if (value is not null && ValueProblem(option, name, kind, value) is { } problem)

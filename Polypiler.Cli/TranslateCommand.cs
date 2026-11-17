@@ -38,8 +38,8 @@ namespace Polypiler.Cli;
 /// <c>--module</c>, <c>--global</c> and <c>--typed-arrays</c> say how the file is packaged and what
 /// an ECMAScript 5 engine has; for Rust it names the edition, <c>--rust-version</c> raises the
 /// minimum supported Rust version above the one the edition brings, and <c>--trap-policy</c> chooses
-/// whether a trap panics or is an error value (ADR 0008). The pipeline options <c>--opt</c>, <c>--disable-opt</c> and
-/// <c>--explain-opt</c> (ADR 0004) apply to every pair: the optimizer runs between the frontend and
+/// whether a trap panics or is an error value (ADR 0008). The pipeline options of <see cref="GlobalOptionSet"/>
+/// (<c>--opt</c>, <c>--disable-opt</c>, <c>--assume</c>, <c>--strict</c>) and <c>--explain-opt</c> (ADR 0004) apply to every pair: the optimizer runs between the frontend and
 /// the backend, and the target passes between the backend's syntax tree and its printer (#1336),
 /// unless <c>--opt none</c> says otherwise; the rules of the one and the passes of the other share
 /// one namespace of optimization numbers. The foundation checks the command line
@@ -101,8 +101,6 @@ public sealed partial class TranslateCommand : ICliCommand {
     [From] = "the source language",
     [To] = "the target language",
     [Output] = "the directory to write into; it is created when it does not exist",
-    [Opt] = "the optimization level",
-    [DisableOpt] = "optimizations not to apply",
     [ExplainOpt] = "write every optimization applied to standard error",
     [Export] = "JavaScript: the functions to translate",
     [ExplainTypes] = "JavaScript: write why every value has its type to standard output",
@@ -138,7 +136,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   public string Description => "translate a source file into another language; a prototype for small subsets of its languages, see the README for the planned interface";
 
   /// <summary>The options of the pass pipeline, which every pair of languages takes.</summary>
-  private static readonly OptionSpec[] _pipeline = [new(Opt, "<none|default>"), new(DisableOpt, "<O####>[,<O####>...]"), new(ExplainOpt, null)];
+  private static readonly OptionSpec[] _pipeline = [new(ExplainOpt, null)];
 
   /// <summary>The source languages; another one is another entry.</summary>
   private static readonly Frontend[] _frontends = [
@@ -175,6 +173,8 @@ public sealed partial class TranslateCommand : ICliCommand {
       .DistinctBy(option => option.Name);
     foreach (var option in options)
       command.Options.Add(Declared(option));
+
+    GlobalOptionSet.AddTo(command);
   }
 
   /// <summary>The option of the command line for an option of the command: a flag, a list or a single value.</summary>
@@ -184,7 +184,7 @@ public sealed partial class TranslateCommand : ICliCommand {
       return new Option<bool>(option.Name) { Description = description };
 
     var helpName = option.Value[1..option.Value.IndexOf('>')];
-    return option.Name is DisableOpt or Export or Instantiate or Bind
+    return option.Name is Export or Instantiate or Bind
       ? new Option<string[]>(option.Name) { Description = description, HelpName = helpName }
       : new Option<string>(option.Name) { Description = description, HelpName = helpName, Required = _required.Contains(option.Name) };
   }
@@ -250,12 +250,15 @@ public sealed partial class TranslateCommand : ICliCommand {
       return Refuse(context, $"unknown target language '{options[To]}'; the prototype writes {Listed(backends.Select(candidate => candidate.Name))}");
 
     // An option that is not required belongs to a source or to a target language, and only to the chosen one.
-    var foreign = options.Keys.FirstOrDefault(option => !_required.Contains(option) && _pipeline.All(pipeline => pipeline.Name != option) && !frontend.Has(option) && !backend.Has(option));
-    var misuse = foreign is null ? PipelineMisuse(options) ?? frontend.Misuse(options) ?? backend.Misuse(options)
+    var foreign = options.Keys.FirstOrDefault(option => !_required.Contains(option) && _pipeline.All(pipeline => pipeline.Name != option) && !GlobalOptionSet.Names.Contains(option) && !frontend.Has(option) && !backend.Has(option));
+    var misuse = foreign is null ? frontend.Misuse(options) ?? backend.Misuse(options)
       : _frontends.Any(candidate => candidate.Has(foreign)) ? $"the option '{foreign}' does not apply to the source language '{frontend.Name}'"
       : $"the option '{foreign}' does not apply to the target language '{backend.Name}'";
     if (misuse is not null)
       return Refuse(context, misuse);
+
+    if (GlobalOptionSet.Read(parse, context, _optimizations) is not { } pipeline)
+      return 0;
 
     if (!CliPaths.RequireInput(file, context))
       return (int)ExitCode.EnvironmentError;
@@ -270,15 +273,11 @@ public sealed partial class TranslateCommand : ICliCommand {
       return Refuse(context, unused);
 
     var (optimized, applications) = Optimized(file, module, options, context, backend);
-    return Emit(optimized, options, context, backend, new Record(file, bytes, frontend.Name, caveats, applications));
+    return Emit(optimized, options, context, backend, new Record(file, bytes, frontend.Name, caveats, applications, pipeline));
   }
 
   /// <summary>The level of <c>--opt</c>, or <see langword="null"/> for a value that names none.</summary>
-  private static OptimizationLevel? LevelOf(IReadOnlyDictionary<string, string> options) => options.GetValueOrDefault(Opt, "default") switch {
-    "none" => OptimizationLevel.None,
-    "default" => OptimizationLevel.Default,
-    _ => null
-  };
+  private static OptimizationLevel? LevelOf(IReadOnlyDictionary<string, string> options) => GlobalOptionSet.LevelOf(options.GetValueOrDefault(Opt, "balanced"));
 
   /// <summary>
   /// The optimization numbers of the pipeline: the rules of the IR optimizer, the passes over the
@@ -289,22 +288,6 @@ public sealed partial class TranslateCommand : ICliCommand {
     .. RuleTable.Default.Ids.Concat(IrPassPipeline.Default.Ids).Append(PyIntSpecialization.Id).Concat(CSharpTargetPasses.Pipeline.Ids).Concat(JavaScriptTargetPasses.Pipeline.Ids).Concat(PythonTargetPasses.Pipeline.Ids).Concat(RustTargetPasses.Pipeline.Ids)
       .Distinct().Order(StringComparer.Ordinal)
   ];
-
-  /// <summary>What is wrong with the pipeline options: an unknown level, or an optimization number the pipeline does not have; the foundation refuses an empty item.</summary>
-  private static string? PipelineMisuse(IReadOnlyDictionary<string, string> options) {
-    if (LevelOf(options) is null)
-      return $"unknown optimization level '{options[Opt]}'; the levels are none and default";
-
-    if (!options.TryGetValue(DisableOpt, out var list))
-      return null;
-
-    var unknown = list.Split(',').FirstOrDefault(id => !_optimizations.Contains(id));
-    return unknown switch {
-      null => null,
-      _ when !IrRule.IsId(unknown) => $"'{unknown}' is not an optimization number of the form O####",
-      _ => $"unknown optimization '{unknown}'; the pipeline has {string.Join(", ", _optimizations)}"
-    };
-  }
 
   /// <summary>Which target passes run by the options of a command line: those of the level that <c>--disable-opt</c> does not name.</summary>
   private static TargetPassOptions PassesOf(IReadOnlyDictionary<string, string> options) => new() {
@@ -709,7 +692,8 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// <param name="Language">The source language.</param>
   /// <param name="Caveats">What the imported code is known to do differently from the source.</param>
   /// <param name="Applications">Every rule the optimizer applied.</param>
-  private sealed record Record(string File, byte[] Bytes, string Language, IReadOnlyList<ManifestMessage> Caveats, IReadOnlyList<RuleApplication> Applications);
+  /// <param name="Pipeline">The pipeline options of the command line.</param>
+  private sealed record Record(string File, byte[] Bytes, string Language, IReadOnlyList<ManifestMessage> Caveats, IReadOnlyList<RuleApplication> Applications, GlobalOptions Pipeline);
 
   private static readonly UTF8Encoding _utf8 = new(false);
 
@@ -725,8 +709,12 @@ public sealed partial class TranslateCommand : ICliCommand {
   private static Manifest TranslationManifest(IrModule module, IReadOnlyDictionary<string, string> options, CliContext context, Backend backend, Record record, string output, IReadOnlyList<ManifestOutput> outputs, IReadOnlyList<EmittedHelper> helpers) {
     var input = InputPath(output, context.Resolve(record.File));
     List<string> command = ["translate", input, From, options[From], To, options[To], Output, "."];
-    foreach (var (name, value) in options.Where(option => !_required.Contains(option.Key)))
+    foreach (var (name, value) in options.Where(option => !_required.Contains(option.Key) && !GlobalOptionSet.Names.Contains(option.Key)))
       command.AddRange(name is ExplainOpt or ExplainTypes or TypedArrays or AllowUnsafe ? [name] : [name, value]);
+
+    // The pipeline options, where the command line gives any, in their canonical form (ADR 0004).
+    if (options.Keys.Any(GlobalOptionSet.Names.Contains))
+      command.AddRange(record.Pipeline.CanonicalArguments());
 
     var mode = FloatModeOf(options);
     return new Manifest {
@@ -747,7 +735,7 @@ public sealed partial class TranslateCommand : ICliCommand {
       NativeDependencies = [.. module.ForeignFunctions.Select(function => function.Library).Distinct().Select(library => new ManifestNativeDependency(library, "unspecified", "NOASSERTION"))],
       Licensing = new(OutputLicence.Of(OutputLicence.Header(_utf8.GetString(record.Bytes)), helpers.Select(helper => helper.Licence)), Obligations(helpers), []),
       Caveats = [.. record.Caveats, .. ForeignCaveats(module, options, backend)],
-      Optimization = new(options.GetValueOrDefault(Opt, "default"), options.TryGetValue(DisableOpt, out var disabled) ? disabled.Split(',') : [],
+      Optimization = new(options.GetValueOrDefault(Opt, "balanced"), options.TryGetValue(DisableOpt, out var disabled) ? disabled.Split(',') : [],
         [.. record.Applications.Select(application => application.Id).Distinct().Select(id => new ManifestPass(id, "unproven"))]),
       Warnings = ManifestMessage.WarningsOf(context.Diagnostics.Items),
       Toolchains = [],

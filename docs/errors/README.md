@@ -13,12 +13,12 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY0004](PLY0004.md) | error | 1 (EnvironmentError) | `cannot read the toolchain lock: <reason>` | INFRA-TOOLCHAINS |
 | [PLY0005](PLY0005.md) | error | 1 (EnvironmentError) | `output directory '<path>' is not empty; pass --force to write into it` | CLI-FOUNDATION |
 | [PLY0006](PLY0006.md) (reserved) | error | 2 (UsageError) | `unknown <kind> '<identifier>'` | CLI-TRANSLATE |
-| [PLY0007](PLY0007.md) (reserved) | error | 2 (UsageError) | `'<assumption>' is not an assumption: <reason>` | CLI-OPTIONS |
-| [PLY0008](PLY0008.md) (reserved) | error | 2 (UsageError) | `'<id>' is not an optimization ID (expected O followed by four digits)` | CLI-OPTIONS |
-| [PLY0009](PLY0009.md) (reserved) | warning | — (3 with --strict) | `assumption '<assumption>' is trusted, not proven` | CLI-OPTIONS |
-| [PLY0010](PLY0010.md) (reserved) | error | 3 (UnsupportedConstruct) | `<code>: <message> (refused by --strict)` | CLI-OPTIONS |
+| [PLY0007](PLY0007.md) | error | 2 (UsageError) | `'<assumption>' is not a valid assumption: <reason>` | CLI-OPTIONS |
+| [PLY0008](PLY0008.md) | error | 2 (UsageError) | `'<id>' is not an optimization ID (expected O followed by four digits)` | CLI-OPTIONS |
+| [PLY0009](PLY0009.md) | warning | — (3 with --strict) | `assumption '<assumption>' is trusted without proof` | CLI-OPTIONS |
+| [PLY0010](PLY0010.md) | error | 3 (UnsupportedConstruct) | `strict mode: <code> <message>` | CLI-OPTIONS |
 | [PLY0011](PLY0011.md) | error | 2 (UsageError) | `options '<first>' and '<second>' cannot be combined` | CLI-FOUNDATION |
-| [PLY0012](PLY0012.md) (reserved) | error | 2 (UsageError) | `'<level>' is not an optimization level; expected one of: <levels>` | CLI-OPTIONS |
+| [PLY0012](PLY0012.md) | error | 2 (UsageError) | `'<level>' is not an optimization level; expected one of: none, balanced, speed, size, memory` | CLI-OPTIONS |
 | [PLY0013](PLY0013.md) (reserved) | error | 4 (InvalidSource) | `export '<name>' not found in '<file>'` | CLI-TRANSLATE |
 | [PLY0014](PLY0014.md) (reserved) | error | 3 (UnsupportedConstruct) | `no <frontend\|backend> for '<language>'` | CLI-TRANSLATE |
 | [PLY0015](PLY0015.md) (reserved) | error | 2 (UsageError) | `unknown facet '<facet>'` | CLI-INSPECT |

@@ -10,7 +10,7 @@ using Polypiler.Prototype.Testing;
 namespace Polypiler.Tests.Recognize;
 
 /// <summary>
-/// The pipeline options of <c>translate</c> (ADR 0004): <c>--opt none|default</c>, the repeatable
+/// The pipeline options of <c>translate</c> (ADR 0004): <c>--opt none|balanced|speed|size|memory</c>, the repeatable
 /// list <c>--disable-opt</c>, and <c>--explain-opt</c>, which lists every rule application on the
 /// error stream. Test design 9 and 11.
 /// </summary>
@@ -50,7 +50,10 @@ public sealed class OptimizationOptionsTests {
   }
 
   [TestCase("none", false)]
-  [TestCase("default", true)]
+  [TestCase("balanced", true)]
+  [TestCase("speed", true)]
+  [TestCase("size", true)]
+  [TestCase("memory", true)]
   public void Opt_ChoosesTheLevel(string level, bool rotated) {
     // The inlining of the helper - in the IR (O0006) and in the backend (O0500) - would write the rotation as shifts again.
     var (exitCode, text, _) = this.Translate(Rotate, "javascript", "--opt", level, "--disable-opt", "O0006,O0500");
@@ -98,18 +101,32 @@ public sealed class OptimizationOptionsTests {
     Assert.That(error.Contains("O0127", StringComparison.Ordinal), Is.EqualTo(fired));
   }
 
-  [TestCase("--opt", "fast", "unknown optimization level 'fast'; the levels are none and default")]
-  [TestCase("--opt", "None", "unknown optimization level 'None'")]
-  [TestCase("--disable-opt", "O9999x", "'O9999x' is not an optimization number of the form O####")]
-  [TestCase("--disable-opt", "o0100", "'o0100' is not an optimization number")]
-  [TestCase("--disable-opt", "O9999", "unknown optimization 'O9999'; the pipeline has O0001, O0002, O0003, O0005, O0006, O0023, O0062, O0100, O0101")]
-  [TestCase("--disable-opt", "", "option '--disable-opt' has an empty list element")]
-  [TestCase("--disable-opt", "O0100,,O0106", "option '--disable-opt' has an empty list element")]
-  [TestCase("--disable-opt", "O0100,", "option '--disable-opt' has an empty list element")]
+  [TestCase("--opt", "fast", "PLY0012: 'fast' is not an optimization level; expected one of: none, balanced, speed, size, memory")]
+  [TestCase("--opt", "None", "PLY0012: 'None' is not an optimization level")]
+  [TestCase("--opt", "default", "PLY0012: 'default' is not an optimization level")]
+  [TestCase("--disable-opt", "O9999x", "PLY0008: 'O9999x' is not an optimization ID (expected O followed by four digits)")]
+  [TestCase("--disable-opt", "o0100", "PLY0008: 'o0100' is not an optimization ID")]
+  [TestCase("--disable-opt", "O9999", "PLY0008: unknown optimization 'O9999'")]
+  [TestCase("--disable-opt", "", "PLY0003: option '--disable-opt' has an empty list element")]
+  [TestCase("--disable-opt", "O0100,,O0106", "PLY0003: option '--disable-opt' has an empty list element")]
+  [TestCase("--disable-opt", "O0100,", "PLY0003: option '--disable-opt' has an empty list element")]
+  [TestCase("--assume", "Rotate.x 5", "PLY0007: 'Rotate.x 5' is not a valid assumption")]
   public void MalformedOption_IsAUsageError(string option, string value, string message) {
     var (exitCode, text, error) = this.Translate(Rotate, "javascript", option, value);
     Assert.That((exitCode, text), Is.EqualTo(((int)ExitCode.UsageError, "")));
-    Assert.That(error, Does.StartWith("polypiler: error PLY0003: " + message).And.Not.Contain("usage:"));
+    Assert.That(error, Does.StartWith("polypiler: error " + message).And.Not.Contain("usage:"));
+  }
+
+  /// <summary>An assumption of translate is reported, recorded in the manifest's command and warnings, and refused under --strict.</summary>
+  [Test]
+  public void Assume_IsReportedAndRecorded() {
+    var (exitCode, text, error) = this.Translate(Rotate, "javascript", "--assume", "F.x in [0,0xFF]", "--opt", "speed");
+    Assert.That(exitCode, Is.EqualTo((int)ExitCode.Success));
+    Assert.That(text, Is.Not.Empty);
+    Assert.That(error, Does.Contain("warning PLY0009: assumption 'F.x in [0, 255]' is trusted without proof"));
+    var (strictExit, strictText, strictError) = this.Translate(Rotate, "javascript", "--assume", "F.x in [0,0xFF]", "--strict");
+    Assert.That((strictExit, strictText), Is.EqualTo(((int)ExitCode.UnsupportedConstruct, "")));
+    Assert.That(strictError, Does.Contain("error PLY0010: strict mode: PLY0009 assumption 'F.x in [0, 255]' is trusted without proof"));
   }
 
   [Test]
