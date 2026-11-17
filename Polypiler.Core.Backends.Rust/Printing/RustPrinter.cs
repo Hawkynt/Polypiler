@@ -88,6 +88,13 @@ public static class RustPrinter {
       case RsFunction function:
         Function(text, function, indent);
         break;
+      case RsConst { IsThreadLocal: true } local: {
+        // rustfmt leaves the body of a macro in braces as it is: the static on one line.
+        var value = Flat(local.Value) ?? Expression(local.Value, indent + Indent, indent + Indent);
+        text.Append(pad).Append("thread_local! {\n").Append(pad).Append(' ', Indent).Append("static ").Append(local.Name).Append(": ").Append(local.TypeName).Append(" = ")
+          .Append(local.IsConstInitialized ? $"const {{ {value} }}" : value).Append(";\n").Append(pad).Append("}\n");
+        break;
+      }
       case RsConst constant: {
         var head = $"{pad}{Visibility(constant.Visibility)}{(constant.IsStatic ? "static" : "const")} {constant.Name}: {constant.TypeName} =";
         text.Append(Right(head, constant.Value, indent)).Append(";\n");
@@ -471,7 +478,7 @@ public static class RustPrinter {
   private static string Label(string? label) => label is null ? "" : $"'{label}: ";
 
   /// <summary>An expression over several lines, the way rustfmt breaks each kind.</summary>
-  private static string Broken(RsExpression expression, int indent, int column, int trailing) {
+  private static string Broken(RsExpression expression, int indent, int column, int trailing, bool forced = false) {
     var pad = new string(' ', indent);
     var inner = new string(' ', indent + Indent);
     switch (expression) {
@@ -481,12 +488,12 @@ public static class RustPrinter {
         if (callee.Contains('\n') && Arguments(call.Arguments) is { } after && callee.Length - callee.LastIndexOf('\n') - 1 + after.Length + 2 + trailing <= MaxWidth)
           return callee + "(" + after + ")";
 
-        return callee + "(" + (Overflowed(call.Arguments, indent, column + callee.Length + 1, true) ?? VerticalArguments(call.Arguments, indent)) + ")";
+        return callee + "(" + (Overflowed(call.Arguments, indent, column + callee.Length + 1, true, trailing, forced) ?? VerticalArguments(call.Arguments, indent)) + ")";
       }
       case RsMacro { Bracketed: true } macro:
         return macro.Name + "!" + Expression(macro.Arguments[0], indent, column + macro.Name.Length + 1, trailing);
       case RsMacro macro:
-        return macro.Name + "!(" + (Overflowed(macro.Arguments, indent, column + macro.Name.Length + 2) ?? VerticalArguments(macro.Arguments, indent)) + ")";
+        return macro.Name + "!(" + (Overflowed(macro.Arguments, indent, column + macro.Name.Length + 2, false, trailing) ?? VerticalArguments(macro.Arguments, indent)) + ")";
       case RsReference reference: {
         var prefix = reference.Mutable ? "&mut " : "&";
         return prefix + Expression(reference.Operand, indent, column + prefix.Length, trailing);
@@ -750,7 +757,16 @@ public static class RustPrinter {
   /// overflows the call, starting on its line and closing at the call's indentation, as rustfmt lets
   /// it; <see langword="null"/> for any other arguments.
   /// </summary>
-  private static string? Overflowed(IReadOnlyList<RsExpression> arguments, int indent, int column, bool function = false) {
+  /// <param name="arguments">The arguments.</param>
+  /// <param name="indent">The indentation of the call.</param>
+  /// <param name="column">The column the arguments start at.</param>
+  /// <param name="function">Whether the call is a function's, whose one argument may be a method chain.</param>
+  /// <param name="trailing">How many characters follow the call's closing parenthesis on its last line, which the line must hold too.</param>
+  /// <param name="forced">
+  /// Whether the call is the overflowed argument of a call too wide for a call's arguments, which must take
+  /// several lines: its one call argument overflows in turn, any other argument stands on a line of its own.
+  /// </param>
+  private static string? Overflowed(IReadOnlyList<RsExpression> arguments, int indent, int column, bool function = false, int trailing = 0, bool forced = false) {
     if (arguments.Count == 0 || !Overflows(arguments[^1], arguments.Count, function))
       return null;
 
@@ -759,7 +775,10 @@ public static class RustPrinter {
       return null;
 
     var head = string.Concat(others.Select(other => other + ", "));
-    var last = Called(arguments[^1]) && Flat(arguments[^1]) is { Length: > CallWidth } ? Opened(arguments[^1], indent, column + head.Length) : Expression(arguments[^1], indent, column + head.Length, 1);
+    var last = Called(arguments[^1]) && (forced && arguments.Count == 1 || Flat(arguments[^1]) is { Length: > CallWidth }) ? Opened(arguments[^1], indent, column + head.Length, trailing + 1)
+      : Expression(arguments[^1], indent, column + head.Length, trailing + 1);
+    if (forced && !last.Contains('\n'))
+      return null;
     // A closure that stays on the line yet makes the arguments wider than a call's may be takes a block body.
     if (arguments[^1] is RsClosure closure && !last.Contains('\n') && head.Length + last.Length > CallWidth)
       last = ClosureHead(closure) + (closure.Body is RsBlockExpression { Block: var body } ? Block(body, indent) : Block(new RsBlock([], closure.Body), indent));
@@ -775,7 +794,8 @@ public static class RustPrinter {
     if (leading is not null && last.Contains('\n') && first.Length > CallWidth)
       return null;
 
-    return column + head.Length + first.Length <= MaxWidth ? head + last : null;
+    // A last argument on one line closes the call on it: the line holds what follows it too.
+    return column + head.Length + first.Length + (last.Contains('\n') ? 0 : trailing + 1) <= MaxWidth ? head + last : null;
   }
 
   /// <summary>
@@ -787,7 +807,9 @@ public static class RustPrinter {
   private static bool Overflows(RsExpression last, int count, bool function = false) => last switch {
     RsIf or RsMatch or RsWhile or RsLoop or RsFor or RsLabeledBlock or RsBlockExpression or RsClosure => true,
     RsCall or RsMacro or RsArray or RsStructLiteral => count == 1,
-    RsMethodCall or RsField => function && count == 1,
+    // rustfmt overflows a chain whose root is a call on one line, f(g(x)\n.h()); a chain from a variable,
+    // an array or a macro, or from a root over several lines, stands on lines of its own.
+    RsMethodCall or RsField => function && count == 1 && Chain(last).Receiver is RsCall root && Flat(root) is not null,
     RsTry attempt => Overflows(attempt.Operand, count, function),
     RsUnary unary => Overflows(unary.Operand, count, function),
     RsReference reference => Overflows(reference.Operand, count, function),
@@ -803,9 +825,9 @@ public static class RustPrinter {
   };
 
   /// <summary>A nested call too wide for a call's arguments, broken even where the line would hold it.</summary>
-  private static string Opened(RsExpression argument, int indent, int column) => argument switch {
-    RsReference reference => (reference.Mutable ? "&mut " : "&") + Opened(reference.Operand, indent, column + (reference.Mutable ? 5 : 1)),
-    _ => Broken(argument, indent, column, 1)
+  private static string Opened(RsExpression argument, int indent, int column, int trailing) => argument switch {
+    RsReference reference => (reference.Mutable ? "&mut " : "&") + Opened(reference.Operand, indent, column + (reference.Mutable ? 5 : 1), trailing),
+    _ => Broken(argument, indent, column, trailing, true)
   };
 
   /// <summary>Arguments one on each line, each followed by a comma, the closing parenthesis back at the indentation.</summary>
