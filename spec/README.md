@@ -168,7 +168,7 @@ follow once their tolerance documents exist.
 
 ## Family `ir`
 
-The IR operations, stages and version (PRD §4.1–§4.3, [ADR 0001](../docs/adr/0001-ir-stage-invariants.md)),
+The IR operations, stages and version (PRD §4.1–§4.3, [ADR 0001](../docs/adr/0001-ir-stage-invariants.md); a stage names a legality set per [ADR 0009](../docs/adr/0009-structured-tree-ir.md)),
 checked by [`schemas/ir.schema.json`](schemas/ir.schema.json) and `IrSpecFamily`. The body's `kind`
 selects the shape, and the path follows from it:
 

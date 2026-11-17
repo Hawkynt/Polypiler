@@ -18,7 +18,7 @@ flowchart TB
   Decoder --> Semantic
   CodeLifter --> Semantic
   MachineLifter --> Semantic
-  Semantic --> IR["Typed SSA, memory, effects,<br/>iteration and object semantics"]
+  Semantic --> IR["Structured typed tree IR: memory,<br/>effect summaries, iteration and objects"]
   IR --> Facts["Range, type, shape and alias facts"]
   Facts --> Recover["Recover semantic operations"]
   Recover --> Transform["Specialize and optimize<br/>under proven preconditions"]
@@ -29,7 +29,7 @@ flowchart TB
   Verify --> Manifest["Manifest and precise support status"]
 ```
 
-These are **conceptual stages**, not necessarily separate serialized IR formats. Facts may flow back into earlier passes; iterative passes must converge or stop at a deterministic budget with conservative fallback. The [IR contracts](IR.md) define the representation boundaries and [ADR 0001](../adr/0001-ir-stage-invariants.md) the invariants of each IR stage; [semantic recovery](SEMANTIC-RECOVERY.md) explains recognition and proof obligations.
+These are **conceptual stages**, not necessarily separate serialized IR formats. Facts may flow back into earlier passes; iterative passes must converge or stop at a deterministic budget with conservative fallback. The [IR contracts](IR.md) define the representation boundaries and [ADR 0009](../adr/0009-structured-tree-ir.md) the tree IR and its legality checks; [semantic recovery](SEMANTIC-RECOVERY.md) explains recognition and proof obligations.
 
 ## Detailed phases
 
@@ -38,8 +38,8 @@ These are **conceptual stages**, not necessarily separate serialized IR formats.
 | 0. Input discovery | Files, requested entry symbols, target profile, dependency manifest | Pinned compilation units and import graph | Input identity, version, provenance |
 | 1. Parse/lift | Language syntax, bytecode, instructions, metadata | Structured source semantics and CFG | Dialect quirks, overflow, exception and order rules |
 | 2. Bind/normalize | Modules, names, types, calls, external symbols | Typed references and explicit semantic operations | Dynamic dispatch, overload choices, API identities |
-| 3. Construct IR | Bound code and memory model | SSA values, blocks, regions, effects, provenance | All observable state, control flow, traps |
-| 4. Analyze | SSA, interprocedural summaries, target facts | Ranges, known bits, shape, ownership, alias and effects | Soundness at each program point |
+| 3. Construct IR | Bound code and memory model | Typed tree of structured statements and expressions, effect summaries, provenance | All observable state, control flow, traps |
+| 4. Analyze | The tree (an SSA view derived where an analysis needs one), interprocedural summaries, target facts | Ranges, known bits, shape, ownership, alias and effects | Soundness at each program point |
 | 5. Recognize | Expressions, loops, library calls, mixed ASM | Canonical operations and proof obligations | Exact bit, floating-point and memory semantics |
 | 6. Optimize | Semantic operations and proven facts | Optimized IR, proof/decision log | Behavioral equivalence under selected contract |
 | 7. Legalize | Optimized IR and target capabilities | Target IR, type layouts, runtime closure, ABI adapters | Target instruction, runtime and FFI legality |
