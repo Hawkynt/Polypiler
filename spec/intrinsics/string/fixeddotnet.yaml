@@ -23,6 +23,7 @@ spec:
     algorithm: "the exact value rounded to digits after the point, a tie to the even digit, never an exponent; the sign of a negative number stays, also of -0"
     source: ".NET API reference, Standard numeric format strings (F); .NET Core 3.0 formats the exact value"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {}, inputs: ["0x4004000000000000", 0], outputs: [[50]]}
     - {types: {}, inputs: ["0x3FC0000000000000", 2], outputs: [[48, 46, 49, 50]]}

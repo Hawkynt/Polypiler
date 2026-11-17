@@ -22,6 +22,7 @@ spec:
     algorithm: "Number::toString(value, 10): the shortest digits that read back, the nearer of two; fixed notation while the exponent e of the first digit satisfies -7 < e < 21, otherwise d.ddde+n or d.ddde-n; -0 is 0; an integer as its decimal digits"
     source: "ECMA-262 2022 §6.1.6.1.20 (Number::toString), §6.1.6.2.20 (BigInt::toString)"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {N: TYPES.f64}, inputs: ["0x444B1AE4D6E2EF50"], outputs: [[49, 101, 43, 50, 49]]}
     - {types: {N: TYPES.f64}, inputs: ["0x3EB92A737110E454"], outputs: [[48, 46, 48, 48, 48, 48, 48, 49, 53]]}

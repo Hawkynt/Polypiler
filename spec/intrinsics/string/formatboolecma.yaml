@@ -22,6 +22,7 @@ spec:
     algorithm: "true or false"
     source: "ECMA-262 2022 §7.1.17 (ToString of a Boolean)"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {}, inputs: [1], outputs: [[116, 114, 117, 101]]}
     - {types: {}, inputs: [0], outputs: [[102, 97, 108, 115, 101]]}

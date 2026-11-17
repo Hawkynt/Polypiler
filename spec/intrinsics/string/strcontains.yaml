@@ -22,6 +22,7 @@ spec:
     algorithm: "by code unit, a needle that is a string or a code unit"
     source: "ECMA-262 2022 §22.1.3.8 (includes); the .NET API reference of System.String.Contains(String)"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {N: TYPES.str}, inputs: [[97, 98, 99], [98]], outputs: [1]}
     - {types: {N: TYPES.str}, inputs: [[97, 98, 99], []], outputs: [1]}

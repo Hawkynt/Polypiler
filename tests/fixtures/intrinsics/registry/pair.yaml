@@ -1,0 +1,16 @@
+# Two results: one tuple value whose projections are named after the returns, in their order.
+id: INTRINSICS.Pair
+title: Pair
+spec:
+  name: Pair
+  group: IntMath
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: a, type: T}, {name: b, type: T}]
+  returns: [{name: first, type: T}, {name: second, type: T}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  requiresRuntime: true
+  reference: {algorithm: "(a, b)", source: "registry self-test"}
+  mustSurviveUntil: IR.stage.lifted
+  vectors: []

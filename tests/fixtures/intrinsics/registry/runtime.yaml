@@ -1,0 +1,16 @@
+# A contract that requires the runtime of the target: no decomposition, and ExpandIntrinsics leaves it.
+id: INTRINSICS.PopCount
+title: Runtime only
+spec:
+  name: PopCount
+  group: BitCount
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: value, type: T}]
+  returns: [{name: count, type: TYPES.i32}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  requiresRuntime: true
+  reference: {algorithm: "the number of set bits", source: "registry self-test"}
+  mustSurviveUntil: IR.stage.lifted
+  vectors: []

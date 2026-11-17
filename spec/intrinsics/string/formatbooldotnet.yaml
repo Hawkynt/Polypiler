@@ -22,6 +22,7 @@ spec:
     algorithm: "True or False"
     source: ".NET API reference, Boolean.ToString()"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {}, inputs: [1], outputs: [[84, 114, 117, 101]]}
     - {types: {}, inputs: [0], outputs: [[70, 97, 108, 115, 101]]}

@@ -22,6 +22,7 @@ spec:
     algorithm: "the nearest integral value, a tie to the even one; the sign of a zero result is that of x"
     source: "IEEE Std 754-2019, section 5.3.1 (roundToIntegralTiesToEven)"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {F: TYPES.f64}, inputs: ["0x4004000000000000"], outputs: ["0x4000000000000000"]}
     - {types: {F: TYPES.f64}, inputs: ["0x400C000000000000"], outputs: ["0x4010000000000000"]}

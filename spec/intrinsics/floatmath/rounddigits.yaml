@@ -24,6 +24,7 @@ spec:
     algorithm: "x rounded to digits decimal digits after the point as System.Math.Round(x, digits, mode) computes it"
     source: ".NET API reference, System.Math.Round(Double, Int32, MidpointRounding)"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {F: TYPES.f64}, inputs: ["0x4004000000000000", 0, 0], outputs: ["0x4000000000000000"]}
     - {types: {F: TYPES.f64}, inputs: ["0x4004000000000000", 0, 1], outputs: ["0x4008000000000000"]}
