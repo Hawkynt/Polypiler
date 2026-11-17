@@ -1,4 +1,5 @@
 using Polypiler.Cli;
+using Polypiler.Cli.Options;
 
 namespace Polypiler.Tests.Acceptance.Support;
 
@@ -13,5 +14,8 @@ public sealed class TestCommandSet {
   /// process and in the scenario's workspace; <see langword="null"/> for the real commands.
   /// </summary>
   public CommandRegistry? Registry { get; set; }
+
+  /// <summary>The options contributed to the commands of <see cref="Registry"/>; <see langword="null"/> for none.</summary>
+  public OptionContributions? Contributions { get; set; }
 
 }

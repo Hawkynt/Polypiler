@@ -22,6 +22,7 @@ Original chapter numbers and section links are retained. The pages here are a re
 - [Floating-point operations](reference/floating-point-operations.md) — every floating-point operation of the IR with its contract, special values and portable implementation.
 - [Known runtime defects](reference/known-runtime-defects.md) — defects of a target runtime that change what correct generated code computes, their minimal reproductions and the forms the backends write around them.
 - [Exit codes](cli/exit-codes.md) — the exit code of every failure category of `polypiler`, generated from the code; `polypiler help exit-codes` prints the same table.
+- [Registered options](cli/registered-options.md) — the options and identifiers other areas contribute to the commands of `polypiler`, their planned owners and what is registered today, generated from the code.
 - [Value records](reference/records.md) — structs, record structs and fixed-shape object literals: their value semantics, what each frontend imports and how each profile writes them.
 - [Classes](reference/classes.md) — sealed classes, record classes, JavaScript classes and constructor functions: the object model of the IR, what each frontend imports and how each profile writes them.
 - [Optional values](reference/optional-values.md) — `T?`, `null` and `undefined`: the optional type of the IR, C#'s lifted operators and JavaScript's coercion written out, and how each profile writes `??`, `?.` and `??=`.

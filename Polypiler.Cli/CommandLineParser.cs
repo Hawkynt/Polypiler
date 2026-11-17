@@ -5,12 +5,13 @@ using System.CommandLine.Help;
 using System.CommandLine.Parsing;
 using System.Globalization;
 using System.Linq;
+using Polypiler.Cli.Options;
 using Polypiler.Core;
 
 namespace Polypiler.Cli;
 
-/// <summary>How an option takes its value (ADR 0004, "Kinds"), read from its value type.</summary>
-internal enum OptionKind {
+/// <summary>How an option takes its value (ADR 0004, "Kinds"), read from its value type and, for a repeat-only option, from its declaration.</summary>
+public enum OptionKind {
 
   /// <summary>An <see cref="Option{T}"/> of <see cref="bool"/>: no value.</summary>
   Flag,
@@ -19,7 +20,10 @@ internal enum OptionKind {
   Single,
 
   /// <summary>An <see cref="Option{T}"/> of <see cref="T:string[]"/>: a comma list, repeatable.</summary>
-  List
+  List,
+
+  /// <summary>An <see cref="Option{T}"/> of <see cref="T:string[]"/> declared repeat-only: one value per occurrence, repeatable, never split at commas.</summary>
+  RepeatOnly
 
 }
 
@@ -47,9 +51,13 @@ internal sealed class CommandLineParser {
   private static readonly ParserConfiguration _configuration = new() { EnablePosixBundling = false, ResponseFileTokenReplacer = null };
 
   private readonly CommandRegistry _registry;
+  private readonly OptionContributions _contributions;
 
-  /// <summary>Creates a parser for the commands of a registry.</summary>
-  internal CommandLineParser(CommandRegistry registry) => this._registry = registry;
+  /// <summary>Creates a parser for the commands of a registry with the options contributed to them.</summary>
+  internal CommandLineParser(CommandRegistry registry, OptionContributions contributions) {
+    this._registry = registry;
+    this._contributions = contributions;
+  }
 
   /// <summary>The two global options, new for every command tree: <c>--diagnostics text|json</c> and <c>--quiet</c>.</summary>
   internal static Option[] Globals() => [
@@ -57,8 +65,12 @@ internal sealed class CommandLineParser {
     new Option<bool>(QuietName) { Description = "leave infos and warnings off standard error", Recursive = true }
   ];
 
-  /// <summary>The kind of an option.</summary>
+  /// <summary>The kind of an option: <see cref="BaseKindOf"/>, a list marked repeat-only by its contributor <see cref="OptionKind.RepeatOnly"/>.</summary>
   internal static OptionKind KindOf(Option option)
+    => BaseKindOf(option) == OptionKind.List && OptionRules.IsRepeatOnly(option) ? OptionKind.RepeatOnly : BaseKindOf(option);
+
+  /// <summary>The kind an option's value type gives: a flag, a list or a single value.</summary>
+  internal static OptionKind BaseKindOf(Option option)
     => option.ValueType == typeof(bool) ? OptionKind.Flag : option.ValueType == typeof(string[]) ? OptionKind.List : OptionKind.Single;
 
   /// <summary>Whether an argument is an option by rule 1 of the grammar: two or more characters, the first a <c>-</c>.</summary>
@@ -96,12 +108,14 @@ internal sealed class CommandLineParser {
 
   /// <summary>
   /// The tree of one command under the plain root command <c>polypiler</c>, with the help option
-  /// <c>--help</c>/<c>-h</c> and the global options; every option normalised to its kind.
+  /// <c>--help</c>/<c>-h</c> and the global options; the command's own options, then those contributed
+  /// to it; every option normalised to its kind.
   /// </summary>
   /// <param name="command">The registered command.</param>
+  /// <param name="contributions">The contributed options, or <see langword="null"/> for the command's own only.</param>
   /// <returns>The root and the command under it.</returns>
   /// <exception cref="InvalidOperationException">The command declares an option a global option or another of its options already has.</exception>
-  internal static (Command Root, Command Command) Build(ICliCommand command) {
+  internal static (Command Root, Command Command) Build(ICliCommand command, OptionContributions? contributions = null) {
     var root = new Command(ProductInfo.Name);
     root.Options.Add(new HelpOption("--help", "-h"));
     foreach (var global in Globals())
@@ -109,6 +123,7 @@ internal sealed class CommandLineParser {
 
     var symbol = new Command(command.Name, command.Description);
     command.Configure(symbol);
+    contributions?.ConfigureFor(command.Name, symbol);
     var names = new HashSet<string>(root.Options.Select(option => option.Name), StringComparer.Ordinal);
     foreach (var option in symbol.Options) {
       if (!names.Add(option.Name))
@@ -131,6 +146,10 @@ internal sealed class CommandLineParser {
         option.Arity = ArgumentArity.OneOrMore;
         option.AllowMultipleArgumentsPerToken = false;
         ((Option<string[]>)option).CustomParser = result => [.. result.Tokens.SelectMany(token => token.Value.Split(','))];
+        break;
+      case OptionKind.RepeatOnly:
+        option.Arity = ArgumentArity.OneOrMore;
+        option.AllowMultipleArgumentsPerToken = false;
         break;
       default:
         option.Arity = ArgumentArity.ExactlyOne;
@@ -210,7 +229,7 @@ internal sealed class CommandLineParser {
         }
 
         counts[name] = counts.GetValueOrDefault(name) + 1;
-        if (kind != OptionKind.List && counts[name] > 1)
+        if (kind is not (OptionKind.List or OptionKind.RepeatOnly) && counts[name] > 1)
           return Grammar(CliDiagnostics.GivenTwice, name);
 
         if (value is not null && ValueProblem(option, name, kind, value) is { } problem)
@@ -224,7 +243,7 @@ internal sealed class CommandLineParser {
         if (command is null)
           return Diagnostic.Create(CliDiagnostics.UnknownCommand, null, argument);
 
-        (root, symbol) = Build(command);
+        (root, symbol) = Build(command, this._contributions);
         foreach (var option in symbol.Options)
           known.Add(option.Name, option);
 
