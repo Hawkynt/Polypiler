@@ -109,6 +109,10 @@ public static class IntegerLibrary {
         return wide
           ? Helper("Store64", [.. arguments, Truth(intrinsic.Op == IrIntrinsicOp.StoreLittle)])
           : Helper("Store32", [.. arguments, Int(bits / 8), Truth(intrinsic.Op == IrIntrinsicOp.StoreLittle)]);
+      case IrIntrinsicOp.ParallelBitExtract or IrIntrinsicOp.ParallelBitDeposit or IrIntrinsicOp.CrcUpdate:
+        return Sized(name);
+      case IrIntrinsicOp.ByteShuffle:
+        return Helper(name + bits, arguments);
       default:
         return null;
     }

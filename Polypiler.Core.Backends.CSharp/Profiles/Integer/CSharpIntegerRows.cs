@@ -27,7 +27,8 @@ internal static partial class CSharpIntegerRows {
   /// <summary>Every row, family by family.</summary>
   public static IEnumerable<CSharpCapability> All => [
     .. Rotate, .. Counts, .. Reordering, .. PowersOfTwo, .. WideMultiply, .. Division, .. Bounds,
-    .. Saturating, .. Carry, .. Overflow, .. BitFields, .. Masks, .. EndianAccess, .. Limbs
+    .. Saturating, .. Carry, .. Overflow, .. BitFields, .. Masks, .. EndianAccess, .. Limbs,
+    .. Permutations
   ];
 
   /// <summary>The keyword of an integer type, or of a floating-point type an array of bytes is read as.</summary>

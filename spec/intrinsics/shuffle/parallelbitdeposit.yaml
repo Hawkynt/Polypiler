@@ -1,0 +1,33 @@
+id: INTRINSICS.ParallelBitDeposit
+title: Parallel bit deposit
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-PERMUTE-PEXT
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: ParallelBitDeposit
+  group: Shuffle
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: value, type: T}, {name: mask, type: T}]
+  returns: [{name: result, type: T}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "with m_0 < m_1 < ... < m_(k-1) the positions of the ones of mask, bit m_j of the result is bit j of value for j < k, every other bit 0; the signedness of T is ignored. Extract(Deposit(x, m), m) = x & (2^k - 1)"
+    source: "Intel 64 and IA-32 Architectures Software Developer's Manual, vol. 2, PDEP; H. S. Warren, Hacker's Delight, 2nd ed., section 7-5 (expand); vectors from System.Runtime.Intrinsics.X86.Bmi2 on .NET 10"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u8}, inputs: ["0x0B", "0xF0"], outputs: ["0xB0"]}
+    - {types: {T: TYPES.u32}, inputs: ["0x000000AB", "0x0F0F0000"], outputs: ["0x0A0B0000"]}
+    - {types: {T: TYPES.u32}, inputs: ["0xFFFFFFFF", "0x80000001"], outputs: ["0x80000001"]}
+    - {types: {T: TYPES.u32}, inputs: ["0xDEADBEEF", "0x00000000"], outputs: ["0x00000000"]}
+    - {types: {T: TYPES.u32}, inputs: ["0xDEADBEEF", "0xFFFFFFFF"], outputs: ["0xDEADBEEF"]}
+    - {types: {T: TYPES.u16}, inputs: ["0x00FF", "0x5555"], outputs: ["0x5555"]}
+    - {types: {T: TYPES.u64}, inputs: ["0x00000000DC985410", "0x00FF00FF00FF00FF"], outputs: ["0x00DC009800540010"]}
+    - {types: {T: TYPES.u64}, inputs: ["0x123456789ABCDEF0", "0xAAAAAAAAAAAAAAAA"], outputs: ["0x82888AA0A2A8AA00"]}

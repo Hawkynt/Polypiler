@@ -36,7 +36,8 @@ public static partial class CSharpIntegerApi {
 
   /// <summary>Every member the frontend maps, family by family.</summary>
   public static IReadOnlyList<CSharpIntegerMember> Members { get; } = [
-    .. Rotates, .. Counts, .. Reorderings, .. Powers, .. WideMultiplies, .. Divisions, .. Bounds, .. Conversions, .. EndianAccesses
+    .. Rotates, .. Counts, .. Reorderings, .. Powers, .. WideMultiplies, .. Divisions, .. Bounds, .. Conversions, .. EndianAccesses,
+    .. Permutations
   ];
 
   private static readonly Dictionary<(string, string), CSharpIntegerMember> _byName = Members.ToDictionary(member => (member.Type, member.Member));

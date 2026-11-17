@@ -56,6 +56,10 @@ Related: [repository README](../../README.md) · [IR and analysis](../architectu
 | | `SignExtend`, `ZeroExtend` | `(T, bits) → T` | all | the lowest `bits` bits extended by their top bit or by zeros; `bits` outside 1 to the width traps |
 | Endian access | `LoadLittle`, `LoadBig` | `(u8[], index) → T` | bytes | a byte outside the array traps; a number is the `f32` or `f64` with the bits read, never converted through another format |
 | | `StoreLittle`, `StoreBig` | `(u8[], index, T) → void` | bytes | traps before anything is written; a number is written as its encoding |
+| Bit permutation | `ParallelBitExtract` | `(T, mask) → T` | all | the bits at the ones of the mask, packed to the bottom in their order (x86 `PEXT`); signedness ignored |
+| | `ParallelBitDeposit` | `(T, mask) → T` | all | the lowest bits spread to the ones of the mask, zeros elsewhere (x86 `PDEP`) |
+| | `ByteShuffle` | `(T table, T indices, group) → T` | `u64` | `PSHUFB`: result byte `i` is 0 where bit 7 of index byte `i` is set, else table byte `base + (index mod group)` of the group of `group` bytes holding `i`; bytes count from the least significant; a group outside 8, 16, 32, 64 or not dividing the bytes traps |
+| CRC | `CrcUpdate` (`Crc.Update`) | `(T crc, T poly, bool reflected, u8[], index, count) → T` | unsigned | the register after `count` bytes from the index, one bit at a time; `poly` in normal form without its top bit, also when reflected; no initial value or final XOR; a span outside the array traps before any byte is read, a polynomial of 0 traps as an invalid operation |
 
 Truncating division and its remainder are the `Divide` and `Remainder` operators of the IR.
 
@@ -84,6 +88,7 @@ member of these types the table does not list (`BitOperations.Crc32C`), is refus
 | `BitConverter.ToInt16` … `ToUInt64` | `LoadLittle` | little-endian, as on every supported host |
 | `BinaryPrimitives.Read`/`Write` `Single`/`Double` `LittleEndian`/`BigEndian` | `LoadLittle`, `LoadBig`, `StoreLittle`, `StoreBig` of `f32`, `f64` | as the integer ones |
 | `BitConverter.ToSingle(byte[], int)`, `ToDouble(byte[], int)` | `LoadLittle` of `f32`, `f64` | the overloads on a span are refused |
+| `Bmi2.ParallelBitExtract`/`ParallelBitDeposit`, the same of `Bmi2.X64` | `ParallelBitExtract`, `ParallelBitDeposit` | computed on every processor, where .NET throws `PlatformNotSupportedException` without BMI2 |
 
 `T` is each of `sbyte`, `byte`, `short`, `ushort`, `int`, `uint`, `long`, `ulong`; `T.Abs` exists for the
 signed ones. A file that uses `AsSpan` needs `using System;`, as the frontend compiles it without global
@@ -146,12 +151,16 @@ it. A form that C# writes with its own operators exists in every profile.
 | `LoadLittle`, `LoadBig` | `BinaryPrimitives.Read…LittleEndian`/`BigEndian` on a `ReadOnlySpan<byte>` | netstandard2.1 | helper |
 | `LoadLittle`, `LoadBig` of `f32`, `f64` | `BinaryPrimitives.ReadSingle…`/`ReadDouble…` on a `ReadOnlySpan<byte>` | net8.0 | the integer load of the width and its bit cast: `BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32…)` from netstandard2.1, the `Int32BitsToSingle` helper over the load helper before; `Int64BitsToDouble` likewise |
 | `StoreLittle`, `StoreBig` of `f32`, `f64` | — | — | the store helper of the integer of the width, of `BitConverter.SingleToInt32Bits` (a helper before netstandard2.1) or `DoubleToInt64Bits` |
-| `BitReverse`, the floor and Euclidean divisions, `Clamp`, signed `AbsWrap`, saturation, the 64-bit carries, the remaining overflow tests, bit fields, masks, stores | — | — | helper in every profile |
+| `BitReverse`, the floor and Euclidean divisions, `Clamp`, signed `AbsWrap`, saturation, the 64-bit carries, the remaining overflow tests, bit fields, masks, stores, `ParallelBitExtract`, `ParallelBitDeposit`, `ByteShuffle`, `CrcUpdate` | — | — | helper in every profile |
 
 `Math.Clamp` is not used: it throws `ArgumentException` for crossed bounds, where the IR traps with
 an invalid operation (`ArithmeticException` in generated C#). A store is a helper in every profile:
 the span of `BinaryPrimitives.Write…` would check the range before the value is evaluated, where the
-IR evaluates every argument first.
+IR evaluates every argument first. `Bmi2.ParallelBitExtract` and `ParallelBitDeposit` are not used
+either: they exist only on x86 with BMI2 and throw `PlatformNotSupportedException` elsewhere. Their
+helpers are the parallel-suffix method of *Hacker's Delight* §7-4 and §7-5 written out step by step,
+with no loop, branch or table that depends on the value or the mask; the CRC helper works bit by bit,
+without a table, so it serves every polynomial.
 
 Where the arguments cannot make an operation trap, the operators of the language say it as cheaply as
 the idiom a recognition rule found (`CSharpCapability.Total`): `TestBit`, `SetBit`, `ClearBit` and
