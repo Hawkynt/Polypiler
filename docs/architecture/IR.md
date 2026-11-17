@@ -53,6 +53,44 @@ A pure function does not invalidate unrelated memory facts. A write invalidates 
 
 Use fixpoints with widening/narrowing and deterministic budgets where required. After any pass changes the CFG, effects or representation, invalidate or recompute affected facts.
 
+### The fact facade (what exists)
+
+`Polypiler.Core.Analysis` holds the one place a pass asks for facts (#88). The IR is a structured tree,
+so a **program point** is `ProgramPoint(block, index)`: the point before statement `index` of a block
+node, or its end when the index is the number of statements; the edge into a branch of an `IrIf` is the
+entry of that branch. Points compare by the identity of the block node, not by record equality.
+
+- `ValueFacts` answers `Get<TFact>(value, point)` for any registered domain. A domain without a provider,
+  a provider that gives up (`FactUnavailableException`) and a provider out of its budget (PLY0301, once
+  per domain) all answer the domain's `Unknown`; only `Require` insists (PLY0300). `Decide` asks every
+  provider that decides comparisons and reports two that contradict each other (PLY0302). `Describe`
+  lists one line per domain in the order of the domain names. A value may only be asked about where every
+  variable it reads is defined; elsewhere the query is an `ArgumentException`.
+- A fact type names its domain (`IFact<TSelf>.Domain`); a domain (`IFactDomain<TFact>`) is a lattice with
+  `Unknown` on top, `Unreachable` at the bottom, join, meet, widening and `Contains` for an observed value.
+- `TreeDataflow<TFact>` walks the tree forward: joins after branches, iterates loops to a fixpoint and
+  widens after three passes, records the state at every point. A variable a lambda captures or whose
+  address is taken is always `Unknown`; a write inside an expression forgets the variable; catch and
+  finally blocks start from the state before the `try` with what it may write forgotten.
+- `ConstantAnalysis` is the first provider: integer and truth constants, folded by the interpreter
+  itself, refined on the edges of `==`, `!=`, truth variables, `!`, `&&` and `||`.
+- `RangeAnalysis` is a minimal interval provider (`ValueRange`, mathematical integers, so a `u64` fits):
+  exact constants, sums, differences and products while they stay within the type, masks with a
+  non-negative operand, remainders and divisions by a positive divisor, and the edges of `<`, `<=`, `>`,
+  `>=` and `==`. The full range analysis (#94) is to replace it.
+- `ProvenanceAnalysis` (#93) gives every bounded pointer its allocation sites - a `stackalloc`, a pin, the
+  address of a local; at most four, more is `Unknown` - its byte offset as a `ValueRange` and whether it may
+  be null. Pointer arithmetic adds the range of its count times the element size, read from the range
+  analysis at the same point; an offset that may leave 64 bits is `Unknown`, the sites stay. `IsInBounds`
+  answers `True` only for a never-null pointer whose every site has a known size that holds the access,
+  `False` when every possible pointer leaves its region. A pointer bumped in a loop keeps its site but
+  loses its offset to widening: narrowing by the loop's trip count is not done yet. The IR stores no
+  pointer to memory and has no integer-to-pointer conversion, so those sources of the issue do not arise.
+- `FactChecker` holds every answered query against runs of the interpreter, which reports each point it
+  reaches to an `IIrObserver`; a value a run observes outside its fact is PLY0302. The tests check the
+  constant domain on 10 000 seeded random functions (`RandomIr`, seed 300) and on loops, switches and
+  exception handlers of real C#.
+
 ## Numeric, encoded and collection operations
 
 IR semantics should distinguish:
