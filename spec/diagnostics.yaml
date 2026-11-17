@@ -1697,33 +1697,37 @@ codes:
     exit: EnvironmentError
     title: machine vector file not valid
     message: "machine vector file '<file>' is not valid: <reason>"
+    rule: machine.vectors.valid
     area: machine
     owner: MACH-TRACE
-    reserved: true
+    surfaces: "MachineVectorFile.Load and MachineVectorFile.Parse, for a machine vector file that cannot be read or breaks a rule; the reason ends in \"(rule: <rule>)\""
   - code: PLY4031
     severity: error
     exit: SemanticMismatch
     title: machine trace differs
     message: "'<fixture>' vector '<vector>': <what> expected <expected>, actual <actual>"
+    rule: machine.trace.mismatch
     area: machine
     owner: MACH-TRACE
-    reserved: true
+    surfaces: TraceComparer.ToDiagnostic, for the first difference TraceComparer.Compare found between a reference trace and a trace under test
   - code: PLY4032
     severity: error
     exit: EnvironmentError
     title: observed storage not in the profile
     message: "'<file>' observes '<name>', which machine profile '<profile>' does not define"
+    rule: machine.vectors.observed
     area: machine
     owner: MACH-TRACE
-    reserved: true
+    surfaces: MachineVectorFile.Load and MachineVectorFile.Parse, for an observe.registers or observe.flags entry the machine profile does not define
   - code: PLY4033
     severity: error
     exit: EnvironmentError
     title: reference reports unobserved events
     message: "'<fixture>' vector '<vector>': the reference produced <count> event(s) of kind '<kind>' but the projection does not observe that kind"
+    rule: machine.trace.unobserved-events
     area: machine
     owner: MACH-TRACE
-    reserved: true
+    surfaces: TraceComparer.CheckReference, for each device, external or trap kind a reference trace has events of while the projection does not observe it
   - code: PLY4034
     severity: error
     exit: UnsupportedConstruct

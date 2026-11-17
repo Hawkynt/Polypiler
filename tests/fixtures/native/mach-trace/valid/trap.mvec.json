@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "fixture": "mach-trace.trap",
+  "isa": "test-m32",
+  "provenance": {
+    "kind": "published",
+    "producer": "hand",
+    "source": "issue 144, test design rows 4 and 16: a division by zero, and a loop that runs out of its budget"
+  },
+  "observe": {
+    "registers": [
+      "r0",
+      "r1"
+    ],
+    "flags": [],
+    "memory": [],
+    "events": [
+      "trap"
+    ],
+    "cycles": false,
+    "mode": "semantic"
+  },
+  "limits": {
+    "maxCycles": 100,
+    "maxSteps": 50
+  },
+  "vectors": [
+    {
+      "name": "divide-by-zero",
+      "initial": {
+        "registers": {
+          "r0": "0x7",
+          "r1": "0x0"
+        },
+        "flags": {},
+        "memory": []
+      },
+      "expected": {
+        "registers": {
+          "r0": "0x7",
+          "r1": "0x0"
+        },
+        "flags": {},
+        "memory": [],
+        "events": [
+          {
+            "kind": "trap",
+            "trap": "divide-error",
+            "vector": 0,
+            "at": "0x1004"
+          }
+        ],
+        "outcome": "trapped"
+      }
+    },
+    {
+      "name": "endless-loop",
+      "initial": {
+        "registers": {
+          "r0": "0x1",
+          "r1": "0x1"
+        },
+        "flags": {},
+        "memory": []
+      },
+      "expected": {
+        "registers": {},
+        "flags": {},
+        "memory": [],
+        "events": [
+          {
+            "kind": "trap",
+            "trap": "budget"
+          }
+        ],
+        "outcome": "budget-exceeded"
+      }
+    }
+  ]
+}

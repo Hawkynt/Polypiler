@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "fixture": "mach-trace.external",
+  "isa": "test-m32",
+  "provenance": {
+    "kind": "published",
+    "producer": "hand",
+    "source": "issue 144, test design row 4: two calls out of the routine, one with a convention and result"
+  },
+  "observe": {
+    "registers": [
+      "r0"
+    ],
+    "flags": [],
+    "memory": [],
+    "events": [
+      "external"
+    ],
+    "cycles": false,
+    "mode": "semantic"
+  },
+  "vectors": [
+    {
+      "name": "allocate-and-log",
+      "initial": {
+        "registers": {
+          "r0": "0x20"
+        },
+        "flags": {},
+        "memory": []
+      },
+      "expected": {
+        "registers": {
+          "r0": "0x10000"
+        },
+        "flags": {},
+        "memory": [],
+        "events": [
+          {
+            "kind": "external",
+            "symbol": "malloc",
+            "abi": "test-reg",
+            "arguments": [
+              "0x20"
+            ],
+            "result": "0x10000"
+          },
+          {
+            "kind": "external",
+            "symbol": "log",
+            "arguments": []
+          }
+        ],
+        "outcome": "returned"
+      }
+    }
+  ]
+}

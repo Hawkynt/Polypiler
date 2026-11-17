@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "fixture": "mach-trace.return",
+  "isa": "test-m32",
+  "provenance": {
+    "kind": "published",
+    "producer": "hand",
+    "source": "issue 144, test design rows 4 and 17: an addition entered through a call and through preset registers"
+  },
+  "observe": {
+    "registers": [
+      "r0",
+      "r0l"
+    ],
+    "flags": [
+      "c",
+      "z"
+    ],
+    "memory": [],
+    "events": [
+      "return"
+    ],
+    "cycles": false,
+    "mode": "semantic"
+  },
+  "vectors": [
+    {
+      "name": "add-called",
+      "call": {
+        "contract": "test-reg (u32, u32) -> u32",
+        "arguments": [
+          "0x1",
+          "0x2"
+        ]
+      },
+      "initial": {
+        "registers": {},
+        "flags": {},
+        "memory": []
+      },
+      "expected": {
+        "registers": {
+          "r0": "0x3",
+          "r0l": "0x3"
+        },
+        "flags": {
+          "c": false,
+          "z": false
+        },
+        "memory": [],
+        "events": [
+          {
+            "kind": "return",
+            "value": "0x3"
+          }
+        ],
+        "outcome": "returned"
+      }
+    },
+    {
+      "name": "add-preset",
+      "initial": {
+        "registers": {
+          "r0": "0xFFFFFFFF",
+          "r1": "0x1"
+        },
+        "flags": {
+          "c": false,
+          "o": null
+        },
+        "memory": []
+      },
+      "expected": {
+        "registers": {
+          "r0": "0x0",
+          "r0l": "0x0"
+        },
+        "flags": {
+          "c": true,
+          "z": null
+        },
+        "memory": [],
+        "events": [
+          {
+            "kind": "return"
+          }
+        ],
+        "outcome": "returned"
+      }
+    }
+  ]
+}
