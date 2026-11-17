@@ -197,17 +197,19 @@ codes:
     exit: EnvironmentError
     title: no manifest
     message: "no manifest in '<path>'"
+    rule: cli.verify.manifest
     area: infrastructure
     owner: CLI-VERIFY
-    reserved: true
+    surfaces: standard error of polypiler verify for a directory without polypiler.manifest.json
   - code: PLY0017
     severity: error
     exit: UsageError
     title: vectors not understood
     message: "'<path>' holds no test vectors: <reason>"
+    rule: cli.verify.vectors
     area: infrastructure
     owner: CLI-VERIFY
-    reserved: true
+    surfaces: standard error of polypiler verify for a vector file that is not JSON or not of the vector file format, or whose call signature the JavaScript driver cannot pass
   - code: PLY0018
     severity: error
     exit: EnvironmentError

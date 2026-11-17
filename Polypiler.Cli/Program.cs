@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Polypiler.Cli.Verify;
 using Polypiler.Core;
 
 namespace Polypiler.Cli;
@@ -18,6 +19,7 @@ public static class Program {
   public static CommandRegistry CreateRegistry() {
     var registry = new CommandRegistry();
     registry.Add(new TranslateCommand());
+    registry.Add(new VerifyCommand());
     return registry;
   }
 
