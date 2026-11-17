@@ -17,7 +17,9 @@ Related: [repository README](../../README.md) · [pointers](pointers.md) · [rec
   `[LibraryImport]` - `EntryPoint`, `StringMarshalling`, `SetLastError` - is kept.
 - **Effect.** A foreign call has the unknown external effect of #73: it is evaluated exactly once where it stands,
   after its arguments left to right; no optimization moves, folds, merges or drops it. The interpreter never runs
-  it: it traps `InvalidOperation` (`IrForeign.Trap`, "foreign call") - it is no oracle for native code.
+  it: `IrInterpreter.Call` traps `InvalidOperation` (`IrForeign.Trap`, "foreign call") - it is no oracle for native
+  code - and `IrInterpreter.Run` resolves it through the `IExternalModel` of the run, which may record its effects in
+  the trace; without a model for it the run aborts with `PLY0123` ([IR, reference interpreter](../architecture/IR.md#reference-interpreter)).
 - **In async functions.** A native call is synchronous: it runs to its end where it stands, so an
   [async function](async.md) may make one between its awaits - P/Invoke in C#, the call of the binding in JavaScript.
   Its effects are outside the module, so a function that makes one is not isolated, and a `Task.WhenAll` or

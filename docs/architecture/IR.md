@@ -87,6 +87,41 @@ An example IR fragment is illustrative, **not** a proposed parser grammar:
     Store8(program_ram, base + 2, %sum.value)
     ObserveFlags(%sum.flags)  // retained only if flags are live
 
+## Reference interpreter
+
+`IrInterpreter` is the executable definition of the IR and the oracle of the differential tests (#119). It has two
+entry points over the same evaluation:
+
+- **`Call` / `Instantiate`** take and return host values and throw: `IrTrapException` for a trap, `IrException` for an
+  object the program throws, `IrBudgetException` for a call within a step budget that needs more or nests deeper than
+  `BudgetDepth`. The optimizer's call evaluation and most tests use it.
+- **`Run(module, function, arguments, options)`** never throws for what the program does. It verifies the module
+  first (`PLY0124`, the verifier's diagnostics attached) and returns an `ExecutionResult` whose `Outcome` is
+  `Returned` (with the value), `Trapped` (the trap or the class of the object thrown, and the function it left),
+  `Aborted` (a diagnostic) or `UndefinedBehaviourReached` (an `[undefined]` contract of #122 violated, at its node).
+  Values cross as `IrValue`: the bit pattern of a scalar - a two's-complement integer of its width, the IEEE 754
+  encoding of a float, the integer of a big integer - independent of host types; anything else as its host value.
+
+`InterpreterOptions` configures a run, and `ExecutionResult` reports what it observed:
+
+| Option or probe | What it does in the tree interpreter |
+| --- | --- |
+| `MaxSteps` (10 000 000) | each statement and each call is a step; the step past it aborts with `PLY0121` after exactly `MaxSteps` |
+| `MaxCallDepth` (10 000) | frames at once, the function run being the first; one more aborts with `PLY0121`. The run takes a thread with stack for that many frames |
+| `Externals` | the `IExternalModel` every foreign call is resolved through; it appends `EffectEvent(channel, kind, payload)`s to `Trace`. No model for a call aborts with `PLY0123`, with nothing traced for it |
+| `Evaluators` | an `OpcodeEvaluatorRegistry`: an `IOpcodeEvaluator` registered for an `OpcodeId` (`Intrinsic.<op>`, `Binary.<op>`, `Collection.<op>`, `NewArray`, ...), else the first a resolver added by `AddResolver` supplies, replaces the interpreter's own evaluation of the node; an operation `Withhold` names and nothing evaluates aborts with `PLY0120` |
+| `RecordValues` | `RecordedValues` holds every value each local took, by the local: parameters bound, declarations with a value, assignments |
+| `Bounds` | `Contract` or `CheckAll`, applied by `EvaluationContext.Access`: under `CheckAll` an access outside its region aborts with `PLY0142` even where its contract promises it in bounds. The tree's own array accesses are always checked and trap `IndexOutOfRange` |
+| `ByteOrder`, `Memory`, `Schedule` | handed unchanged to evaluators (`IrValue.ToBytes`/`FromBytes` take the order; `FlatMemoryModel` and `Schedules.Ascending` are the defaults; `Schedules.Descending` and `Schedules.Seeded(seed)` choose other orders and chunkings). The tree has no address arithmetic or parallel node of its own, so only evaluators consult them |
+| `Allocations` | one per `IrNewArray`, `IrNew`, `ArrayOf` and construction of a collection executed, plus what evaluators count |
+| `MaxFrameDepth` | the most frames at once: 1 for a function that calls nothing |
+
+A local read before anything was assigned to it aborts a run with `PLY0120` instead of inventing a value. A run is
+deterministic: no clock, culture or dictionary order reaches it; `Schedules.Seeded` draws from SplitMix64, not the
+host's random numbers. The SSA-shaped items of the original work order - phis evaluated by predecessor, unwind
+edges, `Landing`/`Resume`, `.pir` fixtures with `lli` twins - are withdrawn by ADR 0009: the tree has structured
+control flow and `try`, which both entry points evaluate.
+
 ## Pass contract and invariants
 
 Every transformation needs:
