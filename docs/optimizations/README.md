@@ -264,7 +264,7 @@ maps every one of its optimization documents to the page here that covers it.
 
 ## Interprocedural
 
-- [ ] [O0380](O0380-interprocedural-constant-propagation.md) — Replace a parameter that receives the same constant at every call site by that constant in the callee (P3)
+- [x] [O0380](O0380-interprocedural-constant-propagation.md) — Replace a parameter that receives the same constant at every call site by that constant in the callee (P3)
 - [ ] [O0381](O0381-dead-function-elimination.md) — Remove functions that are unreachable from the module's exports, tests and taken addresses (P3)
 - [ ] [O0382](O0382-identical-code-folding.md) — Merge functions with identical bodies and rebind the duplicates' call sites to one copy (P3)
 - [ ] [O0383](O0383-global-dead-code-elimination.md) — Remove unreferenced globals of a module and the functions only their initializers kept alive (P3)
@@ -273,7 +273,7 @@ maps every one of its optimization documents to the page here that covers it.
 - [ ] [O0386](O0386-return-value-propagation.md) — Replace the result of a call to a function that returns the same constant on every path by that constant (P3)
 - [ ] [O0387](O0387-call-site-cloning.md) — Clone a function for the call sites whose argument ranges or aliasing decide checks the joined facts leave open (P3)
 - [ ] [O0388](O0388-read-only-global-propagation.md) — Fold reads of a global that is never written to its initializer (P3)
-- [ ] [O0389](O0389-global-variable-localization.md) — Turn a global that only one non-reentrant function touches into a local of that function (P3)
+- [x] [O0389](O0389-global-variable-localization.md) — Turn a global that only one non-reentrant function touches into a local of that function (P3)
 - [ ] [O0390](O0390-whole-program-devirtualization.md) — Resolve an indirect call whose complete target set has exactly one member to a direct call (P3)
 - [ ] [O0391](O0391-argument-structure-reduction.md) — Pass only the fields a callee reads instead of the whole record, at every call site (P3)
 - [ ] [O0392](O0392-return-structure-reduction.md) — Return only the record fields callers read and drop the computations of the rest (P3)
