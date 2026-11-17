@@ -777,6 +777,24 @@ codes:
     area: ir
     owner: IR-INT
     surfaces: "IrVerifier.Verify, for an IrIntegerOp without the overflow contract of Add, Sub, Mul and Neg, the zero-divisor contract of a division or remainder, the ovf contract of SDiv and SRem, or the shift-amount contract of a shift; and ProfileContracts.Check, as '<operation>[undefined]' is not permitted: source profile '<profile>' does not declare undefinedOverflow, for an [undefined] contract in a module of a profile that does not permit it"
+  - code: PLY0130
+    severity: error
+    exit: InternalError
+    title: arithmetic on bool
+    message: "'<operation>' does not accept bool operands; convert with BoolToInt"
+    rule: ir.bool.operands
+    area: ir
+    owner: IR-BOOL
+    surfaces: "IrVerifier.Verify, for an IrBinary whose operands are bool and whose operator is arithmetic, a shift or an ordered comparison, and for an IrIntegerOp of the type bool"
+  - code: PLY0131
+    severity: error
+    exit: InternalError
+    title: true encoding zero or out of range
+    message: "true encoding <value> is zero or does not fit <type>"
+    rule: ir.bool.encoding
+    area: ir
+    owner: IR-BOOL
+    surfaces: "IrBooleans.Problem, and the ArgumentException of IrBooleans.ToInt and IrBoolEncoding.Store, for a BoolToInt whose true value is 0 or not a value of the integer type"
   - code: PLY0800
     severity: error
     exit: UnsupportedConstruct

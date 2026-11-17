@@ -40,7 +40,9 @@ public static class IrIntegerContracts {
     if (node.Operands.Count != arity)
       Ill($"{node.Op} takes {arity} operands, not {node.Operands.Count}");
 
-    if (!IsInteger(node.Type))
+    if (node.Type == IrType.Bool)
+      problems.Add((IrBooleans.BoolOperand, $"'{node.Op}' does not accept bool operands; convert with BoolToInt"));
+    else if (!IsInteger(node.Type))
       Ill($"{node.Op} is applied to the type {node.Type}, which is no integer type");
 
     foreach (var operand in node.Operands)

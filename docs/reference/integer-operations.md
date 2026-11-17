@@ -321,6 +321,24 @@ The recipe `promote-to-float` is named only: Perl continues a result outside `i6
 `UV_MAX` and as `f64` beyond it, a value whose type depends on the operands, which the frontend that
 imports Perl builds from existing operations.
 
+## Booleans and their encodings
+
+`bool` (#112) is distinct from every integer: a condition must be a `bool` (`PLY0100` otherwise), and an
+arithmetic operator, a shift or an ordered comparison on `bool` is `PLY0130` ("'Add' does not accept
+bool operands; convert with BoolToInt"); the logical operators and equality take it. `IrBooleans` converts
+at the boundary, built from the conditional and the comparisons every backend writes:
+
+| Conversion | Built as | Rule |
+| --- | --- | --- |
+| `BoolToInt.<T>[true=k]` (`IrBooleans.ToInt`) | `b ? k : 0` | exactly `k` or 0; `k` non-zero and a value of `T`, else `PLY0131` |
+| `IntToBool[nonzero]` (`IrBooleans.FromInt`) | `x != 0` | true for every non-zero bit pattern (ISO C §6.3.1.2) |
+| `IntToBool[eq k]` | `x == k` | true only for exactly `k` |
+
+A narrow integer is compared as `i32`. `bool` has no memory layout: a stored boolean is an integer plus
+these conversions, an `IrBoolEncoding` (C's `int` 1, BASIC's `i16` -1, one byte 1), recorded per field by
+`IrBoolStorage`, whose default covers every field it does not name. So BASIC's `NOT` on a flag (the
+bitwise complement, `-6` for 5) and C's `!` (`LogicalNot` between the conversions, 0) stay two operations.
+
 ## The arbitrary-precision integer
 
 `bigint` (`IrType.BigInt`, #494) is an exact integer of any magnitude, the type a Python `int` is

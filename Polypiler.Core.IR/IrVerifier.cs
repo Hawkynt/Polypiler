@@ -343,8 +343,11 @@ public static partial class IrVerifier {
         case IrBinary binary:
           this.Expression(binary.Left);
           this.Expression(binary.Right);
-          this.Require(IrOperators.Accepts(binary.Op, binary.Left.Type, binary.Right.Type),
-            $"{binary.Op} is applied to {binary.Left.Type} and {binary.Right.Type}");
+          if (binary.Left.Type == IrType.Bool && IrBooleans.RejectsBool(binary.Op))
+            diagnostics.Add(IrBooleans.BoolOperand.At($"'{binary.Op}' does not accept bool operands; convert with BoolToInt in '{function.Name}'"));
+          else
+            this.Require(IrOperators.Accepts(binary.Op, binary.Left.Type, binary.Right.Type),
+              $"{binary.Op} is applied to {binary.Left.Type} and {binary.Right.Type}");
           break;
         case IrConvert conversion:
           this.Expression(conversion.Operand);
