@@ -1,0 +1,5 @@
+# Scenario 3, test design 13: x * 257 = (x << 8) + x, which an or equals only while the halves share no bit: all of 8 bit, first wrong at 16.
+rule: mul257-as-or
+inputs: x: u<w>
+before: %r = Mul.u<w> %x, 257
+after: %h = Shl.u<w>[mask] %x, 8; %r = Or.u<w> %h, %x

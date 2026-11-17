@@ -1,0 +1,5 @@
+# Scenario 1, test design 1: a constant rotation written as two masked shifts (Hacker's Delight 2-15).
+rule: rotate-constant
+inputs: x: u<w>
+before: %a = Shl.u<w>[mask] %x, 3; %s = Sub.u<w> <w>, 3; %b = LShr.u<w>[mask] %x, %s; %r = Or.u<w> %a, %b
+after: %r = RotateLeft.u<w> %x, 3

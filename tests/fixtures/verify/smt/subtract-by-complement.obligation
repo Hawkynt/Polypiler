@@ -1,0 +1,5 @@
+# Known-true identity: a - b = a + (~b + 1) (Hacker's Delight 2-1).
+rule: subtract-by-complement
+inputs: a: u<w>, b: u<w>
+before: %r = Sub.u<w> %a, %b
+after: %n = Not.u<w> %b; %m = Add.u<w> %n, 1; %r = Add.u<w> %a, %m

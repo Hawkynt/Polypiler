@@ -1,0 +1,5 @@
+# Test design 4: no unsigned value is below 0, so the comparison is always false.
+rule: unsigned-below-zero
+inputs: x: u32
+before: %r = ULt.u32 %x, 0
+after: %r = Ne.u32 %x, %x

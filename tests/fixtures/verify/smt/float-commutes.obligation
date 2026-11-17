@@ -1,0 +1,5 @@
+# Scenario 5, test design 15: floating point is outside QF_BV.
+rule: float-commutes
+inputs: a: f64, b: f64
+before: %r = Add.f64 %a, %b
+after: %r = Add.f64 %b, %a

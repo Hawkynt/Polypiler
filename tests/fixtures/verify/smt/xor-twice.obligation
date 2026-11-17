@@ -1,0 +1,5 @@
+# Known-true identity: (a ^ b) ^ b = a.
+rule: xor-twice
+inputs: a: u<w>, b: u<w>
+before: %c = Xor.u<w> %a, %b; %r = Xor.u<w> %c, %b
+after: %r = Or.u<w> %a, 0
