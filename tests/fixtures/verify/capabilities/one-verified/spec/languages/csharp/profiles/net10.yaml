@@ -1,0 +1,17 @@
+id: LANGUAGES.csharp.net10
+title: "csharp profile net10"
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#49"
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: profile
+  language: LANGUAGES.csharp
+  constructs:
+    - {construct: "integer arithmetic", family: scalars, state: supported}
+    - {construct: "decimal arithmetic", family: scalars, state: diagnosed, diagnostic: PLY1003}

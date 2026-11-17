@@ -1,0 +1,19 @@
+id: LANGUAGES.csharp.net8
+title: "csharp profile net8"
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#49"
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: profile
+  language: LANGUAGES.csharp
+  constructs:
+    - {construct: "goto statement", family: control, state: diagnosed, diagnostic: PLY1002}
+    - {construct: "integer arithmetic", family: scalars, state: supported}
+    - {construct: "lambda", family: functions, state: diagnosed, diagnostic: PLY1002}
+    - {construct: "string", family: scalars, state: diagnosed, diagnostic: PLY1002}

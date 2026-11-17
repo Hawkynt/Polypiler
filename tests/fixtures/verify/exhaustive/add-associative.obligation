@@ -1,0 +1,5 @@
+# Test design 7: 24 input bits, on the budget.
+rule: add-associative
+inputs: a: u8, b: u8, c: u8
+before: %s = Add.u8 %a, %b; %r = Add.u8 %s, %c
+after: %s = Add.u8 %b, %c; %r = Add.u8 %a, %s

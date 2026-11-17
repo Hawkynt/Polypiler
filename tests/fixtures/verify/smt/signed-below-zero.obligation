@@ -1,0 +1,5 @@
+# Test design 4: some signed value is below 0, so the comparison is not always false.
+rule: signed-below-zero
+inputs: x: i32
+before: %r = SLt.i32 %x, 0
+after: %r = Ne.i32 %x, %x

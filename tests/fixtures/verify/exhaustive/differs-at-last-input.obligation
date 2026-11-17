@@ -1,0 +1,5 @@
+# Test design 11: the sides differ only at the last input, x = 0xFF.
+rule: differs-at-last-input
+inputs: x: u<w>
+before: %r = Add.u<w> %x, 1
+after: %c = Eq.u<w> %x, 255; %s = Add.u<w> %x, 1; %r = Select.u<w> %c, 1, %s

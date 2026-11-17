@@ -1,0 +1,5 @@
+# Test design 7: the after side shifts strictly by an amount the before side reduces; invalid for n >= w.
+rule: after-invalid
+inputs: x: u<w>, n: u<w>
+before: %m = URem.u<w> %n, <w>; %r = Shl.u<w>[strict] %x, %m
+after: %r = Shl.u<w>[strict] %x, %n

@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "fixture": "cli.verify.adler32",
+  "provenance": {
+    "kind": "published",
+    "source": "RFC 1950",
+    "detail": "section 8.2 defines Adler-32; empty, a, abc and Wikipedia give 00000001, 00620062, 024D0127 and 11E60398 with python3 zlib.adler32, and the empty input is also the test case 00 00 00 01 of Hawkynt/Hawkynt.github.io@b3a8a8e92cbca83475986391c3cac56f0b185d29:Cipher/algorithms/checksum/adler.js; inputs and outputs are the value images of the signature, little-endian",
+    "generatedBy": "hand"
+  },
+  "exactness": { "mode": "exact" },
+  "export": "adler32",
+  "signature": { "parameters": [ { "name": "bytes", "type": "bytes", "mode": "in" } ], "result": "u32" },
+  "vectors": [
+    { "name": "empty", "input": { "hex": "00000000" }, "expected": { "hex": "01000000" } },
+    { "name": "a", "input": { "hex": "0100000061" }, "expected": { "hex": "62006200" } },
+    { "name": "abc", "input": { "hex": "03000000616263" }, "expected": { "hex": "27014d02" } },
+    { "name": "Wikipedia", "input": { "hex": "0900000057696b697065646961" }, "expected": { "hex": "9803e611" } }
+  ]
+}

@@ -46,6 +46,7 @@ public static class Program {
       output.WriteLine($"       {Name} {ToolchainsCommand.Verb} probe [--lock <path>] [--only <key>[,<key>...]] [--format text|json]");
       output.WriteLine($"       {Name} {DiagnosticsCommand.Verb} validate [--registry <path>]");
       output.WriteLine($"       {Name} {ErrorCatalogueCommand.Verb} {ErrorCatalogueCommand.Report} [--registry <file>] [--notes <dir>] [--out <dir>] [--check]");
+      output.WriteLine($"       {Name} {ErrorCatalogueCommand.Verb} {ReportCapabilitiesCommand.Report} [--gates <dir>] [--spec <dir>] [--out <dir>] [--commit <sha>] [--check]");
       output.WriteLine($"       {Name} {SpecCommand.Verb} validate [--root <dir>] [--family <folder>] [--diagnostics text|json]");
       output.WriteLine($"       {Name} {CorpusCommand.Verb} import [--source <dir>]... [--update-lock] [--fixture <id>]...");
       output.WriteLine($"       {Name} {CorpusCommand.Verb} verify");
@@ -86,6 +87,9 @@ public static class Program {
 
     if (args[0] == DiagnosticsCommand.Verb)
       return DiagnosticsCommand.Run(args[1..], output, error);
+
+    if (args[0] == ErrorCatalogueCommand.Verb && args.Length > 1 && args[1] == ReportCapabilitiesCommand.Report)
+      return ReportCapabilitiesCommand.Run(args[2..], output, error);
 
     if (args[0] == ErrorCatalogueCommand.Verb)
       return ErrorCatalogueCommand.Run(args[1..], output, error);

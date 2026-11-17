@@ -61,6 +61,10 @@ generated code — a row changes only in the pull request that makes it true.
 
 `✅` full for the declared subset · `⚠️` partial, explained in the row · `—` not yet (planned).
 
+The state of every source-profile and target-profile pair, as far as gate records prove it, is the
+generated [capability report](docs/capabilities.md) ([JSON](docs/capabilities.json)); a pair without
+evidence reads `planned` there.
+
 ### Languages
 
 | Language | Dialect / version | Frontend | Backend | Notes |
@@ -139,7 +143,7 @@ Nothing has been released yet. Once the first alpha lands, self-contained `polyp
 
 ## 🚀 Quick start
 
-One public command name is planned: `polypiler`. Today it has a single working command, the prototype below. Every other example in this section establishes the product interface and **will not run until the corresponding features have been implemented and verified.**
+One public command name is planned: `polypiler`. Today it has two working commands: the `translate` prototype below and [`verify`](#verify-a-generated-directory). Every other example in this section establishes the product interface and **will not run until the corresponding features have been implemented and verified.**
 
 ### Run the prototype: a small C# algorithm to a JavaScript module
 
@@ -198,6 +202,7 @@ This is a walking skeleton, not the product: one thin path from source to genera
 - **`--float strict|accurate`** (default `accurate`, [ADR 0005](docs/adr/0005-floating-point-tolerance.md)): `strict` writes the portable, correctly rounded implementation of every floating-point function with a tolerance, so every target and profile returns the same bits; `accurate` calls the target's own function where its measured error is admitted and names each one with its comparison bound in the header of the file.
 - **Manifest ([PRD §10.2](docs/prd/04-roadmap-and-delivery.md#s10-2)):** beside the files, `translate` writes `polypiler.manifest.json`, which [`spec/schemas/manifest.schema.json`](spec/schemas/manifest.schema.json) describes: the compiler and IR version, the command line with its paths relative to the output directory, the SHA-256 of the input and of every file written, the source language, the target profile and runtime, the exported functions with their IR signatures, the intrinsics, the floating-point mode with every native function and bound the header of the file names, every helper the backend emitted with its origin, licence, call sites, size and dependencies, the licence of the output — the input's `SPDX-License-Identifier` header together with the helpers' MIT ([LICENSE-OUTPUT.md](LICENSE-OUTPUT.md)), `NOASSERTION` without a header — the optimizations applied, the caveats of a JavaScript import and the warnings. Its state is `generated`: a manifest reaches `built`, `executed` or `verified` only with the build, run and oracle results recorded in it, and `ManifestValidator` refuses one that claims more (`PLY0054`) or breaks the schema (`PLY0053`). The text is canonical — the same output gives the same bytes, with no timestamp, host name or absolute path.
 - **Gate states ([PRD §23.6](docs/prd/06-recovery-acceptance-and-gates.md#s23-6)):** the acceptance tests that run the generated code record how far each fixture got in `artifacts/gates/<from>--<to>--<source-profile>--<target-profile>.json` ([`spec/schemas/gate-record.schema.json`](spec/schemas/gate-record.schema.json)), with the files that show it: C# to JavaScript per JavaScript profile (`node-es2022-esm` …), JavaScript to C# per C# profile. `parsed` needs a translation without an error, `lifted` and `legalized` the frontend's IR as the verifier and the target's check accept it, `emitted` the manifest of the translation, `compiled`, `executed` and `verified` a manifest that records the build, the run and the comparison with the compiled original or `node` on the original; recognition and proof are not recorded, since the rewrites are reported unproven. A pair is the lowest state of its fixtures. `GateStore` re-hashes every file and rejects a record that claims more than its evidence (`PLY0058`); a C# profile whose code an earlier profile runs reaches `compiled` only.
+- **Equivalence proofs ([docs/quality/VERIFICATION.md](docs/quality/VERIFICATION.md#equivalence-proofs)):** a rewrite is handed over as a `ProofObligation` - before and after IR in the notation of ADR 0002, inputs, preconditions. `ExhaustiveProver` evaluates every input of up to 24 bits with the IR interpreter (proof class `exhaustive-8bit` for a width-generic obligation); `SmtBitvectorProver` asks Z3 (NuGet `Microsoft.Z3` 4.11.2) at 16, 32 and 64 bits and re-evaluates every model with the interpreter (`smt-bitvector`). A counterexample is `PLY0056`, a too large domain `PLY0057`, a timeout or vacuous preconditions `PLY0055` (the rewrite stays off), floating point, memory and calls `PLY0062`. No rule engine asks them yet.
 - **Command line ([ADR 0004](docs/adr/0004-cli-design.md)):** `polypiler [--diagnostics text|json] [--quiet] <command> [arguments] [options]`; `polypiler help <command>` and `<command> --help` print a command's operands and options. Diagnostics go to standard error, as text or, with `--diagnostics json`, one JSON object per line; `--quiet` leaves infos and warnings off. A command line the grammar refuses is one diagnostic and nothing else: `PLY0002` for an unknown command, `PLY0003` for an unknown option, a missing value or operand, a repeated option or an empty list item, `PLY0011` for two options that exclude each other.
 - **Exit codes:** 0 success, 1 a file that cannot be read or written (`PLY0004` for the source, `PLY0005` for the output directory), 2 usage error (`PLY0002`, `PLY0003`, `PLY0011`), 3 unsupported construct (`PLY1002` in the source, `PLY1052` for IR the C# backend cannot write, `PLY1053` for IR that has no form in the chosen C# profile, `PLY1152` for IR that has no form in the chosen JavaScript profile — nothing today), 4 invalid C# (`PLY1000`, or `PLY1003` for a constant expression that overflows, each with the compiler's own message), 70 internal error (`PLY0101` when the float implementations the executable carries precomputed are missing or damaged, `PLY0001` for any exception nothing anticipated, which a stack trace follows on standard error only with `POLYPILER_DEBUG=1`), 130 a run cancelled by the user. The exit code is the one of the first error reported, 70 once `PLY0001` was; in text format a command that ran and reported something ends standard error with `polypiler: <e> error(s), <w> warning(s)`. `polypiler help exit-codes` prints the whole table of [PRD §10.1](docs/cli/exit-codes.md), with the codes no command raises yet.
 
@@ -239,6 +244,17 @@ JavaScript has no static types. This importer models what JavaScript itself does
 - **Exit codes:** as above, with 3 for `PLY1101` to `PLY1106` (`PLY1104`: `--export` names a function the file does not have) and 4 for a syntax error (`PLY1100`, with the parser's own message).
 
 Of the 155 functions that stand directly in the `OpCodes` object, 103 import today — all 37 that imported while every type had to be stated in JSDoc among them; `tests/fixtures/prototype/js/OpCodes.import.txt` lists every one with the reason it is refused. The pairs JavaScript → JavaScript and JavaScript → C# are `executed` on the fixtures in `tests/fixtures/prototype/js` — `node` running the original is the oracle, a double compared by its bits — not `verified`.
+
+### Verify a generated directory
+
+```bash
+# Works today: checks the JavaScript of a generated directory with node, calls its adler32 on every vector and
+# compares; prints "tests/fixtures/cli/verify/adler32-js: verified (4 of 4 vectors)" and exits with 0
+dotnet run --project Polypiler.Cli -c Release -- verify tests/fixtures/cli/verify/adler32-js \
+  --against tests/fixtures/cli/verify/adler32.vectors.json --no-update --evidence ./artifacts/evidence
+```
+
+`verify` re-establishes from a directory and its `polypiler.manifest.json` alone whether the output still builds, runs and matches independent vectors ([docs/cli/verify.md](docs/cli/verify.md)): it recomputes the hash of every listed output (an edited file is `PLY0054` and nothing runs), reads a vector file of the oracle framework (`--against`, or the one the manifest recorded), checks every JavaScript source with `node --check`, calls the function the vector file exports once per vector in the sandbox and compares the outputs under the file's exactness policy. Each vector is a `pass` or `FAIL expected <e> actual <a>` line. The manifest's build, execution and verification are then rewritten to what this run found — a `verified` manifest that now fails goes back to `executed` — unless `--no-update` is given; `--evidence <directory>` writes an evidence bundle. `PLY0016` for a directory without a manifest, `PLY0017` for a vector file that is not one, `PLY0063` when no independent oracle is left. Only JavaScript output is run so far.
 
 ### Translate an existing algorithm
 

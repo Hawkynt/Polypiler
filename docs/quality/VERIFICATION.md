@@ -100,6 +100,28 @@ Return values are insufficient when behavior can also be observed through memory
 
 A proof timeout, an unsatisfied target capability or a missing reference toolchain means **no verified claim**.
 
+## Equivalence proofs
+
+A rule hands its rewrite over as a `ProofObligation` (`Polypiler.Core.Verification.Proofs`): the before
+and after fragments in the IR notation of `backlog/README.md` and ADR 0002 (`%r = Op.type[contract]
+operand, operand`, `<w>` for the width), their inputs and preconditions. Two provers answer it through
+one contract, `IEquivalenceProver.Prove(obligation, budget)`; only `Proved` lets the rewrite fire.
+
+| Prover | Proof class | How | Gives up |
+| --- | --- | --- | --- |
+| `ExhaustiveProver` (#70) | `exhaustive-<n>bit` (`<w>` = 8) | every input combination, both sides evaluated by `IrInterpreter`, compared by bit pattern; the first counterexample in enumeration order (first input slowest) | more than `MaxInputBits` (24) input bits: `PLY0057` |
+| `SmtBitvectorProver` (#71) | `smt-bitvector` (`<w>` = 16, 32, 64) | Z3 (NuGet `Microsoft.Z3`, pinned as `microsoft-z3` in `tooling/toolchains.lock`) decides `preconditions ∧ valid(before) ∧ (¬valid(after) ∨ before ≠ after)` in `QF_BV`; a model is re-evaluated by `IrInterpreter` before it counts | timeout or `unknown`: `PLY0055`, never a proof |
+
+Equivalence is refinement: an input where a precondition is false or the before side is invalid (a
+`[strict]` shift by the width or more, a zero divisor, a signed division with `ovf=trap` of the
+smallest value by -1) is excluded; everywhere else the after side must be valid and give the same
+bits. A counterexample is `PLY0056`; floating point, loads, stores, calls and unknown operations are
+`PLY0062`. `ProofDiagnostics.ReportLine` writes the opt-report line (`<rule> <proof-class> proved <n>
+cases` or `<rule> <proof-class> <verdict>: <detail>`); with `POLYPILER_PROOF_DUMP` set, every SMT query
+is written as `<rule>-w<width>.smt2`. The proof classes are spec documents,
+[`spec/verification/proofs/`](../../spec/verification/proofs/); the obligations of the tests are
+`tests/fixtures/verify/exhaustive/` and `tests/fixtures/verify/smt/`.
+
 ## CI and PR requirements
 
 - Documentation-only changes: link/structure review and consistency with the PRD; no fictitious build or test claims.

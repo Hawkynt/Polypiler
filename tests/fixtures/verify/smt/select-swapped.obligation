@@ -1,0 +1,5 @@
+# Test design 5: a choice with its condition negated and its branches swapped.
+rule: select-swapped
+inputs: c: bool, a: u<w>, b: u<w>
+before: %r = Select.u<w> %c, %a, %b
+after: %n = Not.bool %c; %r = Select.u<w> %n, %b, %a

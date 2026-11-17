@@ -1,0 +1,5 @@
+# Known-false identity: ~(a & b) is not ~a & ~b; wrong first at a = 0x00, b = 0x01.
+rule: de-morgan-wrong
+inputs: a: u<w>, b: u<w>
+before: %c = And.u<w> %a, %b; %r = Not.u<w> %c
+after: %na = Not.u<w> %a; %nb = Not.u<w> %b; %r = And.u<w> %na, %nb

@@ -1,0 +1,5 @@
+# Test design 6: masked shifts need no precondition on n.
+rule: rotate-masked
+inputs: x: u<w>, n: u<w>
+before: %a = Shl.u<w>[mask] %x, %n; %s = Sub.u<w> 8, %n; %b = LShr.u<w>[mask] %x, %s; %r = Or.u<w> %a, %b
+after: %r = RotateLeft.u<w> %x, %n
