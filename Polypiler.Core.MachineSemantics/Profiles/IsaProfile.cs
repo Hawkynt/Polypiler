@@ -26,6 +26,14 @@ public sealed record IsaProfile(string Id, int AddressBits, ByteOrder ByteOrder,
   /// <inheritdoc/>
   string IMachineStateModel.Isa => this.Id;
 
+  /// <inheritdoc/>
+  public bool Equals(IsaProfile? other)
+    => other is not null && this.Id == other.Id && this.AddressBits == other.AddressBits && this.ByteOrder == other.ByteOrder
+      && this.Registers.SequenceEqual(other.Registers) && this.Flags.SequenceEqual(other.Flags) && this.InterruptVectors == other.InterruptVectors;
+
+  /// <inheritdoc/>
+  public override int GetHashCode() => HashCode.Combine(this.Id, this.AddressBits, this.ByteOrder, this.Registers.Length, this.Flags.Length);
+
   /// <summary>Reads and checks a profile file.</summary>
   /// <param name="path">The file.</param>
   /// <returns>The profile.</returns>

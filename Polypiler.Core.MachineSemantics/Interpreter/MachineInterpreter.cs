@@ -77,7 +77,7 @@ public static class MachineInterpreter {
     ArgumentNullException.ThrowIfNull(initial);
     var profile = module.Profile ?? throw new ArgumentException("the module declares no machine profile", nameof(module));
     var routine = module.Function(function) ?? throw new ArgumentException($"the module has no function '@{function}'", nameof(function));
-    if (!ReferenceEquals(initial.Profile, profile) && initial.Profile != profile)
+    if (initial.Profile != profile)
       throw new ArgumentException($"the state is for '{initial.Profile.Id}', the module for '{profile.Id}'", nameof(initial));
     return new Execution(routine, initial, options ?? new()).Execute();
   }

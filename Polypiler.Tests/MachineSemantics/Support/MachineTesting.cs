@@ -4,7 +4,7 @@ using Polypiler.Core;
 using Polypiler.Core.MachineSemantics;
 using Polypiler.Prototype.Testing;
 
-namespace Polypiler.Tests.MachineSemantics;
+namespace Polypiler.Tests.MachineSemantics.Support;
 
 /// <summary>
 /// What the MachineIR tests share: the profiles of <c>spec/machine</c> and of the fixture folder

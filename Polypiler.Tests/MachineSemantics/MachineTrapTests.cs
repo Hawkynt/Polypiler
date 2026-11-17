@@ -4,6 +4,7 @@ using NUnit.Framework;
 using Polypiler.Core;
 using Polypiler.Core.IR;
 using Polypiler.Core.MachineSemantics;
+using Polypiler.Tests.MachineSemantics.Support;
 using Polypiler.Core.MachineSemantics.Traps;
 
 namespace Polypiler.Tests.MachineSemantics;

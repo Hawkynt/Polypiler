@@ -5,6 +5,7 @@ using System.Linq;
 using NUnit.Framework;
 using Polypiler.Core;
 using Polypiler.Core.MachineSemantics;
+using Polypiler.Tests.MachineSemantics.Support;
 using Polypiler.Core.MachineSemantics.Ports;
 
 namespace Polypiler.Tests.MachineSemantics;
