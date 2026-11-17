@@ -22,8 +22,8 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY0013](PLY0013.md) (reserved) | error | 4 (InvalidSource) | `export '<name>' not found in '<file>'` | CLI-TRANSLATE |
 | [PLY0014](PLY0014.md) (reserved) | error | 3 (UnsupportedConstruct) | `no <frontend\|backend> for '<language>'` | CLI-TRANSLATE |
 | [PLY0015](PLY0015.md) (reserved) | error | 2 (UsageError) | `unknown facet '<facet>'` | CLI-INSPECT |
-| [PLY0016](PLY0016.md) (reserved) | error | 1 (EnvironmentError) | `no manifest in '<path>'` | CLI-VERIFY |
-| [PLY0017](PLY0017.md) (reserved) | error | 2 (UsageError) | `'<path>' holds no test vectors: <reason>` | CLI-VERIFY |
+| [PLY0016](PLY0016.md) | error | 1 (EnvironmentError) | `no manifest in '<path>'` | CLI-VERIFY |
+| [PLY0017](PLY0017.md) | error | 2 (UsageError) | `'<path>' holds no test vectors: <reason>` | CLI-VERIFY |
 | [PLY0018](PLY0018.md) (reserved) | error | 1 (EnvironmentError) | `catalogue index '<path>' not found` | CLI-SEARCH |
 | [PLY0019](PLY0019.md) (reserved) | error | 2 (UsageError) | `unknown algorithm '<id>'` | CLI-GENERATE |
 | [PLY0020](PLY0020.md) | error | 1 (EnvironmentError) | `<reason>` | INFRA-TOOLCHAINS |
