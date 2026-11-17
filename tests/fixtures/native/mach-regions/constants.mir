@@ -1,0 +1,22 @@
+# Constant addresses against the IBM PC memory map (IBM Personal Computer Technical Reference,
+# system memory map: RAM 00000h-9FFFFh, video buffer A0000h-BFFFFh, ROM F0000h-FFFFFh).
+# The expected class of every access is written here by hand from that map.
+# map pc-vga.map.json
+machine test-m32
+
+@constants {
+entry:
+  Store.u8 0x9FFFF, 77            # expect ProvenShared Memory:ram
+  Store.u8 0xA0000, 77            # expect MemoryMappedIO Device:mmio.vga
+  Store.u8 0xA0064, 77            # expect MemoryMappedIO Device:mmio.vga
+  Store.u8 0xBFFFF, 77            # expect MemoryMappedIO Device:mmio.vga
+  Store.u8 0xC0000, 77            # expect UnknownMemory Memory.Unknown PLY4010
+  %v = Const.u32 0x12345678
+  Store.u32 0x9FFFE, %v           # expect MemoryMappedIO Memory:ram,Device:mmio.vga
+  Store.u8 0xF0010, 77            # expect ExecutableMemory Memory.ExecutableWrite:rom
+  %r = Load.u8 0xF0010            # expect ProvenShared Memory:rom
+  %a = Const.u32 0xA0002
+  %w = Load.u16 %a                # expect MemoryMappedIO Device:mmio.vga
+  %b = Load.u32 0xBFFFE           # expect MemoryMappedIO Device:mmio.vga,Memory.Unknown PLY4010
+  Ret
+}

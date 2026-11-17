@@ -48,6 +48,9 @@ public interface IAddressMap {
   /// <returns>The range.</returns>
   AddressRange? RangeAt(ulong address);
 
+  /// <summary>Every range of the map, non-overlapping; the classifier walks them to find each range an access touches.</summary>
+  ImmutableArray<AddressRange> Ranges { get; }
+
 }
 
 /// <summary>
