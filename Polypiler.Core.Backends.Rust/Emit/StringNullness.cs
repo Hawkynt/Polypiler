@@ -56,10 +56,13 @@ internal sealed class StringNullness {
     var facts = new StringNullness();
     var byName = module.Functions.ToDictionary(function => function.Name, StringComparer.Ordinal);
     // A call through a slot passes its arguments to every method of the slot.
-    var slots = module.Types.OfType<IrClassType>().SelectMany(type => type.Methods)
-      .Concat(module.Types.OfType<IrInterfaceType>().SelectMany(type => type.Methods))
-      .GroupBy(method => method.Root, ReferenceEqualityComparer.Instance)
-      .ToDictionary(group => (IrMethod)group.Key!, group => group.Select(method => method.Function).ToList(), ReferenceEqualityComparer.Instance);
+    var slots = new Dictionary<IrMethod, List<string>>(ReferenceEqualityComparer.Instance);
+    foreach (var method in module.Types.OfType<IrClassType>().SelectMany(type => type.Methods).Concat(module.Types.OfType<IrInterfaceType>().SelectMany(type => type.Methods))) {
+      if (!slots.TryGetValue(method.Root, out var functions))
+        slots[method.Root] = functions = [];
+      functions.Add(method.Function);
+    }
+
     var groups = SlotGroups.Of(module);
     for (var changed = true; changed;) {
       changed = false;
