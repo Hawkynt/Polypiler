@@ -118,14 +118,16 @@ one effect class and whether an operation with it may be reordered (`ordering`),
 (`duplication`) or eliminated (`elimination`), the region kinds it `reads` and `writes`, `mayTrap`,
 `defaultForUnknown`, and `targets.unsupported`, the diagnostic a target that cannot honour it raises
 instead of dropping the operation. [`effects/unknown-call.yaml`](effects/unknown-call.yaml) is the
-default: the effect of every operation nothing else describes. Rules (`PLY0046`):
+default: the effect of every operation nothing else describes. The classes of PRD §17.2 that the
+effect summary names as place kinds (#114) have one document each: `volatile`, `mmio`, `device-io`,
+`external-call`, `exception`, `machine-registers` and `machine-flags`. Rules (`PLY0046`):
 
 | Rule | What it requires |
 | --- | --- |
 | `layout` | the file lies directly in `effects/`; its ID is `EFFECTS.<file name>` and `name` is the file name |
 | `single-default` | exactly one document has `defaultForUnknown: true`; when several do, the one of class `unknown-call` is the default and the others are reported |
 | `default-is-conservative` | the default is `strict`, duplication and elimination `forbidden`, and reads and writes `unknown` |
-| `volatile-is-strict` | classes `volatile`, `mmio`, `device-io`, `code-write` and `unknown-call` are `strict`, duplication and elimination `forbidden` |
+| `volatile-is-strict` | classes `volatile`, `mmio`, `device-io`, `code-write`, `unknown-call` and `external-call` are `strict`, duplication and elimination `forbidden` |
 | `write-implies-order` | an effect that writes anything is not `free` |
 | `unique-name` | no two documents share a `name` |
 

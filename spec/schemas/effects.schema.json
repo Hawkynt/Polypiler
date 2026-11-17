@@ -13,8 +13,8 @@
       "description": "The effect's name; equals the file name without '.yaml' (layout)."
     },
     "class": {
-      "enum": ["unknown-call", "volatile", "mmio", "device-io", "external-memory", "code-write", "mixed-asm", "trap", "allocation", "private-memory"],
-      "description": "The effect class. unknown-call, volatile, mmio, device-io and code-write are always strict, never duplicated and never eliminated (volatile-is-strict)."
+      "enum": ["unknown-call", "volatile", "mmio", "device-io", "external-memory", "code-write", "mixed-asm", "trap", "allocation", "private-memory", "external-call", "exception", "machine-registers", "machine-flags"],
+      "description": "The effect class. unknown-call, volatile, mmio, device-io, code-write and external-call are always strict, never duplicated and never eliminated (volatile-is-strict)."
     },
     "ordering": {
       "enum": ["strict", "within-region", "free"],

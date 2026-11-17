@@ -79,6 +79,25 @@ Canonical intrinsic names permit recognition and late target-specific decomposit
 | ResourceScope | Deterministic cleanup across all relevant exits |
 | Suspend/Resume | Coroutine or async continuation state |
 
+### Effect classes and reordering
+
+The effect classes of [PRD §17.2](../prd/05-semantics-and-recovery.md#s17-2) are place kinds of the
+summary (`IrPlaceKind`, one document each under [`spec/effects/`](../../spec/effects)): beside a
+function's variables, globals, fields and array elements there are `Memory` regions (`*` is unknown
+memory, a pointer nothing resolves), `Volatile` storage, `Mmio` registers, `Device` ports, the
+`External` world, the `Exception` being handled, and `MachineRegister` and `MachineFlags`. Places
+overlap when kind and name match or a name is `*`; all external places overlap, so do all exception
+places; unknown memory overlaps every storage place, volatile and memory-mapped ones included, but no
+device port, register or flag.
+
+A pass that reorders proves non-interference with `IrEffectQueries.Interferes(first, second)`, or
+`MayReorder(table, first, second)` for two expressions of a function. Two summaries interfere when one
+may trap or run forever and the other writes, traps or makes a strict access; when one writes a place
+the other reads or writes; or when both access overlapping **strict** places - volatile, memory-mapped,
+device, external or unknown memory - reads included. `IsStrict(effects)` marks code that is never
+merged, repeated or dropped. A brute-force reference machine in the tests checks that the query
+forbids exactly the swaps that change a run.
+
 An example IR fragment is illustrative, **not** a proposed parser grammar:
 
     %a = Load8(program_ram, base + 0)

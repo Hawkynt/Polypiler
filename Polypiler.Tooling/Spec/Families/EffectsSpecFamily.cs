@@ -22,7 +22,7 @@ public sealed class EffectsSpecFamily : ISpecFamily {
 
   /// <summary>The classes whose operations keep program order and count: ordering <c>strict</c>, duplication and elimination <c>forbidden</c>.</summary>
   public static IReadOnlySet<string> VolatileClasses { get; } = new HashSet<string>(StringComparer.Ordinal) {
-    "volatile", "mmio", "device-io", "code-write", "unknown-call"
+    "volatile", "mmio", "device-io", "code-write", "unknown-call", "external-call"
   };
 
   /// <inheritdoc />

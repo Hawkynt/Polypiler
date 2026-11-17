@@ -1,0 +1,24 @@
+id: EFFECTS.machine-flags
+title: Machine status flags
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#114"
+tests: [Polypiler.Tests/Helpers/EffectInterferenceTests.cs]
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  A status flag (place kind MachineFlags) is ordinary storage named by the flag: a write is ordered
+  against every read and write of the same flag; reads commute; a flag nothing demands may go.
+spec:
+  name: machine-flags
+  class: machine-flags
+  ordering: within-region
+  duplication: allowed
+  elimination: if-unobserved
+  reads: [flags]
+  writes: [flags]
+  mayTrap: false
+  defaultForUnknown: false
+  targets: {unsupported: PLY0100}

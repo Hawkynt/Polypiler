@@ -1,0 +1,25 @@
+id: EFFECTS.external-call
+title: Call of code outside the program
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#114"
+tests: [Polypiler.Tests/Helpers/EffectInterferenceTests.cs]
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  A call of an external function (place kind External) touches the one world outside the program:
+  every two external accesses keep their order, whatever symbols they name. A call is mapped only to
+  an exact known equivalent contract; otherwise its dependency is retained.
+spec:
+  name: external-call
+  class: external-call
+  ordering: strict
+  duplication: forbidden
+  elimination: forbidden
+  reads: [unknown]
+  writes: [unknown]
+  mayTrap: true
+  defaultForUnknown: false
+  targets: {unsupported: PLY0100}

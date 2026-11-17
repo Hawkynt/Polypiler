@@ -1,0 +1,26 @@
+id: EFFECTS.volatile
+title: Volatile storage
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#114"
+tests: [Polypiler.Tests/Helpers/EffectInterferenceTests.cs]
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  A read or a write of volatile storage (place kind Volatile) MUST happen exactly as often as the
+  program says and in its order: two accesses of one volatile place never change places, two reads
+  included, and none is merged, repeated or dropped. Accesses of volatile places told apart by name
+  MAY change places.
+spec:
+  name: volatile
+  class: volatile
+  ordering: strict
+  duplication: forbidden
+  elimination: forbidden
+  reads: [heap]
+  writes: [heap]
+  mayTrap: false
+  defaultForUnknown: false
+  targets: {unsupported: PLY0100}

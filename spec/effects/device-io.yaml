@@ -1,0 +1,25 @@
+id: EFFECTS.device-io
+title: Device input and output
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#114"
+tests: [Polypiler.Tests/Helpers/EffectInterferenceTests.cs]
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  A port or device access (place kind Device), such as a DOS OUT, MUST keep its count and its order
+  against every access of an overlapping device place. A device is no memory: an access through an
+  unknown pointer does not reach it.
+spec:
+  name: device-io
+  class: device-io
+  ordering: strict
+  duplication: forbidden
+  elimination: forbidden
+  reads: [io]
+  writes: [io]
+  mayTrap: false
+  defaultForUnknown: false
+  targets: {unsupported: PLY0100}

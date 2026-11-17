@@ -1,0 +1,25 @@
+id: EFFECTS.machine-registers
+title: Machine registers
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#114"
+tests: [Polypiler.Tests/Helpers/EffectInterferenceTests.cs]
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  A machine register (place kind MachineRegister) of a lifted body is ordinary storage named by the
+  register: a write is ordered against every read and write of the same register; reads commute; a
+  write nothing reads may go.
+spec:
+  name: machine-registers
+  class: machine-registers
+  ordering: within-region
+  duplication: allowed
+  elimination: if-unobserved
+  reads: [registers]
+  writes: [registers]
+  mayTrap: false
+  defaultForUnknown: false
+  targets: {unsupported: PLY0100}

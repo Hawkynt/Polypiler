@@ -132,6 +132,10 @@ public sealed class EffectsSpecFamilyTests {
   [TestCase("trap")]
   [TestCase("allocation")]
   [TestCase("private-memory")]
+  [TestCase("external-call")]
+  [TestCase("exception")]
+  [TestCase("machine-registers")]
+  [TestCase("machine-flags")]
   public void EveryClass_IsValid(string effectClass) => Assert.That(WithDefault("effect", ("class", effectClass)), Is.Empty);
 
   [TestCase("ordering", "strict")]

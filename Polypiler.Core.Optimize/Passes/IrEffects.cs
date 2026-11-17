@@ -20,7 +20,35 @@ public enum IrPlaceKind {
   Field,
 
   /// <summary>The elements of every array of one element type: the analysis does not tell arrays apart.</summary>
-  Elements
+  Elements,
+
+  /// <summary>
+  /// A region of raw memory, named by its address space, such as <c>heap</c> or <c>stack0</c> (#114); the
+  /// name <c>*</c> is unknown memory - a store through a pointer nothing resolves - which may be any
+  /// storage of the program, volatile and memory-mapped storage included, but no device port.
+  /// </summary>
+  Memory,
+
+  /// <summary>Volatile storage: every read and every write is observable, in order, and none may be merged, repeated or dropped.</summary>
+  Volatile,
+
+  /// <summary>A memory-mapped device register, such as the VIC-II's <c>d020</c>: volatile, and reached by memory addresses.</summary>
+  Mmio,
+
+  /// <summary>A device reached by port I/O or a device call, such as <c>vic2</c> or a DOS <c>OUT</c> port: no memory at all.</summary>
+  Device,
+
+  /// <summary>The state outside the program an external call reads and writes: every external call touches all of it, whatever its name.</summary>
+  External,
+
+  /// <summary>The state of exception handling - the exception being handled - which a catch writes and a rethrow reads.</summary>
+  Exception,
+
+  /// <summary>A machine register, such as <c>A</c> or <c>sp</c>, of the machine a lifted body runs on.</summary>
+  MachineRegister,
+
+  /// <summary>A flag of the machine's status, such as <c>carry</c>.</summary>
+  MachineFlags
 
 }
 

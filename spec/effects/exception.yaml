@@ -1,0 +1,26 @@
+id: EFFECTS.exception
+title: Traps and exception state
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#114"
+tests: [Polypiler.Tests/Helpers/EffectInterferenceTests.cs]
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  A trap MUST happen at its place: every effect before it is visible, none after it. Two pieces of
+  code that may trap keep their order, and code that may trap or run forever is not swapped with code
+  that writes, traps or makes a strict access. The exception being handled (place kind Exception) is
+  one state that a catch writes and a rethrow reads. An observable failure is never silently erased.
+spec:
+  name: exception
+  class: exception
+  ordering: strict
+  duplication: forbidden
+  elimination: forbidden
+  reads: []
+  writes: []
+  mayTrap: true
+  defaultForUnknown: false
+  targets: {unsupported: PLY0100}

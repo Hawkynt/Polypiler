@@ -1,0 +1,26 @@
+id: EFFECTS.mmio
+title: Memory-mapped device register
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#114"
+tests: [Polypiler.Tests/Helpers/EffectInterferenceTests.cs]
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  A read or a write of a memory-mapped register (place kind Mmio), such as a C64 POKE to the VIC-II,
+  MUST keep its count and its order like a volatile access. It is reached by a memory address, so a
+  load or a store through an unknown pointer MUST be ordered against it; an array of the program is
+  another place.
+spec:
+  name: mmio
+  class: mmio
+  ordering: strict
+  duplication: forbidden
+  elimination: forbidden
+  reads: [io]
+  writes: [io]
+  mayTrap: false
+  defaultForUnknown: false
+  targets: {unsupported: PLY0100}
