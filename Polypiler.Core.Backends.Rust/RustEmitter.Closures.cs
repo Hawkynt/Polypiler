@@ -305,7 +305,7 @@ public static partial class RustEmitter {
         if (member.Kind != MemberKind.Static || this._hierarchy.Contains(member.Class))
           return this.Refuse("a method of a class as a function value without its object");
 
-        name = $"{this.StructName(member.Class)}::{member.Name}";
+        name = $"{this.ClassPath(member.Class)}::{member.Name}";
       }
 
       var function = this._module.Functions.First(candidate => candidate.Name == reference.Function);

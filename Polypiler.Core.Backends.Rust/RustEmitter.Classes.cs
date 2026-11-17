@@ -427,7 +427,7 @@ public static partial class RustEmitter {
     private RsExpression MemberCall(IrCall call, Member member) {
       var arguments = this.Arguments(call);
       if (member.Kind != MemberKind.Instance)
-        return new RsCall(new RsPath($"{this.StructName(member.Class)}::{member.Name}"), arguments) { Type = call.Type };
+        return new RsCall(new RsPath($"{this.ClassPath(member.Class)}::{member.Name}"), arguments) { Type = call.Type };
 
       var receiver = this._sharedSelf.Contains(call.Function) ? this.Receiver(SelfBorrowed(this.ObjectBorrow(call.Arguments[0]))) : this.ObjectReceiver(call.Arguments[0]);
       return new RsMethodCall(receiver, member.Name, [.. arguments.Skip(1)]) { Type = call.Type };

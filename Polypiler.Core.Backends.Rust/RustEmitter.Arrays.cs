@@ -261,7 +261,8 @@ public static partial class RustEmitter {
     }
 
     /// <summary>The zero of an element type: <c>0</c>, <c>0.0</c>, <c>false</c>.</summary>
-    private RsExpression Zero(IrType element) => element.IsFunction ? new RsPath("None")
+    private RsExpression Zero(IrType element) => this._standIns.TryGetValue(element, out var parameter) ? new RsCall(new RsPath(parameter + "::default"), []) { Type = element }
+      : element.IsFunction ? new RsPath("None")
       : element.IsStruct || element.IsEnum
       ? new RsCall(new RsPath(this.Type(element) + "::default"), []) { Type = element }
       : TypeName(element) is null ? this.Refuse($"an array of {element}") : Literal(new IrConst(element, 0)) with { Type = null };

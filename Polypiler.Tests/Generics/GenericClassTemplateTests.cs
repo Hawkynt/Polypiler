@@ -76,6 +76,29 @@ public sealed class GenericClassTemplateTests {
     Assert.That(Problems(module), Is.Empty);
   }
 
+  [Test]
+  public void TwoParameters_AndAStaticMember() {
+    var module = Snippet("""
+      public sealed class Pair<A, B> {
+        private A _a;
+        private B _b;
+        public Pair(A a, B b) { this.Set(a, b); }
+        public void Set(A a, B b) { this._a = a; this._b = b; }
+        public A First() => this._a;
+        public static int Size() => 2;
+        public int Twice() => Size() * 2;
+      }
+      public static class Use {
+        public static int F(int a, double b) { var p = new Pair<int, double>(a, b); return p.First() + Pair<int, double>.Size() + p.Twice(); }
+      }
+      """);
+    var instance = Instance(module, "Pair<i32,f64>");
+    var template = instance.Origin!.ClassTemplate!;
+    Assert.That((template.IsDefined, template.Class!.Name), Is.EqualTo((true, "Pair<A,B>")));
+    var functions = module.Functions.ToDictionary(function => function.Name);
+    Assert.That(IrGenerics.Instantiate(template, [IrType.I32, IrType.F64], instance, module).Where(function => !IrGenerics.Equivalent(function, functions[function.Name])).Select(function => function.Name), Is.Empty);
+  }
+
   [TestCase("public T[] Show() => new[] { this._v, this._v };", "[1]", TestName = "A template member makes an array of the parameter")]
   [TestCase("public T Show() => Use.Id(this._v);", "", TestName = "A template member calls a generic method with the parameter")]
   public void ATemplateMember_StatesTheConstructInTermsOfTheParameter(string member, string element) {
