@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "fixture": "mach-trace.memory-write",
+  "isa": "test-m32",
+  "provenance": {
+    "kind": "published",
+    "producer": "hand",
+    "source": "issue 144, test design rows 4 and 5: a two-byte store compared write by write"
+  },
+  "observe": {
+    "registers": [],
+    "flags": [],
+    "memory": [
+      {
+        "address": "0x1000",
+        "length": 2
+      }
+    ],
+    "events": [
+      "memory-write"
+    ],
+    "cycles": false,
+    "mode": "raw"
+  },
+  "vectors": [
+    {
+      "name": "store-two-bytes",
+      "initial": {
+        "registers": {
+          "r0": "0x201"
+        },
+        "flags": {},
+        "memory": [
+          {
+            "address": "0x1000",
+            "hex": "0000"
+          }
+        ]
+      },
+      "expected": {
+        "registers": {},
+        "flags": {},
+        "memory": [
+          {
+            "address": "0x1000",
+            "hex": "0102"
+          }
+        ],
+        "events": [
+          {
+            "kind": "memory-write",
+            "address": "0x1000",
+            "hex": "01"
+          },
+          {
+            "kind": "memory-write",
+            "address": "0x1001",
+            "hex": "02"
+          }
+        ],
+        "outcome": "returned"
+      }
+    }
+  ]
+}

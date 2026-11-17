@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "fixture": "mach-trace.combined",
+  "isa": "test-m32",
+  "provenance": {
+    "kind": "reference-run",
+    "producer": "hand",
+    "source": "issue 144: every event kind in one interleaved sequence, with cycles observed"
+  },
+  "observe": {
+    "registers": [
+      "r0",
+      "sp"
+    ],
+    "flags": [
+      "c"
+    ],
+    "memory": [
+      {
+        "address": "0x1000",
+        "length": 4
+      },
+      {
+        "address": "0x2000",
+        "length": 0
+      }
+    ],
+    "events": [
+      "device",
+      "external",
+      "trap",
+      "memory-write",
+      "return"
+    ],
+    "cycles": true,
+    "mode": "raw"
+  },
+  "limits": {
+    "maxSteps": 1000
+  },
+  "vectors": [
+    {
+      "name": "everything",
+      "initial": {
+        "registers": {
+          "pc": "0x400",
+          "r0": "0x5",
+          "sp": "0x8000"
+        },
+        "flags": {
+          "c": false
+        },
+        "memory": [
+          {
+            "address": "0x1000",
+            "hex": "DEADBEEF"
+          }
+        ]
+      },
+      "expected": {
+        "registers": {
+          "r0": "0x5",
+          "sp": "0x8000"
+        },
+        "flags": {
+          "c": true
+        },
+        "memory": [
+          {
+            "address": "0x1000",
+            "hex": "05000000"
+          }
+        ],
+        "events": [
+          {
+            "kind": "device",
+            "space": "mmio",
+            "address": "0xFFFF0000",
+            "width": 32,
+            "write": false,
+            "value": "0x5"
+          },
+          {
+            "kind": "memory-write",
+            "address": "0x1000",
+            "hex": "05000000"
+          },
+          {
+            "kind": "external",
+            "symbol": "notify",
+            "abi": "test-reg",
+            "arguments": [
+              "0x1000",
+              "0x4"
+            ]
+          },
+          {
+            "kind": "trap",
+            "trap": "breakpoint",
+            "vector": 3
+          },
+          {
+            "kind": "return",
+            "value": "0x5"
+          }
+        ],
+        "outcome": "returned",
+        "cycles": 42
+      }
+    }
+  ]
+}
