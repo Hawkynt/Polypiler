@@ -64,6 +64,15 @@ public sealed record IrGenericOrigin(string Name, IReadOnlyList<string> TypePara
   /// </summary>
   public IrGenericTemplate? Template { get; init; }
 
+  /// <summary>
+  /// The generic class an instantiation of a class is one of, with its type parameters, when the
+  /// frontend could state it: the class instantiated with the instantiation's own type arguments
+  /// (<see cref="IrGenerics.Instantiate(IrGenericClassTemplate, IReadOnlyList{IrType}, IrClassType, IrModule)"/>)
+  /// is the instantiation, so that a backend may write the generic class instead of the
+  /// instantiations. Every instantiation of one class shares it; the origin of a function has none.
+  /// </summary>
+  public IrGenericClassTemplate? ClassTemplate { get; init; }
+
   /// <summary>The definition as the source names it, with its type parameters: <c>IndexOf&lt;T&gt;</c>.</summary>
   public string Display => $"{this.Name}<{string.Join(", ", this.TypeParameters)}>";
 
@@ -87,6 +96,48 @@ public sealed record IrGenericTemplate(IrFunction Function, IReadOnlyList<IrType
 
   /// <summary>Every name of a call of the template that names an instantiation in terms of the parameters, with what it instantiates.</summary>
   public IReadOnlyDictionary<string, IrGenericCall> Calls { get; init; } = new Dictionary<string, IrGenericCall>();
+
+}
+
+/// <summary>
+/// A generic class with its type parameters standing as types of their own, as
+/// <see cref="IrGenericTemplate"/> is for a method: a class of no module, named with the parameters
+/// (<c>Ring&lt;T&gt;</c>), whose fields have the types of the parameters, and one template per
+/// function of its constructors and methods, in the order <see cref="IrClassType.Functions"/> names
+/// them, each with the same parameters. It is never verified, interpreted or emitted as it stands.
+/// <para>
+/// The template is made when the first instantiation names it and defined once its bodies are
+/// known; one never defined (<see cref="IsDefined"/>) is none, as where a construct of the class has
+/// no form in terms of its parameters.
+/// </para>
+/// </summary>
+public sealed class IrGenericClassTemplate {
+
+  /// <summary>The class with the parameters, or <see langword="null"/> before <see cref="Define"/>.</summary>
+  public IrClassType? Class { get; private set; }
+
+  /// <summary>The types that stand for the type parameters, in order; empty before <see cref="Define"/>.</summary>
+  public IReadOnlyList<IrType> Parameters { get; private set; } = [];
+
+  /// <summary>The template of every function of the class, in the order of its <see cref="IrClassType.Functions"/>; empty before <see cref="Define"/>.</summary>
+  public IReadOnlyList<IrGenericTemplate> Members { get; private set; } = [];
+
+  /// <summary>Whether <see cref="Define"/> has been called.</summary>
+  public bool IsDefined => this.Class is not null;
+
+  /// <summary>Gives the template its class, parameters and member templates, once.</summary>
+  /// <param name="class">The class with the parameters, its members defined.</param>
+  /// <param name="parameters">The types that stand for the type parameters.</param>
+  /// <param name="members">One template per function of the class, in order.</param>
+  /// <exception cref="InvalidOperationException">The template has been defined before.</exception>
+  public void Define(IrClassType @class, IReadOnlyList<IrType> parameters, IReadOnlyList<IrGenericTemplate> members) {
+    if (this.IsDefined)
+      throw new InvalidOperationException($"The template '{this.Class!.Name}' is defined already.");
+
+    this.Class = @class;
+    this.Parameters = [.. parameters];
+    this.Members = [.. members];
+  }
 
 }
 
@@ -180,11 +231,100 @@ public static class IrGenerics {
     if (arguments.Count != template.Parameters.Count)
       throw new ArgumentException($"The template '{template.Function.Name}' takes {template.Parameters.Count} type arguments, not {arguments.Count}.", nameof(arguments));
 
+    return Substitute(template, Map(template.Parameters, arguments), name, module, null);
+  }
+
+  /// <summary>
+  /// The functions of a class that is an instantiation of a generic class: every member template
+  /// with the parameters replaced by type arguments as <see cref="Instantiate(IrGenericTemplate, IReadOnlyList{IrType}, string, IrModule)"/>
+  /// does, the template's class by the class, its fields, constructors and methods by those of the
+  /// class at the same position, and each function named as the class names it.
+  /// </summary>
+  /// <param name="template">The template of the generic class, defined.</param>
+  /// <param name="arguments">One type per parameter.</param>
+  /// <param name="target">The class the functions belong to: its fields, constructors and methods one to one with the template's class.</param>
+  /// <param name="module">The module whose functions the constructors of its classes are, for <c>new T()</c>.</param>
+  /// <returns>The functions, in the order of <see cref="IrClassType.Functions"/> of the class.</returns>
+  /// <exception cref="ArgumentException">The template is not defined, the number of arguments differs from the number of parameters, or the class does not match the template's.</exception>
+  public static IReadOnlyList<IrFunction> Instantiate(IrGenericClassTemplate template, IReadOnlyList<IrType> arguments, IrClassType target, IrModule module) {
+    var source = Defined(template, arguments);
+    var functions = source.Functions.ToList();
+    var targets = target.Functions.ToList();
+    if (!target.IsDefined || target.Fields.Count != source.Fields.Count || target.Constructors.Count != source.Constructors.Count
+        || target.Methods.Count != source.Methods.Count || template.Members.Count != functions.Count)
+      throw new ArgumentException($"The class '{target.Name}' is no instantiation of the template '{source.Name}'.", nameof(target));
+
+    var map = Map(template.Parameters, arguments);
+    map[source] = IrType.Object(target);
+    var members = new ClassMap(
+      Paired(source.Fields, target.Fields),
+      Paired(source.Constructors, target.Constructors),
+      Paired(source.Methods, target.Methods),
+      functions.Zip(targets).ToDictionary(pair => pair.First, pair => pair.Second, StringComparer.Ordinal));
+    return [.. template.Members.Select((member, index) => Substitute(member, map, targets[index], module, members))];
+  }
+
+  /// <summary>
+  /// A new class that is an instantiation of a generic class: the template's class with the
+  /// parameters replaced by type arguments in the types of its fields and properties, and every
+  /// function of its members named after the new class, <c>Ring&lt;T&gt;.Push</c> as <c>Name.Push</c>.
+  /// Its functions are <see cref="Instantiate(IrGenericClassTemplate, IReadOnlyList{IrType}, IrClassType, IrModule)"/> of it.
+  /// </summary>
+  /// <param name="template">The template of the generic class, defined.</param>
+  /// <param name="arguments">One type per parameter.</param>
+  /// <param name="name">The name of the new class.</param>
+  /// <returns>The class, its fields and members defined.</returns>
+  /// <exception cref="ArgumentException">The template is not defined, the number of arguments differs from the number of parameters, or a function of the template's class is not named after it.</exception>
+  public static IrClassType Declare(IrGenericClassTemplate template, IReadOnlyList<IrType> arguments, string name) {
+    var source = Defined(template, arguments);
+    var declared = new IrClassType(name) { Visibility = source.Visibility, IsSealed = source.IsSealed, IsRecord = source.IsRecord };
+    declared.Inherit(null, []);
+    var map = Map(template.Parameters, arguments);
+    map[source] = IrType.Object(declared);
+    var type = Substitution(map);
+    var fields = Paired(source.Fields, source.Fields.Select(field => field with { Type = type(field.Type) }));
+    declared.Define([.. source.Fields.Select(field => fields[field])]);
+    string Renamed(string function) => function.StartsWith(source.Name + ".", StringComparison.Ordinal) ? name + function[source.Name.Length..]
+      : throw new ArgumentException($"The function '{function}' of the template '{source.Name}' is not named after it.", nameof(template));
+    var methods = Paired(source.Methods, source.Methods.Select(method => method with { Function = Renamed(method.Function) }));
+    IrMethod? Accessor(IrMethod? method) => method is null ? null : methods[method];
+    declared.DefineMembers(
+      [.. source.Constructors.Select(constructor => constructor with { Function = Renamed(constructor.Function) })],
+      [.. source.Methods.Select(method => methods[method])],
+      [.. source.Properties.Select(property => property with {
+        Type = type(property.Type), BackingField = property.BackingField is null ? null : fields[property.BackingField], Getter = Accessor(property.Getter), Setter = Accessor(property.Setter)
+      })],
+      []);
+    return declared;
+  }
+
+  /// <summary>Each object of a list by the object at the same position of another, by identity: two fields of one name and type are two fields.</summary>
+  private static Dictionary<T, T> Paired<T>(IEnumerable<T> keys, IEnumerable<T> values) where T : class {
+    var paired = new Dictionary<T, T>(ReferenceEqualityComparer.Instance);
+    foreach (var (key, value) in keys.Zip(values))
+      paired[key] = value;
+
+    return paired;
+  }
+
+  /// <summary>The class of a defined template whose parameters the arguments match in number.</summary>
+  private static IrClassType Defined(IrGenericClassTemplate template, IReadOnlyList<IrType> arguments) {
+    var source = template.Class ?? throw new ArgumentException("The template of the generic class is not defined.", nameof(template));
+    return arguments.Count == template.Parameters.Count ? source
+      : throw new ArgumentException($"The template '{source.Name}' takes {template.Parameters.Count} type arguments, not {arguments.Count}.", nameof(arguments));
+  }
+
+  /// <summary>The type argument of every declaration that stands for a type parameter.</summary>
+  private static Dictionary<IrTypeDeclaration, IrType> Map(IReadOnlyList<IrType> parameters, IReadOnlyList<IrType> arguments) {
     var map = new Dictionary<IrTypeDeclaration, IrType>(ReferenceEqualityComparer.Instance);
-    foreach (var (parameter, argument) in template.Parameters.Zip(arguments))
+    foreach (var (parameter, argument) in parameters.Zip(arguments))
       map[parameter.Declaration!] = argument;
 
-    var functions = module.Functions.ToDictionary(function => function.Name);
+    return map;
+  }
+
+  /// <summary>A type with every declaration the map names replaced, within arrays, collections and signatures too.</summary>
+  private static Func<IrType, IrType> Substitution(Dictionary<IrTypeDeclaration, IrType> map) {
     IrType Type(IrType type) => type.Declaration is { } declared && map.TryGetValue(declared, out var argument) ? argument
       : type.Signature is { } signature ? IrType.Function(new IrFunctionType([.. signature.Parameters.Select(Type)], Type(signature.Result)))
       : type.Element is { } element ? type.Kind switch {
@@ -197,25 +337,39 @@ public static class IrGenerics {
         _ => IrType.Array(Type(element))
       } : type;
 
-    string Call(string callee) => template.Calls.TryGetValue(callee, out var call) ? Mangle(call.Origin, call.Arguments.Select(Type)) : callee;
+    return Type;
+  }
+
+  /// <summary>A template with the declarations of a map replaced, the members of a class too where <paramref name="members"/> says so.</summary>
+  private static IrFunction Substitute(IrGenericTemplate template, Dictionary<IrTypeDeclaration, IrType> map, string name, IrModule module, ClassMap? members) {
+    var functions = module.Functions.ToDictionary(function => function.Name);
+    var type = Substitution(map);
+    string Call(string callee) => template.Calls.TryGetValue(callee, out var call) ? Mangle(call.Origin, call.Arguments.Select(type))
+      : members?.Functions.GetValueOrDefault(callee) ?? callee;
 
     IrExpr? Special(IrExpr node) {
       if (node is IrNull { Type.Declaration: { } nulled } && map.TryGetValue(nulled, out var defaulted))
         return DefaultOf(defaulted);
 
-      if (node is not IrNew { Type.Declaration: { } made } || !map.TryGetValue(made, out var created))
+      // new T() names the constructor without parameters of a class not known yet; a class of the template's own names its constructor.
+      if (node is not IrNew { Type.Declaration: { } made } creation || creation.Constructor != Parameterless || !map.TryGetValue(made, out var created))
         return null;
 
       if (created.ClassType is not { } owner)
         return DefaultOf(created);
 
       var constructor = owner.Constructors.FirstOrDefault(candidate => functions.TryGetValue(candidate.Function, out var body) && body.Parameters.Count == 1)
-        ?? throw new ArgumentException($"The class {owner.Name} has no constructor without parameters.", nameof(arguments));
+        ?? throw new ArgumentException($"The class {owner.Name} has no constructor without parameters.", "arguments");
       return new IrNew(created, constructor, []);
     }
 
-    return new Rewriter(Type, Call, Special).Function(template.Function) with { Name = name };
+    return new Rewriter(type, Call, Special) { Members = members }.Function(template.Function) with { Name = name };
   }
+
+  /// <summary>The fields, constructors, methods and function names of a template's class by those of the class it is instantiated as.</summary>
+  private sealed record ClassMap(
+    IReadOnlyDictionary<IrField, IrField> Fields, IReadOnlyDictionary<IrConstructor, IrConstructor> Constructors,
+    IReadOnlyDictionary<IrMethod, IrMethod> Methods, IReadOnlyDictionary<string, string> Functions);
 
   /// <summary>A module with functions renamed, every call of them included; a function the map does not name keeps its name.</summary>
   /// <param name="module">The module.</param>
@@ -277,6 +431,15 @@ public static class IrGenerics {
     /// <summary>The globals as the rewritten module has them, by the old ones.</summary>
     public IReadOnlyDictionary<IrGlobal, IrGlobal> Globals { get; set; } = new Dictionary<IrGlobal, IrGlobal>();
 
+    /// <summary>The members of the class the function is instantiated into, by those of the template's class; <see langword="null"/> for none.</summary>
+    public ClassMap? Members { get; init; }
+
+    private IrField Field(IrField field) => this.Members?.Fields.GetValueOrDefault(field) ?? field;
+
+    private IrConstructor Constructor(IrConstructor constructor) => this.Members?.Constructors.GetValueOrDefault(constructor) ?? constructor;
+
+    private IrMethod Method(IrMethod method) => this.Members?.Methods.GetValueOrDefault(method) ?? method;
+
     public IrFunction Function(IrFunction function) {
       this._locals.Clear();
       var parameters = function.Parameters.Select(this.Local).ToList();
@@ -301,7 +464,7 @@ public static class IrGenerics {
       IrAssign assign => new IrAssign(this.Local(assign.Local), this.Expression(assign.Value)),
       IrGlobalAssign assign => new IrGlobalAssign(this.Global(assign.Global), this.Expression(assign.Value)),
       IrStore store => new IrStore(this.Expression(store.Array), this.Expression(store.Index), this.Expression(store.Value)),
-      IrFieldStore store => new IrFieldStore(this.Expression(store.Target), store.Field, this.Expression(store.Value)),
+      IrFieldStore store => new IrFieldStore(this.Expression(store.Target), this.Field(store.Field), this.Expression(store.Value)),
       IrExprStmt expression => new IrExprStmt(this.Expression(expression.Expression)),
       IrIf conditional => new IrIf(this.Expression(conditional.Condition), this.Block(conditional.Then), conditional.Else is null ? null : this.Block(conditional.Else)),
       IrWhile loop => new IrWhile(this.Expression(loop.Condition), this.Block(loop.Body)),
@@ -341,11 +504,11 @@ public static class IrGenerics {
         IrStep step => step with { Target = this.Expression(step.Target) },
         IrStructNew creation => new IrStructNew(type(creation.Type), this.Expressions(creation.Arguments)),
         IrStructDefault value => new IrStructDefault(type(value.Type)),
-        IrFieldLoad load => new IrFieldLoad(this.Expression(load.Target), load.Field),
+        IrFieldLoad load => new IrFieldLoad(this.Expression(load.Target), this.Field(load.Field)),
         IrStructEquals equality => new IrStructEquals(this.Expression(equality.Left), this.Expression(equality.Right)),
-        IrNew creation => new IrNew(type(creation.Type), creation.Constructor, this.Expressions(creation.Arguments)),
+        IrNew creation => new IrNew(type(creation.Type), this.Constructor(creation.Constructor), this.Expressions(creation.Arguments)),
         IrNull value => new IrNull(type(value.Type)),
-        IrMethodCall invoked => invoked with { Type = type(invoked.Type), Target = invoked.Target is null ? null : this.Expression(invoked.Target), Arguments = this.Expressions(invoked.Arguments) },
+        IrMethodCall invoked => invoked with { Method = this.Method(invoked.Method), Type = type(invoked.Type), Target = invoked.Target is null ? null : this.Expression(invoked.Target), Arguments = this.Expressions(invoked.Arguments) },
         IrReferenceEquals equality => new IrReferenceEquals(this.Expression(equality.Left), this.Expression(equality.Right)),
         IrTypeTest test => new IrTypeTest(this.Expression(test.Value), type(test.Target)),
         IrCast cast => new IrCast(type(cast.Type), this.Expression(cast.Value)),
@@ -355,7 +518,7 @@ public static class IrGenerics {
         IrCollection operation => new IrCollection(operation.Op, type(operation.Type), this.Expressions(operation.Arguments)),
         IrLambda lambda => new IrLambda(type(lambda.Type), [.. lambda.Captures.Select(this.Local)], [.. lambda.Parameters.Select(this.Local)], [.. lambda.Locals.Select(this.Local)], this.Block(lambda.Body)),
         IrFunctionRef reference => new IrFunctionRef(type(reference.Type), call(reference.Function)),
-        IrBoundMethod bound => bound with { Type = type(bound.Type), Receiver = bound.Receiver is null ? null : this.Expression(bound.Receiver) },
+        IrBoundMethod bound => bound with { Method = this.Method(bound.Method), Type = type(bound.Type), Receiver = bound.Receiver is null ? null : this.Expression(bound.Receiver) },
         IrInvoke invocation => new IrInvoke(type(invocation.Type), this.Expression(invocation.Callee), this.Expressions(invocation.Arguments)),
         IrNone none => new IrNone(type(none.Type)),
         IrSome some => new IrSome(this.Expression(some.Value)),
