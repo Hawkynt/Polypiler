@@ -7,7 +7,9 @@ PRD §17.2, §18.2, §21.4, §23.1.
 The structured, typed tree IR of `Polypiler.Core.IR` is the IR of source-level code. Machine code is
 the one exception: lifters produce **MachineIR**, a separate level whose vocabulary is registers,
 sub-registers, flags and machine memory. It is lowered to and raised from the tree IR; it is never a set
-of extra opcodes in the tree IR.
+of extra opcodes in the tree IR. In the terms of [ADR 0009](../adr/0009-structured-tree-ir.md), MachineIR is the working form of
+a lifter, an assembler and a machine oracle: what a lifter delivers to the pipeline is the tree, and no
+pass between import and emission sees MachineIR.
 
 ```mermaid
 flowchart LR
