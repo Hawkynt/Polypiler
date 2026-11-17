@@ -1,0 +1,5 @@
+# Test design 10: 257 does not fit 8 bits but fits 16.
+rule: mul257-self
+inputs: x: u<w>
+before: %r = Mul.u<w> %x, 257
+after: %r = Mul.u<w> %x, 257

@@ -1,0 +1,5 @@
+# Known-true identity: doubling is a shift by one.
+rule: mul2-is-shl1
+inputs: x: u<w>
+before: %r = Mul.u<w> %x, 2
+after: %r = Shl.u<w>[strict] %x, 1

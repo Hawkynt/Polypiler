@@ -1,0 +1,5 @@
+# Test design 18: an operation the notation does not know.
+rule: unknown-opcode
+inputs: x: u<w>
+before: %r = Frobnicate.u<w> %x
+after: %r = Add.u<w> %x, 0

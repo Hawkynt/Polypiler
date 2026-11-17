@@ -22,8 +22,8 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY0013](PLY0013.md) (reserved) | error | 4 (InvalidSource) | `export '<name>' not found in '<file>'` | CLI-TRANSLATE |
 | [PLY0014](PLY0014.md) (reserved) | error | 3 (UnsupportedConstruct) | `no <frontend\|backend> for '<language>'` | CLI-TRANSLATE |
 | [PLY0015](PLY0015.md) (reserved) | error | 2 (UsageError) | `unknown facet '<facet>'` | CLI-INSPECT |
-| [PLY0016](PLY0016.md) (reserved) | error | 1 (EnvironmentError) | `no manifest in '<path>'` | CLI-VERIFY |
-| [PLY0017](PLY0017.md) (reserved) | error | 2 (UsageError) | `'<path>' holds no test vectors: <reason>` | CLI-VERIFY |
+| [PLY0016](PLY0016.md) | error | 1 (EnvironmentError) | `no manifest in '<path>'` | CLI-VERIFY |
+| [PLY0017](PLY0017.md) | error | 2 (UsageError) | `'<path>' holds no test vectors: <reason>` | CLI-VERIFY |
 | [PLY0018](PLY0018.md) (reserved) | error | 1 (EnvironmentError) | `catalogue index '<path>' not found` | CLI-SEARCH |
 | [PLY0019](PLY0019.md) (reserved) | error | 2 (UsageError) | `unknown algorithm '<id>'` | CLI-GENERATE |
 | [PLY0020](PLY0020.md) | error | 1 (EnvironmentError) | `<reason>` | INFRA-TOOLCHAINS |
@@ -57,14 +57,14 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY0052](PLY0052.md) | error | 5 (SemanticMismatch) | `'<fixture>' vector '<name>' element <index>: expected <hex>, actual <hex>, <distance> exceeds <mode> <bound>` | VER-ORACLE |
 | [PLY0053](PLY0053.md) | error | 1 (EnvironmentError) | `manifest '<path>' is invalid: <JSON pointer>: <reason>` | VER-MANIFEST |
 | [PLY0054](PLY0054.md) | error | 1 (EnvironmentError) | `manifest '<path>' claims '<state>' but the evidence supports only '<derived>': <missing>` | VER-MANIFEST |
-| [PLY0055](PLY0055.md) (reserved) | warning | — | `proof of <rule> gave up after <budget>` | VER-SMT |
-| [PLY0056](PLY0056.md) (reserved) | error | 5 (SemanticMismatch) | `proof of <rule> refuted: <name>=<hex>[, ...]: before <hex>, after <hex>` | VER-SMT |
-| [PLY0057](PLY0057.md) (reserved) | error | 10 (BudgetExceeded) | `exhaustive proof of <rule> needs <n> input bits, budget is <m>` | VER-EXHAUSTIVE |
+| [PLY0055](PLY0055.md) | warning | — | `proof of <rule> inconclusive (<reason>); rewrite not applied` | VER-SMT |
+| [PLY0056](PLY0056.md) | error | 5 (SemanticMismatch) | `proof of <rule> refuted[ at width <w>]: <name>=<hex>[, ...]: before <hex>, after <hex>` | VER-SMT |
+| [PLY0057](PLY0057.md) | error | 10 (BudgetExceeded) | `exhaustive proof of <rule> needs <n> input bits, budget is <m>` | VER-EXHAUSTIVE |
 | [PLY0058](PLY0058.md) | error | 1 (EnvironmentError) | `gate record '<file>': fixture '<fixture>' claims '<state>': <reason>` | VER-GATES |
 | [PLY0059](PLY0059.md) (reserved) | error | 5 (SemanticMismatch) | `round trip '<id>' leg <leg> (<opt>): <function>(<arguments>) expected <expected>, got <actual>` | VER-ROUNDTRIP |
 | [PLY0060](PLY0060.md) | error | 1 (EnvironmentError) | `evidence bundle '<directory>' <reason>` | VER-EVIDENCE |
-| [PLY0061](PLY0061.md) (reserved) | error | 1 (EnvironmentError) | `<reason>` | SPEC-CAPABILITIES |
-| [PLY0062](PLY0062.md) (reserved) | error | 3 (UnsupportedConstruct) | `the proof of <rule> meets the unmodelled operation <operation>` | VER-SMT |
+| [PLY0061](PLY0061.md) | error | 1 (EnvironmentError) | `<reason>` | SPEC-CAPABILITIES |
+| [PLY0062](PLY0062.md) | error | 3 (UnsupportedConstruct) | `proof of <rule>: operation '<operation>' is not modelled by prover '<prover>'` | VER-SMT |
 | [PLY0063](PLY0063.md) | error | 7 (OracleFailure) | `no independent oracle is registered for '<fixture>'` | VER-ORACLE |
 | [PLY0064](PLY0064.md) | error | 2 (UsageError) | `<reason>` | VER-IMAGES |
 | [PLY0070](PLY0070.md) | error | 1 (EnvironmentError) | `fuzz target '<target>': <kind> '<signature>' at iteration <i> (seed <seed>); minimized to <n> bytes: artifacts/fuzz/<target>/<id>.bin` | INFRA-FUZZ |

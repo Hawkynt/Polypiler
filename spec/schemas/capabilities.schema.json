@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/capabilities.schema.json",
+  "title": "Capability report",
+  "description": "docs/capabilities.json: the state of every pair of a source profile (spec/languages) and a target profile (spec/targets), computed by polypiler-tooling report capabilities from the gate records alone (PRD §23.6). A pair without a valid gate record is planned.",
+  "type": "object",
+  "required": ["schemaVersion", "generatedFrom", "states", "pairs"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "generatedFrom": {
+      "type": "object",
+      "required": ["commit", "gateRecords"],
+      "additionalProperties": false,
+      "properties": {
+        "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "gateRecords": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "states": {
+      "const": ["planned", "parsed", "lifted", "recognized", "proved", "legalized", "emitted", "compiled", "executed", "verified", "performance-validated"]
+    },
+    "pairs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["from", "sourceProfile", "to", "targetProfile", "state", "fixtures", "evidence", "limitations"],
+        "additionalProperties": false,
+        "if": { "properties": { "state": { "const": "planned" } } },
+        "then": { "properties": { "fixtures": { "const": 0 }, "evidence": { "type": "null" } } },
+        "else": { "properties": { "fixtures": { "minimum": 1 }, "evidence": { "type": "string" } } },
+        "properties": {
+          "from": { "type": "string", "minLength": 1 },
+          "sourceProfile": { "type": "string", "minLength": 1 },
+          "to": { "type": "string", "minLength": 1 },
+          "targetProfile": { "type": "string", "minLength": 1 },
+          "state": { "enum": ["planned", "parsed", "lifted", "recognized", "proved", "legalized", "emitted", "compiled", "executed", "verified", "performance-validated"] },
+          "fixtures": { "type": "integer", "minimum": 0 },
+          "evidence": { "type": ["string", "null"], "minLength": 1 },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["construct", "diagnostic"],
+              "additionalProperties": false,
+              "properties": {
+                "construct": { "type": "string", "minLength": 1 },
+                "diagnostic": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

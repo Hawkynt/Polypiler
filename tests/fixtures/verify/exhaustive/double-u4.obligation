@@ -1,0 +1,5 @@
+# Test design 5: explicit 4-bit types, no width parameter.
+rule: double-u4
+inputs: x: u4
+before: %r = Add.u4 %x, %x
+after: %r = Shl.u4[strict] %x, 1

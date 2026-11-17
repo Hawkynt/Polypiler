@@ -1,0 +1,5 @@
+# Test design 16: a call is outside the model.
+rule: call
+inputs: x: u<w>
+before: %r = Call.u<w> %x
+after: %r = Call.u<w> %x

@@ -1,0 +1,5 @@
+# Test design 8: 25 input bits, just outside the budget.
+rule: budget-25-bits
+inputs: a: u8, b: u8, c: u8, d: bool
+before: %s = Add.u8 %a, %b; %t = Add.u8 %s, %c; %r = Select.u8 %d, %t, %a
+after: %s = Add.u8 %b, %c; %t = Add.u8 %a, %s; %r = Select.u8 %d, %t, %a

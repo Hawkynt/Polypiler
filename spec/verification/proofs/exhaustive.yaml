@@ -1,0 +1,16 @@
+id: VERIFICATION.proof.exhaustive
+title: Exhaustive small-width equivalence
+version: 1
+status: draft
+owner: Hawkynt
+issue: VER-EXHAUSTIVE
+tests: [Polypiler.Tests/Verification/Proofs/ExhaustiveProverTests.cs]
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: proof
+  prover: exhaustive
+  widths: [8]
+  maxInputBits: 24

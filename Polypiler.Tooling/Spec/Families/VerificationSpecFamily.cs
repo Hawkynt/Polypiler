@@ -11,7 +11,7 @@ namespace Polypiler.Tooling.Spec.Families;
 /// <summary>
 /// The family <c>spec/verification/</c> (PRD §4.1, §7.2, §23): the input generators, the tolerance of
 /// each operation compared under one (ADR 0005) and the reference oracles, each in its own folder
-/// <c>generators</c>, <c>tolerances</c> or <c>oracles</c>. The schema
+/// <c>generators</c>, <c>tolerances</c> or <c>oracles</c>, and the proof classes the provers issue in <c>proofs</c>. The schema
 /// <c>spec/schemas/verification.schema.json</c> states the shapes; this class the rules across fields and
 /// files. A value of a generator is a bit pattern <c>0x…</c> or a decimal integer; an operation without a
 /// tolerance document is compared <c>exact</c>.
@@ -52,6 +52,9 @@ public sealed class VerificationSpecFamily : ISpecFamily {
         break;
       case "tolerance":
         problems.AddRange(CheckTolerance(document, body, tree));
+        break;
+      case "proof":
+        // A proof class has no rule across fields beyond its schema.
         break;
       default:
         var implementation = (string)body["implementation"]!;

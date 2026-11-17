@@ -1,0 +1,6 @@
+# Test design 6: n = 31 is compared, n = 32 makes the before side invalid and is a don't-care.
+rule: strict-shift-31
+inputs: x: u32, n: u32
+precondition: %p1 = UGe.u32 %n, 31; %p2 = ULe.u32 %n, 32; %p = And.bool %p1, %p2
+before: %r = Shl.u32[strict] %x, %n
+after: %r = Mul.u32 %x, 2147483648

@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "compiler": {
+    "name": "polypiler",
+    "version": "0.1.0",
+    "irVersion": 1
+  },
+  "command": [
+    "translate",
+    "adler32.cs",
+    "--from",
+    "csharp",
+    "--to",
+    "javascript",
+    "--output",
+    "."
+  ],
+  "inputs": [
+    {
+      "path": "adler32.cs",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "provenance": null
+    }
+  ],
+  "frontend": {
+    "language": "csharp",
+    "profile": null
+  },
+  "target": {
+    "language": "javascript",
+    "profile": "es2022, cjs",
+    "runtime": "node",
+    "platform": "any"
+  },
+  "outputs": [
+    {
+      "path": "adler32.js",
+      "sha256": "f0f49b04ecb363ca00406cec9704acf8185f861e02939d64f32668e7d4723759",
+      "role": "source"
+    }
+  ],
+  "api": [
+    {
+      "name": "adler32",
+      "signature": "u32 adler32(u8[] bytes)"
+    }
+  ],
+  "intrinsics": [],
+  "helpers": [],
+  "nativeDependencies": [],
+  "licensing": {
+    "outputLicence": "NOASSERTION",
+    "obligations": [],
+    "modelRestrictions": []
+  },
+  "caveats": [],
+  "optimization": {
+    "level": "default",
+    "disabled": [],
+    "passes": []
+  },
+  "warnings": [],
+  "toolchains": [],
+  "commands": {
+    "build": "polypiler translate adler32.cs --from csharp --to javascript --output .",
+    "run": null
+  },
+  "state": "generated"
+}

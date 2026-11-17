@@ -1,0 +1,5 @@
+# Scenario 4: 32 input bits exceed the budget of 24.
+rule: budget-two-u16
+inputs: a: u16, b: u16
+before: %r = Add.u16 %a, %b
+after: %r = Add.u16 %b, %a
