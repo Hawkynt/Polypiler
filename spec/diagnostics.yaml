@@ -759,6 +759,24 @@ codes:
     area: ir
     owner: PROTOTYPE
     surfaces: "standard error of polypiler translate, as 'error PLY0101: <reason>' with the reason that the executable carries no float-implementations resource or the reason IrModuleFormat refuses its bytes, when a strict float translation needs the float-implementations module the executable embeds and it is absent or does not read back"
+  - code: PLY0355
+    severity: error
+    exit: UnsupportedConstruct
+    title: no cost profile for the target profile
+    message: "target profile '<language>/<profile>' has no cost profile"
+    rule: opt-cost.profile-missing
+    area: optimization
+    owner: OPT-COST
+    surfaces: "the CostProfileException of TargetCostProfile.ForTarget and CostModel.ForTarget when spec/targets/<language>/<profile>/cost.yaml does not exist; the cost model never falls back to a default profile"
+  - code: PLY0356
+    severity: error
+    exit: InvalidSource
+    title: cost profile malformed
+    message: "cost profile '<path>': <key>: <problem>"
+    rule: opt-cost.profile-invalid
+    area: optimization
+    owner: OPT-COST
+    surfaces: "the CostProfileException of TargetCostProfile.Load and Parse, at the line and column of the offending node: invalid YAML, a missing required key such as default, a negative or non-integer number, an unknown key, or an operation name the IR's operator enums and scalar types do not know"
   - code: PLY0800
     severity: error
     exit: UnsupportedConstruct

@@ -1,0 +1,7 @@
+# Refused with PLY0356 at default: every profile prices the operations it does not list.
+profile: invalid-missing-default
+unknownTripCount: 16
+operations:
+  RotateLeft.u32:
+    native: { latency: 1, size: 1 }
+loop: { overhead: 2 }
