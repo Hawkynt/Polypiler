@@ -58,6 +58,7 @@
     <Compile Include="..\Polypiler.Tests\Tooling\Integrity\GoldenTree.cs" LinkBase="Infra\Support" />
     <Compile Include="..\Polypiler.Tests\Tooling\Licensing\LicenceEffectTrees.cs" LinkBase="Infra\Support" />
     <Compile Include="..\Polypiler.Tests\BigInt\Support\*.cs" LinkBase="BigInt\Support" />
+    <Compile Include="..\Polypiler.Tests\MachineSemantics\Support\*.cs" LinkBase="MachineSemantics\Support" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1663,9 +1663,10 @@ codes:
     severity: warning
     title: constant address outside every region
     message: "'<instruction>' at <where> accesses constant address <address>, which no declared region covers; treated as unknown memory"
+    rule: machine.regions.uncovered
     area: machine
     owner: MACH-REGIONS
-    reserved: true
+    surfaces: the diagnostic sink of RegionClassifier.Classify and RegionClassifier.Annotate
   - code: PLY4011
     severity: error
     exit: InvalidSource
