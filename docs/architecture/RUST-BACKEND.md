@@ -125,7 +125,8 @@ name escapes as a raw identifier (`r#gen`). The MSRV decides the rows of `RustCa
 | a virtual or interface call | `Trait::method(&*o, ..)` of the trait of the method's slot |
 | `is T`, `as T`, `(T)` | `o.is_t()`, `Rc::clone(&o).into_t()`, `….into_t().expect("InvalidCast")` of the trait `PlyObject`; `ply_cast` keeps a null |
 | a generic method (#1394) | one Rust generic function, `pub fn max<T: Ord + Copy>(a: T, b: T) -> T`, where its template does nothing with a value of a parameter but hold, pass, store and load it in an array of it (`Copy`), make its default (`T::default()`, `Default`), compare it with `Equals` (`a == b`, `Eq`) and test the sign of `CompareTo` (`a >= b`, `Ord`); bounds inline for one parameter with at most two, else a `where` clause; a call names the type arguments where Rust cannot infer them, `def::<i32>()`. See [Generic methods](#generic-methods) |
-| an instantiation the generic function does not take, a generic class | one function or struct per instantiation the module uses (`max_f64`, `RingI64`); `IEquatable`/`IComparable` at the instantiated type, a floating-point one by `ply_same_value_f64`, `ply_compare_f64` |
+| a generic class (#1421) | one Rust generic struct, `pub struct Ring<T> { items: Vec<T>, count: i32 }` with `impl<T: Default + Copy> Ring<T>`, where its objects are single-owner and its members do with a value of a parameter only what a generic method may; callers name the instantiation, `Ring<i64>`, `Ring::<i64>::new(3)`. See [Generic classes](#generic-classes) |
+| an instantiation the generic function or struct does not take, any other generic class | one function or struct per instantiation the module uses (`max_f64`, `BoxF64`, `RingI64`); `IEquatable`/`IComparable` at the instantiated type, a floating-point one by `ply_same_value_f64`, `ply_compare_f64` |
 | a global (static field) | `static NAME: AtomicI32 = AtomicI32::new(0);` read and written with `Ordering::Relaxed`, `++` as `fetch_add` - process-wide as .NET's static fields are |
 | a global that has no atomic form: an array, a string, a floating-point number | a static behind a `Mutex`: `static BUCKETS: Mutex<[u32; 4]> = Mutex::new([0; 4]);` (an array is the fixed array it always is), `static TEXT: Mutex<Vec<u16>> = Mutex::new(Vec::new());`, a first value made at run time in a `LazyLock`; accessed through `ply_with(&BUCKETS, \|buckets\| buckets[i])`, which holds the lock for that one access and takes a poisoned one over, every operand that may take a lock (a call, another such global) evaluated into a binding first; the length of an array is its constant. Not `thread_local!`, which would give each thread a global of its own |
 | a view (`Span<T>`, `ReadOnlySpan<T>`) | a slice, `&[T]`, `&mut [T]` where the function writes it (also through a view made of it); `AsSpan(start, length)` `ply_view(a, start, length)`, which panics with `ArgumentOutOfRange` outside the source; `Length` `s.len() as i32`; a view of a new array of a known length borrows an array, `&mut [0u8; 3]` |
@@ -208,9 +209,54 @@ parameter that no value of the body has (`u64`, `i64`, … the first free ones),
 arrays, mutability and names run on it unchanged; the stand-in is spelled as the parameter, its
 constant - a default - as `T::default()`. A template whose body uses all eight integer types stays per
 instantiation. An instantiation is replaced only where it is the template instantiated with its own
-arguments, as the C# backend checks before it writes a definition back. Generic classes have no
-template in the IR and stay one struct per instantiation (`RingI64`); the Rust frontend records no
-template of the generics it monomorphises, so a Rust source round-trips per instantiation too.
+arguments, as the C# backend checks before it writes a definition back. The Rust frontend records no
+template of the generics it monomorphises, so a Rust source round-trips per instantiation.
+
+## Generic classes
+
+A generic class is one class per instantiation in the IR too, and each instantiation's origin carries
+the template of the class (`IrGenericClassTemplate`): the class with its parameters standing as types
+of their own and one template per function of its members, which the C# frontend lowers once more
+from the source. The backend writes it as one generic struct (`Emit/GenericClasses.cs`):
+
+```rust
+#[derive(Default)]
+pub struct Ring<T> {
+    items: Vec<T>,
+    count: i32,
+}
+
+impl<T: Default + Copy> Ring<T> {
+    pub fn push(&mut self, value: T) { /* … */ }
+}
+
+fn longs() -> Ring<i64> {
+    let mut ring: Ring<i64> = Ring::<i64>::new(3);
+    // …
+}
+```
+
+The bounds are those of [Generic methods](#generic-methods), and `Default` always, which the struct's
+derived default and a new array of a parameter (`vec![T::default(); n]`) need; the struct itself
+carries none. The class is declared from the template with the first free integer types as stand-ins
+(`IrGenerics.Declare`) and written through the ordinary emitter, its functions spelled with the
+parameters; a static member is called as `Ring::<i64>::size()` from outside and `Self::size()` within.
+It is written only where
+
+- every field is a scalar, a parameter or an array of either, and every parameter is the type of a
+  field the struct keeps (a field only written is left out, and an unused parameter is E0392);
+- every member takes and gives scalars and parameters besides its object - an array only as a
+  field - and does with a value of a parameter what a generic method may, or calls another member;
+- its objects are single-owner (plain structs) and the objects of an instantiation it takes the
+  place of are too, with the same fields kept and the same members writing their object;
+- no other type of the module is named as the struct would be.
+
+An instantiation stays a struct of its own where a type argument does not have the bounds with the
+meaning .NET gives them - a floating-point number under `Eq` or `Ord` (`BoxF64` beside `Box<T>`), a
+class - or where its functions are not the template instantiated with its arguments. A class the C#
+frontend cannot state with its parameters (a parameter concatenated to a string) has no template, and
+a class of shared objects (`Rc` of cells) none the backend writes; both stay one struct per
+instantiation (`CellI32`, `RingI64`).
 
 ## Modules
 

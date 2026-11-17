@@ -48,7 +48,7 @@ is -1: neither `===` alone nor `indexOf`/`includes` is ever written for it.
 | Construct | IR | Status |
 | --- | --- | --- |
 | generic static method of the static class, closed by inference or explicit arguments | one `IrFunction` per instantiation the module reaches, `IndexOf<f64>` | supported |
-| generic class beside the static class (no base class or interface), its fields, constructors, methods and properties | one `IrClassType` per instantiation, `Ring<i64>` | supported |
+| generic class beside the static class (no base class or interface), its fields, constructors, methods and properties | one `IrClassType` per instantiation, `Ring<i64>`, each with the template of the class (`IrGenericClassTemplate`: `Ring<T>` lowered with its parameters, one template per member function) where every member can be stated with the parameters | supported |
 | constraints `struct`, `class`, `unmanaged`, `notnull`, `new()`, `IEquatable<T>`, `IComparable<T>`, an interface of the file | checked by the compiler, kept in the origin | supported |
 | `default(T)`, `default` of a type parameter | the default of the argument: zero, `false`, the default struct, `null` | supported |
 | a parameter of a function type (`Func<T, bool>`, `Action<T>`) | the function type of the instantiation ([functions and closures](functions-and-closures.md)) | supported |
@@ -112,8 +112,9 @@ issue's fixtures needs it.
 
 ## Known differences
 
-- An instantiation of a generic class is a class per instantiation in C# as well; writing the class
-  back generic waits for templates of classes.
+- An instantiation of a generic class is a class per instantiation in C# and JavaScript; the Rust
+  backend writes the template back as a generic struct ([the Rust backend](../architecture/RUST-BACKEND.md#generic-classes)).
+  A class whose member converts a parameter to text has no template.
 - A generic method of a class, a static field of a generic class and a generic class with a base class
   or an interface are refused; so are arrays of class references (`T[]` with a class `T`), which the
   IR does not have yet.
