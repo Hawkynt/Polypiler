@@ -11,7 +11,7 @@ using Reqnroll;
 namespace Polypiler.Tests.Acceptance.Cli;
 
 /// <summary>
-/// The steps of <c>tests/features/cli/cli-translate.feature</c> (#180): the fixtures copied into the
+/// The steps of <c>tests/features/infra/cli-translate.feature</c> (#180): the fixtures copied into the
 /// workspace under their repository path, the manifest's state and canonical command line, and the
 /// generated module run under the real <c>node</c>.
 /// </summary>

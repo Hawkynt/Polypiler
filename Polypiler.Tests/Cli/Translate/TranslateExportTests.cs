@@ -57,6 +57,23 @@ public sealed class TranslateExportTests {
   }
 
   [Test]
+  public void ANativeFunction_IsAnExport() {
+    var native = this._workspace.Write("Ext.cs", """
+      using System.Runtime.InteropServices;
+      public static class Ext {
+        [DllImport("liba")]
+        public static extern int A();
+        [DllImport("liba")]
+        public static extern int B();
+      }
+      """);
+    var (exitCode, _, error) = this._workspace.Run("translate", native, "--from", "csharp", "--to", "csharp", "--export", "B", "--output", "out");
+    Assert.That((exitCode, error), Is.EqualTo(((int)ExitCode.Success, "")));
+    var text = File.ReadAllText(this._workspace.Resolve("out/Ext.cs"));
+    Assert.That(text, Does.Contain("public static extern int B(").And.Not.Contain("public static extern int A("));
+  }
+
+  [Test]
   public void TheExportOfARustInput_IsChosenAsForCSharp() {
     var rust = this._workspace.Write("lib.rs", "pub fn a(x: i32) -> i32 { x }\npub fn b(x: i32) -> i32 { x }\n");
     var (exitCode, _, error) = this._workspace.Run("translate", rust, "--from", "rust", "--to", "javascript", "--export", "b", "--output", "out");

@@ -147,14 +147,17 @@ public sealed partial class TranslateCommand {
   }
 
   /// <summary>
-  /// The exports of an imported module: every public function, or with <c>--export</c> only the ones
-  /// it names, the others kept as functions of the module. The JavaScript frontend reads
-  /// <c>--export</c> itself. An input without any public function, and a name it does not have, are
-  /// <c>PLY0013</c>; so is the function <c>--verify</c> calls when the module does not export it.
+  /// The exports of an imported module: every public function and native function, or with
+  /// <c>--export</c> only the ones it names, the others kept as functions of the module. The
+  /// JavaScript frontend reads <c>--export</c> itself. An input without any public function, and a
+  /// name it does not have, are <c>PLY0013</c>; so is the function <c>--verify</c> calls when the
+  /// module does not export it.
   /// </summary>
   /// <returns>The module with its exports; <see langword="null"/> after a <c>PLY0013</c>.</returns>
   private static IrModule? Exported(string file, string language, IrModule module, IReadOnlyDictionary<string, string> options, VerificationRequest? verification, CliContext context) {
-    var exported = module.Functions.Where(function => function.IsPublic).Select(function => function.Name).ToHashSet(StringComparer.Ordinal);
+    var exported = module.Functions.Where(function => function.IsPublic).Select(function => function.Name)
+      .Concat(module.ForeignFunctions.Where(function => function.IsPublic).Select(function => function.Name))
+      .ToHashSet(StringComparer.Ordinal);
     if (exported.Count == 0)
       return NotExported(TranslateDiagnostics.NothingToExport, context, file);
 
@@ -165,7 +168,10 @@ public sealed partial class TranslateCommand {
 
     return names.Length == 0
       ? module
-      : module with { Functions = [.. module.Functions.Select(function => function.IsPublic && !names.Contains(function.Name) ? function with { IsPublic = false } : function)] };
+      : module with {
+        Functions = [.. module.Functions.Select(function => function.IsPublic && !names.Contains(function.Name) ? function with { IsPublic = false } : function)],
+        ForeignFunctions = [.. module.ForeignFunctions.Select(function => function.IsPublic && !names.Contains(function.Name) ? function with { IsPublic = false } : function)]
+      };
   }
 
   private static IrModule? NotExported(string format, CliContext context, params object[] arguments) {
