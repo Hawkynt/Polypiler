@@ -51,7 +51,6 @@ public sealed class TranslateToRustTests {
     Assert.That(File.ReadAllText(Path.Combine(this._out, "src", "lib.rs")), Does.Contain("//! Rust profile: rust2021 (Rust 1.77)."));
   }
 
-  [TestCase("--profile", "rust2015", "unknown Rust profile 'rust2015'")]
   [TestCase("--rust-version", "1.2", "Rust 1.2 is older than the 2024 edition")]
   [TestCase("--rust-version", "two", "'two' is not a Rust version")]
   [TestCase("--float", "fast", "unknown floating-point mode 'fast'")]

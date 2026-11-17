@@ -70,7 +70,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   private const string Namespace = "--namespace";
   private const string Export = "--export";
   private const string ExplainTypes = "--explain-types";
-  private const string Profile = "--profile";
+  private const string Profile = "--target-profile";
   private const string LangVersion = "--langversion";
   private const string Module = "--module";
   private const string Global = "--global";
@@ -104,7 +104,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     [Opt] = "the optimization level",
     [DisableOpt] = "optimizations not to apply",
     [ExplainOpt] = "write every optimization applied to standard error",
-    [Export] = "JavaScript: the functions to translate",
+    [Export] = "the functions to translate; every public one when absent",
     [ExplainTypes] = "JavaScript: write why every value has its type to standard output",
     [Profile] = "the target profile: a target framework of C#, a language level of JavaScript, a version of Python, an edition of Rust",
     [Module] = "JavaScript: how the file is packaged",
@@ -120,16 +120,27 @@ public sealed partial class TranslateCommand : ICliCommand {
     [RustVersion] = "Rust: the minimum supported Rust version, above the one of the edition",
     [TrapPolicyOption] = "Rust: what a trap is: a panic (the default) or an error value, every function a trap can leave returning a Result (ADR 0008)",
     [AllowUnsafe] = "Rust: allow the one unsafe lowering, a mutable overlay view, which the crate then has to pass Miri with; refused with PLY1567 otherwise",
-    [Bind] = "JavaScript: the binding module or global object of a native library, repeatable"
+    [Bind] = "JavaScript: the binding module or global object of a native library, repeatable",
+    [SourceProfile] = "the profile of the source language; its default profile when absent",
+    [LegacyProfile] = "the former name of --target-profile",
+    [Verify] = "build and run the output and compare it with the vectors; JavaScript",
+    [VectorsOption] = "the vector file --verify compares with"
   };
 
   private readonly Backend[] _backendsOfThis;
+  private readonly Func<TranslationVerifier> _verifier;
 
   /// <summary>Creates the command with the standard backends.</summary>
-  public TranslateCommand() : this(_backends) {
+  public TranslateCommand() : this(_backends, TranslationVerifier.ForHost) {
   }
 
-  private TranslateCommand(Backend[] backends) => this._backendsOfThis = backends;
+  /// <summary>Creates the command with the standard backends and a verifier of the caller's for <c>--verify</c>.</summary>
+  /// <param name="verifier">Builds, runs and compares the output.</param>
+  public TranslateCommand(TranslationVerifier verifier) : this(_backends, () => verifier) {
+    ArgumentNullException.ThrowIfNull(verifier);
+  }
+
+  private TranslateCommand(Backend[] backends, Func<TranslationVerifier> verifier) => (this._backendsOfThis, this._verifier) = (backends, verifier);
 
   /// <inheritdoc/>
   public string Name => "translate";
@@ -170,6 +181,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     ];
     var options = required
       .Concat(_pipeline)
+      .Concat(_request)
       .Concat(_frontends.SelectMany(frontend => frontend.Options))
       .Concat(this._backendsOfThis.SelectMany(backend => backend.Options))
       .DistinctBy(option => option.Name);
@@ -221,7 +233,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// <summary>Runs <c>polypiler translate</c> with the arguments, the command made with the given backends.</summary>
   private static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Backend[] backends) {
     var registry = new CommandRegistry();
-    registry.Add(new TranslateCommand(backends));
+    registry.Add(new TranslateCommand(backends, TranslationVerifier.ForHost));
     return Program.Run(["translate", .. arguments], output, error, registry, Directory.GetCurrentDirectory());
   }
 
@@ -240,17 +252,14 @@ public sealed partial class TranslateCommand : ICliCommand {
           _ => parse.GetValue((Option<string>)option)!
         };
 
-    var frontend = _frontends.FirstOrDefault(candidate => candidate.Name == options[From]);
-    if (frontend is null)
-      return Refuse(context, $"unknown source language '{options[From]}'; the prototype reads {Listed(_frontends.Select(candidate => candidate.Name))}");
+    if (this.Resolve(file, options, context, out var verification) is { } refused)
+      return refused;
 
-    var backends = this._backendsOfThis;
-    var backend = backends.FirstOrDefault(candidate => candidate.Name == options[To]);
-    if (backend is null)
-      return Refuse(context, $"unknown target language '{options[To]}'; the prototype writes {Listed(backends.Select(candidate => candidate.Name))}");
+    var frontend = _frontends.First(candidate => candidate.Name == options[From]);
+    var backend = this._backendsOfThis.First(candidate => candidate.Name == options[To]);
 
     // An option that is not required belongs to a source or to a target language, and only to the chosen one.
-    var foreign = options.Keys.FirstOrDefault(option => !_required.Contains(option) && _pipeline.All(pipeline => pipeline.Name != option) && !frontend.Has(option) && !backend.Has(option));
+    var foreign = options.Keys.FirstOrDefault(option => !_required.Contains(option) && _pipeline.Concat(_request).All(common => common.Name != option) && !frontend.Has(option) && !backend.Has(option));
     var misuse = foreign is null ? PipelineMisuse(options) ?? frontend.Misuse(options) ?? backend.Misuse(options)
       : _frontends.Any(candidate => candidate.Has(foreign)) ? $"the option '{foreign}' does not apply to the source language '{frontend.Name}'"
       : $"the option '{foreign}' does not apply to the target language '{backend.Name}'";
@@ -266,11 +275,18 @@ public sealed partial class TranslateCommand : ICliCommand {
     if (module is null)
       return exitCode;
 
-    if (UnusedBinding(module, options) is { } unused)
+    if (Exported(file, frontend.Name, module, options, verification, context) is not { } exported)
+      return (int)ExitCode.InvalidSource;
+
+    if (UnusedBinding(exported, options) is { } unused)
       return Refuse(context, unused);
 
-    var (optimized, applications) = Optimized(file, module, options, context, backend);
-    return Emit(optimized, options, context, backend, new Record(file, bytes, frontend.Name, caveats, applications));
+    var (optimized, applications) = Optimized(file, exported, options, context, backend);
+    return Emit(optimized, options, context, backend, new Record(file, bytes, frontend.Name, caveats, applications) {
+      RequestedConfig = Requested(file, options),
+      Verification = verification,
+      Verifier = verification is null ? null : this._verifier()
+    });
   }
 
   /// <summary>The level of <c>--opt</c>, or <see langword="null"/> for a value that names none.</summary>
@@ -344,7 +360,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// <param name="error">Receives the diagnostics, as text.</param>
   /// <returns>The process exit code.</returns>
   public static int Emit(IrModule module, IReadOnlyDictionary<string, string> options, TextWriter output, TextWriter error)
-    => Emit(module, options, Context(output, error), _backends.First(candidate => candidate.Name == options[To]));
+    => Emit(module, Spelled(options), Context(output, error), _backends.First(candidate => candidate.Name == options[To]));
 
   /// <summary>Checks a module and writes it as C# by a capability table of the caller's.</summary>
   /// <param name="module">The module to emit.</param>
@@ -354,7 +370,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// <param name="capabilities">What each profile has, and what replaces what it lacks.</param>
   /// <returns>The process exit code.</returns>
   public static int Emit(IrModule module, IReadOnlyDictionary<string, string> options, TextWriter output, TextWriter error, CSharpCapabilities capabilities)
-    => Emit(module, options, Context(output, error), CSharp(capabilities, Implementations));
+    => Emit(module, Spelled(options), Context(output, error), CSharp(capabilities, Implementations));
 
   /// <summary>The context of an emission outside a command line: diagnostics as text, paths relative to the current directory.</summary>
   private static CliContext Context(TextWriter output, TextWriter error)
@@ -410,9 +426,11 @@ public sealed partial class TranslateCommand : ICliCommand {
 
       var outputs = new List<ManifestOutput>();
       var helpers = new List<EmittedHelper>();
+      var written = new List<(string Path, byte[] Bytes)>();
       foreach (var generated in emission.Files) {
         helpers.AddRange(generated.Helpers);
         var bytes = _utf8.GetBytes(generated.Content);
+        written.Add((ManifestWriter.PortablePath(generated.Path), bytes));
         // A crate's sources lie in a folder of the output (src/lib.rs).
         Directory.CreateDirectory(Path.GetDirectoryName(Path.Combine(full, generated.Path))!);
         File.WriteAllBytes(Path.Combine(full, generated.Path), bytes);
@@ -420,8 +438,12 @@ public sealed partial class TranslateCommand : ICliCommand {
         context.Output.WriteLine(Path.Combine(directory, generated.Path));
       }
 
-      if (record is not null)
-        ManifestWriter.Write(TranslationManifest(module, options, context, backend, record, full, outputs, helpers), full);
+      if (record is not null) {
+        var manifest = TranslationManifest(module, options, context, backend, record, full, outputs, helpers);
+        ManifestWriter.Write(manifest, full);
+        if (record.Verification is { } verification)
+          return record.Verifier!.Run(verification, manifest, written, full, directory, context);
+      }
     } catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException) {
       CliPaths.NotCreatable(directory, exception.Message, context);
       return (int)ExitCode.EnvironmentError;
@@ -691,12 +713,6 @@ public sealed partial class TranslateCommand : ICliCommand {
 
   private static string Choice(IEnumerable<string> names) => $"<{string.Join('|', names)}>";
 
-  /// <summary>Names in quotes, the last joined by "and", the others by commas: 'a', 'b' and 'c'.</summary>
-  private static string Listed(IEnumerable<string> names) {
-    var quoted = names.Select(name => $"'{name}'").ToList();
-    return quoted.Count < 2 ? string.Concat(quoted) : $"{string.Join(", ", quoted[..^1])} and {quoted[^1]}";
-  }
-
   /// <summary>Reports a command line the command cannot carry out as <c>PLY0003</c>.</summary>
   private static int Refuse(CliContext context, string message) {
     context.Report(Diagnostic.Create(CliDiagnostics.CommandLine, null, message));
@@ -709,7 +725,18 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// <param name="Language">The source language.</param>
   /// <param name="Caveats">What the imported code is known to do differently from the source.</param>
   /// <param name="Applications">Every rule the optimizer applied.</param>
-  private sealed record Record(string File, byte[] Bytes, string Language, IReadOnlyList<ManifestMessage> Caveats, IReadOnlyList<RuleApplication> Applications);
+  private sealed record Record(string File, byte[] Bytes, string Language, IReadOnlyList<ManifestMessage> Caveats, IReadOnlyList<RuleApplication> Applications) {
+
+    /// <summary>The canonical command line of the request, which the manifest stores as <c>requestedConfig</c>.</summary>
+    public string? RequestedConfig { get; init; }
+
+    /// <summary>What <c>--verify</c> compares the output with; <see langword="null"/> without it.</summary>
+    public VerificationRequest? Verification { get; init; }
+
+    /// <summary>Builds, runs and compares the output; set with <see cref="Verification"/>.</summary>
+    public TranslationVerifier? Verifier { get; init; }
+
+  }
 
   private static readonly UTF8Encoding _utf8 = new(false);
 
@@ -726,12 +753,13 @@ public sealed partial class TranslateCommand : ICliCommand {
     var input = InputPath(output, context.Resolve(record.File));
     List<string> command = ["translate", input, From, options[From], To, options[To], Output, "."];
     foreach (var (name, value) in options.Where(option => !_required.Contains(option.Key)))
-      command.AddRange(name is ExplainOpt or ExplainTypes or TypedArrays or AllowUnsafe ? [name] : [name, value]);
+      command.AddRange(name is ExplainOpt or ExplainTypes or TypedArrays or AllowUnsafe or Verify ? [name] : name is VectorsOption ? [name, InputPath(output, context.Resolve(value))] : [name, value]);
 
     var mode = FloatModeOf(options);
     return new Manifest {
       Compiler = new(ProductInfo.Name, ProductInfo.Version, IrModuleFormat.Version),
       Command = command,
+      RequestedConfig = record.RequestedConfig,
       Inputs = [new(input, ManifestWriter.Sha256(record.Bytes), null)],
       Frontend = new(record.Language, null),
       Target = new(backend.Name, backend.ProfileName(options), backend.Runtime, "any"),

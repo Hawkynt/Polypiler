@@ -75,8 +75,6 @@ public sealed class TranslateToCSharpTests {
   }
 
   /// <summary>Test design 10: a command line that cannot be carried out is PLY0003, exit code 2, and writes nothing.</summary>
-  [TestCase(new[] { "--to", "cobol", "--output", "out" }, "unknown target language 'cobol'; the prototype writes 'javascript', 'csharp', 'python' and 'rust'", TestName = "Misuse: unknown target")]
-  [TestCase(new[] { "--to", "CSharp", "--output", "out" }, "unknown target language 'CSharp'", TestName = "Misuse: the target is case-sensitive")]
   [TestCase(new[] { "--to", "csharp" }, "option '--output' is required", TestName = "Misuse: missing output")]
   [TestCase(new[] { "--to", "csharp", "--output", "out", "--namespace" }, "option '--namespace' requires a value", TestName = "Misuse: namespace without a value")]
   [TestCase(new[] { "--to", "csharp", "--output", "out", "--namespace", "" }, "'' is not a namespace name", TestName = "Misuse: empty namespace")]
@@ -84,8 +82,6 @@ public sealed class TranslateToCSharpTests {
   [TestCase(new[] { "--to", "csharp", "--output", "out", "--namespace", "Demo..Checksums" }, "'Demo..Checksums' is not a namespace name", TestName = "Misuse: namespace with an empty part")]
   [TestCase(new[] { "--to", "csharp", "--output", "out", "--namespace", "Demo; class X" }, "'Demo; class X' is not a namespace name", TestName = "Misuse: namespace that is more than a name")]
   [TestCase(new[] { "--to", "javascript", "--output", "out", "--namespace", "Demo" }, "the option '--namespace' does not apply to the target language 'javascript'", TestName = "Misuse: namespace for another target")]
-  [TestCase(new[] { "--to", "csharp", "--output", "out", "--profile", "net1.1" }, "unknown C# profile 'net1.1'; the profiles are 'net2.0', 'net3.5', 'net4.6', 'net4.8', 'netstandard2.0', 'netstandard2.1', 'netcoreapp3.1', 'net8.0', 'net10.0'", TestName = "Misuse: unknown profile")]
-  [TestCase(new[] { "--to", "csharp", "--output", "out", "--profile", "Net8.0" }, "unknown C# profile 'Net8.0'", TestName = "Misuse: the profile is case-sensitive")]
   [TestCase(new[] { "--to", "csharp", "--output", "out", "--profile" }, "option '--profile' requires a value", TestName = "Misuse: profile without a value")]
   [TestCase(new[] { "--to", "csharp", "--output", "out", "--profile", "net10.0", "--langversion", "7.3" }, "the C# profile 'net10.0' is written in C# 14 or later, not in C# 7.3", TestName = "Misuse: language version below the profile's")]
   [TestCase(new[] { "--to", "csharp", "--output", "out", "--profile", "net4.8", "--langversion", "7.2" }, "the C# profile 'net4.8' is written in C# 7.3 or later, not in C# 7.2", TestName = "Misuse: language version just below the profile's")]
@@ -93,7 +89,7 @@ public sealed class TranslateToCSharpTests {
   [TestCase(new[] { "--to", "csharp", "--output", "out", "--langversion", "latest" }, "'latest' is not a C# language version; the versions are 1, 2, 3, 4, 5, 6, 7, 7.1, 7.2, 7.3, 8, 9, 10, 11, 12, 13, 14", TestName = "Misuse: language version that is none")]
   [TestCase(new[] { "--to", "csharp", "--output", "out", "--langversion", "15" }, "'15' is not a C# language version", TestName = "Misuse: language version that does not exist yet")]
   [TestCase(new[] { "--to", "csharp", "--output", "out", "--langversion" }, "option '--langversion' requires a value", TestName = "Misuse: language version without a value")]
-  [TestCase(new[] { "--to", "csharp", "--output", "out", "--namespace", "2fast", "--profile", "net1.1" }, "'2fast' is not a namespace name", TestName = "Misuse: the namespace is judged before the profile")]
+  [TestCase(new[] { "--to", "csharp", "--output", "out", "--namespace", "2fast", "--langversion", "latest" }, "'2fast' is not a namespace name", TestName = "Misuse: the namespace is judged before the language version")]
   [TestCase(new[] { "--to", "javascript", "--output", "out", "--langversion", "8" }, "the option '--langversion' does not apply to the target language 'javascript'", TestName = "Misuse: language version for another target")]
   public void Misuse_IsAUsageError(string[] arguments, string message) {
     string[] all = ["translate", PrototypeFixture.PathOf("Adler32"), "--from", "csharp", .. arguments.Select(argument => argument == "out" ? this._out : argument)];

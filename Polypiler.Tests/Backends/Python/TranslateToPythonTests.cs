@@ -56,7 +56,6 @@ public sealed class TranslateToPythonTests {
     Assert.That(File.ReadAllText(Path.Combine(this._out, "snippet.py")), Does.Contain($"# Python profile: py{profile.Replace("py", "", StringComparison.Ordinal)}."));
   }
 
-  [TestCase(new[] { "--profile", "py2.7" }, "unknown Python profile 'py2.7'")]
   [TestCase(new[] { "--namespace", "N" }, "the option '--namespace' does not apply to the target language 'python'")]
   [TestCase(new[] { "--float", "fast" }, "unknown floating-point mode 'fast'")]
   public void OptionsThatDoNotApply_AreAUsageError(string[] options, string message) {

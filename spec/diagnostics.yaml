@@ -115,10 +115,11 @@ codes:
     severity: error
     exit: UsageError
     title: unknown identifier
-    message: "unknown <kind> '<identifier>'"
+    message: "unknown language '<identifier>'"
+    rule: adr-0004.identifiers
     area: infrastructure
     owner: CLI-TRANSLATE
-    reserved: true
+    surfaces: "standard error of polypiler translate for a --from or --to that names no known language, and as \"unknown profile '<profile>' for language '<language>'\" for a --source-profile or --target-profile the language does not have; nothing is written"
   - code: PLY0007
     severity: error
     exit: UsageError
@@ -173,17 +174,19 @@ codes:
     exit: InvalidSource
     title: export not found
     message: "export '<name>' not found in '<file>'"
+    rule: translate.export
     area: infrastructure
     owner: CLI-TRANSLATE
-    reserved: true
+    surfaces: "standard error of polypiler translate for an --export, or the export of the --vectors file, that the input has no public function of, and as \"'<file>' contains no exportable function\" for an input without any; nothing is written"
   - code: PLY0014
     severity: error
     exit: UnsupportedConstruct
     title: no frontend or backend
-    message: "no <frontend|backend> for '<language>'"
+    message: "no <frontend|backend> for '<language>' with profile '<profile>'"
+    rule: translate.components
     area: infrastructure
     owner: CLI-TRANSLATE
-    reserved: true
+    surfaces: "standard error of polypiler translate for a known language the command has no frontend (--from) or backend (--to) for; requiredCapability names the language and the profile; nothing is written"
   - code: PLY0015
     severity: error
     exit: UsageError
@@ -241,7 +244,7 @@ codes:
     rule: toolchains.installed
     area: infrastructure
     owner: INFRA-TOOLCHAINS
-    surfaces: standard error of polypiler-tooling toolchains probe and of fuzz run --engine afl without aflplusplus; the failure, or the inconclusive outcome outside CI, of a test marked RequiresToolchain
+    surfaces: standard error of polypiler-tooling toolchains probe and of fuzz run --engine afl without aflplusplus; the failure, or the inconclusive outcome outside CI, of a test marked RequiresToolchain; standard error of polypiler translate --verify when node is not on the search path
   - code: PLY0022
     severity: error
     exit: EnvironmentError

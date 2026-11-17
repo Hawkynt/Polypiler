@@ -41,7 +41,6 @@ public sealed class CSharpRoundTripTests {
   public void DeleteWorkingDirectory() => Directory.Delete(this._directory, true);
 
   /// <summary>Test design 10, with the real executable: a usage error is exit code 2 and writes nothing.</summary>
-  [TestCase(new[] { "--to", "cobol", "--output", "out" }, "unknown target language 'cobol'")]
   [TestCase(new[] { "--to", "csharp" }, "option '--output' is required")]
   [TestCase(new[] { "--to", "csharp", "--output", "out", "--namespace", "2fast" }, "'2fast' is not a namespace name")]
   public void Misuse_IsAUsageError(string[] arguments, string message) {
@@ -49,6 +48,16 @@ public sealed class CSharpRoundTripTests {
     var (exitCode, output) = Toolchain.RunPolypiler(this._directory, ["translate", "Adler32.cs", "--from", "csharp", .. arguments]);
     Assert.That(exitCode, Is.EqualTo(2));
     Assert.That(output, Does.Contain("error PLY0003: " + message));
+    Assert.That(Directory.Exists(Path.Combine(this._directory, "out")), Is.False);
+  }
+
+  /// <summary>Test design 10, with the real executable: a language no registry knows is PLY0006, exit code 2, and writes nothing.</summary>
+  [Test]
+  public void UnknownTargetLanguage_IsPLY0006() {
+    File.Copy(PrototypeFixture.PathOf("Adler32"), Path.Combine(this._directory, "Adler32.cs"));
+    var (exitCode, output) = Toolchain.RunPolypiler(this._directory, ["translate", "Adler32.cs", "--from", "csharp", "--to", "cobol", "--output", "out"]);
+    Assert.That(exitCode, Is.EqualTo(2));
+    Assert.That(output, Does.Contain("error PLY0006: unknown language 'cobol'"));
     Assert.That(Directory.Exists(Path.Combine(this._directory, "out")), Is.False);
   }
 

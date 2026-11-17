@@ -123,7 +123,7 @@ public sealed class TranslateManifestTests {
     var manifest = this.Read();
     Assert.That(manifest.Caveats.Select(caveat => caveat.Code), Is.EqualTo(new[] { "js-oob-read", "js-div-zero", "js-param-integer-inferred", "js-param-array-inferred" }));
     Assert.That((manifest.Caveats.All(caveat => caveat.Message.Length > 0), manifest.Frontend.Language), Is.EqualTo((true, "javascript")));
-    Assert.That(manifest.Command.Skip(8), Is.EquivalentTo(new[] { "--export", "f,g", "--profile", "es5", "--module", "cjs", "--typed-arrays" }));
+    Assert.That(manifest.Command.Skip(8), Is.EquivalentTo(new[] { "--export", "f,g", "--target-profile", "es5", "--module", "cjs", "--typed-arrays" }));
   }
 
   [Test]

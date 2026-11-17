@@ -81,7 +81,7 @@ public sealed class CSharpProfilesTests {
   public void UnknownProfile_IsAUsageError() {
     var (exitCode, output) = Toolchain.RunPolypiler(this._directory, "translate", PrototypeFixture.PathOf("Adler32"), "--from", "csharp", "--to", "csharp", "--profile", "net1.1", "--output", "out");
     Assert.That(exitCode, Is.EqualTo(2), output);
-    Assert.That(output, Does.Contain("polypiler: error PLY0003: unknown C# profile 'net1.1'").And.Not.Contain("usage:"));
+    Assert.That(output, Does.Contain("polypiler: error PLY0006: unknown profile 'net1.1' for language 'csharp'").And.Not.Contain("usage:"));
     Assert.That(Directory.Exists(Path.Combine(this._directory, "out")), Is.False);
   }
 

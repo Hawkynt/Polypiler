@@ -60,7 +60,6 @@ public sealed class JavaScriptProfileTests {
 
   /// <summary>The usage error of the scenario "An ES module is not available at ES5", word for word, and the other command lines that name no profile (test design 8).</summary>
   [TestCase(new[] { "--profile", "es5", "--module", "esm" }, "the profile 'es5' has no ES modules")]
-  [TestCase(new[] { "--profile", "es3" }, "unknown JavaScript profile 'es3'")]
   [TestCase(new[] { "--module", "amd" }, "unknown module format 'amd'")]
   [TestCase(new[] { "--module", "iife" }, "needs the name of its global object")]
   [TestCase(new[] { "--module", "iife", "--global", "not-a-name" }, "'not-a-name' is not a name a JavaScript global can have")]

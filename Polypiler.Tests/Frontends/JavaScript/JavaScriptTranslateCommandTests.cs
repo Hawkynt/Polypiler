@@ -136,11 +136,8 @@ public sealed class JavaScriptTranslateCommandTests {
   /// <summary>A command line that cannot be carried out is PLY0003, exit code 2, and names what exists.</summary>
   [TestCase(new[] { "A.js", "--from", "javascript", "--to", "javascript", "--output", "out", "--export" }, "option '--export' requires a value", TestName = "Misuse: --export without value")]
   [TestCase(new[] { "A.js", "--from", "javascript", "--to", "javascript", "--output", "out", "--export", " , " }, "the option '--export' names no function", TestName = "Misuse: --export without a name")]
-  [TestCase(new[] { "A.cs", "--from", "csharp", "--to", "javascript", "--output", "out", "--export", "F" }, "the option '--export' does not apply to the source language 'csharp'", TestName = "Misuse: --export for C#")]
   [TestCase(new[] { "A.cs", "--from", "csharp", "--to", "javascript", "--output", "out", "--explain-types" }, "the option '--explain-types' does not apply to the source language 'csharp'", TestName = "Misuse: --explain-types for C#")]
   [TestCase(new[] { "A.js", "--explain-types", "B.js", "--from", "javascript", "--to", "javascript", "--output", "out" }, "unexpected argument 'B.js'", TestName = "Misuse: --explain-types takes no value")]
-  [TestCase(new[] { "A.js", "--from", "typescript", "--to", "javascript", "--output", "out" }, "unknown source language 'typescript'; the prototype reads 'csharp', 'javascript', 'python' and 'rust'", TestName = "Misuse: unknown --from names the sources")]
-  [TestCase(new[] { "A.js", "--from", "javascript", "--to", "cobol", "--output", "out" }, "unknown target language 'cobol'; the prototype writes 'javascript', 'csharp', 'python' and 'rust'", TestName = "Misuse: unknown --to names the targets")]
   public void Misuse_IsAUsageError(string[] arguments, string message) {
     var (exitCode, output, error) = Invoke(arguments.Prepend("translate").ToArray());
     Assert.That((exitCode, output), Is.EqualTo(((int)ExitCode.UsageError, "")));

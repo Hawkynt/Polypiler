@@ -83,9 +83,7 @@ public sealed class TranslateToJavaScriptProfileTests {
     Assert.That(File.ReadAllText(Path.Combine(this._out, "Snippet.cjs")), Does.Contain("// F(a: Int32Array): number"));
   }
 
-  /// <summary>Test design 8: what names no profile is PLY0003, exit code 2, and nothing is written.</summary>
-  [TestCase(new[] { "--profile", "es3" }, "unknown JavaScript profile 'es3'; the profiles are 'es5', 'es2015', 'es2017', 'es2020', 'es2022'")]
-  [TestCase(new[] { "--profile", "es2016" }, "unknown JavaScript profile 'es2016'")]
+  /// <summary>Test design 8: a combination of profile options that names no profile is PLY0003, exit code 2, and nothing is written; a level that is none is PLY0006 (<c>TranslateIdentifierTests</c>).</summary>
   [TestCase(new[] { "--module", "amd" }, "unknown module format 'amd'; the module formats are 'esm', 'cjs', 'iife'")]
   [TestCase(new[] { "--profile", "es5", "--module", "esm" }, "the profile 'es5' has no ES modules; its module formats are 'cjs' and 'iife'")]
   [TestCase(new[] { "--module", "iife" }, "the module format 'iife' needs the name of its global object: --global <name>")]
@@ -114,11 +112,9 @@ public sealed class TranslateToJavaScriptProfileTests {
 
   /// <summary>
   /// <c>--profile</c> is one option of the command that the chosen target reads its own way: a
-  /// JavaScript level is no C# profile and a C# framework no JavaScript level, and each target says
-  /// so with its own list. <c>--langversion</c> stays the C# backend's.
+  /// JavaScript level is no C# profile and a C# framework no JavaScript level, which is <c>PLY0006</c>
+  /// (<c>TranslateIdentifierTests</c>). <c>--langversion</c> stays the C# backend's.
   /// </summary>
-  [TestCase("csharp", new[] { "--profile", "es2017" }, "unknown C# profile 'es2017'; the profiles are 'net2.0'")]
-  [TestCase("javascript", new[] { "--profile", "net8.0" }, "unknown JavaScript profile 'net8.0'; the profiles are 'es5', 'es2015', 'es2017', 'es2020', 'es2022'")]
   [TestCase("javascript", new[] { "--langversion", "14" }, "the option '--langversion' does not apply to the target language 'javascript'")]
   public void SharedProfileOption_IsReadByTheChosenTarget(string to, string[] options, string message) {
     var (exitCode, output, error) = this.Translate(to, options);
