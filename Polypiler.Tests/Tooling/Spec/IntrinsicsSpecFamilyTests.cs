@@ -132,7 +132,7 @@ public sealed class IntrinsicsSpecFamilyTests {
     var tree = SpecTree.Load(Path.Combine(PrototypeFixture.RepositoryRoot, "spec"), PrototypeFixture.RepositoryRoot);
     var validation = new SpecValidator(SpecFamilies.All).Run(tree, "intrinsics");
     Assert.That(validation.Diagnostics, Is.Empty);
-    Assert.That(validation.Documents, Is.EqualTo(136));
+    Assert.That(validation.Documents, Is.EqualTo(139));
   }
 
   /// <summary>

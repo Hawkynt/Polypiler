@@ -1,0 +1,31 @@
+id: INTRINSICS.FloatConvert
+title: Convert between floating-point formats with a rounding mode
+version: 1
+status: draft
+owner: Hawkynt
+issue: IR-FLOATCONV
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: FloatConvert
+  group: FloatMath
+  typeParameters: [{name: F, constraint: float}, {name: G, constraint: float}]
+  parameters: [{name: x, type: F}, {name: mode, type: TYPES.i32}]
+  returns: [{name: result, type: G}]
+  legality:
+    - {id: mode-constant, text: "mode is a constant rounding mode: 0 rne, 1 rtz, 2 rup, 3 rdn, 4 rna", fact: range}
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "x rounded once to the format of G in the rounding mode; overflow gives an infinity or the largest finite number as the mode says; a NaN gives the canonical quiet NaN"
+    source: "IEEE Std 754-2019, section 5.4.2 (convertFormat)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {F: TYPES.f64, G: TYPES.f32}, inputs: ["0x48078287F49C4A1D", 0], outputs: ["0x7F800000"]}
+    - {types: {F: TYPES.f64, G: TYPES.f32}, inputs: ["0x48078287F49C4A1D", 1], outputs: ["0x7F7FFFFF"]}
+    - {types: {F: TYPES.f64, G: TYPES.f32}, inputs: ["0x3FB999999999999A", 2], outputs: ["0x3DCCCCCD"]}
+    - {types: {F: TYPES.f64, G: TYPES.f32}, inputs: ["0x3FB999999999999A", 3], outputs: ["0x3DCCCCCC"]}
+    - {types: {F: TYPES.f32, G: TYPES.f64}, inputs: ["0x3F800000", 2], outputs: ["0x3FF0000000000000"]}

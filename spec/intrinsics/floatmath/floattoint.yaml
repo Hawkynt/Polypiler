@@ -1,0 +1,34 @@
+id: INTRINSICS.FloatToInt
+title: Convert floating point to an integer under a contract
+version: 1
+status: draft
+owner: Hawkynt
+issue: IR-FLOATCONV
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: FloatToInt
+  group: FloatMath
+  typeParameters: [{name: F, constraint: float}, {name: I, constraint: integer}]
+  parameters: [{name: x, type: F}, {name: mode, type: TYPES.i32}, {name: policy, type: TYPES.i32}, {name: sentinel, type: I}, {name: trap, type: TYPES.i32}, {name: nanTrap, type: TYPES.i32}]
+  returns: [{name: result, type: I}]
+  legality:
+    - {id: mode-constant, text: "mode is a constant rounding mode: 0 rne, 1 rtz, 2 rup, 3 rdn, 4 rna", fact: range}
+    - {id: policy-constant, text: "policy is a constant range policy: 0 trap, 1 sat, 2 wrap, 3 sentinel", fact: range}
+    - {id: contract-constant, text: "sentinel is a constant; trap is a constant arithmetic trap (0 divide by zero, 2 integer overflow, 3 invalid operation); nanTrap is one of those or -1", fact: range}
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "x rounded once to an integer in the rounding mode; within I that integer; outside it, an infinity or a NaN: trap raises trap, sat gives the nearest bound and 0 for a NaN, wrap gives the integer modulo 2^N and 0 for a NaN or an infinity, sentinel gives sentinel; with nanTrap other than -1 a NaN raises nanTrap"
+    source: "IEEE Std 754-2019, section 5.8 (convertToInteger); ECMA-262, 15th ed. (2024), sections 7.1.6 and 7.1.7 (ToInt32, ToUint32); WebAssembly Core Specification 2.0, section 4.3.3 (trunc, trunc_sat)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {F: TYPES.f64, I: TYPES.i32}, inputs: ["0x41E65A0BC0000000", 1, 1, 0, 2, -1], outputs: [2147483647]}
+    - {types: {F: TYPES.f64, I: TYPES.i32}, inputs: ["0x41E65A0BC0000000", 1, 2, 0, 2, -1], outputs: [-1294967296]}
+    - {types: {F: TYPES.f64, I: TYPES.i32}, inputs: ["0x7FF8000000000000", 1, 1, 0, 2, -1], outputs: [0]}
+    - {types: {F: TYPES.f64, I: TYPES.i32}, inputs: ["0x41E65A0BC0000000", 0, 3, -2147483648, 2, -1], outputs: [-2147483648]}
+    - {types: {F: TYPES.f64, I: TYPES.i32}, inputs: ["0x4045733333333333", 1, 0, 0, 2, 3], outputs: [42]}
+    - {types: {F: TYPES.f64, I: TYPES.u8}, inputs: ["0x4070180000000000", 0, 2, 0, 2, -1], outputs: [2]}

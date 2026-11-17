@@ -973,7 +973,20 @@ public enum IrIntrinsicOp {
   FloatCompare,
 
   /// <summary><c>(F) → u8</c>: the class of the number as the bits of <see cref="FloatClass"/> (<c>FClass</c>).</summary>
-  FloatClassify
+  FloatClassify,
+
+  /// <summary><c>(I, i32 mode) → F</c>: the integer rounded once to the format in the constant <see cref="RoundingMode"/> (<see cref="IeeeConversions"/>).</summary>
+  IntToFloat,
+
+  /// <summary><c>(F, i32 mode) → G</c>: the number rounded once to another format in the constant <see cref="RoundingMode"/>.</summary>
+  FloatConvert,
+
+  /// <summary>
+  /// <c>(F, i32 mode, i32 policy, I sentinel, i32 trap, i32 nanTrap) → I</c>: the number rounded once to
+  /// an integer, then the constant <see cref="RangePolicy"/> for a value outside the type
+  /// (<see cref="FloatToIntContract"/>).
+  /// </summary>
+  FloatToInt
 
 }
 

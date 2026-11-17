@@ -665,6 +665,8 @@ public static partial class IrInterpreter {
             return computed;
           if (IeeeOperations.Evaluates(intrinsic))
             return IeeeOperations.Evaluate(intrinsic, arguments);
+          if (IeeeConversions.Evaluates(intrinsic))
+            return IeeeConversions.Evaluate(intrinsic, arguments);
 
           return arguments[0] switch {
             float single => Single(intrinsic.Op, single, arguments),

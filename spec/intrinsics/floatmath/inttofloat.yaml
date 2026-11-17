@@ -1,0 +1,31 @@
+id: INTRINSICS.IntToFloat
+title: Convert an integer to floating point with a rounding mode
+version: 1
+status: draft
+owner: Hawkynt
+issue: IR-FLOATCONV
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: IntToFloat
+  group: FloatMath
+  typeParameters: [{name: I, constraint: integer}, {name: F, constraint: float}]
+  parameters: [{name: x, type: I}, {name: mode, type: TYPES.i32}]
+  returns: [{name: result, type: F}]
+  legality:
+    - {id: mode-constant, text: "mode is a constant rounding mode: 0 rne, 1 rtz, 2 rup, 3 rdn, 4 rna", fact: range}
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the integer x, signed or unsigned as I is, rounded once to the format of F in the rounding mode"
+    source: "IEEE Std 754-2019, section 5.4.1 (convertFromInt)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {I: TYPES.i32, F: TYPES.f32}, inputs: [16777217, 0], outputs: ["0x4B800000"]}
+    - {types: {I: TYPES.i32, F: TYPES.f32}, inputs: [16777219, 0], outputs: ["0x4B800002"]}
+    - {types: {I: TYPES.i32, F: TYPES.f32}, inputs: [16777217, 2], outputs: ["0x4B800001"]}
+    - {types: {I: TYPES.u64, F: TYPES.f64}, inputs: ["0xFFFFFFFFFFFFFFFF", 0], outputs: ["0x43F0000000000000"]}
+    - {types: {I: TYPES.i64, F: TYPES.f64}, inputs: [-1, 1], outputs: ["0xBFF0000000000000"]}

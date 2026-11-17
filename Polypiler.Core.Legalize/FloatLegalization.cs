@@ -51,7 +51,7 @@ public static class FloatLegalization {
   /// <param name="native">Whether the target writes an intrinsic itself.</param>
   /// <returns>The rewrite.</returns>
   public static LibraryRewrite Rewrite(Func<IrIntrinsic, bool> native)
-    => (expression, calls) => IeeeLegalization.Call(expression, calls) ?? (expression is IrIntrinsic intrinsic && IsReplaceable(intrinsic) && !native(intrinsic)
+    => (expression, calls) => IeeeLegalization.Call(expression, calls) ?? IeeeConversionLegalization.Call(expression, calls) ?? (expression is IrIntrinsic intrinsic && IsReplaceable(intrinsic) && !native(intrinsic)
       ? calls.Call(Implementation(intrinsic), intrinsic.Type, intrinsic.Arguments)
       : null);
 

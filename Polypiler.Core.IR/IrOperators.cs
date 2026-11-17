@@ -68,6 +68,8 @@ public static class IrOperators {
       return floating;
     if (IeeeOperations.Accepts(op, result, arguments) is { } ieee)
       return ieee;
+    if (IeeeConversions.Accepts(op, result, arguments) is { } conversion)
+      return conversion;
     if (StringOperations.Accepts(op, result, arguments) is { } text)
       return text;
     if (NumberTextOperations.Accepts(op, result, arguments) is { } number)

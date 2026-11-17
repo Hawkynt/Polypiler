@@ -127,6 +127,31 @@ so they need nothing of the target but its integers and its nearest-even arithme
 bit for bit against the exact arithmetic, and that against the host's arithmetic with an error-free
 transformation (TwoSum, the fused multiply-add) as the oracle of the directed modes.
 
+## Conversions with a rounding mode and a range policy
+
+`IrConvert` rounds to nearest even into floating point and truncates into an integer, wrapping,
+trapping or saturating. A conversion with another contract is an intrinsic of
+`Polypiler.Core.IR.IeeeConversions` (#117), its contract constant arguments after the value:
+
+| Operation | Definition |
+| --- | --- |
+| `IntToFloat(i, mode)` | the integer, signed or unsigned as its type is, rounded once to the format |
+| `FloatConvert(x, mode)` | the number rounded once to the other format; overflow gives ±∞ or the largest finite number as the mode says; a NaN the canonical quiet NaN |
+| `FloatToInt(x, mode, policy, sentinel, trap, nanTrap)` | the number rounded once to an integer in `mode`; within the type that integer; otherwise by `policy`: 0 `trap` raises `trap`, 1 `sat` gives the nearest bound (a NaN 0), 2 `wrap` the integer modulo 2^N in the signedness of the type (a NaN and ±∞ 0, ECMA-262 `ToInt32`/`ToUint32`), 3 `sentinel` gives `sentinel` (x87's integer indefinite); `nanTrap`, unless -1, is the trap a NaN raises instead |
+
+The traps are the arithmetic ones: divide by zero, integer overflow and invalid operation. `FloatToIntContract` holds a contract and its text form, short forms included:
+`[saturate, nan→0]` is `rtz, sat, nan=0`, `[trap]` is `rtz, trap Overflow`, `[modular]` is
+`rtz, wrap`, `[round-even]` into `i32` is `rne, sentinel -2147483648` (a contract of a rounding mode
+alone takes the sentinel of the type's minimum), `[round-even, modular]` is `rne, wrap`. The policy
+`undefined` of C follows with #122.
+
+Legalization (`IeeeConversionLegalization`, through `FloatLegalization.Rewrite`) makes a node whose
+contract `IrConvert` states that conversion - an integer to floating point in `rne` or exactly, a
+widening, a truncation with the overflow trap or with saturation - a truncating `wrap` into `i32` or
+`u32` the intrinsic `ToInt32` or `ToUint32`, and every other node the call of `IntToDoubleRounded`,
+`IntToSingleRounded`, `DoubleToSingleRounded` or `FloatToIntBits` in
+`Polypiler.Core.IR/Helpers/Operations/IeeeConversions.cs`.
+
 ## Angle conversion and interpolation
 
 | Operation | Definition |

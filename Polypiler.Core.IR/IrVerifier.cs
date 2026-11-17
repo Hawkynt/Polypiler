@@ -465,6 +465,8 @@ public static partial class IrVerifier {
             this.Require(false, unnamed);
           if (IeeeOperations.Problem(intrinsic) is { } unrounded)
             this.Require(false, unrounded);
+          if (IeeeConversions.Problem(intrinsic) is { } uncontracted)
+            this.Require(false, uncontracted);
 
           this.Declared(intrinsic.Type);
 
