@@ -137,7 +137,7 @@ Nothing has been released yet. Once the first alpha lands, self-contained `polyp
 
 ## 🚀 Quick start
 
-One public command name is planned: `polypiler`. Today it has a single working command, the prototype below. Every other example in this section establishes the product interface and **will not run until the corresponding features have been implemented and verified.**
+One public command name is planned: `polypiler`. Today it has two working commands: the `translate` prototype below and [`verify`](#verify-a-generated-directory). Every other example in this section establishes the product interface and **will not run until the corresponding features have been implemented and verified.**
 
 ### Run the prototype: a small C# algorithm to a JavaScript module
 
@@ -237,6 +237,17 @@ JavaScript has no static types. This importer models what JavaScript itself does
 - **Exit codes:** as above, with 3 for `PLY1101` to `PLY1106` (`PLY1104`: `--export` names a function the file does not have) and 4 for a syntax error (`PLY1100`, with the parser's own message).
 
 Of the 155 functions that stand directly in the `OpCodes` object, 103 import today — all 37 that imported while every type had to be stated in JSDoc among them; `tests/fixtures/prototype/js/OpCodes.import.txt` lists every one with the reason it is refused. The pairs JavaScript → JavaScript and JavaScript → C# are `executed` on the fixtures in `tests/fixtures/prototype/js` — `node` running the original is the oracle, a double compared by its bits — not `verified`.
+
+### Verify a generated directory
+
+```bash
+# Works today: checks the JavaScript of a generated directory with node, calls its adler32 on every vector and
+# compares; prints "tests/fixtures/cli/verify/adler32-js: verified (4 of 4 vectors)" and exits with 0
+dotnet run --project Polypiler.Cli -c Release -- verify tests/fixtures/cli/verify/adler32-js \
+  --against tests/fixtures/cli/verify/adler32.vectors.json --no-update --evidence ./artifacts/evidence
+```
+
+`verify` re-establishes from a directory and its `polypiler.manifest.json` alone whether the output still builds, runs and matches independent vectors ([docs/cli/verify.md](docs/cli/verify.md)): it recomputes the hash of every listed output (an edited file is `PLY0054` and nothing runs), reads a vector file of the oracle framework (`--against`, or the one the manifest recorded), checks every JavaScript source with `node --check`, calls the function the vector file exports once per vector in the sandbox and compares the outputs under the file's exactness policy. Each vector is a `pass` or `FAIL expected <e> actual <a>` line. The manifest's build, execution and verification are then rewritten to what this run found — a `verified` manifest that now fails goes back to `executed` — unless `--no-update` is given; `--evidence <directory>` writes an evidence bundle. `PLY0016` for a directory without a manifest, `PLY0017` for a vector file that is not one, `PLY0063` when no independent oracle is left. Only JavaScript output is run so far.
 
 ### Translate an existing algorithm
 
