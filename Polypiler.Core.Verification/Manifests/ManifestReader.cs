@@ -98,6 +98,7 @@ public static class ManifestReader {
     return new Manifest {
       Compiler = new(Text(compiler, "name"), Text(compiler, "version"), Int(compiler, "irVersion")),
       Command = Strings(root["command"]),
+      RequestedConfig = root["requestedConfig"]?.GetValue<string>(),
       Inputs = List(root["inputs"], input => new ManifestInput(Text(input, "path"), Text(input, "sha256"),
         input["provenance"] is { } provenance ? new(Text(provenance, "repository"), Text(provenance, "commit"), Text(provenance, "path")) : null)),
       Frontend = new(Text(frontend, "language"), OptionalText(frontend, "profile")),

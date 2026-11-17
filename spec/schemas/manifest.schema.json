@@ -19,6 +19,7 @@
       }
     },
     "command": { "type": "array", "minItems": 1, "items": { "type": "string" }, "description": "The argument vector without the executable; paths in it are relative to the output directory." },
+    "requestedConfig": { "type": "string", "minLength": 1, "description": "The canonical command line of the request (ADR 0004, Recorded command line); equal for two invocations that request the same thing." },
     "inputs": {
       "type": "array",
       "items": {
@@ -218,7 +219,8 @@
         "exactness": { "$ref": "#/$defs/exactness" },
         "total": { "type": "integer", "minimum": 0 },
         "passed": { "type": "integer", "minimum": 0 },
-        "failed": { "type": "integer", "minimum": 0 }
+        "failed": { "type": "integer", "minimum": 0 },
+        "result": { "enum": ["passed", "failed"], "description": "passed when at least one vector was compared and every one passed; failed otherwise." }
       }
     },
     "benchmarks": { "$ref": "#/$defs/section.benchmarks" },

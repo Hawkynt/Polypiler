@@ -99,6 +99,8 @@ public static class ManifestWriter {
       ["api"] = List(manifest.Api, Symbol),
       ["intrinsics"] = Strings(manifest.Intrinsics.Order(StringComparer.Ordinal))
     };
+    if (manifest.RequestedConfig is { } requested)
+      root["requestedConfig"] = requested;
     if (manifest.FloatingPoint is { } floating)
       root["floatingPoint"] = new JsonObject {
         ["mode"] = floating.Mode,
@@ -149,7 +151,8 @@ public static class ManifestWriter {
         ["exactness"] = Exactness(verification.Exactness),
         ["total"] = verification.Total,
         ["passed"] = verification.Passed,
-        ["failed"] = verification.Failed
+        ["failed"] = verification.Failed,
+        ["result"] = ManifestStateRule.Passed(verification) ? "passed" : "failed"
       };
     if (manifest.Benchmarks is { } benchmarks)
       root["benchmarks"] = benchmarks.DeepClone();

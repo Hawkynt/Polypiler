@@ -44,6 +44,12 @@ public sealed record Manifest {
   /// <summary>The argument vector without the executable path; paths in it are relative to the output directory.</summary>
   public required IReadOnlyList<string> Command { get; init; }
 
+  /// <summary>
+  /// The canonical command line of the request (ADR 0004, "Recorded command line"): equal for two
+  /// invocations that request the same thing; <see langword="null"/> when the producer records none.
+  /// </summary>
+  public string? RequestedConfig { get; init; }
+
   /// <summary>The inputs; written sorted by path.</summary>
   public required IReadOnlyList<ManifestInput> Inputs { get; init; }
 

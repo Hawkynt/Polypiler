@@ -32,12 +32,20 @@ public static class ManifestStateRule {
       return (ManifestState.Executed, "no verification results are recorded");
     if (verification.Total < 1)
       return (ManifestState.Executed, "the verification compared no vector");
-    if (verification.Failed != 0 || verification.Passed != verification.Total)
+    if (!Passed(verification))
       return (ManifestState.Executed, $"the verification passed {verification.Passed} of {verification.Total} with {verification.Failed} failed");
     if (string.Equals(verification.Producer, SelfProducer, StringComparison.Ordinal))
       return (ManifestState.Executed, $"the expected values were produced by {SelfProducer} itself");
 
     return (ManifestState.Verified, "");
+  }
+
+  /// <summary>Whether a verification compared at least one vector and every one passed: its <c>result</c> is <c>passed</c>, otherwise <c>failed</c>.</summary>
+  /// <param name="verification">The verification.</param>
+  /// <returns>Whether it passed.</returns>
+  public static bool Passed(ManifestVerification verification) {
+    ArgumentNullException.ThrowIfNull(verification);
+    return verification.Total > 0 && verification.Failed == 0 && verification.Passed == verification.Total;
   }
 
   /// <summary>The name of a state as the manifest writes it.</summary>
