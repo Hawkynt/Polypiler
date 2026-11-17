@@ -1442,9 +1442,51 @@ internal sealed class Parser {
         return this.Closure();
       case "::":
         return this.Path();
+      case "<":
+        return this.QualifiedPath();
       default:
         throw this.Error($"expected expression, found {token}");
     }
+  }
+
+  /// <summary>
+  /// A qualified path: <c>&lt;T&gt;::f</c> of a path type <c>T</c> is the path <c>T::f</c>, its generic
+  /// arguments those of <c>T</c>'s last segment, and is checked as that path. <c>&lt;T as Tr&gt;::f</c>
+  /// names an item of a trait implementation and is refused (<c>PLY1540</c>); so is the path of a type
+  /// that is no path, <c>&lt;[u8]&gt;::len</c> (<c>PLY1502</c>).
+  /// </summary>
+  private Expr QualifiedPath() {
+    var at = this.Next().At;
+    var type = this.Type();
+    TypeRef? trait = null;
+    if (this.Accept("as"))
+      trait = this.Type();
+
+    this.CloseAngle();
+    var segments = type.Shape == TypeShape.Path ? type.Name.Split("::").ToList() : [];
+    var generics = new Dictionary<int, IReadOnlyList<TypeRef>>();
+    if (type.Arguments.Count > 0)
+      generics[segments.Count - 1] = type.Arguments;
+
+    var rest = new List<string>();
+    do {
+      this.Expect("::");
+      if (this.At("<")) {
+        generics[segments.Count + rest.Count - 1] = this.GenericArguments();
+        continue;
+      }
+
+      rest.Add(this.Identifier());
+    } while (this.At("::"));
+
+    var text = $"<{type.Text}{(trait is null ? "" : " as " + trait.Text)}>::{string.Join("::", rest)}";
+    if (trait is not null)
+      return new RefusedExpr(new Refusal(RustFrontend.UnsupportedTrait, $"qualified path {text}", at));
+
+    if (type.Shape != TypeShape.Path)
+      return new RefusedExpr(new Refusal(RustFrontend.Unsupported, $"qualified path {text}", at));
+
+    return new PathExpr(at, [.. segments, .. rest]) { Generics = generics };
   }
 
   private Expr Closure() {

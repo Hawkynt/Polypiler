@@ -55,11 +55,43 @@ public sealed class TranslateToRustTests {
   [TestCase("--rust-version", "1.2", "Rust 1.2 is older than the 2024 edition")]
   [TestCase("--rust-version", "two", "'two' is not a Rust version")]
   [TestCase("--float", "fast", "unknown floating-point mode 'fast'")]
+  [TestCase("--trap-policy", "unwind", "unknown trap policy 'unwind'; the trap policies are panic and result")]
   [TestCase("--namespace", "A.B", "the option '--namespace' does not apply to the target language 'rust'")]
   public void Misuse_IsRefused(string option, string value, string message) {
     var (exitCode, _, error) = Invoke("translate", PrototypeFixture.PathOf("Numbers"), "--from", "csharp", "--to", "rust", "--output", this._out, option, value);
     Assert.That(exitCode, Is.EqualTo((int)ExitCode.UsageError));
     Assert.That(error, Does.Contain("PLY0003").And.Contain(message));
+  }
+
+  [Test]
+  public void TrapPolicyResult_WritesTheErrorModule() {
+    var (exitCode, output, error) = Invoke("translate", PrototypeFixture.PathOf("Numbers"), "--from", "csharp", "--to", "rust", "--output", this._out, "--trap-policy", "result");
+    Assert.That((exitCode, error), Is.EqualTo(((int)ExitCode.Success, "")));
+    Assert.That(output.Trim().Split('\n').Select(line => Path.GetRelativePath(this._out, line.Trim()).Replace('\\', '/')), Does.Contain("src/error.rs"));
+    Assert.That(File.ReadAllText(Path.Combine(this._out, "src", "lib.rs")), Does.Contain("pub use error::Error;").And.Contain("trap policy result"));
+    Assert.That(File.ReadAllText(Path.Combine(this._out, Manifest.FileName)), Does.Contain("rust2024 (Rust 1.85, trap policy result)"));
+  }
+
+  [Test]
+  public void TrapPolicyPanic_IsTheDefault() {
+    var (exitCode, _, error) = Invoke("translate", PrototypeFixture.PathOf("Numbers"), "--from", "csharp", "--to", "rust", "--output", this._out, "--trap-policy", "panic");
+    Assert.That((exitCode, error), Is.EqualTo(((int)ExitCode.Success, "")));
+    Assert.That(File.Exists(Path.Combine(this._out, "src", "error.rs")), Is.False);
+  }
+
+  [Test]
+  public void TrapPolicyResult_RefusesWhatWouldStillPanic() {
+    var source = Path.Combine(this._directory, "Lists.cs");
+    File.WriteAllText(source, "public static class Lists { public static int At(System.Collections.Generic.List<int> l, int i) => l[i]; }");
+    var (exitCode, _, error) = Invoke("translate", source, "--from", "csharp", "--to", "rust", "--output", this._out, "--trap-policy", "result");
+    Assert.That(exitCode, Is.EqualTo((int)ExitCode.UnsupportedConstruct));
+    Assert.That(error, Does.Contain("PLY1552").And.Contain("'the helper ply_list_index, which panics'"));
+  }
+
+  [Test]
+  public void TrapPolicy_DoesNotApplyToCSharp() {
+    var (exitCode, _, error) = Invoke("translate", PrototypeFixture.PathOf("Numbers"), "--from", "csharp", "--to", "csharp", "--output", this._out, "--trap-policy", "result");
+    Assert.That((exitCode, error.Contains("the option '--trap-policy' does not apply to the target language 'csharp'", StringComparison.Ordinal)), Is.EqualTo(((int)ExitCode.UsageError, true)));
   }
 
   [Test]
@@ -72,8 +104,54 @@ public sealed class TranslateToRustTests {
   public void UnsupportedConstruct_IsNamed() {
     var (exitCode, _, error) = Invoke("translate", PrototypeFixture.PathOf("pointers/Pointers"), "--from", "csharp", "--to", "rust", "--output", this._out);
     Assert.That(exitCode, Is.EqualTo((int)ExitCode.UnsupportedConstruct));
-    Assert.That(error, Does.Contain("PLY1550").And.Contain("'the type u8*'"));
+    Assert.That(error, Does.Contain("PLY1550").And.Contain("'a pointer comparison across two regions'"));
     Assert.That(Directory.Exists(this._out), Is.False);
+  }
+
+  [Test]
+  public void AllowUnsafe_IsPartOfTheProfile_AndOfTheRecordedCommand() {
+    var (exitCode, _, error) = Invoke("translate", PrototypeFixture.PathOf("Numbers"), "--from", "csharp", "--to", "rust", "--output", this._out, "--allow-unsafe");
+    Assert.That((exitCode, error), Is.EqualTo(((int)ExitCode.Success, "")));
+    Assert.That(File.ReadAllText(Path.Combine(this._out, "src", "lib.rs")), Does.Contain("//! Rust profile: rust2024 (Rust 1.85, unsafe code allowed)."));
+    // Numbers needs no unsafe code: the crate still forbids it.
+    Assert.That(File.ReadAllText(Path.Combine(this._out, "src", "lib.rs")), Does.Contain("#![forbid(unsafe_code)]"));
+    Assert.That(File.ReadAllText(Path.Combine(this._out, Manifest.FileName)), Does.Contain("\"--allow-unsafe\""));
+  }
+
+  [Test]
+  public void AllowUnsafe_DoesNotApplyToCSharp() {
+    var (exitCode, _, error) = Invoke("translate", PrototypeFixture.PathOf("Numbers"), "--from", "csharp", "--to", "csharp", "--output", this._out, "--allow-unsafe");
+    Assert.That((exitCode, error.Contains("the option '--allow-unsafe' does not apply to the target language 'csharp'", StringComparison.Ordinal)), Is.EqualTo(((int)ExitCode.UsageError, true)));
+  }
+
+  private string Written(string path) => File.ReadAllText(Path.Combine(this._out, path));
+
+  /// <summary>#459: a Rust crate of several modules comes back as a crate of the same modules, its root in src/lib.rs, its tests #[test] functions.</summary>
+  [Test]
+  public void RustCrateOfSeveralModules_KeepsItsModules() {
+    var root = Path.Combine(RustFixture.Directory, "modgraph", "src", "lib.rs");
+    var (exitCode, output, _) = Invoke("translate", root, "--from", "rust", "--to", "rust", "--overflow-checks", "panic", "--output", this._out);
+    Assert.That(exitCode, Is.EqualTo((int)ExitCode.Success));
+    Assert.That(output.Trim().Split('\n').Select(line => Path.GetRelativePath(this._out, line.Trim()).Replace('\\', '/')),
+      Is.EqualTo(new[] { "Cargo.toml", "src/lib.rs", "src/hash.rs", "src/util.rs", "src/util/bits.rs" }));
+    Assert.That(this.Written("Cargo.toml"), Does.Contain("name = \"modgraph\""));
+    Assert.That(this.Written("src/lib.rs"), Does.Contain("pub mod hash;\npub mod util;\n\nuse crate::hash::fnv1a;\nuse crate::util::bits::rotl;\n\npub fn checksum(data: &[u8]) -> u32 {"));
+    Assert.That(this.Written("src/lib.rs"), Does.Contain("#[cfg(test)]\nmod tests {\n    use super::*;\n\n    #[test]\n    fn fnv1a_of_a() {"));
+    Assert.That(this.Written("src/hash.rs"), Does.StartWith("use crate::util::bits::mix;\n\npub fn fnv1a(data: &[u8]) -> u32 {"));
+    Assert.That(this.Written("src/util.rs"), Is.EqualTo("pub mod bits;\n"));
+    Assert.That(this.Written("src/util/bits.rs"), Does.Contain("pub fn rotl(x: u32, n: u32) -> u32 {").And.Contain("pub(crate) fn mix(h: u32, b: u8) -> u32 {"));
+  }
+
+  /// <summary>A Rust source of one file stays one module beside the root; a source of another language too.</summary>
+  [Test]
+  public void RustSourceOfOneFile_IsOneModule() {
+    var source = Path.Combine(this._directory, "single.rs");
+    File.WriteAllText(source, "pub fn twice(a: u32) -> u32 { a.wrapping_mul(2) }\n#[test]\nfn doubles() { assert_eq!(twice(2), 4); }\n");
+    var (exitCode, output, _) = Invoke("translate", source, "--from", "rust", "--to", "rust", "--overflow-checks", "wrap", "--output", this._out);
+    Assert.That(exitCode, Is.EqualTo((int)ExitCode.Success));
+    Assert.That(output.Trim().Split('\n').Select(line => Path.GetRelativePath(this._out, line.Trim()).Replace('\\', '/')), Is.EqualTo(new[] { "Cargo.toml", "src/lib.rs", "src/single.rs" }));
+    Assert.That(this.Written("src/lib.rs"), Does.EndWith("pub mod single;\n"));
+    Assert.That(this.Written("src/single.rs"), Does.Contain("    #[test]\n    fn doubles() {"));
   }
 
 }

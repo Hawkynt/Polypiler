@@ -74,9 +74,9 @@ public sealed class RustEmitEdgeTests {
   }
 
   [Test]
-  public void ToInt32AndToUint32_AreTheHelpersOfECMAScript() {
-    Assert.That(Returned(new IrIntrinsic(IrIntrinsicOp.ToInt32, IrType.I32, [Ref(_x)]), _x), Does.Contain("fn to_int32("));
-    Assert.That(Returned(new IrIntrinsic(IrIntrinsicOp.ToUint32, IrType.U32, [Ref(_x)]), _x), Does.Contain("fn to_uint32("));
+  public void ToInt32AndToUint32_AreTheSpellingFunctionsOfTheWrappingConversion() {
+    Assert.That(Returned(new IrIntrinsic(IrIntrinsicOp.ToInt32, IrType.I32, [Ref(_x)]), _x), Does.Contain("fn ply_rs_f2i_wrap_i32(").And.Not.Contain("fn to_int32("));
+    Assert.That(Returned(new IrIntrinsic(IrIntrinsicOp.ToUint32, IrType.U32, [Ref(_x)]), _x), Does.Contain("fn ply_rs_f2i_wrap_u32(").And.Not.Contain("fn to_uint32("));
   }
 
   [Test]

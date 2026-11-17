@@ -90,17 +90,22 @@ public static partial class RustEmitter {
 
     /// <summary>An IR expression.</summary>
     private RsExpression Expression(IrExpr expression) => expression switch {
+      IrConst constant when this._standIns.TryGetValue(constant.Type, out var parameter) => new RsCall(new RsPath(parameter + "::default"), []) { Type = constant.Type },
       IrConst constant when TypeName(constant.Type) is not null => Literal(constant),
       IrConst { Type.IsEnum: true } constant => this.EnumConstant(constant),
       IrIntrinsic operation when EnumOperations.IsEnum(operation.Op) => this.EnumOperation(operation),
+      IrIntrinsic operation when IrPointers.IsPointerNode(operation) => this.PointerOperation(operation),
       IrIntrinsic operation when NumberTextOperations.IsNumberText(operation.Op) => this.NumberText(operation),
-      IrIntrinsic { Op: IrIntrinsicOp.ViewOf or IrIntrinsicOp.Slice or IrIntrinsicOp.ViewLength or IrIntrinsicOp.ViewToArray or IrIntrinsicOp.ViewEqual or IrIntrinsicOp.ViewFill } operation
+      IrIntrinsic { Op: IrIntrinsicOp.ViewOf or IrIntrinsicOp.Slice or IrIntrinsicOp.ViewLength or IrIntrinsicOp.ViewToArray or IrIntrinsicOp.ViewEqual or IrIntrinsicOp.ViewFill or IrIntrinsicOp.ViewCopy } operation
         => this.ViewOperation(operation),
       IrStrConst or IrConstRef { Type.IsString: true } or IrConditional { Type.IsString: true } => this.StringValue(expression),
       IrArrayLoad { Array: IrConstRef table, Type.IsString: true } load => this.TableText(table, load.Index),
       IrIntrinsic operation when StringOperations.IsString(operation.Op) => this.StringOperation(operation),
       IrLocalRef reference when this._shared.Contains(reference.Local) => this.SharedRead(reference.Local),
+      IrLocalRef { Type.IsBigInt: true } reference => this.BigValue(reference),
+      IrBigConst constant => this.BigLiteral(constant.Value),
       IrLocalRef { Type.IsFunction: true } reference when this._nested.ContainsKey(reference.Local) => this.FunctionValue(reference),
+      IrLocalRef reference when IsBuffer(reference.Type) => this.BufferValue(reference),
       IrLocalRef reference => new RsPath(this._locals[reference.Local]) { Type = reference.Type },
       IrLambda lambda => this.Closure(lambda),
       IrSome or IrNone or IrIsNone or IrUnwrap or IrCoalesce or IrBind => this.Optional(expression),
@@ -130,8 +135,9 @@ public static partial class RustEmitter {
       IrStep { Target: IrArrayLoad { Array: IrGlobalRef { Global: var locked } } load } step when IsLocked(locked) => this.LockedStep(step, load, locked),
       IrStep { Target: IrArrayLoad load } step => this.ElementStep(load, step, false),
       IrArrayLoad { Index: IrLocalRef counter } when this._elements.TryGetValue(counter.Local, out var element) => new RsPath(element) { Type = expression.Type },
+      IrArrayLoad load when this.ZippedElement(load.Array, load.Index) is { } zipped => zipped,
       IrArrayLoad { Array: IrGlobalRef { Global: var locked } } load when IsLocked(locked) => this.LockedElement(locked, load.Index),
-      IrArrayLoad load => new RsIndex(this.ArrayTarget(load.Array), this.Index(load.Index)) { Type = load.Type },
+      IrArrayLoad load => this.Element(this.ArrayTarget(load.Array), this.Index(load.Index), load.Type),
       IrArrayLength { Array: IrGlobalRef { Global: var locked } } when this._globalLengths.TryGetValue(locked.Name, out var count)
         => Literal(new IrConst(IrType.I32, count)),
       IrArrayLength length => this.ArrayLength(length),
@@ -156,6 +162,7 @@ public static partial class RustEmitter {
       IrNull { Type.IsObject: true } => new RsPath("None") { Type = expression.Type },
       IrGlobalRef global when !global.Type.IsArray && IsLocked(global.Global) => this.LockedValue(global.Global),
       IrGlobalRef global when !global.Type.IsArray => this.GlobalValue(global),
+      IrStructEquals equality when IsBuffer(equality.Left.Type) => this.Refuse("the equality of a struct holding an array"),
       IrStructEquals equality when equality.Left.Type.IsStruct => this.Binary(this.Expression(equality.Left), "==", this.Expression(equality.Right), IrType.Bool),
       IrThrowExpression thrown => this.Throw(thrown.Exception),
       _ => this.Refuse(expression.GetType().Name[2..])
@@ -207,6 +214,9 @@ public static partial class RustEmitter {
 
     private RsExpression Unary(IrUnary unary) {
       var type = unary.Type;
+      if (type.IsBigInt)
+        return this.BigUnary(unary);
+
       switch (unary.Op) {
         case IrUnaryOp.LogicalNot:
           return this.Not(unary.Operand);
@@ -222,7 +232,7 @@ public static partial class RustEmitter {
         case IrUnaryOp.Negate:
           return this.Method(this.Expression(unary.Operand), "wrapping_neg", type);
         default:
-          return Expect(this.Method(this.Expression(unary.Operand), "checked_neg", type), IrTrap.IntegerOverflow);
+          return this.Checked(this.Method(this.Expression(unary.Operand), "checked_neg", type), IrTrap.IntegerOverflow);
       }
     }
 
@@ -275,6 +285,9 @@ public static partial class RustEmitter {
     private RsExpression Binary(IrBinary binary) {
       var type = binary.Type;
       var operandType = binary.Left.Type;
+      if (operandType.IsBigInt)
+        return this.BigBinary(binary);
+
       // A comparison with a truth value constant is the value itself or its negation (clippy's bool_comparison).
       if (binary.Op is IrBinaryOp.Equal or IrBinaryOp.NotEqual && operandType == IrType.Bool) {
         if (binary.Right is IrConst right)
@@ -327,12 +340,12 @@ public static partial class RustEmitter {
           case IrBinaryOp.Add or IrBinaryOp.Subtract or IrBinaryOp.Multiply:
             return this.Method(a, binary.Op switch { IrBinaryOp.Add => "wrapping_add", IrBinaryOp.Subtract => "wrapping_sub", _ => "wrapping_mul" }, type, b);
           case IrBinaryOp.AddChecked or IrBinaryOp.SubtractChecked or IrBinaryOp.MultiplyChecked:
-            return Expect(this.Method(a, binary.Op switch { IrBinaryOp.AddChecked => "checked_add", IrBinaryOp.SubtractChecked => "checked_sub", _ => "checked_mul" }, type, b), IrTrap.IntegerOverflow);
+            return this.Checked(this.Method(a, binary.Op switch { IrBinaryOp.AddChecked => "checked_add", IrBinaryOp.SubtractChecked => "checked_sub", _ => "checked_mul" }, type, b), IrTrap.IntegerOverflow);
           case IrBinaryOp.ShiftLeft or IrBinaryOp.ShiftRight or IrBinaryOp.ShiftRightLogical:
             return this.Shift(binary, a, b);
           // A constant divisor other than 0 and -1 cannot trap: the operator as it is.
           case IrBinaryOp.Divide or IrBinaryOp.Remainder when binary.Right is not IrConst { Value: not 0 and not -1 }:
-            return new RsCall(new RsPath(this.Division(binary.Op == IrBinaryOp.Divide, operandType)), [a, b]) { Type = type };
+            return this.Spelled(new RsCall(new RsPath(this.Division(binary.Op == IrBinaryOp.Divide, operandType)), [a, b]) { Type = type });
         }
       }
 
@@ -414,7 +427,8 @@ public static partial class RustEmitter {
       if (!step.Postfix)
         return new RsBlockExpression(new RsBlock([assign], place)) { Type = target.Type };
 
-      var old = this._locals[target.Local].TrimStart('_') + "_old";
+      // A field of an iterator's struct, self.taken, is held in a variable of its name, taken_old.
+      var old = this._locals[target.Local].Replace("self.", "", StringComparison.Ordinal).TrimStart('_') + "_old";
       return new RsBlockExpression(new RsBlock([new RsLet(old, false, null, place), assign], new RsPath(old))) { Type = target.Type };
     }
 
@@ -429,6 +443,8 @@ public static partial class RustEmitter {
     private RsExpression Convert(IrConvert convert) {
       var source = convert.Operand.Type;
       var target = convert.Type;
+      if (source.IsBigInt || target.IsBigInt)
+        return this.BigConvert(convert);
       if (source.IsEnum)
         return this.Inner(convert.Operand);
       if (target.IsEnum)
@@ -456,9 +472,9 @@ public static partial class RustEmitter {
         if (convert.Contract != IrConversion.Trap)
           return this.Cast(operand, target);
         if (this.Has(RustCapabilities.TryFrom))
-          return Expect(new RsCall(new RsPath(TypeName(target)! + "::try_from"), [Suffixed(operand)]) { Type = target }, IrTrap.IntegerOverflow);
+          return this.Checked(new RsCall(new RsPath(TypeName(target)! + "::try_from"), [Suffixed(operand)]) { Type = target }, IrTrap.IntegerOverflow);
 
-        return new RsCall(new RsPath(this.CheckedNarrowing(source, target)), [operand]) { Type = target };
+        return this.Spelled(new RsCall(new RsPath(this.CheckedNarrowing(source, target)), [operand]) { Type = target });
       }
 
       if (target.IsFloat)
@@ -466,7 +482,7 @@ public static partial class RustEmitter {
 
       if (convert.Contract == IrConversion.Trap) {
         var wide = source == IrType.F32 ? new RsCall(new RsPath("f64::from"), [operand]) { Type = IrType.F64 } : operand;
-        return new RsCall(new RsPath(this.CheckedFloatToInteger(target)), [wide]) { Type = target };
+        return this.Spelled(new RsCall(new RsPath(this.CheckedFloatToInteger(target)), [wide]) { Type = target });
       }
 
       return this.Cast(operand, target);
@@ -481,7 +497,7 @@ public static partial class RustEmitter {
     private string CheckedFloatToInteger(IrType target) {
       var typeName = TypeName(target)!;
       var name = "ply_f2i_trap_" + typeName;
-      this.Spell(name, () => {
+      this.Spell(name, () => this.SpelledFallible(() => {
         var x = new RsPath("x") { Type = IrType.F64 };
         var minimum = (double)IrOperators.Minimum(target);
         var maximum = (double)IrOperators.Maximum(target) + 1;
@@ -489,8 +505,30 @@ public static partial class RustEmitter {
         var low = this.Binary(x, lowExact ? ">" : ">=", Literal(new IrConst(IrType.F64, IrOperators.Bits(IrType.F64, lowExact ? minimum - 1 : minimum))), IrType.Bool);
         var high = this.Binary(x, "<", Literal(new IrConst(IrType.F64, IrOperators.Bits(IrType.F64, maximum))), IrType.Bool);
         var test = this.Binary(low, "&&", high, IrType.Bool);
-        var body = new RsBlock([], new RsIf(test, new RsBlock([], this.Cast(x, target)), new RsBlockExpression(new RsBlock([], Panic(IrTrap.IntegerOverflow)))));
+        var body = new RsBlock([], new RsIf(test, new RsBlock([], this.Cast(x, target)), new RsBlockExpression(new RsBlock([], this.Trap(IrTrap.IntegerOverflow)))));
         return new RsFunction(name, "", [new RsParameter("x", "f64")], typeName, body);
+      }));
+      return name;
+    }
+
+    /// <summary>
+    /// The spelling function of the wrapping conversion from <c>f64</c> to a 32-bit integer, ECMA-262's
+    /// <c>ToInt32</c> and <c>ToUint32</c> (the IR's <see cref="IrIntrinsicOp.ToInt32"/>): the number
+    /// without its fraction modulo 2^32, a NaN and an infinity 0. Rust has no such conversion - its
+    /// <c>as</c> saturates - so the spelling is the one of the IR library's <c>ToInt32</c>, in Rust's
+    /// casts: the remainder of the truncated number by 2^32 is exact and lies strictly within ±2^32,
+    /// so <c>as i64</c> keeps it whole, and the last <c>as</c> keeps its low 32 bits. A NaN stays one
+    /// through <c>trunc</c> and <c>%</c>, as an infinity becomes one under <c>%</c>, and <c>as</c>
+    /// makes 0 of it.
+    /// </summary>
+    private string WrappingFloatToInteger(IrType target) {
+      var typeName = TypeName(target)!;
+      var name = "ply_rs_f2i_wrap_" + typeName;
+      this.Spell(name, () => {
+        var x = new RsPath("x") { Type = IrType.F64 };
+        var whole = this.Method(x, "trunc", IrType.F64);
+        var remainder = this.Binary(whole, "%", Literal(new IrConst(IrType.F64, IrOperators.Bits(IrType.F64, 4294967296.0))), IrType.F64);
+        return new RsFunction(name, "", [new RsParameter("x", "f64")], typeName, new RsBlock([], this.Cast(this.Cast(remainder, IrType.I64), target)));
       });
       return name;
     }
@@ -505,31 +543,31 @@ public static partial class RustEmitter {
     private string Division(bool quotient, IrType type) {
       var typeName = TypeName(type)!;
       var name = (quotient ? "ply_div_" : "ply_rem_") + typeName;
-      this.Spell(name, () => {
+      this.Spell(name, () => this.SpelledFallible(() => {
         var a = new RsPath("a") { Type = type };
         var b = new RsPath("b") { Type = type };
         var zero = new RsExpressionStatement(new RsIf(this.Binary(b, "==", new RsLiteral("0") { Type = type }, IrType.Bool),
-          new RsBlock([new RsExpressionStatement(Panic(IrTrap.DivideByZero))], null), null));
+          new RsBlock([new RsExpressionStatement(this.Trap(IrTrap.DivideByZero))], null), null));
         RsExpression result = type.IsSigned
-          ? Expect(this.Method(a, quotient ? "checked_div" : "checked_rem", type, b), IrTrap.IntegerOverflow)
+          ? this.Checked(this.Method(a, quotient ? "checked_div" : "checked_rem", type, b), IrTrap.IntegerOverflow)
           : this.Binary(a, quotient ? "/" : "%", b, type);
         return new RsFunction(name, "", [new RsParameter("a", typeName), new RsParameter("b", typeName)], typeName, new RsBlock([zero], result));
-      });
+      }));
       return name;
     }
 
     /// <summary>The spelling function of a trapping narrowing between integers below Rust 1.34: a range test through <c>i128</c>, then <c>as</c>.</summary>
     private string CheckedNarrowing(IrType source, IrType target) {
       var name = $"ply_i2i_trap_{TypeName(source)}_{TypeName(target)}";
-      this.Spell(name, () => {
+      this.Spell(name, () => this.SpelledFallible(() => {
         var x = new RsPath("x") { Type = source };
         var wide = this.Cast(x, IrType.I64) with { Target = "i128" };
         var low = this.Binary(wide, ">=", new RsLiteral(IrOperators.Minimum(target).ToString(CultureInfo.InvariantCulture)), IrType.Bool);
         var high = this.Binary(wide, "<=", new RsLiteral(IrOperators.Maximum(target).ToString(CultureInfo.InvariantCulture)), IrType.Bool);
         var body = new RsBlock([], new RsIf(this.Binary(low, "&&", high, IrType.Bool), new RsBlock([], this.Cast(x, target)),
-          new RsBlockExpression(new RsBlock([], Panic(IrTrap.IntegerOverflow)))));
+          new RsBlockExpression(new RsBlock([], this.Trap(IrTrap.IntegerOverflow)))));
         return new RsFunction(name, "", [new RsParameter("x", TypeName(source)!)], TypeName(target), body);
-      });
+      }));
       return name;
     }
 
@@ -562,7 +600,7 @@ public static partial class RustEmitter {
         IrIntrinsicOp.AddOverflows => this.Method(Call("checked_add", arguments[1]), "is_none", IrType.Bool),
         IrIntrinsicOp.SubOverflows => this.Method(Call("checked_sub", arguments[1]), "is_none", IrType.Bool),
         IrIntrinsicOp.MulOverflows => this.Method(Call("checked_mul", arguments[1]), "is_none", IrType.Bool),
-        IrIntrinsicOp.Abs when operand.IsInteger => Expect(Call("checked_abs"), IrTrap.IntegerOverflow),
+        IrIntrinsicOp.Abs when operand.IsInteger => this.Checked(Call("checked_abs"), IrTrap.IntegerOverflow),
         IrIntrinsicOp.AbsWrap => Call("wrapping_abs"),
         IrIntrinsicOp.Abs => Call("abs"),
         IrIntrinsicOp.Sqrt => Call("sqrt"),
@@ -580,6 +618,7 @@ public static partial class RustEmitter {
         IrIntrinsicOp.IsNormal => Call("is_normal"),
         IrIntrinsicOp.IsSubnormal => Call("is_subnormal"),
         IrIntrinsicOp.FloatBits => As(Call("to_bits"), operand == IrType.F32 ? IrType.U32 : IrType.U64),
+        IrIntrinsicOp.ToInt32 or IrIntrinsicOp.ToUint32 => new RsCall(new RsPath(this.WrappingFloatToInteger(type)), [first]) { Type = type },
         _ => new RsCall(new RsPath(TypeName(type)! + "::from_bits"), [operand.IsSigned ? this.Cast(first, operand == IrType.I32 ? IrType.U32 : IrType.U64) : first]) { Type = type }
       };
     }

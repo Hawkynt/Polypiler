@@ -740,7 +740,9 @@ jobs:
       matrix:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    # The seeded differentials of the Rust frontend (2,000 calls per function, both overflow modes) take
+    # about half an hour on a hosted runner with the rest of the layer.
+    timeout-minutes: 50
     permissions:
       contents: read
     env:

@@ -39,6 +39,10 @@ public sealed class RustPhaseTwoSteps {
   [Given("^the Rust source \"(.*)\"$")]
   public void TheSource(string source) => this._source = source.Replace("\\\"", "\"", StringComparison.Ordinal);
 
+  /// <summary>A real-world file kept byte for byte in <c>tests/fixtures/rust/upstream</c>, with its pin in the notice beside it.</summary>
+  [Given("^the pinned upstream Rust file (\\S+)$")]
+  public void TheUpstreamFile(string name) => this._source = File.ReadAllText(Path.Combine(PrototypeFixture.RepositoryRoot, "tests", "fixtures", "rust", "upstream", name));
+
   [When("^it is imported with overflowChecks (panic|wrap)$")]
   public void Imported(string mode) {
     this._mode = mode == "panic" ? OverflowChecks.Panic : OverflowChecks.Wrap;
@@ -69,6 +73,15 @@ public sealed class RustPhaseTwoSteps {
   [Then("^the interpreter reports the panic (overflow|divide by zero|panic)$")]
   public void ThePanicIs(string kind) => Assert.That(this._outcome, Is.EqualTo(Panic(kind)));
 
+  /// <summary>The IR class the panic throws, and the slices the caller holds after it - written as they were before when the panic came first.</summary>
+  [Then("^the interpreter throws (\\w+) and the slices after the call are (.+)$")]
+  public void ThrowsLeavingTheSlices(string exceptionClass, string expected) {
+    var arguments = this._call!.FreshArguments();
+    var thrown = Assert.Throws(Is.InstanceOf<IrException>(), () => IrInterpreter.Call(this.Module, this._call.Method, arguments));
+    Assert.That(((IrException)thrown!).Class.Name, Is.EqualTo(exceptionClass));
+    Assert.That(string.Join(" | ", arguments.OfType<Array>().Select(PrototypeFixture.Show)), Is.EqualTo(string.Join(" | ", expected.Split(" and ").Select(list => Shown(list.Trim())))));
+  }
+
   [Then("^rustc does the same$")]
   public void RustcAgrees() {
     var directory = Directory.CreateTempSubdirectory("polypiler-rust-step-").FullName;
@@ -94,6 +107,11 @@ public sealed class RustPhaseTwoSteps {
 
   [Then("^the message names \"(.*)\"$")]
   public void MessageNames(string text) => Assert.That(this._result!.Diagnostics.Select(diagnostic => diagnostic.Message), Has.Some.Contains(text));
+
+  /// <summary>Every diagnostic is a refusal of the Rust frontend (<c>PLY15xx</c>) with the line it stands on - no crash turned into a diagnostic.</summary>
+  [Then("^every diagnostic is a refusal of the Rust frontend with its line$")]
+  public void RefusalsOnly()
+    => Assert.That(this._result!.Diagnostics.Select(diagnostic => (diagnostic.Code[..5], diagnostic.Line > 0)), Has.All.EqualTo(("PLY15", true)));
 
   [Then("^no IR is produced$")]
   public void NoModule() => Assert.That(this._result!.Module, Is.Null);

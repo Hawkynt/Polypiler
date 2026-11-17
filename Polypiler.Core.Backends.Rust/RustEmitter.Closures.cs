@@ -257,7 +257,7 @@ public static partial class RustEmitter {
     /// <summary>A function value as the callee of a call: a variable or an element in place, any other value as it is made.</summary>
     private RsExpression Callee(IrExpr callee) => callee switch {
       IrLocalRef reference => new RsPath(this._locals[reference.Local]) { Type = callee.Type },
-      IrArrayLoad load => new RsIndex(this.ArrayTarget(load.Array), this.Index(load.Index)) { Type = callee.Type },
+      IrArrayLoad load => this.Element(this.ArrayTarget(load.Array), this.Index(load.Index), callee.Type),
       _ => this.Expression(callee)
     };
 
@@ -278,9 +278,8 @@ public static partial class RustEmitter {
       if (!this.IsNullable(invoke.Callee.Type))
         return new RsCall(this.Operand(callee, 15), [.. invoke.Arguments.Select(this.Argument)]) { Type = invoke.Type };
 
-      var nonNull = this.StringHelper("ply_non_null");
       if (invoke.Arguments.All(argument => argument is IrLocalRef or IrConst))
-        return new RsCall(new RsCall(new RsPath(nonNull), [new RsReference(false, callee)]), [.. invoke.Arguments.Select(this.Argument)]) { Type = invoke.Type };
+        return new RsCall(this.Operand(this.NonNull(callee), 15), [.. invoke.Arguments.Select(this.Argument)]) { Type = invoke.Type };
 
       var calleeName = this.Temporary("callee");
       var statements = new List<RsStatement> { new RsLet(calleeName, false, null, new RsReference(false, callee)) };
@@ -291,7 +290,8 @@ public static partial class RustEmitter {
         arguments.Add(new RsPath(name) { Type = argument.Type });
       }
 
-      return new RsBlockExpression(new RsBlock(statements, new RsCall(new RsCall(new RsPath(nonNull), [new RsPath(calleeName)]), arguments) { Type = invoke.Type })) { Type = invoke.Type };
+      RsExpression held = this.Results ? this.Operand(this.NonNull(new RsPath(calleeName)), 15) : new RsCall(new RsPath(this.StringHelper("ply_non_null")), [new RsPath(calleeName)]);
+      return new RsBlockExpression(new RsBlock(statements, new RsCall(held, arguments) { Type = invoke.Type })) { Type = invoke.Type };
     }
 
     /// <summary>A function of the module as a value: <c>Rc::new(f)</c>, a static method of a class by its path.</summary>
@@ -343,11 +343,14 @@ public static partial class RustEmitter {
       return this.MadeClosure(lambda, bindings, [.. this._owned, receiver], true);
     }
 
-    /// <summary>A test of a function value for <c>null</c>: <c>f.is_none()</c>, <c>false</c> of a variable whose type never holds <c>null</c>.</summary>
+    /// <summary>
+    /// A test of a function value for <c>null</c>: <c>f.is_none()</c>, <c>false</c> of a variable whose
+    /// type never holds <c>null</c> or that is a local function, a <c>fn</c> item that is never <c>null</c>.
+    /// </summary>
     private RsExpression FunctionIsNull(IrExpr value) {
       if (value is IrNull)
         return new RsLiteral("true") { Type = IrType.Bool };
-      if (!this.IsNullable(value.Type))
+      if (!this.IsNullable(value.Type) || value is IrLocalRef { Local: var local } && this._nested.ContainsKey(local))
         return value is IrLocalRef ? new RsLiteral("false") { Type = IrType.Bool } : this.Refuse("a test for null of a function value that is made");
 
       return new RsMethodCall(this.Receiver(this.Callee(value)), "is_none", []) { Type = IrType.Bool };

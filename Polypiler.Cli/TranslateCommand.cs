@@ -36,8 +36,9 @@ namespace Polypiler.Cli;
 /// own way: for C# it names the target framework, and <c>--langversion</c> raises the version of the
 /// language above the one the profile brings; for JavaScript it names the language level, and
 /// <c>--module</c>, <c>--global</c> and <c>--typed-arrays</c> say how the file is packaged and what
-/// an ECMAScript 5 engine has; for Rust it names the edition, and <c>--rust-version</c> raises the
-/// minimum supported Rust version above the one the edition brings. The pipeline options <c>--opt</c>, <c>--disable-opt</c> and
+/// an ECMAScript 5 engine has; for Rust it names the edition, <c>--rust-version</c> raises the
+/// minimum supported Rust version above the one the edition brings, and <c>--trap-policy</c> chooses
+/// whether a trap panics or is an error value (ADR 0008). The pipeline options <c>--opt</c>, <c>--disable-opt</c> and
 /// <c>--explain-opt</c> (ADR 0004) apply to every pair: the optimizer runs between the frontend and
 /// the backend, and the target passes between the backend's syntax tree and its printer (#1336),
 /// unless <c>--opt none</c> says otherwise; the rules of the one and the passes of the other share
@@ -84,6 +85,8 @@ public sealed partial class TranslateCommand : ICliCommand {
   private const string OverflowChecksOption = "--overflow-checks";
   private const string CargoProfileOption = "--cargo-profile";
   private const string DebugAssertionsOption = "--debug-assertions";
+  private const string TrapPolicyOption = "--trap-policy";
+  private const string AllowUnsafe = "--allow-unsafe";
 
   /// <summary>The caveat that records the overflow mode of a Rust import and where it came from.</summary>
   public const string RustOverflowCaveat = "rs-overflow-checks";
@@ -115,6 +118,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     [DebugAssertionsOption] = "Rust: whether debug_assert! asserts, as rustc -C debug-assertions: on (debug) or off (release); a source with one needs it",
     [LangVersion] = "C#: the language version, above the one of the profile",
     [RustVersion] = "Rust: the minimum supported Rust version, above the one of the edition",
+    [TrapPolicyOption] = "Rust: what a trap is: a panic (the default) or an error value, every function a trap can leave returning a Result (ADR 0008)",
+    [AllowUnsafe] = "Rust: allow the one unsafe lowering, a mutable overlay view, which the crate then has to pass Miri with; refused with PLY1567 otherwise",
     [Bind] = "JavaScript: the binding module or global object of a native library, repeatable"
   };
 
@@ -398,7 +403,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     try {
       var full = context.Resolve(directory);
       Directory.CreateDirectory(full);
-      var emission = backend.Emit(module, options, PassesOf(options));
+      var emission = backend.Emit(module, options, PassesOf(options), context.Layout);
       if (record is not null && options.ContainsKey(ExplainOpt))
         foreach (var application in emission.Applications)
           context.Note($"{record.File}: opt {application}");
@@ -526,6 +531,10 @@ public sealed partial class TranslateCommand : ICliCommand {
       context.Report(diagnostic);
 
     var failure = imported.Diagnostics.Any(diagnostic => diagnostic.ExitCode == ExitCode.InvalidSource) ? InvalidSource : UnsupportedConstruct;
+    // The crate's modules and tests go to a backend that writes them: a crate whose root is src/lib.rs is named after its folder.
+    var full = Path.GetFullPath(context.Resolve(file));
+    var package = Path.GetFileName(full) == "lib.rs" && Path.GetFileName(Path.GetDirectoryName(full)) == "src" ? Path.GetFileName(Path.GetDirectoryName(Path.GetDirectoryName(full))) : null;
+    context.Layout = new CrateLayout(package, imported.Modules, imported.Tests);
     return (imported.Module, failure, [new ManifestMessage(RustOverflowCaveat, description)]);
   }
 
@@ -588,7 +597,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     options => FloatMisuse(options) ?? JavaScriptProfileOf(options).Error ?? BindMisuse(options),
     (module, options) => JavaScriptEmitter.Legalize(module, implementations, JavaScriptProfileOf(options).Profile!, FloatModeOf(options), capabilities),
     (module, options) => JavaScriptEmitter.Check(module, JavaScriptProfileOf(options).Profile!, capabilities),
-    (module, options, passes) => JavaScriptEmitter.Emit(module, JavaScriptProfileOf(options).Profile!, FloatModeOf(options), capabilities, passes));
+    (module, options, passes, _) => JavaScriptEmitter.Emit(module, JavaScriptProfileOf(options).Profile!, FloatModeOf(options), capabilities, passes));
 
   /// <summary>The JavaScript profile the options of a command line name, or what is wrong with them.</summary>
   private static (JavaScriptProfile? Profile, string? Error) JavaScriptProfileOf(IReadOnlyDictionary<string, string> options) {
@@ -607,7 +616,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     options => FloatMisuse(options) ?? CSharpMisuse(options),
     (module, options) => CSharpEmitter.Legalize(module, implementations, CSharpProfileOf(options), FloatModeOf(options), capabilities),
     (module, options) => CSharpEmitter.Check(module, CSharpProfileOf(options), capabilities),
-    (module, options, passes) => CSharpEmitter.Emit(module, CSharpProfileOf(options), FloatModeOf(options), options.GetValueOrDefault(Namespace), capabilities, passes));
+    (module, options, passes, _) => CSharpEmitter.Emit(module, CSharpProfileOf(options), FloatModeOf(options), options.GetValueOrDefault(Namespace), capabilities, passes));
 
   /// <summary>The Python backend with a capability table; <c>--profile</c> names the version of Python.</summary>
   private static Backend Python(PythonCapabilities capabilities, Func<IrModule> implementations) => new("python",
@@ -618,7 +627,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     options => FloatMisuse(options) ?? PythonProfileOf(options).Error,
     (module, options) => PythonEmitter.Legalize(module, implementations, PythonProfileOf(options).Profile!, FloatModeOf(options), capabilities),
     (module, options) => PythonEmitter.Check(module, PythonProfileOf(options).Profile!, capabilities),
-    (module, options, passes) => PythonEmitter.Emit(module, PythonProfileOf(options).Profile!, FloatModeOf(options), capabilities, passes));
+    (module, options, passes, _) => PythonEmitter.Emit(module, PythonProfileOf(options).Profile!, FloatModeOf(options), capabilities, passes));
 
   /// <summary>The Python profile <c>--profile</c> names, the default one without it, or what is wrong with the name.</summary>
   private static (PythonProfile? Profile, string? Error) PythonProfileOf(IReadOnlyDictionary<string, string> options) {
@@ -631,16 +640,22 @@ public sealed partial class TranslateCommand : ICliCommand {
     "rust",
     options => RustProfileOf(options).Profile!.ToString(),
     new RuleTarget(false),
-    [new(Profile, "<name>"), new(RustVersion, "<version>"), new(Float, FloatChoice)],
+    [new(Profile, "<name>"), new(RustVersion, "<version>"), new(TrapPolicyOption, Choice(RustProfile.TrapPolicies)), new(AllowUnsafe, null), new(Float, FloatChoice)],
     options => FloatMisuse(options) ?? RustProfileOf(options).Error,
     (module, options) => RustEmitter.Legalize(module, implementations, RustProfileOf(options).Profile!, capabilities),
     (module, options) => RustEmitter.Check(module, RustProfileOf(options).Profile!, capabilities),
-    (module, options, passes) => RustEmitter.Emit(module, RustProfileOf(options).Profile!, capabilities, passes, new RustEmitOptions { Mode = FloatModeOf(options) }));
+    (module, options, passes, layout) => RustEmitter.Emit(module, RustProfileOf(options).Profile!, capabilities, passes, new RustEmitOptions {
+      Mode = FloatModeOf(options),
+      PackageName = layout?.Package,
+      Modules = layout?.Modules ?? new Dictionary<string, string>(),
+      CrateRoot = layout?.Modules.Count > 0,
+      TestFunctions = layout?.Tests ?? []
+    }));
 
-  /// <summary>The Rust profile the options of a command line name, or what is wrong with them.</summary>
+  /// <summary>The Rust profile the options of a command line name, unsafe code allowed by <c>--allow-unsafe</c>, or what is wrong with them.</summary>
   private static (RustProfile? Profile, string? Error) RustProfileOf(IReadOnlyDictionary<string, string> options) {
-    RustProfile.TryParse(options.GetValueOrDefault(Profile), options.GetValueOrDefault(RustVersion), out var profile, out var error);
-    return (profile, error);
+    RustProfile.TryParse(options.GetValueOrDefault(Profile), options.GetValueOrDefault(RustVersion), options.GetValueOrDefault(TrapPolicyOption), out var profile, out var error);
+    return (profile?.WithUnsafe(options.ContainsKey(AllowUnsafe)), error);
   }
 
   /// <summary>The values <c>--float</c> takes.</summary>
@@ -711,7 +726,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     var input = InputPath(output, context.Resolve(record.File));
     List<string> command = ["translate", input, From, options[From], To, options[To], Output, "."];
     foreach (var (name, value) in options.Where(option => !_required.Contains(option.Key)))
-      command.AddRange(name is ExplainOpt or ExplainTypes or TypedArrays ? [name] : [name, value]);
+      command.AddRange(name is ExplainOpt or ExplainTypes or TypedArrays or AllowUnsafe ? [name] : [name, value]);
 
     var mode = FloatModeOf(options);
     return new Manifest {
@@ -790,6 +805,12 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// <param name="Lower">The module with the floating-point operations the target lacks replaced by their portable implementations.</param>
   /// <param name="Check">Why a module cannot be emitted with the options given; empty when it can.</param>
   /// <param name="Emit">Writes a module that passed the check, running the target passes the options let run.</param>
+  /// <summary>How a source with modules of its own is laid out.</summary>
+  /// <param name="Package">The package name the source gives, the folder of a crate's <c>src/lib.rs</c>; <see langword="null"/> for none.</param>
+  /// <param name="Modules">The module of each function outside the root, by IR name: its path from the root, <c>util::bits</c>.</param>
+  /// <param name="Tests">The functions that are the source's tests, by IR name.</param>
+  internal sealed record CrateLayout(string? Package, IReadOnlyDictionary<string, string> Modules, IReadOnlyList<string> Tests);
+
   private sealed record Backend(
     string Name,
     string Runtime,
@@ -799,7 +820,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     Func<IReadOnlyDictionary<string, string>, string?> Misuse,
     Func<IrModule, IReadOnlyDictionary<string, string>, IrModule> Lower,
     Func<IrModule, IReadOnlyDictionary<string, string>, IReadOnlyList<Diagnostic>> Check,
-    Func<IrModule, IReadOnlyDictionary<string, string>, TargetPassOptions, TargetEmission> Emit) {
+    Func<IrModule, IReadOnlyDictionary<string, string>, TargetPassOptions, CrateLayout?, TargetEmission> Emit) {
 
     /// <summary>Whether an option belongs to this language.</summary>
     public bool Has(string option) => this.Options.Any(candidate => candidate.Name == option);

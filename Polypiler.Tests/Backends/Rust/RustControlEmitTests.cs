@@ -2,7 +2,9 @@ using System.Linq;
 using NUnit.Framework;
 using Polypiler.Backends.Testing;
 using Polypiler.Core.Backends.Rust;
+using Polypiler.Core.IR;
 using Polypiler.Core.Optimize;
+using Polypiler.Prototype.Testing;
 
 namespace Polypiler.Tests.Backends.Rust;
 
@@ -202,5 +204,159 @@ public sealed class RustControlEmitTests {
   [Test]
   public void ThrowOfALibraryException_IsAPanicOfItsTrap()
     => Assert.That(Emitted("public static int F(int a) { if (a < 0) throw new System.ArgumentOutOfRangeException(); return a; }"), Does.Contain("panic!(\"ArgumentOutOfRange\");"));
+
+  /// <summary>Scenario: a loop whose exit carries a value becomes loop with break value; the loop is the function's value.</summary>
+  [Test]
+  public void LoopWhoseExitCarriesAValue_BreaksWithIt() {
+    var text = Emitted("public static uint NextPowerOfTwo(uint x) { uint p = 1; while (true) { if (p >= x) break; p <<= 1; } return p; }");
+    Assert.That(text, Does.Contain("    let mut p: u32 = 1;\n    loop {\n        if p >= x {\n            break p;\n        }\n        p = p.wrapping_shl(1);\n    }\n}"));
+    Assert.That(text, Does.Not.Contain("return"));
+  }
+
+  /// <summary>Every break of the loop carries the value, a computed one too; a return inside it stays a return.</summary>
+  [Test]
+  public void LoopWithSeveralExits_BreaksWithTheValueAtEach() {
+    var text = Emitted("public static int F(int x) { int i = 0; while (true) { if (i > x) break; if (i == 7) return -1; i += 2; if (i * i > 50) break; } return i * 3; }");
+    Assert.That(text, Does.Contain("break i.wrapping_mul(3);"));
+    Assert.That(text, Does.Contain("return -1;"));
+    Assert.That(text.Split("break i.wrapping_mul(3);").Length, Is.EqualTo(3));
+  }
+
+  /// <summary>Not before a return in the middle of a body: the loop is the value of that return.</summary>
+  [Test]
+  public void LoopBeforeAnEarlyReturn_IsTheReturnedValue()
+    => Assert.That(Emitted("public static int F(int x) { if (x < 0) { int i = 0; while (true) { if (i > x) break; i++; } return i; } return 5; }"),
+      Does.Contain("return loop {").Or.Contain("        loop {\n            if i > x {\n                break i;"));
+
+  [TestCase("public static void F(int x) { while (true) { if (x > 3) break; x++; } }", TestName = "LoopAtTheEndOfAVoidFunction_KeepsItsBreak")]
+  [TestCase("public static void F(int x) { while (true) { if (x > 3) break; x++; } return; }", TestName = "LoopBeforeAReturnOfNothing_KeepsItsBreak")]
+  [TestCase("public static int F(int x) { while (x < 9) { if (x > 3) break; x++; } return x; }", TestName = "LoopWithACondition_KeepsItsBreak")]
+  [TestCase("public static string F(int x) { while (true) { if (x > 3) break; x++; } return \"a\"; }", TestName = "LoopBeforeTheReturnOfNoScalar_KeepsItsBreak")]
+  [TestCase("public static int F(int x) { while (true) { if (x > 3) break; x++; } x++; return x; }", TestName = "LoopBeforeAnotherStatement_KeepsItsBreak")]
+  [TestCase("public static int F(int x) { while (true) { x++; if (x > 3) return x; } }", TestName = "LoopWithoutABreak_ReturnsFromInside")]
+  public void LoopThatIsNoValue_KeepsItsPlainBreak(string method) => Assert.That(Emitted(method), Does.Not.Match("break [a-z0-9]"));
+
+  [Test]
+  public void LoopInsideATry_KeepsItsPlainBreak() {
+    const string Methods = "class E : System.Exception { } static int G(int x) { if (x > 100) throw new E(); return x; } "
+      + "public static int F(int x) { try { while (true) { x = G(x) + 1; if (x > 3) break; } return x; } catch (E) { return -1; } }";
+    Assert.That(Emitted(Methods), Does.Not.Contain("break x"));
+  }
+
+  [Test]
+  public void LoopInsideALambda_KeepsItsPlainBreak()
+    => Assert.That(Emitted("public static int F(int x) { System.Func<int, int> f = y => { while (true) { if (y > 3) break; y++; } return y; }; return f(x) + f(1); }"), Does.Not.Contain("break y"));
+
+  /// <summary>Test design 9: an inclusive bound below the type's maximum is a range a..=b, typed by its end.</summary>
+  [Test]
+  public void CountedLoopToAnInclusiveConstant_IsAnInclusiveRange()
+    => Assert.That(Emitted("public static int SumTo() { int s = 0; for (int i = 0; i <= 100; i++) s += i; return s; }"), Does.Contain("for i in 0..=100i32 {"));
+
+  [TestCase("public static int F() { int s = 0; for (int i = 0; i <= int.MaxValue; i++) { s += i; if (s < 0) break; } return s; }", TestName = "CountedLoopToTheMaximum_StaysAWhile")]
+  [TestCase("public static int F(int n) { int s = 0; for (int i = 0; i <= n; i++) s += i; return s; }", TestName = "CountedLoopToAVariableInclusively_StaysAWhile")]
+  public void InclusiveLoopThatMayNotEnd_StaysAWhile(string method) => Assert.That(Emitted(method), Does.Contain("while i <= ").And.Not.Contain("..="));
+
+  /// <summary>An inclusive counted loop over an array's length is no element loop: it reads one element past the end, which traps.</summary>
+  [Test]
+  public void InclusiveLoopOverAnArray_IsNoElementLoop()
+    => Assert.That(Emitted("public static int F(int[] a) { int s = 0; for (int i = 0; i <= 3; i++) s += a[i]; return s; }"), Does.Contain("for i in 0..=3i32 {").And.Not.Contain("for &"));
+
+  private static string RustEmitted(string source)
+    => RustCrates.ModuleText(RustCrates.Emit(RustFixture.Import("snippet.rs", source, Polypiler.Core.Frontends.Rust.OverflowChecks.Panic)));
+
+  /// <summary>Scenario: an inclusive range ending at the type's maximum is Rust's own range again, which ends without overflow.</summary>
+  [Test]
+  public void RustInclusiveRangeToTheMaximum_IsTheRange()
+    => Assert.That(RustEmitted("pub fn count_bytes() -> u32 { let mut c = 0u32; for _ in 0..=255u8 { c += 1; } c }"), Does.Contain("    for _ in 0..=255u8 {\n        c = c.checked_add(1).expect(\"IntegerOverflow\");\n    }"));
+
+  [TestCase("pub fn f(n: u8) -> u32 { let mut s = 0u32; for i in 0..=n { s += i as u32; } s }", "for i in 0..=end {")]
+  [TestCase("pub fn f(a: i8, b: i8) -> i32 { let mut s = 0i32; for i in a..=b { s += i as i32; } s }", "for i in start..=end {")]
+  [TestCase("pub fn f() -> u32 { let mut c = 0u32; for _ in -128i8..=127 { c += 1; } c }", "for _ in i8::MIN..=127 {")]
+  [TestCase("pub fn f() -> u32 { let mut c = 0u32; for _ in 5u8..=3 { c += 1; } c }", "for _ in 5..=3u8 {")]
+  [TestCase("pub fn f(n: u64) -> u64 { let mut s = 0u64; for i in 1..=n { if i % 3 == 0 { continue; } s += i; } s }", "for i in 1..=end {")]
+  public void RustInclusiveRange_IsTheRange(string source, string expected) => Assert.That(RustEmitted(source), Does.Contain(expected).And.Not.Contain("done"));
+
+  private static readonly IrLocal _done = new("done", IrType.Bool);
+  private static readonly IrLocal _index = new("index", IrType.U8);
+  private static readonly IrLocal _end = new("end", IrType.U8);
+  private static readonly IrLocal _count = new("count", IrType.U32);
+
+  private static IrLocalRef Ref(IrLocal local) => new(local);
+
+  private static IrExpr Wide(IrLocal local) => new IrConvert(IrType.U64, Ref(local), IrConversion.Wrap);
+
+  /// <summary>
+  /// The loop over <c>0..=end</c> as the Rust frontend imports it, with one part replaced: the flag's
+  /// first value, the counter's first value, the loop, the statements after it.
+  /// </summary>
+  private static string Inclusive(IrExpr? empty = null, IrExpr? start = null, System.Func<IrStmt[], IrStmt[], IrStmt>? loop = null, IrStmt[]? body = null, IrStmt[]? step = null, IrStmt[]? after = null) {
+    body ??= [new IrAssign(_count, new IrBinary(IrBinaryOp.Add, Ref(_count), new IrConvert(IrType.U32, Ref(_index), IrConversion.Wrap)))];
+    step ??= [
+      new IrAssign(_done, new IrBinary(IrBinaryOp.Less, new IrBinary(IrBinaryOp.Subtract, Wide(_end), Wide(_index)), new IrConst(IrType.U64, 1))),
+      new IrAssign(_index, new IrConvert(IrType.U8, new IrBinary(IrBinaryOp.Add, Wide(_index), new IrConst(IrType.U64, 1)), IrConversion.Wrap))
+    ];
+    loop ??= (statements, advance) => new IrFor(new IrUnary(IrUnaryOp.LogicalNot, Ref(_done)), new IrBlock(statements), new IrBlock(advance));
+    IrStmt[] statements = [
+      new IrDeclare(_count, new IrConst(IrType.U32, 0)),
+      new IrDeclare(_done, empty ?? new IrBinary(IrBinaryOp.Greater, new IrConst(IrType.U32, 0), new IrConvert(IrType.U32, Ref(_end), IrConversion.Wrap))),
+      new IrDeclare(_index, start ?? new IrConst(IrType.U8, 0)),
+      loop(body, step),
+      .. after ?? [],
+      new IrReturn(Ref(_count))
+    ];
+    var module = new IrModule("edge", [new IrFunction("F", true, IrType.U32, [_end], [_count, _done, _index], new IrBlock(statements))]);
+    Assert.That(IrVerifier.Verify(module), Is.Empty);
+    return RustCrates.ModuleText(RustCrates.Emit(module, level: OptimizationLevel.None));
+  }
+
+  private static IrStmt[] Step(IrExpr reached, IrExpr current, IrExpr moved) => [
+    new IrAssign(_done, new IrBinary(IrBinaryOp.Less, new IrBinary(IrBinaryOp.Subtract, reached, current), new IrConst(IrType.U64, 1))),
+    new IrAssign(_index, new IrConvert(IrType.U8, new IrBinary(IrBinaryOp.Add, moved, new IrConst(IrType.U64, 1)), IrConversion.Wrap))
+  ];
+
+  [Test]
+  public void InclusiveLoopOfTheFrontend_IsTheRange() {
+    Assert.That(Inclusive(), Does.Contain("for index in 0..=end {"));
+    Assert.That(Inclusive(new IrUnary(IrUnaryOp.LogicalNot, new IrBinary(IrBinaryOp.LessOrEqual, new IrConvert(IrType.U32, new IrConst(IrType.U8, 0), IrConversion.Wrap), new IrConvert(IrType.U32, Ref(_end), IrConversion.Wrap)))), Does.Contain("for index in 0..=end {"));
+    Assert.That(Inclusive(loop: (statements, advance) => new IrWhile(new IrUnary(IrUnaryOp.LogicalNot, Ref(_done)), new IrBlock([.. statements, .. advance]))), Does.Contain("for index in 0..=end {"));
+    Assert.That(Inclusive(body: [new IrExprStmt(new IrStep(Ref(_count), true, false, false))]), Does.Contain("for _ in 0..=end {"));
+  }
+
+  /// <summary>Every part of the shape that differs keeps the flag and the loop, which mean the same in any case.</summary>
+  [TestCase("first value of the flag")]
+  [TestCase("flag of another start")]
+  [TestCase("flag of the bounds turned around")]
+  [TestCase("loop of another flag")]
+  [TestCase("while with a continue")]
+  [TestCase("step against another bound")]
+  [TestCase("step of another counter")]
+  [TestCase("step that moves another counter")]
+  [TestCase("step by two")]
+  [TestCase("bound assigned in the body")]
+  [TestCase("counter assigned in the body")]
+  [TestCase("flag read in the body")]
+  [TestCase("counter read after the loop")]
+  [TestCase("bound out of the counter's type")]
+  [TestCase("loop of one step")]
+  public void InclusiveLoopOfAnotherShape_StaysAWhile(string change) {
+    var text = change switch {
+      "first value of the flag" => Inclusive(empty: new IrConst(IrType.Bool, 0)),
+      "flag of another start" => Inclusive(empty: new IrBinary(IrBinaryOp.Greater, new IrConst(IrType.U32, 1), new IrConvert(IrType.U32, Ref(_end), IrConversion.Wrap))),
+      "loop of another flag" => Inclusive(loop: (statements, advance) => new IrFor(new IrUnary(IrUnaryOp.LogicalNot, new IrConst(IrType.Bool, 0)), new IrBlock(statements), new IrBlock(advance))),
+      "while with a continue" => Inclusive(loop: (statements, advance) => new IrWhile(new IrUnary(IrUnaryOp.LogicalNot, Ref(_done)), new IrBlock([new IrIf(new IrBinary(IrBinaryOp.Equal, new IrConvert(IrType.U32, Ref(_index), IrConversion.Wrap), new IrConst(IrType.U32, 3)), new IrBlock([new IrContinue()]), null), .. statements, .. advance]))),
+      "flag of the bounds turned around" => Inclusive(empty: new IrBinary(IrBinaryOp.Greater, new IrConvert(IrType.U32, Ref(_end), IrConversion.Wrap), new IrConst(IrType.U32, 0))),
+      "step against another bound" => Inclusive(step: Step(new IrConst(IrType.U64, 1000), Wide(_index), Wide(_index))),
+      "step of another counter" => Inclusive(step: Step(Wide(_end), Wide(_end), Wide(_index))),
+      "step that moves another counter" => Inclusive(step: Step(Wide(_end), Wide(_index), Wide(_end))),
+      "step by two" => Inclusive(step: [Step(Wide(_end), Wide(_index), Wide(_index))[0], new IrAssign(_index, new IrConvert(IrType.U8, new IrBinary(IrBinaryOp.Add, Wide(_index), new IrConst(IrType.U64, 2)), IrConversion.Wrap))]),
+      "bound assigned in the body" => Inclusive(body: [new IrAssign(_end, new IrConst(IrType.U8, 3))]),
+      "counter assigned in the body" => Inclusive(body: [new IrAssign(_index, new IrConst(IrType.U8, 3))]),
+      "flag read in the body" => Inclusive(body: [new IrIf(Ref(_done), new IrBlock([new IrExprStmt(new IrStep(Ref(_count), true, false, false))]), null)]),
+      "counter read after the loop" => Inclusive(after: [new IrAssign(_count, new IrConvert(IrType.U32, Ref(_index), IrConversion.Wrap))]),
+      "bound out of the counter's type" => Inclusive(step: Step(new IrConst(IrType.U64, 300), Wide(_index), Wide(_index)), empty: new IrConst(IrType.Bool, 0)),
+      _ => Inclusive(loop: (statements, advance) => new IrFor(new IrUnary(IrUnaryOp.LogicalNot, Ref(_done)), new IrBlock(statements), new IrBlock([advance[1]])))
+    };
+    Assert.That(text, Does.Not.Contain("..="));
+  }
 
 }

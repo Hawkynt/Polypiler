@@ -142,6 +142,15 @@ public sealed class RustRunnerUnitTests {
   }
 
   [Test]
+  public void Driver_GivesAStructOfScalarsAsTheBytesOfItsFields() {
+    var record = ImageType.Record(new ImageField("item0", ImageType.U32), new ImageField("ok", ImageType.Bool), new ImageField("x", ImageType.F64));
+    var driver = RustDriverGenerator.Generate("k", [new RustExport("m::f", new CallSignature([new CallParameter("s", ImageType.U32, ParameterMode.In)], record))]);
+    Assert.That(driver, Does.Contain("let mut image: Vec<u8> = Vec::new();\n            image.extend_from_slice(&result.item0.to_le_bytes());\n"
+      + "            image.extend_from_slice(&[u8::from(result.ok)]);\n            image.extend_from_slice(&result.x.to_bits().to_le_bytes());\n            hex(&image)"));
+    Assert.That(() => RustDriverGenerator.Generate("c", [new RustExport("f", new CallSignature([], ImageType.Record(new ImageField("s", ImageType.Utf8))))]), Throws.ArgumentException);
+  }
+
+  [Test]
   public void Driver_RefusesWhatItCannotPass() {
     Assert.Throws<ArgumentException>(() => RustDriverGenerator.Generate("c", [new RustExport("f", new CallSignature([new CallParameter("a", ImageType.Bytes, ParameterMode.In)], null))]));
     Assert.Throws<ArgumentException>(() => RustDriverGenerator.Generate("c", [new RustExport("f", new CallSignature([new CallParameter("a", ImageType.U8, ParameterMode.InOut)], null))]));
@@ -205,6 +214,25 @@ public sealed class RustRunnerUnitTests {
     var runner = new RustRunner(new Replay(Result(RunOutcome.Completed, exitCode, Finished + stdout, "aborted")), RustBuildOptions.Dev);
     var execution = await runner.ExecuteAsync(_package, "fixture_package", [_add], [(0, new byte[8]), (0, new byte[8])]);
     Assert.That((execution.Outcomes, execution.Diagnostics.Single().Code), Is.EqualTo(((IReadOnlyList<RustCallOutcome>?)null, code)));
+  }
+
+  [Test]
+  public async Task Execute_ReadsTheErrorOfAFallibleExport() {
+    var runner = new RustRunner(new Replay(Result(RunOutcome.Completed, 0, Finished + "?DivideByZero\n!IntegerOverflow\n05000000\n")), RustBuildOptions.Dev);
+    var execution = await runner.ExecuteAsync(_package, "fixture_package", [_add with { Fallible = true }], [(0, new byte[8]), (0, new byte[8]), (0, new byte[8])]);
+    Assert.That(execution.Outcomes!.Select(outcome => (outcome.Error, outcome.Panic, outcome.Image is null)),
+      Is.EqualTo(new (string?, string?, bool)[] { ("DivideByZero", null, true), (null, "IntegerOverflow", true), (null, null, false) }));
+  }
+
+  [Test]
+  public void Driver_UnwrapsTheResultOfAFallibleExport() {
+    var scalar = RustDriverGenerator.Generate("k", [_add with { Fallible = true }]);
+    Assert.That(scalar, Does.Contain("let result = match k::fixture::add(a0, a1) {\n                Ok(value) => value,\n                Err(error) => return format!(\"?{}\", error),\n            };"));
+    var converted = RustDriverGenerator.Generate("k", [_add with { Fallible = true, Converted = true }]);
+    Assert.That(converted, Does.Contain("let result: u32 = match k::fixture::add(a0.into(), a1.into()) {\n                Ok(value) => value.into(),"));
+    var sequence = RustDriverGenerator.Generate("k", [new RustExport("m::f", new CallSignature([new CallParameter("x", ImageType.Seq(ImageType.U32), ParameterMode.InOut)], null)) { Fallible = true }]);
+    Assert.That(sequence, Does.Contain("let result = match k::m::f(&mut a0) {\n                Ok(value) => value,\n                Err(error) => return format!(\"?{}\", error),\n            };"));
+    Assert.That(RustDriverGenerator.Generate("k", [_add]), Does.Contain("let result = k::fixture::add(a0, a1);"));
   }
 
   [Test]

@@ -70,3 +70,10 @@ Feature: Rust frontend: structs, enums, Option, Result and the ? operator
     Then the import fails with diagnostic PLY1540 at line 1
     And the message names "#473"
     And no IR is produced
+
+  Scenario: A real-world fragment outside the subset is refused without a crash
+    Given the pinned upstream Rust file harness.rs
+    When it is imported with overflowChecks panic
+    Then the import fails with diagnostic PLY1500
+    And every diagnostic is a refusal of the Rust frontend with its line
+    And no IR is produced

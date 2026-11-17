@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using Polypiler.Core.Backends.Rust.Emit;
 using Polypiler.Core.Backends.Rust.Naming;
 using Polypiler.Core.Backends.Rust.Syntax;
 using Polypiler.Core.IR;
@@ -8,6 +10,13 @@ using Polypiler.Core.IR;
 namespace Polypiler.Core.Backends.Rust;
 
 public static partial class RustEmitter {
+
+  /// <summary>The code for a layout of a struct that safe Rust has no form for (#462).</summary>
+  public const string UnsafeLayout = "PLY1584";
+
+  /// <summary>The registered diagnostic of <see cref="UnsafeLayout"/>.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor UnsafeLayoutDescriptor = new(UnsafeLayout, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "rust.backend.layout");
 
   /// <summary>The array a place of fields is an element of, or <see langword="null"/>.</summary>
   internal static IrExpr? ElementOf(IrExpr place) => Writer.ElementArray(place);
@@ -38,10 +47,17 @@ public static partial class RustEmitter {
     private IEnumerable<RsItem> Struct(IrStructType type) {
       this._construct = $"the struct '{type.Name}'";
       var name = this._types[type];
-      foreach (var field in type.Fields.Where(field => !IsValue(field.Type)))
+      foreach (var field in type.Fields.Where(field => !IsValue(field.Type) && !IsBufferField(field.Type)))
         this.Refuse($"a struct field of the type {field.Type}");
 
-      var fields = type.Fields.Select(field => new RsFieldDeclaration(this.FieldName(field), field.Visibility == IrVisibility.Private ? "" : "pub", this.Type(field.Type))).ToList();
+      var fields = type.Fields.Select(field => new RsFieldDeclaration(this.FieldName(field), field.Visibility == IrVisibility.Private ? "" : "pub",
+        field.Type.IsArray ? $"Vec<{this.ElementType(field.Type)}>" : this.Type(field.Type))).ToList();
+      if (OwnsBuffer(type)) {
+        // A struct that owns a vector is moved, never copied; its equality of the IR compares the array by identity, which Rust has no derive for.
+        yield return new RsStruct(name, "pub", fields) { Attributes = ["derive(Clone, Debug)"] };
+        yield break;
+      }
+
       var floats = HasFloat(type);
       var derives = new List<string> { "Clone", "Copy", "Debug" };
       if (type.HasDefault)
@@ -49,7 +65,7 @@ public static partial class RustEmitter {
       if (!floats)
         derives.AddRange(["PartialEq", "Eq"]);
 
-      yield return new RsStruct(name, "pub", fields) { Attributes = [$"derive({string.Join(", ", derives)})"] };
+      yield return new RsStruct(name, "pub", fields) { Attributes = [.. this.Layout(type), $"derive({string.Join(", ", derives)})"] };
       if (!floats)
         yield break;
 
@@ -71,8 +87,54 @@ public static partial class RustEmitter {
       yield return new RsImpl("PartialEq", name, [new RsFunction("eq", "", [new RsParameter("&self", ""), new RsParameter("other", "&Self")], "bool", new RsBlock([], test))]);
     }
 
+    /// <summary>
+    /// The attribute of the layout the source states for a struct (#462): <c>repr(C)</c> for its fields in
+    /// declaration order, each aligned. Explicit field offsets - overlapping ones an untagged union - a
+    /// packing or a size of its own have no safe Rust form: <c>PLY1584</c>.
+    /// </summary>
+    private IEnumerable<string> Layout(IrStructType type) {
+      if (type.Layout is not { } layout)
+        yield break;
+
+      var problem = layout.Kind == IrLayoutKind.Explicit
+        ? layout.Offsets.Distinct().Count() < layout.Offsets.Count ? "overlapping fields, an untagged union" : "explicit field offsets"
+        : layout.Pack != 0 ? $"packed to {layout.Pack.ToString(CultureInfo.InvariantCulture)} bytes"
+        : layout.Size != 0 ? $"a size of {layout.Size.ToString(CultureInfo.InvariantCulture)} bytes"
+        : null;
+      if (problem is null)
+        yield return "repr(C)";
+      else
+        this._problems.Add(UnsafeLayoutDescriptor.At($"layout of '{type.Name}' ({problem}) has no safe Rust representation"));
+    }
+
     /// <summary>Whether a value of a type is copied as a whole: a number, a truth value, or a struct of them.</summary>
     private static bool IsValue(IrType type) => TypeName(type) is not null || type.IsEnum || type.StructType is { } nested && nested.Fields.All(field => IsValue(field.Type));
+
+    /// <summary>Whether a field of a struct may be one that owns a buffer (#1393): an array of values, or a struct that owns one.</summary>
+    private static bool IsBufferField(IrType type) => type.IsArray && type.Element is { } element && IsValue(element) || IsBuffer(type);
+
+    /// <summary>Whether values of a type are structs that own an array, directly or in a struct field: moved, never copied.</summary>
+    private static bool IsBuffer(IrType type) => type.StructType is { } declared && OwnsBuffer(declared);
+
+    /// <summary>Whether a struct holds an array, directly or in a field of a struct; one that contains itself, which the verifier refuses, does not.</summary>
+    private static bool OwnsBuffer(IrStructType type, HashSet<IrStructType>? seen = null) {
+      seen ??= new HashSet<IrStructType>(ReferenceEqualityComparer.Instance);
+      return seen.Add(type) && type.Fields.Any(field => field.Type.IsArray || field.Type.StructType is { } nested && OwnsBuffer(nested, seen));
+    }
+
+    /// <summary>Whether the statement being written reads a variable for the last time, so that it may move its value.</summary>
+    private bool IsLastRead(IrLocal local) => this._statement is { } statement && Moves.IsLast(this._function.Body, statement, local);
+
+    /// <summary>A struct value that owns an array where its variable is read as a whole: moved, which only the last read may do.</summary>
+    private RsExpression BufferValue(IrLocalRef reference)
+      => this.IsLastRead(reference.Local) ? new RsPath(this._locals[reference.Local]) { Type = reference.Type }
+        : this.Refuse("a struct holding an array copied while its variable lives on");
+
+    /// <summary>An array where a field of a struct takes it: a new one, or a vector moved from the variable that owns it, which the struct then shares with no one.</summary>
+    private RsExpression FieldArrayValue(IrExpr value)
+      => value is IrLocalRef reference && (this.IsReference(reference.Local) || !this.IsLastRead(reference.Local))
+        ? this.Refuse("an array a struct field shares with a variable")
+        : this.Vector(value, true);
 
     /// <summary>Whether a struct has a floating-point number among its fields or theirs.</summary>
     private static bool HasFloat(IrStructType type) => type.Fields.Any(field => field.Type.IsFloat || field.Type.StructType is { } nested && HasFloat(nested));
@@ -83,14 +145,15 @@ public static partial class RustEmitter {
     /// <summary><c>Name { a: x, b }</c>, the fields in declaration order, which is the order the IR evaluates them in.</summary>
     private RsExpression StructNew(IrStructNew creation) {
       var type = creation.Type.StructType!;
-      var fields = type.Fields.Zip(creation.Arguments, (field, value) => new RsFieldValue(this.FieldName(field), this.Expression(value))).ToList();
+      var fields = type.Fields.Zip(creation.Arguments, (field, value) => new RsFieldValue(this.FieldName(field), field.Type.IsArray ? this.FieldArrayValue(value) : this.Expression(value))).ToList();
       return new RsStructLiteral(this._types[type], fields) { Type = creation.Type };
     }
 
     /// <summary>The place a field of which is read or written: a variable, an array element or a field of a place.</summary>
     private RsExpression Place(IrExpr target, bool write) => target switch {
-      IrArrayLoad load => new RsIndex(this.ArrayTarget(load.Array, write), this.Index(load.Index)) { Type = load.Type },
+      IrArrayLoad load => this.Element(this.ArrayTarget(load.Array, write), this.Index(load.Index), load.Type, write),
       IrFieldLoad load => new RsField(this.Place(load.Target, write), this.FieldName(load.Field)) { Type = load.Type },
+      IrLocalRef reference when IsBuffer(reference.Type) => new RsPath(this._locals[reference.Local]) { Type = reference.Type },
       _ => this.Operand(this.Expression(target), 15)
     };
 
@@ -123,7 +186,7 @@ public static partial class RustEmitter {
         return;
       }
 
-      into.Add(new RsExpressionStatement(new RsAssign(place, "=", this.Expression(store.Value))));
+      into.Add(new RsExpressionStatement(new RsAssign(place, "=", store.Field.Type.IsArray ? this.FieldArrayValue(store.Value) : this.Expression(store.Value))));
     }
 
     /// <summary>Whether two places are the same: one variable, field or element of a constant or variable index.</summary>

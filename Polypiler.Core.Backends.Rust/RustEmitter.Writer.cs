@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Polypiler.Core.Backends.Rust.Helpers;
 using Polypiler.Core.Backends.Rust.Naming;
 using Polypiler.Core.Backends.Rust.Syntax;
 using Polypiler.Core.IR;
@@ -43,15 +44,16 @@ public static partial class RustEmitter {
 
     /// <summary>The crate: manifest, root and module.</summary>
     public RustCrate Crate(IrModule module) {
+      module = this.Generalized(module);
       module = Polypiler.Core.Backends.Rust.Emit.AliasSpecialization.Run(Polypiler.Core.Backends.Rust.Emit.ObjectLowering.Run(Polypiler.Core.Backends.Rust.Emit.BindHoisting.Run(module)));
       this._module = module;
       var moduleName = ModuleName(module.Name, this._profile);
       var package = this._options.PackageName ?? moduleName;
-      foreach (var type in module.Types.Where(type => type is not (IrStructType or IrEnumType or IrClassType or IrInterfaceType)))
-        this.Refuse($"declared types ({Kind(type)})");
-
+      // The verifier admits structs, enums, classes and interfaces only: each has its form below.
       this.NameItems(module);
+      this.NameInstances();
       this.NameTypes(module);
+      this.NameIterators(module);
       this.NameGlobals(module);
       this.Classes(module);
       this.Signatures(module);
@@ -59,20 +61,29 @@ public static partial class RustEmitter {
       this.CollectionParameters(module);
       this._arrays = Polypiler.Core.Backends.Rust.Emit.ArrayOwnership.Of(module);
       this._arrayNulls = Polypiler.Core.Backends.Rust.Emit.ArrayNullness.Of(module);
+      this.Ownership(module);
+      this.ClosedEnums(module);
       var copied = module.Implementations.Select(pair => pair.Function).ToHashSet(StringComparer.Ordinal);
       var items = new List<RsItem>();
       foreach (var constant in module.Constants)
         items.Add(this.Constant(constant));
       items.AddRange(this.Globals(module));
       items.AddRange(this.ErrorItems());
-      var written = module.Functions.Select(function => (Source: function, Written: this.Function(function) with { IsHelper = copied.Contains(function.Name) })).ToList();
+      if (this.Results && this._types.Values.Contains(TrapErrorType))
+        this.LimitResult($"a type of the module named '{TrapErrorType}'");
+      var written = module.Functions.Where(function => !this._generalized.ContainsKey(function.Name)).Select(function => (Source: function, Written: this.Function(function) with { IsHelper = copied.Contains(function.Name) })).ToList();
       var members = written.Where(pair => this._members.ContainsKey(pair.Source.Name))
         .ToDictionary(pair => pair.Source.Name, pair => this.AsMember(pair.Written, pair.Source, this._members[pair.Source.Name]), StringComparer.Ordinal);
-      var functions = written.Where(pair => !this._members.ContainsKey(pair.Source.Name) && !this._bodiless.Contains(pair.Source.Name)).Select(pair => pair.Written).ToList();
+      var functions = written.Where(pair => !this._members.ContainsKey(pair.Source.Name) && !this._bodiless.Contains(pair.Source.Name) && !this._options.TestFunctions.Contains(pair.Source.Name)).Select(pair => pair.Written).ToList();
+      // A test function of the source is a #[test] of the tests module, which only a test build compiles.
+      var tests = written.Where(pair => this._options.TestFunctions.Contains(pair.Source.Name)).Select(pair => (RsItem)(pair.Written with { Visibility = "", Attributes = ["test"] })).ToList();
       this._written = members;
+      this._definition = null;
+      this._standIns = [];
       foreach (var type in module.Types)
         items.AddRange(type switch {
           IrStructType structType => this.Struct(structType),
+          IrEnumType enumType when this._closedEnums.Contains(enumType) => this.ClosedEnumItems(enumType),
           IrEnumType enumType => this.EnumItems(enumType),
           IrClassType classType when !classType.IsLibrary && !this._hierarchy.Contains(classType) && !IrExceptionClass.IsException(classType) => this.Class(classType, members),
           _ => []
@@ -80,17 +91,27 @@ public static partial class RustEmitter {
 
       items.AddRange(this.HierarchyItems());
 
+      var unit = this._options.Tests.Count > 0 || tests.Count > 0 ? this.Tests(module) : null;
       this._construct = "the module";
+      foreach (var spelling in this._spellings.Values)
+        this.PanicFree(spelling);
+      var errors = this.ErrorFile();
+      if (errors is not null)
+        this._uses.Add("crate::" + TrapErrorType);
+      if (this.Results && this.PlyErrors)
+        items.AddRange(this.ErrorDisplay());
       items.InsertRange(0, this._uses.Select(path => new RsUse(path)));
       items.AddRange(this._enumTableItems);
       items.AddRange(this._whitespace.Values);
+      items.AddRange(this.BigItems());
       items.AddRange(this._spellings.Values);
+      items.AddRange(this._iteratorItems);
       items.AddRange(functions);
-      if (this._options.Tests.Count > 0)
-        items.Add(this.Tests(module));
+      if (unit is not null)
+        items.Add(unit with { Items = [.. unit.Items, .. tests] });
 
       var helpers = module.Implementations.Select(pair => ImplementationSources.Helper(this._functions[pair.Function], pair.Implementation, "")).ToList();
-      helpers.AddRange(this._spellings.Keys.Select(name => new HelperText(name, name, EmittedHelper.OwnLicence, EmittedHelper.OriginOf(Folder), "")));
+      helpers.AddRange(this._spellings.Keys.Select(name => new HelperText(name, name, EmittedHelper.OwnLicence, EmittedHelper.OriginOf(BigInts.Names.Contains(name) ? BigInts.Origin : Folder), "")));
       this.Helpers = helpers;
 
       var header = new List<string> {
@@ -99,13 +120,47 @@ public static partial class RustEmitter {
       };
       if (EmittedHelper.HeaderLine(helpers.Select(helper => helper.Licence)) is { } licences)
         header.Add(licences);
+      if (this._bigInts)
+        header.Add(BigInts.Notice);
 
       header.AddRange(FloatManifest.Lines(module, this._options.Mode, "rust"));
       header.AddRange(module.Caveats.Select(caveat => $"Caveat: {caveat}."));
       header.AddRange(ImplementationSources.Notices(module.Implementations.Select(pair => pair.Implementation).Concat(module.Inlined)));
-      var root = new RsFile(header, ["forbid(unsafe_code)"], [new RsModuleDeclaration(moduleName, "pub")]);
+      // The unsafe ledger: each use of unsafe code, the function that needed it and why; the crate then denies
+      // unsafe code instead of forbidding it, so that the one spelling function may allow it.
+      header.AddRange(this._unsafe.Select(use => $"Unsafe code: {use.Helper}, for the {use.Construct} in the function '{use.Function}'; the crate passes Miri."));
+      RsItem[] declarations = errors is null ? [new RsModuleDeclaration(moduleName, "pub")]
+        : [new RsModuleDeclaration("error", ""), new RsModuleDeclaration(moduleName, "pub"), new RsUse("error::" + TrapErrorType) { Visibility = "pub" }];
+      var root = new RsFile(header, [this._unsafe.Count > 0 ? "deny(unsafe_code)" : "forbid(unsafe_code)"], declarations);
       var file = new RsFile([], [], items);
-      return new RustCrate(package, Manifest(package, this._options.PackageVersion, this._profile, this._capabilities), root, moduleName, file);
+      var crate = new RustCrate(package, Manifest(package, this._options.PackageVersion, this._profile, this._capabilities), root, moduleName, file) { Errors = errors };
+      this.Place(crate);
+      return crate;
+    }
+
+    /// <summary>The module of each function placed in one (<see cref="RustEmitOptions.Modules"/>), by the function's Rust name.</summary>
+    public IReadOnlyDictionary<string, string> Placement { get; private set; } = new Dictionary<string, string>();
+
+    /// <summary>Whether what stays of the IR module is written in the crate root (<see cref="RustEmitOptions.CrateRoot"/>).</summary>
+    public bool InRoot { get; private set; }
+
+    /// <summary>
+    /// Finds the module of every placed function - a test stays with the tests - and refuses a module
+    /// below the root named <c>lib</c> or <c>main</c>, whose file is the crate's root or a program's.
+    /// </summary>
+    private void Place(RustCrate crate) {
+      this._construct = "the modules";
+      this.InRoot = this._options.CrateRoot || crate.ModuleName is "lib" or "main";
+      var placement = new Dictionary<string, string>(StringComparer.Ordinal);
+      foreach (var (function, module) in this._options.Modules.Where(pair => this._functions.ContainsKey(pair.Key) && !this._options.TestFunctions.Contains(pair.Key))) {
+        var path = PlacedPath(module, this._profile);
+        if (path.Split("::")[0] is "lib" or "main")
+          this.Refuse($"the module name '{path.Split("::")[0]}'");
+        else
+          placement[this._functions[function]] = path;
+      }
+
+      this.Placement = placement;
     }
 
     /// <summary>
@@ -132,6 +187,14 @@ public static partial class RustEmitter {
       var others = module.Functions.Where(function => !this._functions.ContainsKey(function.Name)).ToList();
       foreach (var (function, rust) in others.Zip(RustNames.Unique([.. others.Select(function => function.Name)], name => this.FunctionName(others.First(other => other.Name == name)), taken)))
         this._functions[function.Name] = rust;
+
+      // A function in a module of its own is called by its name in it, util_bits_mix in util::bits by mix, where no other function of the crate has that name.
+      var names = this._functions.Values.ToHashSet(StringComparer.Ordinal);
+      foreach (var function in module.Functions)
+        if (this._options.Modules.TryGetValue(function.Name, out var path) && Unprefixed(this._functions[function.Name], PlacedPath(path, this._profile)) is { } own && names.Add(own)) {
+          names.Remove(this._functions[function.Name]);
+          this._functions[function.Name] = own;
+        }
 
       var constants = module.Constants.Select(constant => constant.Name).ToList();
       foreach (var (name, rust) in constants.Zip(RustNames.Unique(constants, name => RustNames.Screaming(name, this.Edition), new HashSet<string>(StringComparer.Ordinal))))
@@ -172,22 +235,14 @@ public static partial class RustEmitter {
 
     /// <summary>The Rust type of an IR type a parameter, a local or a result has: a scalar or a struct; refused for any other.</summary>
     private string Type(IrType type)
-      => TypeName(type) ?? (type.IsString ? OwnedString
+      => this._standIns.GetValueOrDefault(type) ?? TypeName(type) ?? (type.IsString ? OwnedString
         : type.Declaration is IrStructType or IrEnumType && this._types.TryGetValue(type.Declaration, out var name) ? name
         : IsError(type) ? ErrorType
         : type.IsObject ? this.ObjectType(type, false)
         : type.IsFunction ? this.FunctionType(type)
         : IsOptionalValue(type) ? $"Option<{this.Type(type.Underlying!)}>"
-        : type.IsLazySequence ? ((RsPath)this.Refuse(LazySequence)).Name
+        : type.IsBigInt ? this.BigType()
         : ((RsPath)this.Refuse($"the type {type}")).Name);
-
-    /// <summary>What kind of type a declaration is, as a refusal names it.</summary>
-    private static string Kind(IrTypeDeclaration type) => type switch {
-      IrClassType => "classes",
-      IrInterfaceType => "interfaces",
-      IrEnumType => "enums",
-      _ => type.GetType().Name
-    };
 
     /// <summary>A spelling function the crate carries once: an operation of the IR Rust has no method for.</summary>
     private void Spell(string name, Func<RsFunction> build) {

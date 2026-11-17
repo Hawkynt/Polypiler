@@ -33,7 +33,7 @@ public static partial class RustEmitter {
       => facts.Result == ArrayHolder.Borrowed && facts.ResultParameters.All(facts.MutableParameters.Contains);
 
     /// <summary>The Rust type of the elements of an array type; refused for any but a scalar.</summary>
-    private string ElementType(IrType array) => array.Element is { } element && (TypeName(element) is not null || element.IsStruct || element.IsEnum || element.IsString || element.IsFunction) ? this.Type(element) : ((RsPath)this.Refuse($"an array of {array.Element}")).Name;
+    private string ElementType(IrType array) => array.Element is { } element && (TypeName(element) is not null || element.IsStruct && !IsBuffer(element) || element.IsEnum || element.IsString || element.IsFunction) ? this.Type(element) : ((RsPath)this.Refuse($"an array of {array.Element}")).Name;
 
     /// <summary>The lifetime the result of a function borrows with, where Rust cannot elide it: <c>'a</c>, or empty.</summary>
     private static string Lifetime(IrFunction function, FunctionArrays facts)
@@ -42,10 +42,14 @@ public static partial class RustEmitter {
     /// <summary>The type of a parameter: an array borrowed shared or exclusive, with the result's lifetime where it borrows from it.</summary>
     private string ParameterType(IrFunction function, int index) {
       var parameter = function.Parameters[index];
+      if (parameter.Type.IsLazySequence)
+        return this.SequenceParameterType(parameter.Type);
       if (parameter.Type.IsString)
         return BorrowedString;
       if (IsError(parameter.Type))
         return ((RsPath)this.Refuse("an exception passed as a value")).Name;
+      if (this.IsPlain(parameter.Type))
+        return this.PlainParameterType(function, index);
       if (parameter.Type.IsObject)
         return this.ObjectParameterType(parameter);
       if (parameter.Type.IsView)
@@ -94,7 +98,7 @@ public static partial class RustEmitter {
       if (local.Type.IsView)
         return this.ViewType(local.Type, this.WritesView(local));
       if (local.Type.IsCollection)
-        return this.CollectionType(local.Type);
+        return this.IsBorrowedCollection(local) ? this.BorrowedCollectionType(local) : this.CollectionType(local.Type);
       if (!local.Type.IsArray)
         return this.Type(local.Type);
       if (this.IsNullableArray(local))
@@ -119,7 +123,11 @@ public static partial class RustEmitter {
     private RsExpression ArrayInitial(IrLocal local, IrExpr value)
       => this.IsFieldAlias(local) ? this.FieldAlias(local)
         : this.IsNullableArray(local) ? this.NullableArray(value, this.IsReference(local))
-        : !this.IsReference(local) ? this.Vector(value, false) : this.Borrow(value, this._arrayFacts.MutableLocals.Contains(local));
+        : !this.IsReference(local) ? this.Vector(value, this.IsMove(local, value)) : this.Borrow(value, this._arrayFacts.MutableLocals.Contains(local));
+
+    /// <summary>Whether a variable takes the vector of another that never names it again: a move, not a clone.</summary>
+    private bool IsMove(IrLocal local, IrExpr value)
+      => value is IrLocalRef { Local: var source } && this._arrayFacts.Moves.Any(statement => ArrayOwnership.MoveOf(statement) == (local, source));
 
     /// <summary>The array a function returns: a vector it owns, or the borrow of a parameter.</summary>
     private RsExpression ArrayResult(IrFunction function, IrExpr value)
@@ -157,6 +165,8 @@ public static partial class RustEmitter {
           return this.Expression(call);
         case IrFieldLoad { Target.Type.IsObject: true } load:
           return new RsMethodCall(this.FieldArray(load, false), "clone", []) { Type = array.Type };
+        case IrFieldLoad { Target.Type.IsStruct: true }:
+          return this.Refuse("the array of a struct field held by a second owner");
         case IrIntrinsic { Op: IrIntrinsicOp.StrSplit or IrIntrinsicOp.StrToCodeUnits or IrIntrinsicOp.EnumNames or IrIntrinsicOp.EnumValues or IrIntrinsicOp.ViewToArray }:
           return this.Expression(array);
         case IrCall call:
@@ -183,6 +193,8 @@ public static partial class RustEmitter {
           return mutable ? this.Refuse("an array that may be null and is written") : this.NonNullArray(array, true);
         case IrFieldLoad { Target.Type.IsObject: true } load:
           return new RsReference(mutable, this.FieldArray(load, mutable)) { Type = array.Type };
+        case IrFieldLoad { Target.Type.IsStruct: true } load:
+          return new RsReference(mutable, this.Place(load, mutable)) { Type = array.Type };
         case IrLocalRef { Local: var local } when this.IsReference(local):
           return new RsPath(this._locals[local]) { Type = array.Type };
         case IrLocalRef reference:
@@ -210,6 +222,7 @@ public static partial class RustEmitter {
       IrLocalRef or IrBind or IrCall when this.IsNullableArray(array) => mutable ? this.Refuse("an array that may be null and is written") : this.NonNullArray(array, false),
       IrLocalRef reference => new RsPath(this._locals[reference.Local]) { Type = array.Type },
       IrFieldLoad { Target.Type.IsObject: true } load => this.FieldArray(load, mutable),
+      IrFieldLoad { Target.Type.IsStruct: true } load => this.Place(load, mutable),
       IrConstRef table when this._constants.TryGetValue(table.Constant.Name, out var name) => new RsPath(name) { Type = array.Type },
       IrIntrinsic { Op: IrIntrinsicOp.ArrayOf } literal when !mutable => new RsArray([.. literal.Arguments.Select(argument => Suffixed(this.Expression(argument)))]) { Type = array.Type },
       IrCall => this.Expression(array),
@@ -266,7 +279,7 @@ public static partial class RustEmitter {
       if (!length.Type.IsSigned)
         return this.Cast(value, IrType.U64) with { Target = "usize" };
 
-      return Expect(new RsCall(new RsPath("usize::try_from"), [Suffixed(value)]), IrTrap.IntegerOverflow);
+      return this.Checked(new RsCall(new RsPath("usize::try_from"), [Suffixed(value)]), IrTrap.IntegerOverflow);
     }
 
     /// <summary>The number of elements of an array, as the IR's <c>i32</c>.</summary>
@@ -279,6 +292,11 @@ public static partial class RustEmitter {
     /// that is no variable or constant, beside a value that is none either, is bound before.
     /// </summary>
     private void Store(IrStore store, List<RsStatement> into) {
+      if (this.ZippedElement(store.Array, store.Index) is { } zipped) {
+        into.Add(new RsExpressionStatement(new RsAssign(zipped, "=", this.ElementValue(store.Value))));
+        return;
+      }
+
       var target = this.ArrayTarget(store.Array, true);
       RsExpression index;
       if (store.Index is IrStep { Target: IrLocalRef counter } step) {
@@ -302,11 +320,11 @@ public static partial class RustEmitter {
       if (IsFieldArray(store.Array) && store.Value is not (IrLocalRef or IrConst or IrConstRef)) {
         var name = this.Temporary("value");
         into.Add(new RsLet(name, false, null, this.ElementValue(store.Value)));
-        into.Add(new RsExpressionStatement(new RsAssign(new RsIndex(target, index) { Type = store.Value.Type }, "=", new RsPath(name))));
+        into.Add(new RsExpressionStatement(new RsAssign(this.Element(target, index, store.Value.Type, true), "=", new RsPath(name))));
         return;
       }
 
-      var element = new RsIndex(target, index) { Type = store.Value.Type };
+      var element = this.Element(target, index, store.Value.Type, true);
       if (store.Value is IrBinary { Left: IrArrayLoad self } binary && Same(self.Array, store.Array) && Same(self.Index, store.Index) && store.Index is IrLocalRef or IrConst
         && Compound(binary) is { } op) {
         into.Add(new RsExpressionStatement(new RsAssign(element, op + "=", this.Operand(this.Expression(binary.Right), 2))));
@@ -329,7 +347,7 @@ public static partial class RustEmitter {
         index = new RsPath(name);
       }
 
-      var element = new RsIndex(this.ArrayTarget(load.Array, true), index) { Type = load.Type };
+      var element = this.Element(this.ArrayTarget(load.Array, true), index, load.Type, true);
       if (statement && load.Type.IsFloat) {
         statements.Add(new RsExpressionStatement(new RsAssign(element, step.Increment ? "+=" : "-=", Literal(new IrConst(load.Type, IrOperators.Bits(load.Type, 1.0))))));
         return new RsBlockExpression(new RsBlock(statements, null));
@@ -383,17 +401,17 @@ public static partial class RustEmitter {
     private RsExpression ArrayCopy(IrIntrinsic copy) {
       var (source, sourceIndex, target, targetIndex, count) = (copy.Arguments[0], copy.Arguments[1], copy.Arguments[2], copy.Arguments[3], copy.Arguments[4]);
       if (source is IrLocalRef { Local: var a } && target is IrLocalRef { Local: var b } && a == b)
-        return new RsCall(new RsPath(this.CopyHelper(true)), [this.Borrow(target, true), this.Expression(sourceIndex), this.Expression(targetIndex), this.Expression(count)]);
+        return this.Spelled(new RsCall(new RsPath(this.CopyHelper(true)), [this.Borrow(target, true), this.Expression(sourceIndex), this.Expression(targetIndex), this.Expression(count)]));
 
-      return new RsCall(new RsPath(this.CopyHelper(false)), [this.Borrow(source, false), this.Expression(sourceIndex), this.Borrow(target, true), this.Expression(targetIndex), this.Expression(count)]);
+      return this.Spelled(new RsCall(new RsPath(this.CopyHelper(false)), [this.Borrow(source, false), this.Expression(sourceIndex), this.Borrow(target, true), this.Expression(targetIndex), this.Expression(count)]));
     }
 
     /// <summary>The spelling function of a copy between two arrays, or within one.</summary>
     private string CopyHelper(bool within) {
       var name = within ? "ply_copy_within" : "ply_copy";
       var range = this.RangeHelper();
-      this.Spell(name, () => {
-        RsExpression Range(string start, string array) => new RsCall(new RsPath(range), [new RsPath(start), new RsPath("length"), new RsMethodCall(new RsPath(array), "len", [])]);
+      this.Spell(name, () => this.SpelledFallible(() => {
+        RsExpression Range(string start, string array) => this.Spelled(new RsCall(new RsPath(range), [new RsPath(start), new RsPath("length"), new RsMethodCall(new RsPath(array), "len", [])]));
         if (within)
           return new RsFunction(name, "", [new RsParameter("data", "&mut [T]"), new RsParameter("from", "i32"), new RsParameter("to", "i32"), new RsParameter("length", "i32")], null, new RsBlock([
             new RsLet("source", false, null, Range("from", "data")),
@@ -406,23 +424,23 @@ public static partial class RustEmitter {
           new RsLet("to", false, null, Range("to", "target")),
           new RsExpressionStatement(new RsMethodCall(new RsIndex(new RsPath("target"), new RsPath("to")), "copy_from_slice", [new RsReference(false, new RsIndex(new RsPath("source"), new RsPath("from")))]))
         ], null)) { Generics = "<T: Copy>" };
-      });
+      }));
       return name;
     }
 
     /// <summary>The spelling function <c>ply_range</c>: the range of <c>length</c> elements from <c>start</c> in a sequence of <c>size</c>, which panics with <c>IndexOutOfRange</c> unless it lies inside.</summary>
     private string RangeHelper() {
       const string name = "ply_range";
-      this.Spell(name, () => {
-        RsExpression Converted(string value) => Expect(new RsCall(new RsPath("usize::try_from"), [new RsPath(value)]), IrTrap.IndexOutOfRange);
+      this.Spell(name, () => this.SpelledFallible(() => {
+        RsExpression Converted(string value) => this.Checked(new RsCall(new RsPath("usize::try_from"), [new RsPath(value)]), IrTrap.IndexOutOfRange);
         var (start, length, size) = (new RsPath("start"), new RsPath("length"), new RsPath("size"));
         var outside = new RsBinary(new RsBinary(length, ">", size), "||", new RsBinary(start, ">", new RsBinary(size, "-", length)));
         return new RsFunction(name, "", [new RsParameter("start", "i32"), new RsParameter("length", "i32"), new RsParameter("size", "usize")], "std::ops::Range<usize>", new RsBlock([
           new RsLet("start", false, null, Converted("start")),
           new RsLet("length", false, null, Converted("length")),
-          new RsExpressionStatement(new RsIf(outside, new RsBlock([new RsExpressionStatement(Panic(IrTrap.IndexOutOfRange))], null), null))
+          new RsExpressionStatement(new RsIf(outside, new RsBlock([new RsExpressionStatement(this.Trap(IrTrap.IndexOutOfRange))], null), null))
         ], new RsRange(start, new RsBinary(start, "+", length), false)));
-      });
+      }));
       return name;
     }
 
@@ -454,7 +472,7 @@ public static partial class RustEmitter {
     private RsExpression EndianLoad(IrIntrinsic load) {
       var width = Width(load.Type);
       var array = this.ArrayTarget(load.Arguments[0]);
-      var range = new RsCall(new RsPath(this.RangeHelper()), [this.Expression(load.Arguments[1]), new RsLiteral(width.ToString(CultureInfo.InvariantCulture)), new RsMethodCall(array, "len", [])]);
+      var range = this.Spelled(new RsCall(new RsPath(this.RangeHelper()), [this.Expression(load.Arguments[1]), new RsLiteral(width.ToString(CultureInfo.InvariantCulture)), new RsMethodCall(array, "len", [])]));
       var bytes = new RsMethodCall(new RsMethodCall(new RsIndex(array, range), "try_into", []), "expect", [new RsString($"{width} bytes")]);
       return new RsCall(new RsPath($"{TypeName(load.Type)}::{(load.Op == IrIntrinsicOp.LoadLittle ? "from_le_bytes" : "from_be_bytes")}"), [bytes]) { Type = load.Type };
     }
@@ -477,7 +495,7 @@ public static partial class RustEmitter {
       }
 
       var at = this.Temporary("at");
-      statements.Add(new RsLet(at, false, null, new RsCall(new RsPath(this.RangeHelper()), [index, new RsLiteral(width.ToString(CultureInfo.InvariantCulture)), new RsMethodCall(array, "len", [])])));
+      statements.Add(new RsLet(at, false, null, this.Spelled(new RsCall(new RsPath(this.RangeHelper()), [index, new RsLiteral(width.ToString(CultureInfo.InvariantCulture)), new RsMethodCall(array, "len", [])]))));
       var bytes = new RsMethodCall(this.Receiver(value), store.Op == IrIntrinsicOp.StoreLittle ? "to_le_bytes" : "to_be_bytes", []);
       statements.Add(new RsExpressionStatement(new RsMethodCall(new RsIndex(array, new RsPath(at)), "copy_from_slice", [new RsReference(false, bytes)])));
       return new RsBlockExpression(new RsBlock(statements, null));
@@ -493,13 +511,19 @@ public static partial class RustEmitter {
     /// <summary>The arguments of a call: an array borrowed as the callee's parameter takes it, refused where one array is passed twice and written.</summary>
     private IReadOnlyList<RsExpression> Arguments(IrCall call) {
       if (!this._arrays.TryGetValue(call.Function, out var callee))
-        return [.. call.Arguments.Select((argument, index) => argument.Type.IsObject ? this.ObjectArgument(call.Function, index, argument)
+        return [.. call.Arguments.Select((argument, index) => argument.Type.IsLazySequence ? this.SequenceArgument(call, argument)
+          : argument.Type.IsObject ? this.ObjectArgument(call.Function, index, argument)
           : argument.Type.IsCollection ? this.CollectionPassed(argument, this._changedCollections.GetValueOrDefault(call.Function)?.Contains(index) == true)
           : this.Argument(argument))];
 
       var arguments = new List<RsExpression>();
       for (var index = 0; index < call.Arguments.Count; ++index) {
         var argument = call.Arguments[index];
+        if (argument.Type.IsLazySequence) {
+          arguments.Add(this.SequenceArgument(call, argument));
+          continue;
+        }
+
         if (argument.Type.IsObject) {
           arguments.Add(this.ObjectArgument(call.Function, index, argument));
           continue;
@@ -507,6 +531,11 @@ public static partial class RustEmitter {
 
         if (argument.Type.IsView) {
           arguments.Add(this.ViewSource(argument, this.ViewParameterWritten(call.Function, index)));
+          continue;
+        }
+
+        if (argument.Type.IsPointer) {
+          arguments.AddRange(this.PointerArgument(argument, callee.MutablePointers.Contains(index)));
           continue;
         }
 
