@@ -24,18 +24,26 @@ internal static class RustCrates {
   /// <summary>Imports C# methods wrapped into the class <c>Snippet</c>.</summary>
   public static IrModule Import(string methods) => PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(methods));
 
-  /// <summary>A module as <c>translate --to rust</c> prepares it, without emitting it: optimized and legalized for the profile.</summary>
-  public static IrModule Prepared(IrModule module, RustProfile? profile = null, OptimizationLevel level = OptimizationLevel.Default, RustCapabilities? capabilities = null, IReadOnlySet<string>? disabled = null) {
+  /// <summary>A module optimized and legalized for the profile, as the backend gets it before the passes over the legalized module.</summary>
+  public static IrModule Legalized(IrModule module, RustProfile? profile = null, OptimizationLevel level = OptimizationLevel.Default, RustCapabilities? capabilities = null) {
     var options = new OptimizerOptions { Level = level, Target = new RuleTarget(false) };
     var optimized = Optimizer.Run(module, options).Module;
-    var lowered = RustEmitter.Legalize(optimized, () => PrecomputedImplementations.Module, profile ?? RustProfile.Default, capabilities);
-    return RustEmitter.Check(lowered, profile ?? RustProfile.Default, capabilities).Count > 0 ? lowered
-      : IrPassPipeline.Default.Run(lowered, new OptimizerOptions { Level = level, Disabled = disabled ?? new HashSet<string>() }).Module;
+    return RustEmitter.Legalize(optimized, () => PrecomputedImplementations.Module, profile ?? RustProfile.Default, capabilities);
   }
 
-  /// <summary>Why a module cannot be emitted for a profile once prepared; empty when it can.</summary>
+  /// <summary>
+  /// A module as <c>translate --to rust</c> prepares it, without emitting it: optimized, legalized for
+  /// the profile and through the passes over the legalized module, which the CLI checks and emits.
+  /// </summary>
+  public static IrModule Prepared(IrModule module, RustProfile? profile = null, OptimizationLevel level = OptimizationLevel.Default, RustCapabilities? capabilities = null, IReadOnlySet<string>? disabled = null)
+    => IrPassPipeline.Default.Run(Legalized(module, profile, level, capabilities), new OptimizerOptions { Level = level, Disabled = disabled ?? new HashSet<string>() }).Module;
+
+  /// <summary>
+  /// Why the backend refuses a module legalized for a profile, before the passes, which may take a
+  /// construct away (a function value bound to its one callee); empty when it writes it.
+  /// </summary>
   public static IReadOnlyList<Diagnostic> Check(IrModule module, RustProfile? profile = null, RustCapabilities? capabilities = null)
-    => RustEmitter.Check(Prepared(module, profile, capabilities: capabilities), profile ?? RustProfile.Default, capabilities);
+    => RustEmitter.Check(Legalized(module, profile, capabilities: capabilities), profile ?? RustProfile.Default, capabilities);
 
   /// <summary>The files of the crate of a module: <c>Cargo.toml</c>, <c>src/lib.rs</c> and the module's file.</summary>
   /// <param name="disabled">The passes of the pipeline after legalization not to run, as <c>--disable-opt</c> names them.</param>

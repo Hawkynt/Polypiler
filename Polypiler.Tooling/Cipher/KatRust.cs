@@ -23,7 +23,7 @@ public sealed class KatRustException(string message) : Exception(message);
 /// <item>the registry, a public function <c>algorithms()</c> of a module of the crate without
 /// parameters, which gives the registered algorithms, <c>Vec&lt;Rc&lt;dyn Algorithm&gt;&gt;</c>;</item>
 /// <item>the name of an algorithm, its accessor <c>field_name</c> (<c>&amp;RefCell&lt;Vec&lt;u16&gt;&gt;</c>,
-/// <c>Vec&lt;u16&gt;</c> or <c>&amp;[u16]</c>);</item>
+/// <c>&amp;RefCell&lt;Option&lt;Vec&lt;u16&gt;&gt;&gt;</c> where the name may be null, <c>Vec&lt;u16&gt;</c> or <c>&amp;[u16]</c>);</item>
 /// <item>the methods and properties of the algorithm and its instance, the JavaScript names in
 /// <c>snake_case</c> - <c>create_instance</c>, <c>feed</c>, <c>result</c>, a property <c>key</c> through its
 /// accessor <c>field_key</c> - each a method of the type the value has, or of a trait it implements.</item>
@@ -111,7 +111,7 @@ public sealed class KatRustApi {
     api.Registered = element;
     api.Algorithm = algorithm;
     var accessor = api.Member(algorithm, "field_name", 0);
-    if (accessor?.Returns is not ("&RefCell<Vec<u16>>" or "Vec<u16>" or "&[u16]"))
+    if (accessor?.Returns is not ("&RefCell<Vec<u16>>" or "&RefCell<Option<Vec<u16>>>" or "Vec<u16>" or "&[u16]"))
       throw new KatRustException($"the algorithms of the translation have no name the tests can read, an accessor field_name of {algorithm}");
 
     api.NameType = accessor.Returns;
@@ -256,9 +256,13 @@ public static partial class KatRustCrate {
     RsExpression name = new RsMethodCall(new RsPath("algorithm"), "field_name", []);
     if (api.NameType.StartsWith("&RefCell<", StringComparison.Ordinal))
       name = new RsUnary("*", new RsMethodCall(name, "borrow", []));
+    // A name that may be null is compared as the Option it is: a null name is no algorithm's.
+    RsExpression wanted = new RsCall(new RsPath("utf16"), [new RsPath("name")]);
+    if (api.NameType.Contains("Option<", StringComparison.Ordinal))
+      wanted = new RsCall(new RsPath("Some"), [wanted]);
     var found = new RsIf(new RsBinary(name, "==", new RsPath("wanted")), new RsBlock([new RsExpressionStatement(new RsReturn(new RsPath("algorithm")))], null), null);
     return new RsFunction("registered", "", [new RsParameter("name", "&str")], api.Registered, new RsBlock([
-      new RsLet("wanted", false, null, new RsCall(new RsPath("utf16"), [new RsPath("name")])),
+      new RsLet("wanted", false, null, wanted),
       new RsExpressionStatement(new RsFor(null, "algorithm", new RsCall(new RsPath("algorithms"), []), new RsBlock([new RsExpressionStatement(found)], null))),
       new RsExpressionStatement(new RsMacro("panic", [new RsString("the translation registers no algorithm named '{name}'")]))
     ], null));

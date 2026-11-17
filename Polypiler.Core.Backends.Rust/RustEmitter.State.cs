@@ -15,7 +15,7 @@ public static partial class RustEmitter {
     private readonly Dictionary<string, int> _globalLengths = new(System.StringComparer.Ordinal);
 
     /// <summary>Whether a global has no atomic type and is held in a <c>Mutex</c>.</summary>
-    private static bool IsLocked(IrGlobal global) => Atomic(global.Type) is null;
+    private static bool IsLocked(IrGlobal global) => Atomic(global.Type) is null && !IsThreadLocalType(global.Type);
 
     /// <summary>
     /// A global that has no atomic form, as a static of the process behind a <c>Mutex</c> (Rust 1.63 made
@@ -108,7 +108,7 @@ public static partial class RustEmitter {
 
     /// <summary>Whether evaluating an expression may take a lock or have an effect: a call, a step, a bind, a locked global.</summary>
     private static bool MayLock(IrExpr expression)
-      => IrTree.Nodes(expression).Any(node => node is IrCall or IrInvoke or IrMethodCall or IrStep or IrBind || node is IrGlobalRef { Global: var global } && IsLocked(global));
+      => IrTree.Nodes(expression).Any(node => node is IrCall or IrInvoke or IrMethodCall or IrStep or IrBind || node is IrGlobalRef { Global: var global } && (IsLocked(global) || IsThreadLocalType(global.Type)));
 
     /// <summary>A value, bound first into a statement where it may take a lock: the binding's name, or the value as it is.</summary>
     private RsExpression Settled(IrExpr value, string stem, List<RsStatement> before, System.Func<IrExpr, RsExpression> write) {

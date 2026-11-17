@@ -82,7 +82,7 @@ public static partial class RustEmitter {
       if (this._free.TryGetValue(function.Name, out var owner)) {
         // The object of a method of a hierarchy: a reference to its struct, or to any type of its class's trait.
         var polymorphic = this._traits.Contains(owner);
-        parameters[0] = parameters[0] with { TypeName = polymorphic ? "&T" : "&" + this.StructName(owner) };
+        parameters[0] = parameters[0] with { TypeName = polymorphic ? "&T" : this._rcFree.Contains(function.Name) ? $"&Rc<{this.StructName(owner)}>" : "&" + this.StructName(owner) };
         generics = polymorphic ? $"<T: {this._types[owner]} + ?Sized>" : "";
       }
 
@@ -92,10 +92,10 @@ public static partial class RustEmitter {
       var returns = this.ResultType(function);
       if (this._throwing.Contains(function.Name))
         returns = Fallible(returns, this.FailureType);
-      var statements = new List<RsStatement>();
+      var statements = new List<RsStatement>(this.Load());
       foreach (var parameter in function.Parameters.Where(this._reassigned.Contains)) {
         // A parameter given a string or a new array of its own holds a copy it owns from the start.
-        var copied = parameter.Type.IsString || parameter.Type.IsArray && !this.IsReference(parameter);
+        var copied = parameter.Type.IsString && !this.IsNullableString(parameter) || parameter.Type.IsArray && !this.IsReference(parameter);
         var nullable = copied && this.IsNullableArray(parameter);
         var type = parameter.Type.IsString ? OwnedString : nullable ? this.NullableArrayType(parameter.Type, false) : parameter.Type.IsArray && copied ? $"Vec<{this.ElementType(parameter.Type)}>" : null;
         var own = parameter.Type.IsObject && !this.MayBeNull(parameter);

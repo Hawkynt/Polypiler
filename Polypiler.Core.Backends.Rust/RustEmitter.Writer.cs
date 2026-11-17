@@ -45,7 +45,7 @@ public static partial class RustEmitter {
     /// <summary>The crate: manifest, root and module.</summary>
     public RustCrate Crate(IrModule module) {
       module = this.Generalized(module);
-      module = Polypiler.Core.Backends.Rust.Emit.AliasSpecialization.Run(Polypiler.Core.Backends.Rust.Emit.ObjectLowering.Run(Polypiler.Core.Backends.Rust.Emit.BindHoisting.Run(module)));
+      module = Polypiler.Core.Backends.Rust.Emit.AliasSpecialization.Run(Polypiler.Core.Backends.Rust.Emit.ObjectLowering.Run(Polypiler.Core.Backends.Rust.Emit.ListLiterals.Run(Polypiler.Core.Backends.Rust.Emit.BindHoisting.Run(module))));
       this._module = module;
       var moduleName = ModuleName(module.Name, this._profile);
       var package = this._options.PackageName ?? moduleName;
@@ -55,12 +55,16 @@ public static partial class RustEmitter {
       this.NameTypes(module);
       this.NameIterators(module);
       this.NameGlobals(module);
+      this.NameReaders(module);
+      this.SharedCollections(module);
+      this.Loading(module);
       this.Classes(module);
       this.Signatures(module);
       this.Exceptions(module);
       this.CollectionParameters(module);
       this._arrays = Polypiler.Core.Backends.Rust.Emit.ArrayOwnership.Of(module);
       this._arrayNulls = Polypiler.Core.Backends.Rust.Emit.ArrayNullness.Of(module);
+      this._stringNulls = Polypiler.Core.Backends.Rust.Emit.StringNullness.Of(module);
       this.Ownership(module);
       this.ClosedEnums(module);
       var copied = module.Implementations.Select(pair => pair.Function).ToHashSet(StringComparer.Ordinal);
@@ -68,6 +72,7 @@ public static partial class RustEmitter {
       foreach (var constant in module.Constants)
         items.Add(this.Constant(constant));
       items.AddRange(this.Globals(module));
+      items.AddRange(this.ModuleStateItems(module));
       items.AddRange(this.ErrorItems());
       if (this.Results && this._types.Values.Contains(TrapErrorType))
         this.LimitResult($"a type of the module named '{TrapErrorType}'");

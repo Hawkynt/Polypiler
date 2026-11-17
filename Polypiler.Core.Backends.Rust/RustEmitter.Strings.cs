@@ -61,6 +61,7 @@ public static partial class RustEmitter {
     /// an array cloned; the result of an operation as it is.
     /// </summary>
     private RsExpression StringValue(IrExpr text, bool move = false) => text switch {
+      _ when this.IsNullableString(text) => this.NonNullString(text, true),
       IrStrConst constant => this.Utf16(constant.Value),
       IrConstRef constant => this.ConstantText(constant),
       IrArrayLoad { Array: IrConstRef table } load => this.TableText(table, load.Index),
@@ -74,6 +75,7 @@ public static partial class RustEmitter {
 
     /// <summary>A string where a <c>&amp;[u16]</c> is taken: a borrowed one as it is, anything else borrowed for the statement.</summary>
     private RsExpression StringArgument(IrExpr text) => text switch {
+      _ when this.IsNullableString(text) => this.NonNullStringBorrow(text),
       IrLocalRef reference when this.IsBorrowedString(reference) => new RsPath(this._locals[reference.Local]) { Type = IrType.String },
       IrIntrinsic { Op: IrIntrinsicOp.StrFromCodeUnit } unit => new RsReference(false, new RsArray([this.Expression(unit.Arguments[0])])) { Type = IrType.String },
       IrArrayLoad { Array: IrGlobalRef { Global: var locked } } when IsLocked(locked) => new RsReference(false, this.Operand(this.StringValue(text), 15)) { Type = IrType.String },
@@ -83,6 +85,7 @@ public static partial class RustEmitter {
 
     /// <summary>A string as a slice of exactly the type <c>&amp;[u16]</c>, as the elements of an array of slices must be.</summary>
     private RsExpression StringSlice(IrExpr text) => text switch {
+      _ when this.IsNullableString(text) => new RsReference(false, new RsIndex(this.Operand(this.NonNullString(text, false), 15), new RsRange(null, null, false))) { Type = IrType.String },
       IrLocalRef reference when this.IsBorrowedString(reference) => new RsPath(this._locals[reference.Local]) { Type = IrType.String },
       IrArrayLoad { Array: IrGlobalRef { Global: var locked } } when IsLocked(locked) => new RsReference(false, new RsIndex(this.Operand(this.StringValue(text), 15), new RsRange(null, null, false))) { Type = IrType.String },
       IrLocalRef or IrArrayLoad => new RsReference(false, new RsIndex(this.StringPlace(text), new RsRange(null, null, false))) { Type = IrType.String },
@@ -91,6 +94,7 @@ public static partial class RustEmitter {
 
     /// <summary>A string as it stands for a comparison, a length or an index: a variable or an element in place, anything else as its value.</summary>
     private RsExpression StringPlace(IrExpr text) => text switch {
+      _ when this.IsNullableString(text) => this.Operand(this.NonNullString(text, false), 15),
       IrLocalRef reference => new RsPath(this._locals[reference.Local]) { Type = IrType.String },
       IrArrayLoad { Array: not (IrConstRef or IrGlobalRef) } load => this.Element(this.ArrayTarget(load.Array), this.Index(load.Index), IrType.String),
       _ => this.Operand(this.StringValue(text), 15)
@@ -143,6 +147,9 @@ public static partial class RustEmitter {
           var range = this.Spelled(new RsCall(new RsPath(this.RangeHelper()), [this.Expression(arguments[1]), length, new RsMethodCall(text, "len", [])]));
           return new RsMethodCall(new RsIndex(text, range), "to_vec", []) { Type = IrType.String };
         }
+        case IrIntrinsicOp.StrEquals when this.IsNullableString(arguments[0]) || this.IsNullableString(arguments[1]) || arguments[0] is IrNull || arguments[1] is IrNull:
+          // Equality is null-safe: two nulls are equal, null and a string are not.
+          return this.Binary(this.NullableStringOperand(arguments[0]), "==", this.NullableStringOperand(arguments[1]), IrType.Bool);
         case IrIntrinsicOp.StrEquals:
           return this.Binary(this.StringPlace(arguments[0]), "==", this.StringPlace(arguments[1]), IrType.Bool);
         case IrIntrinsicOp.StrCompareOrdinal:

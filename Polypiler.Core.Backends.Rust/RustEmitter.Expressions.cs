@@ -117,6 +117,10 @@ public static partial class RustEmitter {
       IrReferenceEquals equality when equality.Left.Type.IsFunction || equality.Right.Type.IsFunction => this.FunctionEquals(equality.Left, equality.Right),
       IrIsNull test when test.Value.Type.IsFunction => this.FunctionIsNull(test.Value),
       IrIsNull test when test.Value.Type.IsArray => this.ArrayIsNull(test.Value, false),
+      IrIsNull test when test.Value.Type.IsString => this.StringIsNull(test.Value, false),
+      IrReferenceEquals { Left: IrNull, Right.Type.IsString: true } equality => this.StringIsNull(equality.Right, false),
+      IrReferenceEquals { Right: IrNull, Left.Type.IsString: true } equality => this.StringIsNull(equality.Left, false),
+      IrNull { Type.IsString: true } => new RsPath("None") { Type = expression.Type },
       IrConstRef constant when !constant.Type.IsArray && this._constants.TryGetValue(constant.Constant.Name, out var name) => new RsPath(name) { Type = constant.Type },
       IrUnary unary => this.Unary(unary),
       IrBinary binary => this.Binary(binary),
@@ -160,6 +164,8 @@ public static partial class RustEmitter {
       IrGenericCompare comparison => this.GenericCompare(comparison),
       IrIsNull test when test.Value.Type.IsObject => this.IsNull(test.Value),
       IrNull { Type.IsObject: true } => new RsPath("None") { Type = expression.Type },
+      IrNull { Type: var optional } when IsOptionalValue(optional) => new RsPath("None") { Type = expression.Type },
+      IrGlobalRef global when IsThreadLocalType(global.Type) => this.ThreadLocalValue(global.Global),
       IrGlobalRef global when !global.Type.IsArray && IsLocked(global.Global) => this.LockedValue(global.Global),
       IrGlobalRef global when !global.Type.IsArray => this.GlobalValue(global),
       IrStructEquals equality when IsBuffer(equality.Left.Type) => this.Refuse("the equality of a struct holding an array"),
@@ -250,6 +256,8 @@ public static partial class RustEmitter {
           return this.Bound(test.Value, value => new RsMethodCall(this.Receiver(value), "is_some", []) { Type = IrType.Bool });
         case IrIsNull { Value.Type.IsArray: true } test:
           return this.ArrayIsNull(test.Value, true);
+        case IrIsNull { Value.Type.IsString: true } test:
+          return this.StringIsNull(test.Value, true);
         case IrConst { Type.Kind: IrTypeKind.Bool } constant:
           return Literal(new IrConst(IrType.Bool, constant.Value == 0 ? 1 : 0));
         case IrTypeTest test when test.Value.Type.IsAssignableTo(test.Target) && this.MayBeNull(test.Value):
