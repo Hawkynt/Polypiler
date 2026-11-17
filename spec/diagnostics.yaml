@@ -1786,38 +1786,43 @@ codes:
     exit: EnvironmentError
     title: binary manifest not valid
     message: "binary manifest '<file>' is not valid: <reason>"
+    rule: machine.binary.manifest
     area: machine
     owner: MACH-BIN-MANIFEST
-    reserved: true
+    surfaces: "the failure of BinaryManifest.Load and BinaryManifest.Parse naming the broken rule (for example \"'isa' is required in the manifest\", \"unknown field '<name>' in <where>\", \"the manifest needs at least one entry\"); of RawBinaryCodec.Read for a missing 'byteOrder' or 'loadAddress'; and of ImageBuilder.Load for an isa without a machine profile when a catalog is given"
   - code: PLY4056
     severity: error
     exit: EnvironmentError
     title: image hash mismatch
     message: "'<image>' has SHA-256 <actual>, the manifest expects <expected>"
+    rule: machine.binary.hash
     area: machine
     owner: MACH-BIN-MANIFEST
-    reserved: true
+    surfaces: "the failure of ImageBuilder.Load when the image's SHA-256 is not the manifest's image.sha256"
   - code: PLY4057
     severity: error
     exit: EnvironmentError
     title: manifest contradicted
     message: "manifest states <field> '<value>' but <other> states '<other value>'"
+    rule: machine.binary.conflict
     area: machine
     owner: MACH-BIN-MANIFEST
-    reserved: true
+    surfaces: "the failure of ImageBuilder.Load for a container or machine profile that contradicts isa, mode, byteOrder or an import slot of the manifest; BinaryManifest.CheckAgainst for a command-line value, with exit UsageError"
   - code: PLY4058
     severity: error
     exit: EnvironmentError
     title: entry or range outside the image
     message: "entry '<name>' at <address> is not inside executable code; or: range <start>..<end> lies outside the image"
+    rule: machine.binary.range
     area: machine
     owner: MACH-BIN-MANIFEST
-    reserved: true
+    surfaces: "the failure of ImageBuilder.Load for an entry outside an executable section or the code ranges, and as 'range <start>..<end> lies outside the image' for a code or data range no section holds"
   - code: PLY4059
     severity: error
     exit: EnvironmentError
     title: container not recognized
     message: "'<file>' is not a recognized container; give the manifest field 'container' or use a raw profile"
+    rule: machine.binary.container
     area: machine
     owner: MACH-BIN-MANIFEST
-    reserved: true
+    surfaces: "the failure of ImageBuilder.Load and BinaryCodecRegistry.Select for a file whose magic no registered codec claims; as \"'<file>' is a <format> file, which no registered codec reads; ...\" for a known container (ELF, PE, Mach-O, Mach-O universal) and as \"'<file>' is declared as container '<id>', which no registered codec reads; ...\" for a manifest container without a codec"
