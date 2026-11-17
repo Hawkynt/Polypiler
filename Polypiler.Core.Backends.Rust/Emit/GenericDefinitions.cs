@@ -107,21 +107,9 @@ internal static class GenericDefinitions {
 
   /// <summary>What a template needs of each of its parameters, or <see langword="null"/> where it does something with one that no bound gives.</summary>
   private static Need[]? Needs(IrGenericTemplate template) {
-    var parameters = new Dictionary<IrTypeDeclaration, int>(ReferenceEqualityComparer.Instance);
-    foreach (var parameter in template.Parameters)
-      parameters[parameter.Declaration!] = parameters.Count;
-
-    var needs = new Need[parameters.Count];
-    int? Of(IrType type) => type.Declaration is { } declared && parameters.TryGetValue(declared, out var index) ? index : null;
-    // A function type of the parameter is a lambda's, refused below, or a reference to an instantiation, which Calls holds.
-    bool Mentions(IrType type) => Of(type) is not null || type.Element is { } element && Mentions(element) || type.Key is { } key && Mentions(key)
-      || type.Underlying is { } underlying && Mentions(underlying);
-    // A value is a scalar, a parameter, or an array of either: the forms whose Rust type the stand-in spells.
-    bool Scalar(IrType type) => RustEmitter.TypeName(type) is not null || Of(type) is not null;
-    bool Plain(IrType type) => Scalar(type) || type.IsArray && Scalar(type.Element!);
-
+    var standing = new Standing(template.Parameters);
     var function = template.Function;
-    if (template.Calls.Count > 0 || !function.Parameters.Concat(function.Locals).All(local => Plain(local.Type)) || function.ReturnType != IrType.Void && !Plain(function.ReturnType))
+    if (template.Calls.Count > 0 || !function.Parameters.Concat(function.Locals).All(local => standing.Plain(local.Type)) || function.ReturnType != IrType.Void && !standing.Plain(function.ReturnType))
       return null;
 
     // A parameter the signature does not name is one clippy calls unused (extra_unused_type_parameters).
@@ -129,54 +117,30 @@ internal static class GenericDefinitions {
     if (template.Parameters.Any(parameter => !signature.Any(type => type == parameter || type.Element == parameter)))
       return null;
 
-    var nodes = IrTree.Nodes(function.Body).ToList();
-    var tested = nodes.OfType<IrBinary>().Where(binary => binary.Op is >= IrBinaryOp.Equal and <= IrBinaryOp.GreaterOrEqual)
-      .SelectMany(binary => new[] { (binary.Left, binary.Right), (binary.Right, binary.Left) })
-      .Where(pair => pair.Item1 is IrGenericCompare && pair.Item2 is IrConst { Value: 0 }).Select(pair => pair.Item1).ToHashSet(ReferenceEqualityComparer.Instance);
-    foreach (var node in nodes) {
-      if (node is IrLambda)
-        return null;
-      if (!Mentions(node.Type) && !IrTree.Operands(node).Any(operand => Mentions(operand.Type)))
-        continue;
-
-      switch (node) {
-        case IrLocalRef or IrArrayLoad or IrArrayLength or IrConditional:
-          continue;
-        case IrNull or IrNew when Of(node.Type) is { } index:
-          needs[index] |= Need.Default;
-          continue;
-        case IrGenericEquals equality when Of(equality.Left.Type) is { } index:
-          needs[index] |= Need.Equality;
-          continue;
-        case IrGenericCompare order when tested.Contains(order) && Of(order.Left.Type) is { } index:
-          needs[index] |= Need.Order;
-          continue;
-        default:
-          return null;
-      }
-    }
-
-    return needs;
+    var needs = new Need[template.Parameters.Count];
+    return standing.Collect(function.Body, needs, _ => false) ? needs : null;
   }
 
   /// <summary>One integer type for each parameter of a template that no value of the template has, or <see langword="null"/> where too few are left.</summary>
-  private static IrType[]? Stand(IrGenericTemplate template) {
-    var function = template.Function;
-    var used = function.Parameters.Concat(function.Locals).Select(local => local.Type).Append(function.ReturnType)
-      .Concat(IrTree.Nodes(function.Body).Select(node => node.Type)).SelectMany(Scalars).ToHashSet();
+  private static IrType[]? Stand(IrGenericTemplate template) => Stand([template.Function], [], template.Parameters.Count);
+
+  /// <summary>One integer type for each of a number of parameters that no value of the functions and no type of the list has, or <see langword="null"/> where too few are left.</summary>
+  internal static IrType[]? Stand(IEnumerable<IrFunction> functions, IEnumerable<IrType> types, int count) {
+    var used = functions.SelectMany(function => function.Parameters.Concat(function.Locals).Select(local => local.Type).Append(function.ReturnType)
+      .Concat(IrTree.Nodes(function.Body).Select(node => node.Type))).Concat(types).SelectMany(Scalars).ToHashSet();
     var free = StandIns.Where(type => !used.Contains(type)).ToList();
-    return free.Count < template.Parameters.Count ? null : [.. free.Take(template.Parameters.Count)];
+    return free.Count < count ? null : [.. free.Take(count)];
   }
 
   /// <summary>A type and the types of its elements.</summary>
   private static IEnumerable<IrType> Scalars(IrType type) => type.Element is { } element ? [type, .. Scalars(element)] : [type];
 
   /// <summary>Whether a type argument has every bound a parameter needs with the meaning .NET gives the operations: a scalar, an integer or a truth value where it is compared.</summary>
-  private static bool Admits(IrType argument, Need need)
+  internal static bool Admits(IrType argument, Need need)
     => RustEmitter.TypeName(argument) is not null && ((need & (Need.Equality | Need.Order)) == Need.None || argument.IsInteger || argument == IrType.Bool);
 
   /// <summary>The bounds of what a parameter needs, in the order they are written.</summary>
-  private static IReadOnlyList<string> Bounds(Need need) {
+  internal static IReadOnlyList<string> Bounds(Need need) {
     var bounds = new List<string>();
     if ((need & Need.Order) != 0)
       bounds.Add("Ord");
@@ -193,7 +157,7 @@ internal static class GenericDefinitions {
   /// values themselves, <c>a &gt;= b</c>; <c>0 &lt; a.CompareTo(b)</c> as <c>a &gt; b</c>. Both operands
   /// are still evaluated, the left first.
   /// </summary>
-  private static IrExpr SignTest(IrExpr expression) => expression switch {
+  internal static IrExpr SignTest(IrExpr expression) => expression switch {
     IrBinary { Left: IrGenericCompare order, Right: IrConst { Value: 0 } } test => new IrBinary(test.Op, order.Left, order.Right),
     IrBinary { Left: IrConst { Value: 0 }, Right: IrGenericCompare order } test => new IrBinary(test.Op switch {
       IrBinaryOp.Less => IrBinaryOp.Greater,
@@ -205,21 +169,83 @@ internal static class GenericDefinitions {
     _ => expression
   };
 
-  /// <summary>What a template does with the values of a parameter, beyond holding them.</summary>
-  [Flags]
-  private enum Need {
+}
 
-    None = 0,
+/// <summary>What a template does with the values of a parameter, beyond holding them.</summary>
+[Flags]
+internal enum Need {
 
-    /// <summary><c>default(T)</c> or <c>new T()</c>.</summary>
-    Default = 1,
+  /// <summary>Nothing: the values are only held.</summary>
+  None = 0,
 
-    /// <summary><c>Equals</c> of <c>IEquatable&lt;T&gt;</c>.</summary>
-    Equality = 2,
+  /// <summary><c>default(T)</c>, <c>new T()</c> or a new array of the parameter.</summary>
+  Default = 1,
 
-    /// <summary>The sign of <c>CompareTo</c> of <c>IComparable&lt;T&gt;</c>.</summary>
-    Order = 4
+  /// <summary><c>Equals</c> of <c>IEquatable&lt;T&gt;</c>.</summary>
+  Equality = 2,
 
+  /// <summary>The sign of <c>CompareTo</c> of <c>IComparable&lt;T&gt;</c>.</summary>
+  Order = 4
+
+}
+
+/// <summary>The type parameters of a template, by the types that stand for them, and what its nodes do with their values.</summary>
+/// <param name="parameters">The types that stand for the parameters, in order.</param>
+internal sealed class Standing(IReadOnlyList<IrType> parameters) {
+
+  private readonly Dictionary<IrTypeDeclaration, int> _index = parameters.Select((parameter, index) => (parameter, index))
+    .ToDictionary<(IrType Parameter, int Index), IrTypeDeclaration, int>(pair => pair.Parameter.Declaration!, pair => pair.Index, ReferenceEqualityComparer.Instance);
+
+  /// <summary>The position of the parameter a type stands for, or <see langword="null"/> for any other type.</summary>
+  public int? Of(IrType type) => type.Declaration is { } declared && this._index.TryGetValue(declared, out var index) ? index : null;
+
+  /// <summary>Whether a type names a parameter, itself or as an element, key or underlying type.</summary>
+  // A function type of the parameter is a lambda's, refused below, or a reference to an instantiation, which Calls holds.
+  public bool Mentions(IrType type) => this.Of(type) is not null || type.Element is { } element && this.Mentions(element) || type.Key is { } key && this.Mentions(key)
+    || type.Underlying is { } underlying && this.Mentions(underlying);
+
+  /// <summary>Whether a value is a scalar or a parameter: a form whose Rust type the stand-in spells.</summary>
+  public bool Scalar(IrType type) => RustEmitter.TypeName(type) is not null || this.Of(type) is not null;
+
+  /// <summary>Whether a value is a scalar, a parameter, or an array of either.</summary>
+  public bool Plain(IrType type) => this.Scalar(type) || type.IsArray && this.Scalar(type.Element!);
+
+  /// <summary>
+  /// Adds what the nodes of a body do with the values of the parameters to <paramref name="needs"/>:
+  /// holding, reading an array, choosing, the default value, the equality and the sign of the order;
+  /// <see langword="false"/> where a node does anything else with one that <paramref name="own"/> does not admit, or is a lambda.
+  /// </summary>
+  public bool Collect(IrBlock body, Need[] needs, Func<IrExpr, bool> own) {
+    var nodes = IrTree.Nodes(body).ToList();
+    var tested = nodes.OfType<IrBinary>().Where(binary => binary.Op is >= IrBinaryOp.Equal and <= IrBinaryOp.GreaterOrEqual)
+      .SelectMany(binary => new[] { (binary.Left, binary.Right), (binary.Right, binary.Left) })
+      .Where(pair => pair.Item1 is IrGenericCompare && pair.Item2 is IrConst { Value: 0 }).Select(pair => pair.Item1).ToHashSet(ReferenceEqualityComparer.Instance);
+    foreach (var node in nodes) {
+      if (node is IrLambda)
+        return false;
+      if (!this.Mentions(node.Type) && !IrTree.Operands(node).Any(operand => this.Mentions(operand.Type)))
+        continue;
+
+      switch (node) {
+        case IrLocalRef or IrArrayLoad or IrArrayLength or IrConditional:
+          continue;
+        case IrNull or IrNew when this.Of(node.Type) is { } index:
+          needs[index] |= Need.Default;
+          continue;
+        case IrGenericEquals equality when this.Of(equality.Left.Type) is { } index:
+          needs[index] |= Need.Equality;
+          continue;
+        case IrGenericCompare order when tested.Contains(order) && this.Of(order.Left.Type) is { } index:
+          needs[index] |= Need.Order;
+          continue;
+        default:
+          if (!own(node))
+            return false;
+          continue;
+      }
+    }
+
+    return true;
   }
 
 }

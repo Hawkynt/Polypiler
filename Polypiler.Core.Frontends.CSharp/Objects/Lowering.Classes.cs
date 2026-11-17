@@ -303,7 +303,7 @@ internal sealed partial class Lowering {
     if (mapped.IsMemory && node.FirstAncestorOrSelf<TypeDeclarationSyntax>() is RecordDeclarationSyntax)
       throw new UnsupportedException(node, $"a field of the type {type.ToDisplayString()} in a record, which compares it");
 
-    return mapped.IsString || mapped.Element is { IsNumeric: false } ? throw new UnsupportedException(node, $"a field of the type {mapped}") : mapped;
+    return mapped.IsString || mapped.Element is { IsNumeric: false } element && !this.IsStandIn(element) ? throw new UnsupportedException(node, $"a field of the type {mapped}") : mapped;
   }
 
   /// <summary>

@@ -31,6 +31,9 @@ internal sealed partial class Lowering {
   /// <summary>The generic classes of the file, by their definitions, with where they are declared.</summary>
   private readonly Dictionary<INamedTypeSymbol, (string Path, BoundModel Model, TypeDeclarationSyntax Syntax)> _genericClasses = new(SymbolEqualityComparer.Default);
 
+  /// <summary>The template every instantiation of a generic class shares, by the class's definition; defined once every body is lowered.</summary>
+  private readonly Dictionary<INamedTypeSymbol, IrGenericClassTemplate> _classTemplates = new(SymbolEqualityComparer.Default);
+
   /// <summary>The instantiations of generic methods by their names in the IR, in the order they were reached.</summary>
   private readonly Dictionary<string, IMethodSymbol> _instances = [];
 
@@ -254,8 +257,59 @@ internal sealed partial class Lowering {
       return function with { Origin = function.Origin! with { Template = template } };
     });
 
+    foreach (var (definition, template) in this._classTemplates)
+      this.ClassTemplate(definition, template);
+
     // The instantiations stand where their definition stands among the methods of the static class.
     return [.. functions, .. instantiated];
+  }
+
+  /// <summary>
+  /// Defines the template of a generic class (<see cref="IrGenericClassTemplate"/>): the class lowered
+  /// once more with each type parameter as an interface of its own name, as <see cref="Template"/>
+  /// lowers a method, its bodies one template each. A class with a construct that has no form in terms
+  /// of its parameters keeps its template undefined, and only its instantiations.
+  /// </summary>
+  private void ClassTemplate(INamedTypeSymbol definition, IrGenericClassTemplate template) {
+    var (file, semantics, syntax) = this._genericClasses[definition];
+    path = file;
+    model = semantics;
+    this._standIns = new(SymbolEqualityComparer.Default);
+    foreach (var parameter in definition.TypeParameters) {
+      var standIn = new IrInterfaceType(parameter.Name);
+      standIn.DefineMembers([], [], []);
+      this._standIns[parameter] = IrType.Object(standIn);
+    }
+
+    var parameters = definition.TypeParameters.Select(parameter => this._standIns[parameter]).ToList();
+    var declared = new IrClassType(IrGenerics.Mangle(definition.Name, parameters)) {
+      Visibility = VisibilityOf(definition), IsSealed = true, Origin = this.Origin(definition.Name, definition.TypeParameters, definition.TypeParameters, syntax)
+    };
+    declared.Inherit(null, []);
+    var first = this._bodies.Count;
+    // The class names itself, Ring<T>, with its own parameters: that is the template.
+    this._classes[definition] = declared;
+    try {
+      this.Class(syntax, declared, []);
+      var (constructors, methods, properties, _) = this._members[declared];
+      declared.DefineMembers(constructors, methods, properties, []);
+      var lowered = new Dictionary<string, IrGenericTemplate>(StringComparer.Ordinal);
+      foreach (var (_, _, _, lower) in this._bodies.Skip(first).ToList()) {
+        this._templateCalls = [];
+        var function = lower();
+        lowered[function.Name] = new IrGenericTemplate(function, parameters) { Calls = this._templateCalls };
+      }
+
+      template.Define(declared, parameters, [.. declared.Functions.Select(name => lowered[name])]);
+    } catch (Exception exception) when (exception is UnsupportedException or OpenException or ArgumentException or KeyNotFoundException) {
+      // The class stays one class per instantiation.
+    } finally {
+      this._bodies.RemoveRange(first, this._bodies.Count - first);
+      this._members.Remove(declared);
+      this._classes.Remove(definition);
+      this._standIns = null;
+      this._receiver = null;
+    }
   }
 
   /// <summary>The closed method of an instantiation <c>--instantiate</c> names; an unknown method or type is an error of the command line.</summary>
@@ -322,7 +376,10 @@ internal sealed partial class Lowering {
 
     var (file, semantics, syntax) = source;
     var definition = type.OriginalDefinition;
-    var origin = this.Origin(definition.Name, definition.TypeParameters, type.TypeArguments, syntax);
+    if (!this._classTemplates.TryGetValue(definition, out var template))
+      this._classTemplates[definition] = template = new IrGenericClassTemplate();
+
+    var origin = this.Origin(definition.Name, definition.TypeParameters, type.TypeArguments, syntax) with { ClassTemplate = template };
     var declared = new IrClassType(IrGenerics.Mangle(definition.Name, origin.TypeArguments)) {
       Visibility = VisibilityOf(definition), IsSealed = true, Origin = origin
     };

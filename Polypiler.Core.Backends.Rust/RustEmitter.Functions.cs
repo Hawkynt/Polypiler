@@ -58,7 +58,7 @@ public static partial class RustEmitter {
       this._breakables.Clear();
       this._function = function;
       this._definition = this._definitions.GetValueOrDefault(function.Name);
-      this._standIns = this._definition?.Parameters.ToDictionary(parameter => parameter.StandIn, parameter => parameter.Name) ?? [];
+      this._standIns = this._definition?.Parameters.ToDictionary(parameter => parameter.StandIn, parameter => parameter.Name) ?? this.GenericClassOf(function.Name)?.StandIns ?? [];
       this._arrayFacts = this._arrays.GetValueOrDefault(function.Name) ?? new();
       this._arrayParameters = function.Parameters.Select((parameter, index) => (parameter, index)).Where(pair => pair.parameter.Type.IsArray).ToDictionary(pair => pair.parameter, pair => pair.index);
       if (this._arrayFacts.Problem is { } problem)
