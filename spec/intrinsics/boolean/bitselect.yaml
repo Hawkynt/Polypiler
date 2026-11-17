@@ -1,0 +1,29 @@
+id: INTRINSICS.BitSelect
+title: Bitwise select
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#97"
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: BitSelect
+  group: Boolean
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: mask, type: T}, {name: a, type: T}, {name: b, type: T}]
+  returns: [{name: result, type: T}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "(mask & a) | (~mask & b): each bit of a where mask has a 1, of b where it has a 0; the truth table 0xCA of TernaryLogic"
+    source: "Boolean algebra; H. S. Warren, Hacker's Delight, 2nd ed., section 2-20"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u8}, inputs: ["0xF0", "0xCC", "0xAA"], outputs: ["0xCA"]}
+    - {types: {T: TYPES.u32}, inputs: ["0x510E527F", "0x9B05688C", "0x1F83D9AB"], outputs: ["0x1F85C98C"]}
+    - {types: {T: TYPES.u64}, inputs: ["0x00FF00FF00FF00FF", "0x0123456789ABCDEF", "0xFEDCBA9876543210"], outputs: ["0xFE23BA6776AB32EF"]}
+  lowersTo: [INTRINSICS.TernaryLogic]

@@ -49,6 +49,10 @@ internal static class IntegerReference {
         return Enumerable.Reverse(A()).TakeWhile(bit => !bit).Count();
       case IrIntrinsicOp.TrailingZeroCount:
         return A().TakeWhile(bit => !bit).Count();
+      case IrIntrinsicOp.LeadingOneCount:
+        return Enumerable.Reverse(A()).TakeWhile(bit => bit).Count();
+      case IrIntrinsicOp.TrailingOneCount:
+        return A().TakeWhile(bit => bit).Count();
       case IrIntrinsicOp.Log2:
         return Math.Max(0, Highest(A()));
       case IrIntrinsicOp.Parity:
@@ -57,6 +61,9 @@ internal static class IntegerReference {
         return Host(type, ByteSwap(A()));
       case IrIntrinsicOp.BitReverse:
         return Host(type, Enumerable.Reverse(A()).ToArray());
+      case IrIntrinsicOp.ReverseBitsInBytes:
+        var unreversed = A();
+        return Host(type, Enumerable.Range(0, width).Select(index => unreversed[8 * (index / 8) + 7 - index % 8]).ToArray());
       case IrIntrinsicOp.IsPow2:
         return !Negative(A(), type.IsSigned) && A().Count(bit => bit) == 1;
       case IrIntrinsicOp.RoundUpPow2:
@@ -104,6 +111,11 @@ internal static class IntegerReference {
       case IrIntrinsicOp.ExtractBits:
         Require(Int(1) >= 0 && Int(2) >= 0 && (long)Int(1) + Int(2) <= width);
         return Host(type, Enumerable.Range(0, width).Select(index => index < Int(2) && A()[Int(1) + index]).ToArray());
+      case IrIntrinsicOp.ExtractBitsSigned:
+        Require(Int(1) >= 0 && Int(2) >= 0 && (long)Int(1) + Int(2) <= width);
+        var signed = A();
+        // Above the field every bit is its top bit, the sign; a field of no bits is 0.
+        return Host(type, Enumerable.Range(0, width).Select(index => Int(2) > 0 && signed[Int(1) + Math.Min(index, Int(2) - 1)]).ToArray());
       case IrIntrinsicOp.InsertBits:
         Require(Int(2) >= 0 && Int(3) >= 0 && (long)Int(2) + Int(3) <= width);
         var target = A();
@@ -131,6 +143,22 @@ internal static class IntegerReference {
         Require(Int(1) >= 1 && Int(1) <= width);
         var source = A();
         return Host(type, Enumerable.Range(0, width).Select(index => index < Int(1) ? source[index] : op == IrIntrinsicOp.SignExtend && source[Int(1) - 1]).ToArray());
+      case IrIntrinsicOp.Nand or IrIntrinsicOp.Nor or IrIntrinsicOp.Xnor or IrIntrinsicOp.AndNot or IrIntrinsicOp.OrNot or IrIntrinsicOp.Implies:
+        var (left, right) = (A(), B());
+        return Host(type, Enumerable.Range(0, width).Select(index => (op, left[index], right[index]) switch {
+          (IrIntrinsicOp.Nand, var p, var q) => !(p && q),
+          (IrIntrinsicOp.Nor, var p, var q) => !(p || q),
+          (IrIntrinsicOp.Xnor, var p, var q) => p == q,
+          (IrIntrinsicOp.AndNot, var p, var q) => p && !q,
+          (IrIntrinsicOp.OrNot, var p, var q) => p || !q,
+          (_, var p, var q) => !p || q
+        }).ToArray());
+      case IrIntrinsicOp.BitSelect or IrIntrinsicOp.Majority or IrIntrinsicOp.TernaryLogic:
+        var (first, second, third) = (A(), B(), BitsOf(arguments[2], width));
+        // The two named ones are their truth tables: a ? b : c is 0xCA, at least two of three 0xE8.
+        var table = op switch { IrIntrinsicOp.BitSelect => 0xCA, IrIntrinsicOp.Majority => 0xE8, _ => Int(3) };
+        Require(table is >= 0 and <= 255);
+        return Host(type, Enumerable.Range(0, width).Select(index => ((table >> ((first[index] ? 4 : 0) + (second[index] ? 2 : 0) + (third[index] ? 1 : 0))) & 1) == 1).ToArray());
       case IrIntrinsicOp.HighWord:
         return Host(result, A()[32..]);
       case IrIntrinsicOp.JoinWords:

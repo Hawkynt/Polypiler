@@ -2,9 +2,9 @@
 namespace Polypiler.Core.IR;
 
 /// <summary>
-/// The byte swap and the bit reversal: the bytes and the bits of 32 bits by masks and shifts, those
-/// of 64 bits as the two halves exchanged, each reordered, and those of fewer bits as the low part of
-/// the reordered 32 bits.
+/// The byte swap, the bit reversal and the reversal of the bits in each byte: the bytes and the bits
+/// of 32 bits by masks and shifts, those of 64 bits as the two halves exchanged, each reordered, and
+/// those of fewer bits as the low part of the reordered 32 bits.
 /// </summary>
 public static partial class HelperOperations {
 
@@ -38,5 +38,21 @@ public static partial class HelperOperations {
   /// <summary>A <c>ulong</c> with its bits in the opposite order.</summary>
   /// <param name="value">The pattern.</param>
   public static ulong BitReverse64(ulong value) => ((ulong)BitReverse32((uint)value) << 32) | BitReverse32((uint)(value >> 32));
+
+  /// <summary>
+  /// A <c>uint</c> with the bits of each byte in the opposite order: the first three swaps of the bit
+  /// reversal, of single bits, pairs and nibbles, which never cross a byte. A narrower pattern is its
+  /// low bytes.
+  /// </summary>
+  /// <param name="value">The pattern.</param>
+  public static uint ReverseBitsInBytes32(uint value) {
+    value = ((value & 0x55555555u) << 1) | ((value >> 1) & 0x55555555u);
+    value = ((value & 0x33333333u) << 2) | ((value >> 2) & 0x33333333u);
+    return ((value & 0x0F0F0F0Fu) << 4) | ((value >> 4) & 0x0F0F0F0Fu);
+  }
+
+  /// <summary>A <c>ulong</c> with the bits of each byte in the opposite order.</summary>
+  /// <param name="value">The pattern.</param>
+  public static ulong ReverseBitsInBytes64(ulong value) => ((ulong)ReverseBitsInBytes32((uint)(value >> 32)) << 32) | ReverseBitsInBytes32((uint)value);
 
 }

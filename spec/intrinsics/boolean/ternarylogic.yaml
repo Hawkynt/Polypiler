@@ -1,0 +1,30 @@
+id: INTRINSICS.TernaryLogic
+title: Three-input function of a truth table
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#97"
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: TernaryLogic
+  group: Boolean
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: a, type: T}, {name: b, type: T}, {name: c, type: T}, {name: table, type: TYPES.i32}]
+  returns: [{name: result, type: T}]
+  legality:
+    - {id: table-in-range, text: "table is 0 to 255; a constant outside is refused by the verifier, any other traps with an invalid operation", fact: range}
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "bit i of the result is bit (a_i * 4 + b_i * 2 + c_i) of table, so that the operands 0xF0, 0xCC and 0xAA of 8 bits give table itself; expanded on a as (a & f1(b, c)) | (~a & f0(b, c)) with f1 and f0 the functions of the high and the low nibble"
+    source: "Intel 64 and IA-32 Architectures Software Developer's Manual, VPTERNLOGD/VPTERNLOGQ"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u8}, inputs: ["0xF0", "0xCC", "0xAA", "0x5A"], outputs: ["0x5A"]}
+    - {types: {T: TYPES.u32}, inputs: ["0x12345678", "0x9ABCDEF0", "0x0F0F0F0F", "0x96"], outputs: ["0x87878787"]}
+    - {types: {T: TYPES.u32}, inputs: ["0x12345678", "0x9ABCDEF0", "0x0F0F0F0F", "0xCA"], outputs: ["0x1F3F5F77"]}
+    - {types: {T: TYPES.u64}, inputs: ["0x0123456789ABCDEF", "0xFEDCBA9876543210", "0x00FF00FF00FF00FF", 1], outputs: ["0x0000000000000000"]}

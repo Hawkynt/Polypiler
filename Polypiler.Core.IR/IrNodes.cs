@@ -955,7 +955,58 @@ public enum IrIntrinsicOp {
   HighWord,
 
   /// <summary><c>(u32 high, u32 low) → i64</c>: the 64-bit integer of two limbs, the inverse of <see cref="HighWord"/> and the conversion to <c>u32</c>.</summary>
-  JoinWords
+  JoinWords,
+
+  /// <summary>The number of one bits above the highest zero bit of an integer, as an <c>i32</c>; the width for all ones, 0 for 0.</summary>
+  LeadingOneCount,
+
+  /// <summary>The number of one bits below the lowest zero bit of an integer, as an <c>i32</c>; the width for all ones, 0 for 0.</summary>
+  TrailingOneCount,
+
+  /// <summary><c>(a, b)</c>: the complement of the bitwise and, <c>~(a &amp; b)</c>, of two integers of one type.</summary>
+  Nand,
+
+  /// <summary><c>(a, b)</c>: the complement of the bitwise or, <c>~(a | b)</c>.</summary>
+  Nor,
+
+  /// <summary><c>(a, b)</c>: the bitwise equivalence, the complement of the exclusive or, <c>~(a ^ b)</c>.</summary>
+  Xnor,
+
+  /// <summary><c>(a, b)</c>: <c>a &amp; ~b</c>, the second operand complemented - not the first, as x86's <c>ANDN</c> does.</summary>
+  AndNot,
+
+  /// <summary><c>(a, b)</c>: <c>a | ~b</c>.</summary>
+  OrNot,
+
+  /// <summary><c>(a, b)</c>: the bitwise implication, <c>~a | b</c>.</summary>
+  Implies,
+
+  /// <summary><c>(mask, a, b)</c>: each bit of <c>a</c> where the mask has a 1 and of <c>b</c> where it has a 0.</summary>
+  BitSelect,
+
+  /// <summary><c>(a, b, c)</c>: each bit set where at least two of the three integers have it set.</summary>
+  Majority,
+
+  /// <summary>
+  /// <c>(a, b, c, table)</c>: the three-input function of a truth table, the <c>i32</c> 0 to 255: bit
+  /// <c>i</c> of the result is bit <c>a_i·4 + b_i·2 + c_i</c> of the table. A constant table outside
+  /// that range is refused by the verifier, any other traps with an invalid operation.
+  /// </summary>
+  TernaryLogic,
+
+  /// <summary>
+  /// <c>(value, start, length)</c>: the field of <see cref="ExtractBits"/>, sign-extended from its top
+  /// bit, bit <c>length - 1</c>; 0 for a length of 0. A field outside the width traps with an invalid
+  /// operation.
+  /// </summary>
+  ExtractBitsSigned,
+
+  /// <summary>
+  /// An integer with the bits of each byte in the opposite order and the bytes in their place: bit
+  /// <c>i</c> moves to <c>8·(i / 8) + 7 - i % 8</c>. <see cref="BitReverse"/> is this followed by
+  /// <see cref="ByteSwap"/>.
+  /// </summary>
+  ReverseBitsInBytes
 
 }
 

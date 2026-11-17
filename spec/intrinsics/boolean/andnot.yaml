@@ -1,0 +1,28 @@
+id: INTRINSICS.AndNot
+title: And with a complemented operand
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#97"
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: AndNot
+  group: Boolean
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: a, type: T}, {name: b, type: T}]
+  returns: [{name: result, type: T}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "a & ~b on the bit patterns: the second operand is complemented, unlike the operand order of x86 ANDN"
+    source: "Boolean algebra; H. S. Warren, Hacker's Delight, 2nd ed., section 2-20"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u8}, inputs: ["0xF0", "0xCC"], outputs: ["0x30"]}
+    - {types: {T: TYPES.u64}, inputs: ["0x0123456789ABCDEF", "0xFEDCBA9876543210"], outputs: ["0x0123456789ABCDEF"]}
+    - {types: {T: TYPES.i8}, inputs: [-1, 15], outputs: [-16]}

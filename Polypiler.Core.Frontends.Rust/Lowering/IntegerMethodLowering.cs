@@ -161,6 +161,10 @@ internal sealed partial class FunctionLowering {
         return Cast(Binary(IrBinaryOp.Subtract, new IrConst(IrType.I32, type.Bits), new IrIntrinsic(IrIntrinsicOp.PopCount, IrType.I32, [a])), IrType.U32);
       case "leading_zeros":
         return Cast(new IrIntrinsic(IrIntrinsicOp.LeadingZeroCount, IrType.I32, [a]), IrType.U32);
+      case "leading_ones":
+        return Cast(new IrIntrinsic(IrIntrinsicOp.LeadingOneCount, IrType.I32, [a]), IrType.U32);
+      case "trailing_ones":
+        return Cast(new IrIntrinsic(IrIntrinsicOp.TrailingOneCount, IrType.I32, [a]), IrType.U32);
       default:
         return Cast(new IrIntrinsic(IrIntrinsicOp.TrailingZeroCount, IrType.I32, [a]), IrType.U32);
     }

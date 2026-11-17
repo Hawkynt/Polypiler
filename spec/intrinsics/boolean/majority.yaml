@@ -1,0 +1,30 @@
+id: INTRINSICS.Majority
+title: Bitwise majority
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#97"
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: Majority
+  group: Boolean
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: a, type: T}, {name: b, type: T}, {name: c, type: T}]
+  returns: [{name: result, type: T}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "(a & b) | (a & c) | (b & c): each bit set where at least two of the operands have it set; the truth table 0xE8 of TernaryLogic"
+    source: "Boolean algebra; H. S. Warren, Hacker's Delight, 2nd ed., section 2-20"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u8}, inputs: ["0xF0", "0xCC", "0xAA"], outputs: ["0xE8"]}
+    - {types: {T: TYPES.u64}, inputs: ["0x0123456789ABCDEF", "0xFEDCBA9876543210", "0x00FF00FF00FF00FF"], outputs: ["0x00FF00FF00FF00FF"]}
+    - {types: {T: TYPES.i16}, inputs: ["0x1234", "0xFFFF", "0x8001"], outputs: [-28107]}
+  algebra: [commutative]
+  lowersTo: [INTRINSICS.TernaryLogic]

@@ -51,10 +51,11 @@ internal static class IntegerCases {
     foreach (var op in new[] { IrIntrinsicOp.RotateLeft, IrIntrinsicOp.RotateRight })
       Each(op, Integers, Same, type => [type, IrType.I32]);
 
-    foreach (var op in new[] { IrIntrinsicOp.PopCount, IrIntrinsicOp.LeadingZeroCount, IrIntrinsicOp.TrailingZeroCount, IrIntrinsicOp.Log2, IrIntrinsicOp.Parity })
+    foreach (var op in new[] { IrIntrinsicOp.PopCount, IrIntrinsicOp.LeadingZeroCount, IrIntrinsicOp.TrailingZeroCount, IrIntrinsicOp.Log2, IrIntrinsicOp.Parity,
+               IrIntrinsicOp.LeadingOneCount, IrIntrinsicOp.TrailingOneCount })
       Each(op, Integers, _ => IrType.I32, type => [type]);
 
-    foreach (var op in new[] { IrIntrinsicOp.ByteSwap, IrIntrinsicOp.BitReverse, IrIntrinsicOp.RoundUpPow2, IrIntrinsicOp.Abs, IrIntrinsicOp.AbsWrap,
+    foreach (var op in new[] { IrIntrinsicOp.ByteSwap, IrIntrinsicOp.BitReverse, IrIntrinsicOp.ReverseBitsInBytes, IrIntrinsicOp.RoundUpPow2, IrIntrinsicOp.Abs, IrIntrinsicOp.AbsWrap,
                IrIntrinsicOp.IsolateLowestSet, IrIntrinsicOp.ClearLowestSet, IrIntrinsicOp.MaskToLowestSet })
       Each(op, Integers, Same, type => [type]);
 
@@ -76,6 +77,7 @@ internal static class IntegerCases {
       Each(op, Integers, _ => IrType.Bool, type => [type, type]);
 
     Each(IrIntrinsicOp.ExtractBits, Integers, Same, type => [type, IrType.I32, IrType.I32]);
+    Each(IrIntrinsicOp.ExtractBitsSigned, Integers, Same, type => [type, IrType.I32, IrType.I32]);
     Each(IrIntrinsicOp.InsertBits, Integers, Same, type => [type, type, IrType.I32, IrType.I32]);
     Each(IrIntrinsicOp.TestBit, Integers, _ => IrType.Bool, type => [type, IrType.I32]);
     foreach (var op in new[] { IrIntrinsicOp.SetBit, IrIntrinsicOp.ClearBit, IrIntrinsicOp.ToggleBit, IrIntrinsicOp.SignExtend, IrIntrinsicOp.ZeroExtend })
@@ -87,6 +89,15 @@ internal static class IntegerCases {
 
     foreach (var op in new[] { IrIntrinsicOp.StoreLittle, IrIntrinsicOp.StoreBig })
       Each(op, Multibyte, _ => IrType.Void, type => [_bytes, IrType.I32, type]);
+
+    // The Boolean functions (#97).
+    foreach (var op in new[] { IrIntrinsicOp.Nand, IrIntrinsicOp.Nor, IrIntrinsicOp.Xnor, IrIntrinsicOp.AndNot, IrIntrinsicOp.OrNot, IrIntrinsicOp.Implies })
+      Each(op, Integers, Same, type => [type, type]);
+
+    foreach (var op in new[] { IrIntrinsicOp.BitSelect, IrIntrinsicOp.Majority })
+      Each(op, Integers, Same, type => [type, type, type]);
+
+    Each(IrIntrinsicOp.TernaryLogic, Integers, Same, type => [type, type, type, IrType.I32]);
 
     // The limbs of a 64-bit integer (#1358): taken apart and joined.
     Each(IrIntrinsicOp.HighWord, [IrType.I64], _ => IrType.U32, type => [type]);
@@ -153,6 +164,13 @@ internal static class IntegerCases {
     if (type == IrType.Bool)
       return [false, true];
 
+    // A truth table on its boundaries and three named ones; its operands are 0, all ones and the
+    // three patterns whose bits together index every entry of the table.
+    if (@case.Op == IrIntrinsicOp.TernaryLogic)
+      return index == 3
+        ? [-1, 0, 1, 0x96, 0xCA, 0xE8, 255, 256, int.MinValue, int.MaxValue]
+        : [.. new[] { 0UL, ulong.MaxValue, 0xF0F0F0F0F0F0F0F0UL, 0xCCCCCCCCCCCCCCCCUL, 0xAAAAAAAAAAAAAAAAUL }.Select(pattern => FromPattern(type, pattern))];
+
     var counted = type == IrType.I32 && (index > 0 || @case.Op == IrIntrinsicOp.LowMask) && !IsValue(@case, index);
     if (!counted)
       return Edges(type);
@@ -169,7 +187,9 @@ internal static class IntegerCases {
     => @case.Op is IrIntrinsicOp.MulHigh or IrIntrinsicOp.DivFloor or IrIntrinsicOp.ModFloor or IrIntrinsicOp.DivEuclid or IrIntrinsicOp.ModEuclid
       or IrIntrinsicOp.Min or IrIntrinsicOp.Max or IrIntrinsicOp.Clamp or IrIntrinsicOp.AddSaturate or IrIntrinsicOp.SubSaturate or IrIntrinsicOp.MulSaturate
       or IrIntrinsicOp.AddOverflows or IrIntrinsicOp.SubOverflows or IrIntrinsicOp.MulOverflows or IrIntrinsicOp.BigMul
-      || (@case.Op == IrIntrinsicOp.InsertBits && index == 1);
+      or IrIntrinsicOp.Nand or IrIntrinsicOp.Nor or IrIntrinsicOp.Xnor or IrIntrinsicOp.AndNot or IrIntrinsicOp.OrNot or IrIntrinsicOp.Implies
+      or IrIntrinsicOp.BitSelect or IrIntrinsicOp.Majority
+      || (@case.Op == IrIntrinsicOp.InsertBits && index == 1) || (@case.Op == IrIntrinsicOp.TernaryLogic && index < 3);
 
   /// <summary>
   /// The edges of an integer type: 0, 1, 2, 3, all ones, all ones but the lowest bit, only the top
@@ -197,6 +217,9 @@ internal static class IntegerCases {
 
     if (@case.Types[0].IsArray && index == 1)
       return generator.Next(-2, 15);
+
+    if (@case.Op == IrIntrinsicOp.TernaryLogic && index == 3)
+      return generator.Next(-2, 258);
 
     var width = WidthOf(@case);
     if (type == IrType.I32 && !@case.Types[0].IsArray && (index > 0 || @case.Op == IrIntrinsicOp.LowMask) && !IsValue(@case, index))

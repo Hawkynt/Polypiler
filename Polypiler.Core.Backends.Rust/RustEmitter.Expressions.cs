@@ -589,8 +589,12 @@ public static partial class RustEmitter {
         IrIntrinsicOp.PopCount => As(Call("count_ones"), IrType.U32),
         IrIntrinsicOp.LeadingZeroCount => As(Call("leading_zeros"), IrType.U32),
         IrIntrinsicOp.TrailingZeroCount => As(Call("trailing_zeros"), IrType.U32),
+        IrIntrinsicOp.LeadingOneCount => As(Call("leading_ones"), IrType.U32),
+        IrIntrinsicOp.TrailingOneCount => As(Call("trailing_ones"), IrType.U32),
         IrIntrinsicOp.ByteSwap => Call("swap_bytes"),
         IrIntrinsicOp.BitReverse => Call("reverse_bits"),
+        // The bits of every byte reversed are all of them reversed with the bytes swapped back.
+        IrIntrinsicOp.ReverseBitsInBytes => this.Method(Call("swap_bytes"), "reverse_bits", operand),
         IrIntrinsicOp.IsPow2 => Call("is_power_of_two"),
         IrIntrinsicOp.Min => Call("min", arguments[1]),
         IrIntrinsicOp.Max => Call("max", arguments[1]),

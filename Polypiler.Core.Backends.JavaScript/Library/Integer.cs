@@ -24,7 +24,11 @@ internal static partial class JavaScriptLibrary {
       IrIntrinsicOp.AddOverflows, IrIntrinsicOp.SubOverflows, IrIntrinsicOp.MulOverflows,
       IrIntrinsicOp.ExtractBits, IrIntrinsicOp.InsertBits, IrIntrinsicOp.TestBit, IrIntrinsicOp.SetBit, IrIntrinsicOp.ClearBit, IrIntrinsicOp.ToggleBit,
       IrIntrinsicOp.LowMask, IrIntrinsicOp.IsolateLowestSet, IrIntrinsicOp.ClearLowestSet, IrIntrinsicOp.MaskToLowestSet,
-      IrIntrinsicOp.SignExtend, IrIntrinsicOp.ZeroExtend
+      IrIntrinsicOp.SignExtend, IrIntrinsicOp.ZeroExtend,
+      IrIntrinsicOp.LeadingOneCount, IrIntrinsicOp.TrailingOneCount,
+      IrIntrinsicOp.Nand, IrIntrinsicOp.Nor, IrIntrinsicOp.Xnor, IrIntrinsicOp.AndNot, IrIntrinsicOp.OrNot, IrIntrinsicOp.Implies,
+      IrIntrinsicOp.BitSelect, IrIntrinsicOp.Majority, IrIntrinsicOp.TernaryLogic,
+      IrIntrinsicOp.ExtractBitsSigned, IrIntrinsicOp.ReverseBitsInBytes
     }.Select(op => (op, Always)),
     (IrIntrinsicOp.LeadingZeroCount, new Row((node, context) => IsInteger(node) && (Bits(node) == 64 || context.Replaces("Math.clz32")), IntegerLibrary.Call)),
     (IrIntrinsicOp.Log2, new Row((node, context) => IsInteger(node) && (Bits(node) == 64 || context.Replaces("Math.clz32")), IntegerLibrary.Call)),
