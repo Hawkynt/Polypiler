@@ -25,9 +25,9 @@ public static partial class RustEmitter {
     private bool IsBorrowedString(IrExpr expression)
       => expression is IrLocalRef { Local: var local } && this._function.Parameters.Contains(local) && !this._ownedStringParameters.Contains(local) && !this._owned.Contains(local);
 
-    /// <summary>A helper of the string representation the crate carries, with the helpers it calls; its name.</summary>
+    /// <summary>A helper of the string representation the crate carries, with the helpers it calls, in the forms of the crate's trap policy; its name.</summary>
     private string StringHelper(string name) {
-      foreach (var helper in Strings.With(name))
+      foreach (var helper in Strings.With(name, this.Results))
         this.Spell(helper.Name, () => helper);
 
       return name;
@@ -116,7 +116,7 @@ public static partial class RustEmitter {
     private RsExpression StringOperation(IrIntrinsic operation) {
       var arguments = operation.Arguments;
       RsExpression I32(RsExpression value) => this.Cast(value, IrType.I32);
-      RsExpression Call(string helper, params IReadOnlyList<RsExpression> values) => new RsCall(new RsPath(this.StringHelper(helper)), values) { Type = operation.Type };
+      RsExpression Call(string helper, params IReadOnlyList<RsExpression> values) => this.HelperCall(helper, operation.Type, values);
       RsExpression Length(IrExpr text) => new RsMethodCall(this.StringPlace(text), "len", []);
       switch (operation.Op) {
         case IrIntrinsicOp.StrLength:

@@ -529,9 +529,23 @@ the `PLY1560` refusal of catching a trap - and a throw of a library exception is
 `Display` of an exception prints its trap's name, or its class's name. A generated test of a fallible
 function asserts `assert_eq!(f(1, 0), Err(Error::DivideByZero));`.
 
-What would still panic is refused with `PLY1552`, naming it: a call of a string or collection helper
-that panics (`ply_list_index`, `ply_parse_i32`, …), a trap inside a closure, a step of an element of
-module state behind a lock, and a type of the module named `Error`. The exception regions of `PLY1560`
+The helpers of strings and collections that trap have a form of their own under `result` (#1415,
+`Helpers/Strings.Results.cs`), which gives the trap as its value instead of panicking: a helper of one
+trap returns an `Option` (`ply_list_index(i, n) -> Option<usize>`, `ply_list_insert_index`, `ply_map_add`,
+`ply_cast`, `ply_index_of`, `ply_last_index_of`, `ply_position`, `ply_replace`, the views `ply_view` and
+`ply_view_from` with their `_mut` forms, `ply_float_text`, `ply_parse_f64`, `ply_parse_f32`), checked at
+the call as every other trap is, `l[ply_list_index(i, l.len()).ok_or(Error::ArgumentOutOfRange)?]`; a
+helper of two is generic over the error and takes the error of each trap as an argument (`ply_enum_parse`:
+`UnknownName` and `IntegerOverflow`; `ply_parse_integer`: `InvalidFormat` and `IntegerOverflow`), its
+`Result` handed on as a fallible call's is, `ply_parse_integer(s, lo, hi, Error::InvalidFormat, Error::IntegerOverflow)?`. `ply_split` and
+`ply_replace_first` search from the start, where no trap can happen, and keep their plain results.
+`ply_value` and `ply_non_null` are never called under `result` (the value is checked in place). A
+helper whose body hands an error on with `?` is never inlined (O0500), since the `?` would then leave
+its caller. Under `panic` the helpers are the panicking ones above.
+
+What would still panic is refused with `PLY1552`, naming it: a call of a helper that panics and has no
+form for `result`, a trap inside a closure (a helper's included: `Rc<dyn Fn>` cannot hand an error on),
+a step of an element of module state behind a lock, and a type of the module named `Error`. The exception regions of `PLY1560`
 other than catching a trap - a filter that may trap or that a `finally` in a function called would
 run after - stay refused under both policies.
 

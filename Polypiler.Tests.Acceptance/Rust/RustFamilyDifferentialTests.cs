@@ -270,4 +270,34 @@ public sealed class RustFamilyDifferentialTests {
     }
   }
 
+  /// <summary>
+  /// #1415: the fixtures whose helpers of strings and collections trap - an enum's parse, a cast, the parse
+  /// of a number, a list's index - written under the trap policy <c>result</c> as well, where the helpers'
+  /// forms give a trap as their value; with overflow checks on and off no call panics and every outcome is
+  /// what .NET computes.
+  /// </summary>
+  [TestCase("enums/Big")]
+  [TestCase("enums/Color")]
+  [TestCase("enums/Perm")]
+  [TestCase("dispatch/Shapes")]
+  [TestCase("numtext/Parse")]
+  [TestCase("collections/WordFrequency")]
+  [TestCase("collections/Collections (written part)")]
+  [RequiresToolchain(RustRunner.Toolchain)]
+  public async Task Fixture_UnderResult_AgreesWithDotNet(string name) {
+    var result = RustProfile.Default.WithTrapPolicy(RustTrapPolicy.Result);
+    var family = Families().Single(candidate => candidate.Name == name);
+    var module = family.Module();
+    Assert.That(RustCrates.Check(module, result).Select(problem => problem.Message), Is.Empty, "the fixture is written as Rust under result");
+    var calls = family.Calls();
+    var expected = family.Sequenced?.Invoke(calls) ?? [.. calls.Select(family.Expected)];
+    var matches = family.Matches ?? ((_, wanted, actual) => wanted == actual);
+    foreach (var checks in new[] { OverflowChecks.Panic, OverflowChecks.Wrap }) {
+      var actual = await RustRun.OutcomesAsync(module, calls, checks, result);
+      var mismatches = calls.Select((call, index) => (call, index)).Where(pair => !matches(pair.call, expected[pair.index], actual[pair.index]))
+        .Select(pair => $"{pair.call}: C# {expected[pair.index]}, Rust {actual[pair.index]}").ToList();
+      Assert.That(mismatches.Take(20), Is.Empty, $"{mismatches.Count} of {calls.Count} calls differ with overflow checks {checks}");
+    }
+  }
+
 }

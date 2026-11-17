@@ -213,7 +213,7 @@ public static partial class RustEmitter {
         if (!trap)
           return (this.Method(optional, "and_then", target, path), Held.OptionalValue);
 
-        return (new RsCall(new RsPath(this.StringHelper("ply_cast")), [optional, path]) { Type = target }, Held.OptionalValue);
+        return (this.HelperCall("ply_cast", target, [optional, path]), Held.OptionalValue);
       }
 
       var converted = this.Method(this.ObjectValue(value, false), method, target);

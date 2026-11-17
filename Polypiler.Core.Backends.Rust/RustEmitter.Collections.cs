@@ -242,7 +242,7 @@ public static partial class RustEmitter {
     }
 
     private RsExpression Helper(string name, IrType type, params IReadOnlyList<RsExpression> arguments)
-      => new RsCall(new RsPath(this.StringHelper(name)), arguments) { Type = type };
+      => this.HelperCall(name, type, arguments);
 
     /// <summary>An operation on a list, a map or a set.</summary>
     private RsExpression Collection(IrCollection operation) {

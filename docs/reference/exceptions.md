@@ -349,8 +349,11 @@ can leave returns a `Result`; a function nothing can leave keeps its type.
 
 `Error` is `#[repr(u16)] pub enum Error` in `src/error.rs`, re-exported from `src/lib.rs`, with the codes
 `DivideByZero = 1`, `IntegerOverflow = 2`, `IndexOutOfRange = 3` and the other traps from 4, and
-`Display` printing the trap's name. A call of a helper that panics, a trap inside a closure, a step of
-locked module state and a type named `Error` are refused with `PLY1552`.
+`Display` printing the trap's name. A helper of strings and collections that traps (a list's index, an
+enum's or a number's parse, a cast, a view) gives the trap as its value there and the call checks it
+(`ply_list_index(i, n).ok_or(Error::ArgumentOutOfRange)?`). A call of a helper that panics and has no such
+form, a trap inside a closure, a step of locked module state and a type named `Error` are refused with
+`PLY1552`.
 
 ## Known differences
 

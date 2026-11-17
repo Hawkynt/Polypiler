@@ -57,14 +57,14 @@ public static partial class RustEmitter {
       var value = this.ViewSource(source, false);
       if (value is RsPath) {
         var length = this.Cast(new RsMethodCall(value, "len", []) { Type = IrType.U64 }, IrType.I32);
-        var window = new RsCall(new RsPath(this.StringHelper("ply_view_mut")), [this.ViewSource(target, true), new RsLiteral("0"), length]) { Type = target.Type };
+        var window = this.HelperCall("ply_view_mut", target.Type, [this.ViewSource(target, true), new RsLiteral("0"), length]);
         return new RsMethodCall(window, "copy_from_slice", [value]);
       }
 
       var name = this.Temporary("source");
       var bound = new RsPath(name) { Type = source.Type };
       var measured = this.Cast(new RsMethodCall(bound, "len", []) { Type = IrType.U64 }, IrType.I32);
-      var into = new RsCall(new RsPath(this.StringHelper("ply_view_mut")), [this.ViewSource(target, true), new RsLiteral("0"), measured]) { Type = target.Type };
+      var into = this.HelperCall("ply_view_mut", target.Type, [this.ViewSource(target, true), new RsLiteral("0"), measured]);
       return new RsBlockExpression(new RsBlock([new RsLet(name, false, null, value)], new RsMethodCall(into, "copy_from_slice", [bound])));
     }
 
@@ -110,8 +110,8 @@ public static partial class RustEmitter {
         var whole = this.ViewSource(root, false);
         // A method borrows its receiver itself: `a.len()`, never `&a.len()`.
         var view = part.Start is null ? (whole is RsReference { Operand: var owner } ? owner : whole)
-          : part.Length is null ? new RsCall(new RsPath(this.StringHelper("ply_view_from")), [whole, start]) { Type = root.Type }
-          : new RsCall(new RsPath(this.StringHelper("ply_view")), [whole, start, Bound(part.Length, stem + "_length")]) { Type = root.Type };
+          : part.Length is null ? this.HelperCall("ply_view_from", root.Type, [whole, start])
+          : this.HelperCall("ply_view", root.Type, [whole, start, Bound(part.Length, stem + "_length")]);
         var name = this.Temporary(stem);
         statements.Add(new RsLet(name, false, null, new RsMethodCall(view, "len", []) { Type = IrType.U64 }));
         return new RsPath(name) { Type = IrType.U64 };
@@ -141,7 +141,7 @@ public static partial class RustEmitter {
           || Polypiler.Core.Backends.Rust.Emit.ArrayOwnership.Statements(this._function.Body).Any(statement => statement is IrAssign assign && (assign.Local == left || assign.Local == right)))
         return null;
 
-      var measured = new RsMethodCall(new RsCall(new RsPath(this.StringHelper("ply_view")), [this.ViewSource(root, false), new RsLiteral("0"), this.Expression(middle)]) { Type = root.Type }, "len", []) { Type = IrType.U64 };
+      var measured = new RsMethodCall(this.HelperCall("ply_view", root.Type, [this.ViewSource(root, false), new RsLiteral("0"), this.Expression(middle)]), "len", []) { Type = IrType.U64 };
       var receiver = this.ViewSource(root, true) is RsReference { Operand: var vector } ? vector : this.ViewSource(root, true);
       return new RsLet($"({this._locals[left]}, {this._locals[right]})", false, null, new RsMethodCall(receiver, "split_at_mut", [measured]));
     }
@@ -207,7 +207,7 @@ public static partial class RustEmitter {
         return source;
 
       var helper = (operation.Arguments.Count == 2 ? "ply_view_from" : "ply_view") + (mutable ? "_mut" : "");
-      return new RsCall(new RsPath(this.StringHelper(helper)), [source, .. operation.Arguments.Skip(1).Select(this.Expression)]) { Type = operation.Type };
+      return this.HelperCall(helper, operation.Type, [source, .. operation.Arguments.Skip(1).Select(this.Expression)]);
     }
 
   }
