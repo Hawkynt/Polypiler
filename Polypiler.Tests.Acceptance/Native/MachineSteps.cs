@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using NUnit.Framework;
@@ -175,7 +176,7 @@ public sealed class MachineSteps {
   public void Trapped(string address, string value, string kind) => Assert.Multiple(() => {
     Assert.That(this.Execution.Trace.Outcome, Is.EqualTo(TraceOutcome.Trapped));
     Assert.That(this.Execution.Trace.Final.Memory.Single(), Is.EqualTo(new MemoryBytes(Hex(address), [(byte)Hex(value)])));
-    Assert.That(this.Execution.Trace.Events[^1], Is.InstanceOf<Trap>().With.Property(nameof(Trap.Kind)).EqualTo(kind));
+    Assert.That(this.Execution.Trace.Events[^1], Is.InstanceOf<Trap>().With.Property("Kind").EqualTo(kind));
   });
 
   /// <summary>The run aborted on an undefined flag.</summary>

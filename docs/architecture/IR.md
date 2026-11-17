@@ -12,7 +12,7 @@ The IR is language-independent **without erasing source-language behavior**. Som
 - **Effects:** writes/reads, potential faults, exceptions, synchronization, device I/O, external calls, stack/register/flag state and dynamic control flow.
 - **Iteration:** induction variables, access functions, strides, reductions, dependences, mutation and evaluation order.
 - **Object/runtime:** classes, interface dispatch, generic instantiations, type identity, [cleanup, continuations and error-handler regions](LANGUAGE-LOWERING.md).
-- **Machine:** explicit registers/flags and instruction effects for binary lifting/inline ASM; uninterpreted operations only with conservative effect summaries.
+- **Machine:** explicit registers/flags and instruction effects for binary lifting/inline ASM; uninterpreted operations only with conservative effect summaries. These live on a level of their own, [MachineIR](MACHINE-IR.md), which is raised to and lowered from this IR.
 - **Provenance:** source instruction range, import module, optimization provenance and licensing identity.
 
 ## Do not conflate widths

@@ -55,7 +55,8 @@ body:
   RegWrite.u32 @r2, %t
   %p1 = Add.u32 %p, 1
   RegWrite.u32 @r0, %p1
-  %n1 = Sub.u32 %n, 1
+  %m = RegRead.u32 @r1
+  %n1 = Sub.u32 %m, 1
   RegWrite.u32 @r1, %n1
   Jump loop
 out:

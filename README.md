@@ -107,6 +107,8 @@ For these, the frontend *lifts* (decodes and recovers semantics) and the backend
 | GW-BASIC tokenized | | — | — | |
 | Microsoft BASIC p-code | per dialect, after an inventory | — | — | |
 
+No instruction set is lifted or emitted yet. The machine level they build on exists: [MachineIR](docs/architecture/MACHINE-IR.md) with machine profiles (`test-m32`, `test-m64`, `mos6502`), sub-registers, flags, traps and memory regions, its verifier and interpreter, observable-state traces with machine vector files, and the binary image model with its manifest.
+
 ### Instruction-set extensions
 
 A CPU family is not one instruction set. Each extension is lifted and emitted separately, and a target

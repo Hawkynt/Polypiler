@@ -13,7 +13,7 @@ namespace Polypiler.Tests.MachineSemantics.Support;
 /// <summary>
 /// The fixtures of the machine-state interpreter, <c>tests/fixtures/native/mach-interp</c>: the routines
 /// of <c>routines.mir</c>, and the vectors with the results the C reference <c>routines.ref.c</c>
-/// printed under gcc, captured in <c>golden/routines.out</c>.
+/// printed under gcc, captured in <c>golden/routines.expected.txt</c>.
 /// </summary>
 public static class InterpreterFixtures {
 
@@ -42,7 +42,7 @@ public static class InterpreterFixtures {
 
   /// <summary>Every captured vector.</summary>
   public static IEnumerable<Vector> Vectors() {
-    foreach (var line in File.ReadAllLines(Path.Combine(Directory, "golden", "routines.out"))) {
+    foreach (var line in File.ReadAllLines(Path.Combine(Directory, "golden", "routines.expected.txt"))) {
       var parts = line.Split(" => ");
       var input = parts[0].Split(' ');
       static Dictionary<string, string> Fields(IEnumerable<string> tokens)
