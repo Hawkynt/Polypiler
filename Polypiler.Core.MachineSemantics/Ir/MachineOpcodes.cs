@@ -21,6 +21,18 @@ public enum MachineOpcode {
   /// <summary><c>%x = Mul.T %a, %b</c>, the low half of the product.</summary>
   Mul,
 
+  /// <summary><c>%x = UDiv.T %a, %b</c>: unsigned quotient; a zero divisor raises the trap <c>divide-error</c>.</summary>
+  UDiv,
+
+  /// <summary><c>%x = URem.T %a, %b</c>: unsigned remainder; a zero divisor raises the trap <c>divide-error</c>.</summary>
+  URem,
+
+  /// <summary><c>%x = SDiv.T %a, %b</c>: two's-complement quotient towards zero; a zero divisor or the smallest value divided by -1 raises <c>divide-error</c>.</summary>
+  SDiv,
+
+  /// <summary><c>%x = SRem.T %a, %b</c>: two's-complement remainder with the sign of the dividend; traps as <see cref="SDiv"/>.</summary>
+  SRem,
+
   /// <summary><c>%x = And.T %a, %b</c>.</summary>
   And,
 
@@ -112,7 +124,14 @@ public enum MachineOpcode {
   IndirectJump,
 
   /// <summary><c>Ret</c>: a terminator.</summary>
-  Ret
+  Ret,
+
+  /// <summary>
+  /// <c>MachineTrap[kind=…, vector=…, resumes=…, id=…]</c>, optionally with a service contract: the CPU's
+  /// exception mechanism, taken unconditionally. A trap that does not resume is a terminator without
+  /// successors; a machine operation.
+  /// </summary>
+  MachineTrap
 
 }
 
@@ -120,7 +139,7 @@ public enum MachineOpcode {
 public static class MachineOpcodes {
 
   private static readonly HashSet<MachineOpcode> _binary = [
-    MachineOpcode.Add, MachineOpcode.Sub, MachineOpcode.Mul, MachineOpcode.And, MachineOpcode.Or, MachineOpcode.Xor,
+    MachineOpcode.Add, MachineOpcode.Sub, MachineOpcode.Mul, MachineOpcode.UDiv, MachineOpcode.URem, MachineOpcode.SDiv, MachineOpcode.SRem, MachineOpcode.And, MachineOpcode.Or, MachineOpcode.Xor,
     MachineOpcode.Shl, MachineOpcode.LShr, MachineOpcode.AShr
   ];
 
@@ -128,7 +147,7 @@ public static class MachineOpcodes {
 
   private static readonly HashSet<MachineOpcode> _machine = [
     MachineOpcode.RegRead, MachineOpcode.RegWrite, MachineOpcode.FlagRead, MachineOpcode.FlagWrite, MachineOpcode.FlagUndef,
-    MachineOpcode.Load, MachineOpcode.Store, MachineOpcode.IndirectJump
+    MachineOpcode.Load, MachineOpcode.Store, MachineOpcode.IndirectJump, MachineOpcode.MachineTrap
   ];
 
   /// <summary>Whether an opcode takes two operands of its type and yields its type.</summary>
@@ -140,11 +159,14 @@ public static class MachineOpcodes {
   /// <summary>Whether an opcode touches machine state and therefore needs a machine profile.</summary>
   public static bool IsMachineOperation(MachineOpcode opcode) => _machine.Contains(opcode);
 
-  /// <summary>Whether an opcode ends a block.</summary>
+  /// <summary>Whether an opcode is a division that raises <c>divide-error</c>.</summary>
+  public static bool IsDivision(MachineOpcode opcode) => opcode is MachineOpcode.UDiv or MachineOpcode.URem or MachineOpcode.SDiv or MachineOpcode.SRem;
+
+  /// <summary>Whether an opcode always ends a block; a <see cref="MachineOpcode.MachineTrap"/> ends it when it does not resume.</summary>
   public static bool IsTerminator(MachineOpcode opcode) => opcode is MachineOpcode.Jump or MachineOpcode.Branch or MachineOpcode.IndirectJump or MachineOpcode.Ret;
 
   /// <summary>Whether an opcode yields a value.</summary>
   public static bool HasResult(MachineOpcode opcode)
-    => !IsTerminator(opcode) && opcode is not (MachineOpcode.RegWrite or MachineOpcode.FlagWrite or MachineOpcode.FlagUndef or MachineOpcode.Store);
+    => !IsTerminator(opcode) && opcode is not (MachineOpcode.RegWrite or MachineOpcode.FlagWrite or MachineOpcode.FlagUndef or MachineOpcode.Store or MachineOpcode.MachineTrap);
 
 }

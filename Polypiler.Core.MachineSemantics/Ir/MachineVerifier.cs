@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using Polypiler.Core.MachineSemantics.Traps;
 
 namespace Polypiler.Core.MachineSemantics;
 
@@ -90,7 +91,7 @@ public static class MachineVerifier {
         }
       }
 
-      if (this._profile is not null && this.Problems.Count == 0)
+      if (this._profile is not null && this.Problems.All(problem => problem.Severity != DiagnosticSeverity.Error))
         this.UndefinedFlags(this._profile);
     }
 
@@ -115,6 +116,8 @@ public static class MachineVerifier {
       this.Types(instruction, where);
       if (this._profile is { } profile && instruction.Storage is { } storage)
         this.Storage(instruction, storage, profile, where);
+      if (this._profile is { } machine && instruction.Trap is { } trap)
+        this.Problems.AddRange(TrapRules.Check(trap, machine, where));
     }
 
     private static MachineType ResultType(MachineInstruction instruction) => MachineOpcodes.IsComparison(instruction.Opcode) ? MachineType.Bool : instruction.Type;
@@ -144,12 +147,17 @@ public static class MachineVerifier {
         MachineOpcode.Store => (2, operands.Length == 2 && IsData(0) && IsData(1), true),
         MachineOpcode.Jump => (1, operands.Length == 1 && IsLabel(0), false),
         MachineOpcode.Branch => (3, operands.Length == 3 && IsData(0) && IsLabel(1) && IsLabel(2), false),
+        MachineOpcode.MachineTrap => (0, operands.IsEmpty && instruction.Trap is not null, false),
         MachineOpcode.IndirectJump => (1, operands.Length >= 1 && IsData(0) && operands.Skip(1).All(operand => operand is MachineLabel) && (operands.Length > 1) != instruction.Unresolved, false),
         _ => (0, operands.IsEmpty, false)
       };
 
       if (!ok)
-        this.Malformed($"{where} '{instruction}' does not have the operands of {opcode}" + (opcode == MachineOpcode.IndirectJump ? " (a target list or 'unresolved')" : $" ({count})"));
+        this.Malformed($"{where} '{instruction}' does not have the operands of {opcode}" + opcode switch {
+          MachineOpcode.IndirectJump => " (a target list or 'unresolved')",
+          MachineOpcode.MachineTrap => " (none, and a trap descriptor)",
+          _ => $" ({count})"
+        });
       else if (typed != (instruction.Type != MachineType.Void))
         this.Malformed(typed ? $"{where} '{instruction}' needs a type" : $"{where} '{instruction}' takes no type");
       else if (opcode == MachineOpcode.FlagRead && instruction.Type != MachineType.Bool)

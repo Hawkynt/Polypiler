@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using Polypiler.Core.MachineSemantics.Traps;
 
 namespace Polypiler.Core.MachineSemantics;
 
@@ -84,12 +85,21 @@ public static class MachineSyntax {
     text.Append(instruction.Opcode);
     if (instruction.Type != MachineType.Void)
       text.Append('.').Append(instruction.Type);
+    if (instruction.Trap is { } trap)
+      AppendTrap(text, trap);
 
     if (instruction.Opcode == MachineOpcode.IndirectJump) {
       text.Append(' ').Append(instruction.Operands[0]).Append(" -> ");
       text.Append(instruction.Unresolved ? "unresolved" : string.Join(", ", instruction.Operands.Skip(1)));
     } else if (!instruction.Operands.IsEmpty) {
-      text.Append(' ').Append(string.Join(", ", instruction.Operands));
+      // The offset and width of a bit field are positions, written in decimal.
+      var field = instruction.Opcode switch {
+        MachineOpcode.ExtractBits => 1,
+        MachineOpcode.InsertBits => 2,
+        _ => instruction.Operands.Length
+      };
+      text.Append(' ').Append(string.Join(", ", instruction.Operands.Select((operand, index)
+        => index >= field && operand is MachineImmediate immediate ? immediate.Value.ToString(CultureInfo.InvariantCulture) : operand.ToString())));
     }
 
     if (instruction.Origin is { } origin) {
@@ -106,6 +116,25 @@ public static class MachineSyntax {
     }
 
     return text.ToString();
+  }
+
+  private static void AppendTrap(StringBuilder text, TrapDescriptor trap) {
+    text.Append("[kind=").Append(TrapDescriptor.Name(trap.Kind));
+    if (trap.Vector is { } vector)
+      text.Append(", vector=").Append(vector < 0 ? vector.ToString(CultureInfo.InvariantCulture) : Number((ulong)vector));
+    text.Append(", resumes=").Append(trap.Resumes ? "true" : "false");
+    if (trap.Id is { } id)
+      text.Append(", id=").Append(id);
+    text.Append(']');
+    if (trap.Service is not { } service)
+      return;
+    text.Append(" service(\"").Append(service.Name).Append("\")");
+    if (!service.RegistersRead.IsEmpty)
+      text.Append(" reads(").Append(string.Join(", ", service.RegistersRead)).Append(')');
+    if (!service.RegistersWritten.IsEmpty)
+      text.Append(" writes(").Append(string.Join(", ", service.RegistersWritten)).Append(')');
+    if (!service.Channels.IsEmpty)
+      text.Append(" channels(").Append(string.Join(", ", service.Channels.Select(channel => "\"" + channel + "\""))).Append(')');
   }
 
   /// <summary>Parses a module.</summary>
@@ -209,7 +238,12 @@ public static class MachineSyntax {
 
     private Token Peek => tokens[this._position];
 
-    private Token Next() => tokens[this._position++];
+    private Token Next() {
+      var token = tokens[this._position];
+      if (token.Kind != TokenKind.Eof)
+        ++this._position;
+      return token;
+    }
 
     private MachineException Error(Token at, string reason) => MachineSyntax.Error(at.Line, reason);
 
@@ -232,6 +266,8 @@ public static class MachineSyntax {
     }
 
     private void EndOfStatement() {
+      if (this.IsSymbol("}"))
+        return;
       var token = this.Next();
       if (token.Kind is not (TokenKind.End or TokenKind.Eof))
         throw this.Error(token, $"expected the end of the statement but found {token}");
@@ -340,9 +376,16 @@ public static class MachineSyntax {
       if (MachineOpcodes.HasResult(opcode) != (result is not null))
         throw this.Error(head, result is null ? $"'{name}' defines a value and needs '%name ='" : $"'{name}' defines no value");
 
+      TrapDescriptor? trap = null;
+      if (opcode == MachineOpcode.MachineTrap) {
+        trap = this.Trap(head);
+      } else if (this.IsSymbol("[")) {
+        throw this.Error(head, $"'{name}' takes no attributes");
+      }
+
       var operands = ImmutableArray.CreateBuilder<MachineOperand>();
       var unresolved = false;
-      if (this.Peek.Kind is not (TokenKind.End or TokenKind.Eof) && !this.IsSymbol("!")) {
+      if (this.Peek.Kind is not (TokenKind.End or TokenKind.Eof) && !this.IsSymbol("!") && !this.IsSymbol("}")) {
         operands.Add(this.Operand());
         if (opcode == MachineOpcode.IndirectJump) {
           this.Expect("->");
@@ -364,7 +407,68 @@ public static class MachineSyntax {
       if (this.IsSymbol("!"))
         origin = this.Origin();
       this.EndOfStatement();
-      return new(opcode, type, result, operands.ToImmutable()) { Origin = origin, Unresolved = unresolved };
+      return new(opcode, type, result, operands.ToImmutable()) { Origin = origin, Unresolved = unresolved, Trap = trap };
+    }
+
+    private TrapDescriptor Trap(Token head) {
+      this.Expect("[");
+      var attributes = new Dictionary<string, Token>(StringComparer.Ordinal);
+      do {
+        var key = this.Word("an attribute of MachineTrap");
+        this.Expect("=");
+        var value = this.Next();
+        if (value.Kind is not (TokenKind.Word or TokenKind.Number))
+          throw this.Error(value, $"expected the value of '{key}' but found {value}");
+        if (key is not ("kind" or "vector" or "resumes" or "id") || !attributes.TryAdd(key, value))
+          throw this.Error(value, $"'{key}' is not an attribute of MachineTrap or is given twice");
+      } while (this.TryComma());
+      this.Expect("]");
+
+      if (!attributes.TryGetValue("kind", out var kindToken) || !TrapDescriptor.TryParseKind(kindToken.Text, out var kind))
+        throw this.Error(head, "MachineTrap needs kind= with one of the nine trap kinds");
+      long? vector = null;
+      if (attributes.TryGetValue("vector", out var vectorToken))
+        vector = TryNumber(vectorToken.Text, out var unsigned) && unsigned <= long.MaxValue ? (long)unsigned
+          : long.TryParse(vectorToken.Text, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var signed) ? signed
+          : throw this.Error(vectorToken, $"'{vectorToken.Text}' is not a vector");
+      var resumes = TrapDescriptor.ResumesByDefault(kind);
+      if (attributes.TryGetValue("resumes", out var resumesToken))
+        resumes = resumesToken.Text switch {
+          "true" => true,
+          "false" => false,
+          _ => throw this.Error(resumesToken, $"resumes must be true or false, not '{resumesToken.Text}'")
+        };
+      var id = attributes.TryGetValue("id", out var idToken) ? idToken.Text : null;
+
+      ServiceContract? service = null;
+      if (this.Peek is { Kind: TokenKind.Word, Text: "service" }) {
+        ++this._position;
+        this.Expect("(");
+        var serviceName = this.Next();
+        if (serviceName.Kind != TokenKind.String)
+          throw this.Error(serviceName, $"expected the service name as a string but found {serviceName}");
+        this.Expect(")");
+        var reads = this.NameList("reads", TokenKind.Word);
+        var writes = this.NameList("writes", TokenKind.Word);
+        var channels = this.NameList("channels", TokenKind.String);
+        service = new(serviceName.Text, reads, writes, channels);
+      }
+
+      return new(kind, vector, resumes, service) { Id = id };
+    }
+
+    private ImmutableArray<string> NameList(string keyword, TokenKind kind) {
+      if (this.Peek.Kind != TokenKind.Word || this.Peek.Text != keyword)
+        return [];
+      ++this._position;
+      this.Expect("(");
+      var names = ImmutableArray.CreateBuilder<string>();
+      do {
+        var token = this.Next();
+        names.Add(token.Kind == kind ? token.Text : throw this.Error(token, $"expected a name in {keyword}(...) but found {token}"));
+      } while (this.TryComma());
+      this.Expect(")");
+      return names.ToImmutable();
     }
 
     private MachineOperand Operand() {

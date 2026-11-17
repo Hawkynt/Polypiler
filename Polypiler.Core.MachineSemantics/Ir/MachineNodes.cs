@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using Polypiler.Core.MachineSemantics.Traps;
 
 namespace Polypiler.Core.MachineSemantics;
 
@@ -61,8 +62,11 @@ public sealed record MachineInstruction(MachineOpcode Opcode, MachineType Type, 
   /// <summary>For <see cref="MachineOpcode.IndirectJump"/>: the targets are not known, the listed ones are none.</summary>
   public bool Unresolved { get; init; }
 
-  /// <summary>Whether the instruction ends its block.</summary>
-  public bool IsTerminator => MachineOpcodes.IsTerminator(this.Opcode);
+  /// <summary>For <see cref="MachineOpcode.MachineTrap"/>: the trap's kind, vector, resumption and service contract.</summary>
+  public TrapDescriptor? Trap { get; init; }
+
+  /// <summary>Whether the instruction ends its block: a terminator opcode, or a trap that does not resume.</summary>
+  public bool IsTerminator => MachineOpcodes.IsTerminator(this.Opcode) || this.Trap is { Resumes: false };
 
   /// <summary>The blocks the instruction may continue at, when it is a terminator.</summary>
   public IEnumerable<string> Successors => this.IsTerminator ? this.Operands.OfType<MachineLabel>().Select(label => label.Name) : [];
@@ -82,7 +86,8 @@ public sealed record MachineInstruction(MachineOpcode Opcode, MachineType Type, 
   /// <inheritdoc/>
   public bool Equals(MachineInstruction? other)
     => other is not null && this.Opcode == other.Opcode && this.Type == other.Type && this.Result == other.Result
-      && this.Operands.SequenceEqual(other.Operands) && Equals(this.Origin, other.Origin) && this.Unresolved == other.Unresolved;
+      && this.Operands.SequenceEqual(other.Operands) && Equals(this.Origin, other.Origin) && this.Unresolved == other.Unresolved
+      && Equals(this.Trap, other.Trap);
 
   /// <inheritdoc/>
   public override int GetHashCode() => HashCode.Combine(this.Opcode, this.Type, this.Result, this.Operands.Length);
