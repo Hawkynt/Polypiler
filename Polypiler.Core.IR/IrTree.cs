@@ -47,6 +47,7 @@ public static class IrTree {
     IrAwait awaited => [awaited.Operand],
     IrAsync operation => operation.Arguments,
     IrForeignCall call => call.Arguments,
+    IrIntegerOp operation => operation.Operands,
     _ => []
   };
 
@@ -136,6 +137,7 @@ public static class IrTree {
     IrAwait => new IrAwait(operands[0]),
     IrAsync operation => operation with { Arguments = operands },
     IrForeignCall call => call with { Arguments = operands },
+    IrIntegerOp operation => operation with { Operands = operands },
     _ => expression
   };
 

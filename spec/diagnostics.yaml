@@ -759,6 +759,24 @@ codes:
     area: ir
     owner: PROTOTYPE
     surfaces: "standard error of polypiler translate, as 'error PLY0101: <reason>' with the reason that the executable carries no float-implementations resource or the reason IrModuleFormat refuses its bytes, when a strict float translation needs the float-implementations module the executable embeds and it is absent or does not read back"
+  - code: PLY0126
+    severity: error
+    exit: InternalError
+    title: strict shift amount not below the width
+    message: "shift amount <amount> is not below the width <width> of a [strict] shift"
+    rule: ir.integer.shift-contract
+    area: ir
+    owner: IR-INT
+    surfaces: "IrVerifier.Verify, for an IrIntegerOp shift whose contract is [strict] and whose amount is a constant that, read as an unsigned number, is not below the width of the type"
+  - code: PLY0127
+    severity: error
+    exit: InternalError
+    title: integer operation without its contract
+    message: "'<operation>' requires <contract>"
+    rule: ir.integer.contract
+    area: ir
+    owner: IR-INT
+    surfaces: "IrVerifier.Verify, for an IrIntegerOp without the overflow contract of Add, Sub, Mul and Neg, the zero-divisor contract of a division or remainder, the ovf contract of SDiv and SRem, or the shift-amount contract of a shift"
   - code: PLY0800
     severity: error
     exit: UnsupportedConstruct

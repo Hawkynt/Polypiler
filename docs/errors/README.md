@@ -92,6 +92,8 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | --- | --- | --- | --- | --- |
 | [PLY0100](PLY0100.md) | error | 70 (InternalError) | `ill-typed IR in '<member>': <reason>` | PROTOTYPE |
 | [PLY0101](PLY0101.md) | error | 70 (InternalError) | `<reason>` | PROTOTYPE |
+| [PLY0126](PLY0126.md) | error | 70 (InternalError) | `shift amount <amount> is not below the width <width> of a [strict] shift` | IR-INT |
+| [PLY0127](PLY0127.md) | error | 70 (InternalError) | `'<operation>' requires <contract>` | IR-INT |
 
 ## PLY0800–PLY0899 · permutation
 

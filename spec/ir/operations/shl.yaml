@@ -10,10 +10,14 @@ compatibility: none
 reviewedRevision: 0
 normative: >-
   Shl shifts the bits of an integer value left by an amount and discards the bits shifted out of the
-  width of T; the vacated low bits are zero. Shl[mask] MUST take the amount modulo the width of T.
-  Shl[strict] MUST trap with invalid-shift when the amount is at least the width of T. The prototype's
-  structured IR (Polypiler.Core.IR) implements the mask variant only, as IrBinaryOp.ShiftLeft with an
-  i32 amount; the strict variant and an amount of type T belong to the typed SSA IR of IR-INT.
+  width of T; the vacated low bits are zero. The amount has the type T and is read as an unsigned
+  number, so -1 is 2^width - 1. Shl[mask] MUST take the amount modulo the width of T. Shl[unbounded]
+  MUST give 0 for an amount of at least the width. Shl[trap <label>] MUST raise the trap label for an
+  amount of at least the width. Shl[strict] promises the amount below the width: a constant amount
+  that is not is the verifier error PLY0126, and the interpreter traps with invalid-shift
+  (IrTrap.InvalidOperation) for a variable one. The structured IR (Polypiler.Core.IR) implements all
+  four as IrIntegerOp with IrIntegerOpcode.Shl and an IrShiftContract; legalization lowers [mask] to
+  IrBinaryOp.ShiftLeft, which takes an i32 amount and masks it, and the others to helpers.
 spec:
   kind: operation
   mnemonic: Shl
@@ -21,7 +25,7 @@ spec:
   typeParameters: [{name: T, constraint: integer}]
   operands: [{name: value, type: T}, {name: amount, type: T}]
   result: {type: T}
-  flags: [mask, strict]
+  flags: [mask, unbounded, trap, strict]
   effects: [pure]
   traps: [{when: "flag strict and amount >= width", kind: invalid-shift}]
   stages: {from: IR.stage.source-semantic, to: IR.stage.legalized-target}

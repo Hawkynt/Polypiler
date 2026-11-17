@@ -467,6 +467,9 @@ public static partial class IrVerifier {
           this.Declared(intrinsic.Type);
 
           break;
+        case IrIntegerOp operation:
+          this.IntegerOp(operation);
+          break;
         case IrStep step:
           if (step.Target is IrArrayLoad stepped)
             this.Writable(stepped.Array);

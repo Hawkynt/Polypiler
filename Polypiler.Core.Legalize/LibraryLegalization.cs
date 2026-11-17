@@ -94,7 +94,8 @@ public static class LibraryLegalization {
   public static IrModule Lower(IrModule module, Func<IrModule> implementations, LibraryRewrite rewrite) {
     ArgumentNullException.ThrowIfNull(module);
     ArgumentNullException.ThrowIfNull(rewrite);
-    var run = new Run(module, implementations, rewrite);
+    // An integer operation with its contract becomes the operators and helpers it is made of before any backend sees it (#118).
+    var run = new Run(module, implementations, (expression, calls) => IntegerContractLegalization.Rewrite(expression, calls) ?? rewrite(expression, calls));
     var globals = run.Globals();
     var functions = module.Functions.Select(run.Function).ToList();
     if (run.Names.Count == 0 && !run.Changed)
@@ -359,6 +360,8 @@ public static class LibraryLegalization {
           return new IrCall(this._inHelper ? this.Rename(call.Function) : call.Function, call.Type, arguments);
         case IrIntrinsic intrinsic:
           return new IrIntrinsic(intrinsic.Op, intrinsic.Type, [.. intrinsic.Arguments.Select(this.Expression)]);
+        case IrIntegerOp operation:
+          return operation with { Operands = [.. operation.Operands.Select(this.Expression)] };
         default:
           return expression;
       }

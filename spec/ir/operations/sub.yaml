@@ -10,10 +10,12 @@ compatibility: none
 reviewedRevision: 0
 normative: >-
   Sub subtracts its second operand from its first. Sub[wrap] MUST give the difference modulo 2^width
-  of T. Sub[trap] MUST trap with overflow when the difference is not a value of T. The prototype's
-  structured IR (Polypiler.Core.IR) implements both variants for integers, as IrBinaryOp.Subtract and
-  IrBinaryOp.SubtractChecked; it also uses Subtract for floating point, which belongs to a document of
-  its own. The examples are of T = TYPES.i32.
+  of T. Sub[trap] MUST trap with overflow when the difference is not a value of T. Sub[sat] MUST give the nearest
+  bound of T when the difference is not a value of T. The structured IR (Polypiler.Core.IR) implements the
+  three as IrIntegerOp with IrIntegerOpcode.Sub and an IrOverflowContract, on every integer type;
+  legalization lowers them to IrBinaryOp.Subtract,
+  IrBinaryOp.SubtractChecked and IrIntrinsicOp.SubSaturate, a narrow type
+  computed in 32 or 64 bits and converted back. The examples are of T = TYPES.i32.
 spec:
   kind: operation
   mnemonic: Sub
@@ -21,7 +23,7 @@ spec:
   typeParameters: [{name: T, constraint: integer}]
   operands: [{name: left, type: T}, {name: right, type: T}]
   result: {type: T}
-  flags: [wrap, trap]
+  flags: [wrap, trap, sat]
   effects: [pure]
   traps: [{when: "flag trap and the difference is not a value of T", kind: overflow}]
   stages: {from: IR.stage.source-semantic, to: IR.stage.legalized-target}

@@ -247,6 +247,50 @@ the library, copied into the module (see [the Rust backend](../architecture/RUST
   fixtures `float/FloatView.cs` and `js/FloatView.js`, a WAV reader among their methods, give in every
   profile of both backends what the C# fixture gives on .NET.
 
+## Operations with a contract
+
+`IrIntegerOp` (#118) is an integer operation that carries on the node what happens where its
+mathematical result leaves the type, so that one node set expresses C#'s `unchecked` and `checked`,
+Rust's debug and release builds, Go's and Perl's shifts and DSP saturation alike. The operands and the
+result have the integer type of the node - the amount of a shift too, read as an unsigned number, so
+that `-1` is 2^width − 1. `IrIntegerContracts` holds the type rules and the evaluation; the text form
+below is what `IrIntegerOp.Text` writes, every contract spelled out.
+
+| Opcode | Contract it requires | Meaning |
+| --- | --- | --- |
+| `Add`, `Sub`, `Mul`, `Neg` | overflow: `[wrap]`, `[trap <label>]`, `[sat]` | modulo 2^width; the trap when the exact result is outside the type; the nearest bound (`Neg.u8[sat]` of a non-zero value is 0) |
+| `UDiv`, `URem` | zero divisor: `[trap <label>]`, `[divzero=zero]` | the bit patterns read as unsigned; a zero divisor traps or gives 0 |
+| `SDiv`, `SRem` | zero divisor and `ovf=wrap` or `ovf=trap <label>` | truncating towards zero, the remainder with the dividend's sign; `MIN / -1` is `MIN` and `MIN % -1` is 0 under `ovf=wrap` |
+| `Shl`, `LShr`, `AShr` | amount: `[mask]`, `[unbounded]`, `[trap <label>]`, `[strict]` | modulo the width; every bit shifted out (`AShr`: the sign fill); the trap; a promise checked by the verifier for a constant (`PLY0126`) and trapping *invalid operation* for a variable |
+
+`AShr` replicates the sign bit and `LShr` shifts in zeros whatever the signedness of the type; `UDiv`
+and `SDiv` read the bits with the signedness of the opcode. A label is one of the IR's traps
+(`IrTrap`). A node without the contract its opcode requires is `PLY0127`; a contract part the opcode
+does not take, an operand of another type and a type that is no integer are `PLY0100`.
+
+`LibraryLegalization.Lower` lowers every node before the rewrite of a backend sees it
+(`IntegerContractLegalization`), so no backend knows the node:
+
+| Contract | Becomes |
+| --- | --- |
+| `[wrap]` | `Add`, `Subtract`, `Multiply` (`Neg` is `0 - x`); a narrow type computed as `i32` and converted back |
+| `[trap IntegerOverflow]` | `AddChecked`, `SubtractChecked`, `MultiplyChecked`; a narrow type computed exactly as `i64` and converted back with `IrConversion.Trap` |
+| `[sat]` | `AddSaturate`, `SubSaturate`, `MulSaturate` |
+| division `[trap DivideByZero]` (and `ovf=trap IntegerOverflow`) | `Divide`, `Remainder` on 32 and 64 bits; a narrow signed type through `DivideContract32`/`RemainderContract32` |
+| `[divzero=zero]`, `ovf=wrap` | `DivideContract32/64`, `RemainderContract32/64`, `DivideOrZeroUnsigned32/64`, `RemainderOrZeroUnsigned32/64` |
+| shift `[mask]` | the shift operators, which mask an `i32` amount; a narrow type masks the amount and shifts as `i32` |
+| shift `[unbounded]`, `[trap <label>]`, `[strict]` | `ShiftLeftBounded32/64`, `ShiftRightLogicalBounded32/64`, `ShiftRightArithmeticBounded32/64` |
+
+A trap label no operator or helper raises - `[trap IndexOutOfRange]` on an addition, say - leaves the
+node in place, and the backend refuses it as any node it does not know. Tests: every opcode and
+contract on `u8` and `i8` for all 65 536 operand pairs against a reference written from the SMT-LIB
+bit-vector definitions, and the boundaries of every width in the interpreter and lowered
+(`Polypiler.Tests/Integer/IntegerContractTests.cs`).
+
+Withdrawn by [ADR 0009](../adr/0009-structured-tree-ir.md): the `.pir` text input and its aliases (a
+missing contract read as `[wrap]`, `[strict]`, `[trap DivideByZero]`, `ovf=wrap`); every node states its
+contract.
+
 ## The arbitrary-precision integer
 
 `bigint` (`IrType.BigInt`, #494) is an exact integer of any magnitude, the type a Python `int` is

@@ -47,7 +47,8 @@ public static partial class IrModuleFormat {
     Sequence,
     Await, Async,
     ForeignCall, LastError,
-    BigConst
+    BigConst,
+    IntegerOp
   }
 
   /// <summary>The kinds of declaration, as the byte after the name of a declaration says.</summary>
@@ -688,6 +689,7 @@ public static partial class IrModuleFormat {
       IrForeignCall => Tag.ForeignCall,
       IrLastError => Tag.LastError,
       IrBigConst => Tag.BigConst,
+      IrIntegerOp => Tag.IntegerOp,
       _ => throw new ArgumentException($"The expression {expression.GetType().Name} has no form in bytes.", nameof(module))
     };
 
@@ -888,6 +890,9 @@ public static partial class IrModuleFormat {
           break;
         case IrLastError error:
           writer.Write(error.PInvoke);
+          break;
+        case IrIntegerOp operation:
+          this.IntegerOp(operation);
           break;
         default:
           var invocation = (IrInvoke)expression;
@@ -1332,12 +1337,12 @@ public static partial class IrModuleFormat {
         return Of(this._nodes, index, "node") as T ?? throw new InvalidDataException($"The node {index} is no {typeof(T).Name}.");
       }
 
-      if (tag > Tag.BigConst)
+      if (tag > Tag.IntegerOp)
         throw new InvalidDataException($"{(int)tag} is no kind of node.");
 
       var slot = this._nodes.Count;
       this._nodes.Add(null);
-      object node = tag >= Tag.Block && tag is not (Tag.ArraySequence or Tag.Sequence or Tag.Await or Tag.Async or Tag.ForeignCall or Tag.LastError or Tag.BigConst) ? this.Statement(tag) : this.Expression(tag);
+      object node = tag >= Tag.Block && tag is not (Tag.ArraySequence or Tag.Sequence or Tag.Await or Tag.Async or Tag.ForeignCall or Tag.LastError or Tag.BigConst or Tag.IntegerOp) ? this.Statement(tag) : this.Expression(tag);
       this._nodes[slot] = node;
       return node as T ?? throw new InvalidDataException($"A {node.GetType().Name} stands where a {typeof(T).Name} belongs.");
     }
@@ -1392,6 +1397,7 @@ public static partial class IrModuleFormat {
         Tag.Async => new IrAsync(this.Enum<IrAsyncOp>(), type, this.Nodes<IrExpr>()),
         Tag.ForeignCall => new IrForeignCall(reader.ReadString(), type, this.Nodes<IrExpr>()),
         Tag.LastError => new IrLastError(reader.ReadBoolean()),
+        Tag.IntegerOp => this.IntegerOp(type),
         _ => new IrInvoke(type, this.Node<IrExpr>(), this.Nodes<IrExpr>())
       };
       return expression.Type == type ? expression : expression with { Type = type };

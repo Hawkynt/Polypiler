@@ -57,7 +57,10 @@ Use fixpoints with widening/narrowing and deterministic budgets where required. 
 
 IR semantics should distinguish:
 
-- integer add/sub/mul with **checked**, wrapping and saturating variants;
+- integer add/sub/mul with **checked**, wrapping and saturating variants - `IrIntegerOp` carries the
+  contract on the node, with the zero-divisor and `ovf` contracts of a division and the amount contract
+  of a shift, and is lowered before any backend sees it
+  ([integer operations](../reference/integer-operations.md#operations-with-a-contract));
 - signed division modes, carry/borrow, high/wide multiply, bit-count and bit-field operations;
 - floating-point format, exceptional values, fused versus non-fused operations, rounding and domain;
 - reversible **Encode/Decode** versus numerical **Convert/Quantize** versus bitwise **Reinterpret**;

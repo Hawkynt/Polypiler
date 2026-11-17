@@ -617,6 +617,8 @@ public static partial class IrInterpreter {
           return this.AsyncOperation(operation, frame);
         case IrForeignCall or IrLastError:
           return this.Foreign(expression, frame);
+        case IrIntegerOp operation:
+          return IrIntegerContracts.Evaluate(operation, [.. operation.Operands.Select(operand => (long)this.Evaluate(operand, frame))]);
         default:
           throw new NotSupportedException($"Unknown expression {expression.GetType().Name}.");
       }
