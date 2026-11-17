@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "The assumptions section of polypiler.manifest.json (DYN-ASSUME, docs/reference/caller-contracts.md): every caller contract and every value fact of --assume, with whether a run-time check or a proof stands behind it (checked) or it is trusted (checked: false).",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["target", "contract", "checked", "origin", "usedBy"],
+    "additionalProperties": false,
+    "properties": {
+      "target": { "type": "string", "minLength": 1, "description": "function.parameter, function.return or global.name; for a value fact its path." },
+      "contract": { "type": "string", "minLength": 1, "description": "The contract, canonically spelled; for a value fact what it states of the path." },
+      "checked": { "type": "boolean" },
+      "origin": { "type": "string", "minLength": 1, "description": "--assume, --assume-unchecked or --assume-file <path>:<line>." },
+      "usedBy": { "type": "integer", "minimum": 0, "description": "How many facts were derived from it." }
+    }
+  }
+}

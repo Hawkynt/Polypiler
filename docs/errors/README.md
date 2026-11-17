@@ -93,6 +93,16 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY0100](PLY0100.md) | error | 70 (InternalError) | `ill-typed IR in '<member>': <reason>` | PROTOTYPE |
 | [PLY0101](PLY0101.md) | error | 70 (InternalError) | `<reason>` | PROTOTYPE |
 
+## PLY0500–PLY0599 · legalization
+
+| Code | Severity | Exit code | Message | Owner |
+| --- | --- | --- | --- | --- |
+| [PLY0512](PLY0512.md) | warning | — (3 with --strict) | `assumption '<target>: <contract>' is trusted without a run-time check; results are undefined for calls that violate it` | DYN-ASSUME |
+| [PLY0513](PLY0513.md) | error | 4 (InvalidSource) | `assumption '<target>: <contract>' contradicts a proven fact: <fact> at <location>` | DYN-ASSUME |
+| [PLY0514](PLY0514.md) | error | 2 (UsageError) | `invalid assumption '<text>': <problem>` | DYN-ASSUME |
+| [PLY0515](PLY0515.md) | warning | — | `assumption '<target>: <contract>' had no effect` | DYN-ASSUME |
+| [PLY0516](PLY0516.md) | error | 2 (UsageError) | `assumption '<target>: <contract>' cannot be checked at run time in O(1); use --assume-unchecked to accept it explicitly` | DYN-ASSUME |
+
 ## PLY0800–PLY0899 · permutation
 
 | Code | Severity | Exit code | Message | Owner |

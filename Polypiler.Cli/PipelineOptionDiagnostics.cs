@@ -37,7 +37,4 @@ public static class PipelineOptionDiagnostics {
   /// <summary>An optimization ID the pipeline does not have.</summary>
   public const string UnknownId = "unknown optimization '{0}'";
 
-  /// <summary>An assumption in the contract form <c>&lt;target&gt;: &lt;contract&gt;</c> where no contract parser is registered.</summary>
-  public const string ContractsUnavailable = "contract assumptions are not available in this build";
-
 }

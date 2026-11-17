@@ -38,8 +38,9 @@ decimal integers: `Sum.n in[0x1,31]` is `Sum.n in [1, 31]`.
 
 A fact is never trusted silently: every accepted `--assume` reports the warning `PLY0009` once, in
 command-line order, the manifest of `translate` lists it among its warnings and records it in its
-command line. A text that contains `:` is a caller contract (`<target>: <contract>`), which the
-contract parser reads.
+command line. A text that contains `:` is a [caller contract](../reference/caller-contracts.md)
+(`<target>: <contract>`), checked at run time or refused; `--assume-unchecked` and `--assume-file`
+state contracts too.
 
 ## Strict mode
 

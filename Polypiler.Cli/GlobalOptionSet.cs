@@ -4,16 +4,18 @@ using System.CommandLine;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Polypiler.Core;
+using Polypiler.Core.Analysis.Dynamic;
 using Polypiler.Core.Optimize;
 using Polypiler.Core.Options;
 
 namespace Polypiler.Cli;
 
 /// <summary>
-/// The four pipeline options, defined once (ADR 0004, "Options"; <c>docs/cli/pipeline-options.md</c>):
+/// The pipeline options, defined once (ADR 0004, "Options"; <c>docs/cli/pipeline-options.md</c>):
 /// <c>--opt none|balanced|speed|size|memory</c> (single, default <c>balanced</c>),
 /// <c>--disable-opt O####[,O####]…</c> (a list declared a set), <c>--assume "&lt;fact&gt;"</c>
-/// (repeat-only) and <c>--strict</c> (a flag). They are command options: a command that runs the
+/// (repeat-only), <c>--strict</c> (a flag) and the caller contracts of <c>docs/reference/caller-contracts.md</c>:
+/// a <c>--assume</c> with a <c>:</c>, <c>--assume-unchecked</c> and <c>--assume-file</c> (repeat-only). They are command options: a command that runs the
 /// pipeline attaches them with <see cref="AddTo"/> and reads them with <see cref="Read"/>; before the
 /// command name, or on a command that did not attach them, they are <c>PLY0003</c>.
 /// </summary>
@@ -28,11 +30,17 @@ public static partial class GlobalOptionSet {
   /// <summary>The name of the option of a stated fact.</summary>
   public const string Assume = "--assume";
 
+  /// <summary>The name of the option of a caller contract that is trusted, not checked (#777).</summary>
+  public const string AssumeUnchecked = "--assume-unchecked";
+
+  /// <summary>The name of the option of a file of checked caller contracts, one per line (#777).</summary>
+  public const string AssumeFile = "--assume-file";
+
   /// <summary>The name of the flag of strict mode.</summary>
   public const string Strict = "--strict";
 
-  /// <summary>The four names, in the fixed order of the canonical command line.</summary>
-  public static IReadOnlyList<string> Names { get; } = [Opt, DisableOpt, Assume, Strict];
+  /// <summary>The names, in the fixed order of the canonical command line.</summary>
+  public static IReadOnlyList<string> Names { get; } = [Opt, DisableOpt, Assume, AssumeUnchecked, AssumeFile, Strict];
 
   /// <summary>The optimization levels by their names, in the order of the message of <c>PLY0012</c>.</summary>
   private static readonly (string Name, OptimizationLevel Level)[] _levels = [
@@ -43,14 +51,16 @@ public static partial class GlobalOptionSet {
   [GeneratedRegex("^O[0-9]{4}$", RegexOptions.CultureInvariant)]
   private static partial Regex OptimizationId();
 
-  /// <summary>Attaches the four options to a command.</summary>
+  /// <summary>Attaches the options to a command.</summary>
   /// <param name="command">The command that runs the pipeline.</param>
   /// <exception cref="ArgumentNullException"><paramref name="command"/> is <see langword="null"/>.</exception>
   public static void AddTo(Command command) {
     ArgumentNullException.ThrowIfNull(command);
     command.Options.Add(new Option<string>(Opt) { Description = "the optimization level: none, balanced (the default), speed, size or memory", HelpName = "level" });
     command.Options.Add(new Option<string[]>(DisableOpt) { Description = "optimizations not to apply, by their IDs", HelpName = "O####" });
-    command.Options.Add(OptionRules.RepeatOnly(new Option<string[]>(Assume) { Description = "a fact the compiler may use without proof, reported as a warning; once per fact", HelpName = "fact" }));
+    command.Options.Add(OptionRules.RepeatOnly(new Option<string[]>(Assume) { Description = "a fact the compiler may use without proof, reported as a warning, or a caller contract '<target>: <contract>' checked at run time; once per fact", HelpName = "fact" }));
+    command.Options.Add(OptionRules.RepeatOnly(new Option<string[]>(AssumeUnchecked) { Description = "a caller contract '<target>: <contract>' trusted without a run-time check, reported as a warning", HelpName = "contract" }));
+    command.Options.Add(OptionRules.RepeatOnly(new Option<string[]>(AssumeFile) { Description = "a file of checked caller contracts, one per line", HelpName = "path" }));
     command.Options.Add(new Option<bool>(Strict) { Description = "refuse everything unproven: a strict warning becomes an error" });
   }
 
@@ -70,7 +80,9 @@ public static partial class GlobalOptionSet {
   /// <summary>
   /// Reads and validates the four options of a parsed command line that attached them, and reports
   /// what is wrong in the order the checks run: the level (<c>PLY0012</c>), every item of
-  /// <c>--disable-opt</c> (<c>PLY0008</c>), every <c>--assume</c> (<c>PLY0007</c>). For a valid
+  /// <c>--disable-opt</c> (<c>PLY0008</c>), every <c>--assume</c> (<c>PLY0007</c> for a fact,
+  /// <c>PLY0514</c> for a contract), every <c>--assume-unchecked</c> and every line of every
+  /// <c>--assume-file</c> (<c>PLY0514</c>). For a valid
   /// command line strict mode is set on the context and every fact is reported as <c>PLY0009</c> once,
   /// in command-line order — under <c>--strict</c> as <c>PLY0010</c>.
   /// </summary>
@@ -101,11 +113,21 @@ public static partial class GlobalOptionSet {
     }
 
     var assumptions = new List<Assumption>();
+    var contracts = new List<ContractAssumption>();
     foreach (var text in parse.GetValue<string[]>(Assume) ?? [])
-      if (Fact(text, out var reason) is { } assumption)
-        assumptions.Add(assumption);
+      if (text.Contains(':', StringComparison.Ordinal))
+        Contract(text, true, ContractParser.Checked, contracts, context);
+      else if (AssumptionParser.TryParse(text, out var assumption, out var reason))
+        assumptions.Add(assumption!);
       else
         context.Report(Diagnostic.Create(PipelineOptionDiagnostics.InvalidAssumption, null, text, reason!));
+
+    foreach (var text in parse.GetValue<string[]>(AssumeUnchecked) ?? [])
+      Contract(text, false, ContractParser.Unchecked, contracts, context);
+
+    var files = parse.GetValue<string[]>(AssumeFile) ?? [];
+    foreach (var file in files)
+      contracts.AddRange(ContractParser.ParseFile(context.Resolve(file), file, true, context));
 
     if (context.Diagnostics.ErrorCount > errors)
       return null;
@@ -115,21 +137,15 @@ public static partial class GlobalOptionSet {
     foreach (var assumption in assumptions)
       context.Report(Diagnostic.Create(PipelineOptionDiagnostics.TrustedAssumption, null, assumption.Text));
 
-    return context.Diagnostics.ErrorCount > errors ? null : new GlobalOptions(level!.Value, disabled, assumptions, strict);
+    return context.Diagnostics.ErrorCount > errors ? null : new GlobalOptions(level!.Value, disabled, assumptions, strict) { Contracts = contracts, AssumptionFiles = files };
   }
 
-  /// <summary>
-  /// The fact of one <c>--assume</c>. A text with a <c>:</c> is a caller contract, whose parser is
-  /// not part of this build; any other is a value fact of <see cref="AssumptionParser"/>.
-  /// </summary>
-  private static Assumption? Fact(string text, out string? reason) {
-    if (text.Contains(':', StringComparison.Ordinal)) {
-      reason = PipelineOptionDiagnostics.ContractsUnavailable;
-      return null;
-    }
-
-    AssumptionParser.TryParse(text, out var assumption, out reason);
-    return assumption;
+  /// <summary>Reads one caller contract into the list, or reports why it is none as <c>PLY0514</c>.</summary>
+  private static void Contract(string text, bool isChecked, string origin, List<ContractAssumption> contracts, CliContext context) {
+    if (ContractParser.TryParse(text, isChecked, origin, out var contract, out var problem))
+      contracts.Add(contract!);
+    else
+      context.Report(Diagnostic.Create(ContractDiagnostics.Invalid, null, text, problem!));
   }
 
 }

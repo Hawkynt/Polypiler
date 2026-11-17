@@ -38,6 +38,18 @@ public static class AssumptionParser {
     return result is not null;
   }
 
+  /// <summary>Reads an integer of the grammar: <c>["-"] ( [0-9]+ | "0x" [0-9A-Fa-f]+ )</c>, of any size.</summary>
+  /// <param name="token">The text of the integer, nothing before or after it.</param>
+  /// <param name="value">The value, or 0.</param>
+  /// <returns>Whether the text is an integer.</returns>
+  /// <exception cref="ArgumentNullException"><paramref name="token"/> is <see langword="null"/>.</exception>
+  public static bool TryParseInteger(string token, out BigInteger value) {
+    ArgumentNullException.ThrowIfNull(token);
+    var parsed = Reader.ParseInteger(token);
+    value = parsed ?? BigInteger.Zero;
+    return parsed is not null;
+  }
+
   /// <summary>Whether an identifier is a word of the grammar.</summary>
   private static bool IsIdentifierStart(char character) => char.IsAsciiLetter(character) || character == '_';
 
@@ -150,7 +162,7 @@ public static class AssumptionParser {
       return null;
     }
 
-    private static BigInteger? ParseInteger(string token) {
+    public static BigInteger? ParseInteger(string token) {
       var negative = token.StartsWith('-');
       var digits = negative ? token[1..] : token;
       BigInteger value;

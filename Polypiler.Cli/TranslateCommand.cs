@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Polypiler.Core;
+using Polypiler.Core.Analysis.Dynamic;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.Backends.Python;
@@ -272,8 +273,14 @@ public sealed partial class TranslateCommand : ICliCommand {
     if (UnusedBinding(module, options) is { } unused)
       return Refuse(context, unused);
 
-    var (optimized, applications) = Optimized(file, module, options, context, backend);
-    return Emit(optimized, options, context, backend, new Record(file, bytes, frontend.Name, caveats, applications, pipeline));
+    // The caller contracts are checked at the boundary or reported, before anything optimizes the module (#777).
+    // Under --strict a trusted contract is an error too.
+    var contracts = ContractEnforcer.Enforce(module, pipeline.Contracts, frontend.Name, context);
+    if (contracts.Module is null || context.Diagnostics.ErrorCount > 0)
+      return 0;
+
+    var (optimized, applications) = Optimized(file, contracts.Module, options, context, backend);
+    return Emit(optimized, options, context, backend, new Record(file, bytes, frontend.Name, caveats, applications, pipeline, contracts.Assumptions));
   }
 
   /// <summary>The level of <c>--opt</c>, or <see langword="null"/> for a value that names none.</summary>
@@ -693,7 +700,8 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// <param name="Caveats">What the imported code is known to do differently from the source.</param>
   /// <param name="Applications">Every rule the optimizer applied.</param>
   /// <param name="Pipeline">The pipeline options of the command line.</param>
-  private sealed record Record(string File, byte[] Bytes, string Language, IReadOnlyList<ManifestMessage> Caveats, IReadOnlyList<RuleApplication> Applications, GlobalOptions Pipeline);
+  /// <param name="Contracts">The record of every caller contract accepted.</param>
+  private sealed record Record(string File, byte[] Bytes, string Language, IReadOnlyList<ManifestMessage> Caveats, IReadOnlyList<RuleApplication> Applications, GlobalOptions Pipeline, IReadOnlyList<ContractRecord> Contracts);
 
   private static readonly UTF8Encoding _utf8 = new(false);
 
@@ -739,7 +747,8 @@ public sealed partial class TranslateCommand : ICliCommand {
         [.. record.Applications.Select(application => application.Id).Distinct().Select(id => new ManifestPass(id, "unproven"))]),
       Warnings = ManifestMessage.WarningsOf(context.Diagnostics.Items),
       Toolchains = [],
-      Commands = new(CliContext.Invocation(command), null)
+      Commands = new(CliContext.Invocation(command), null),
+      Assumptions = AssumptionsOf(record.Pipeline, record.Contracts)
     };
   }
 

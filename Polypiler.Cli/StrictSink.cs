@@ -18,7 +18,7 @@ public sealed class StrictSink(IDiagnosticSink inner) : IDiagnosticSink {
   private readonly IDiagnosticSink _inner = inner ?? throw new ArgumentNullException(nameof(inner));
 
   /// <summary>The codes of the warnings <c>--strict</c> refuses: those the registry marks <c>strict: true</c>.</summary>
-  public static IReadOnlySet<string> StrictCodes { get; } = new[] { PipelineOptionDiagnostics.TrustedAssumption.Code }.ToFrozenSet(StringComparer.Ordinal);
+  public static IReadOnlySet<string> StrictCodes { get; } = new[] { PipelineOptionDiagnostics.TrustedAssumption.Code, Polypiler.Core.Analysis.Dynamic.ContractDiagnostics.Unchecked.Code }.ToFrozenSet(StringComparer.Ordinal);
 
   /// <inheritdoc/>
   /// <exception cref="ArgumentNullException"><paramref name="diagnostic"/> is <see langword="null"/>.</exception>

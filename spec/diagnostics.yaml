@@ -127,7 +127,7 @@ codes:
     rule: adr-0004.pipeline-options
     area: infrastructure
     owner: CLI-OPTIONS
-    surfaces: "standard error of every command that attaches the pipeline options (polypiler translate, the test command options), for an --assume that is empty or breaks the fact grammar of docs/cli/pipeline-options.md, a range whose lower bound exceeds its upper bound, an unknown type, or a contract form '<target>: <contract>' where no contract parser is registered"
+    surfaces: "standard error of every command that attaches the pipeline options (polypiler translate, the test command options), for an --assume that is empty or breaks the fact grammar of docs/cli/pipeline-options.md, a range whose lower bound exceeds its upper bound, or an unknown type; a text with ':' is a caller contract, PLY0514"
   - code: PLY0008
     severity: error
     exit: UsageError
@@ -764,6 +764,50 @@ codes:
     area: ir
     owner: PROTOTYPE
     surfaces: "standard error of polypiler translate, as 'error PLY0101: <reason>' with the reason that the executable carries no float-implementations resource or the reason IrModuleFormat refuses its bytes, when a strict float translation needs the float-implementations module the executable embeds and it is absent or does not read back"
+  - code: PLY0512
+    severity: warning
+    title: contract trusted unchecked
+    message: "assumption '<target>: <contract>' is trusted without a run-time check; results are undefined for calls that violate it"
+    rule: prd-4.6.assumptions
+    area: legalization
+    owner: DYN-ASSUME
+    surfaces: "standard error of every command that attaches the pipeline options, once per caller contract of --assume-unchecked that the type of its target does not already guarantee; the warnings of the manifest of polypiler translate, whose assumptions section lists the contract with checked: false"
+    strict: true
+  - code: PLY0513
+    severity: error
+    exit: InvalidSource
+    title: contract contradicts the program
+    message: "assumption '<target>: <contract>' contradicts a proven fact: <fact> at <location>"
+    rule: prd-4.6.assumptions
+    area: legalization
+    owner: DYN-ASSUME
+    surfaces: "standard error of polypiler translate, for a caller contract that no value of the type the module proves for its target satisfies, checked or not; nothing is written"
+  - code: PLY0514
+    severity: error
+    exit: UsageError
+    title: invalid assumption
+    message: "invalid assumption '<text>': <problem>"
+    rule: prd-4.6.assumptions
+    area: legalization
+    owner: DYN-ASSUME
+    surfaces: "standard error of every command that attaches the pipeline options, for a caller contract that breaks the grammar of docs/reference/caller-contracts.md, a file of --assume-file that cannot be read or a line of it that is no contract (at the file and line); of polypiler translate for a contract that names no exported function, parameter, result or global of the module, or a language-native spelling of another source language"
+  - code: PLY0515
+    severity: warning
+    title: contract without effect
+    message: "assumption '<target>: <contract>' had no effect"
+    rule: prd-4.6.assumptions
+    area: legalization
+    owner: DYN-ASSUME
+    surfaces: "standard error of polypiler translate, for a caller contract the type of its target already guarantees; the manifest lists it with checked: true"
+  - code: PLY0516
+    severity: error
+    exit: UsageError
+    title: contract not checkable
+    message: "assumption '<target>: <contract>' cannot be checked at run time in O(1); use --assume-unchecked to accept it explicitly"
+    rule: prd-4.6.assumptions
+    area: legalization
+    owner: DYN-ASSUME
+    surfaces: "standard error of polypiler translate, for a checked caller contract that only a test of the elements of a sequence, the fields of a record, a conversion or an absence test could check, or one on a global"
   - code: PLY0800
     severity: error
     exit: UnsupportedConstruct

@@ -172,9 +172,47 @@ public sealed class GlobalOptionsTests {
   [TestCase("", "empty assumption")]
   [TestCase("Sum.n in [32, 31]", "lower bound 32 exceeds upper bound 31")]
   [TestCase("Sum.n 5", "expected 'in', '!=', 'is' or 'noalias' after the path")]
-  [TestCase("Sum.n: int[0, 9]", "contract assumptions are not available in this build")]
   public void AnInvalidAssumption_IsPLY0007(string text, string reason)
     => AssertRefused(Invoke("options", "--assume", text), "PLY0007", $"'{text}' is not a valid assumption: {reason}");
+
+  /// <summary>Issue #777: a text with ':' is a caller contract, read by the contract parser and rendered canonically, with no PLY0009.</summary>
+  [Test]
+  public void AContract_IsReadAndRendered() {
+    var run = Invoke("options", "--assume", "Sum.n:int[0x0,9]", "--assume-unchecked", "Sum.d: Uint8Array", "--assume", "b != null");
+    Assert.That((run.ExitCode, run.Output), Is.EqualTo((0, "--opt balanced --assume \"Sum.n: int[0, 9]\" --assume \"b != null\" --assume-unchecked \"Sum.d: seq<u8>\"")));
+    Assert.That(run.ErrorLines.Count(line => line.Contains("PLY0009", StringComparison.Ordinal)), Is.EqualTo(1));
+    Assert.That(run.Command.Last!.Contracts.Select(contract => (contract.Text, contract.Checked, contract.Origin)), Is.EqualTo(new[] {
+      ("Sum.n: int[0, 9]", true, "--assume"), ("Sum.d: seq<u8>", false, "--assume-unchecked")
+    }));
+  }
+
+  /// <summary>Issue #777: a malformed contract is PLY0514, of --assume and of --assume-unchecked alike.</summary>
+  [TestCase("--assume", "Sum.n: int[9, 0]", "lower bound 9 exceeds upper bound 0")]
+  [TestCase("--assume-unchecked", "Sum.n int[0, 9]", "expected ':' after the target")]
+  [TestCase("--assume-unchecked", "Sum.n in [0, 9]", "expected ':' after the target")]
+  public void AMalformedContract_IsPLY0514(string option, string text, string problem)
+    => AssertRefused(Invoke("options", option, text), "PLY0514", $"invalid assumption '{text}': {problem}");
+
+  /// <summary>Issue #777: a file of contracts, read relative to the working directory and rendered by its path.</summary>
+  [Test]
+  public void AContractFile_IsRead() {
+    var directory = Path.Combine(Path.GetTempPath(), "polypiler-options-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try {
+      File.WriteAllText(Path.Combine(directory, "contracts.txt"), "# sum\nSum.n: int[0, 9]\n");
+      var (registry, command) = OptionsCommand.Registry();
+      using var output = new StringWriter();
+      using var error = new StringWriter();
+      Assert.That(Program.Run(["options", "--assume-file", "contracts.txt"], output, error, registry, directory), Is.Zero, error.ToString());
+      Assert.That(output.ToString().TrimEnd(), Is.EqualTo("--opt balanced --assume-file contracts.txt"));
+      Assert.That(command.Last!.Contracts.Single().Origin, Is.EqualTo("--assume-file contracts.txt:2"));
+      Assert.That(command.Last.AssumptionFiles, Is.EqualTo(new[] { "contracts.txt" }));
+      Assert.That(Program.Run(["options", "--assume-file", "missing.txt"], output, error, registry, directory), Is.EqualTo((int)ExitCode.UsageError));
+      Assert.That(error.ToString(), Does.Contain("error PLY0514: invalid assumption 'missing.txt': cannot read the file"));
+    } finally {
+      Directory.Delete(directory, true);
+    }
+  }
 
   [Test]
   public void AnEmptyAttachedAssumption_IsPLY0007()
