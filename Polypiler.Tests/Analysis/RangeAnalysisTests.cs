@@ -187,11 +187,17 @@ public sealed class RangeAnalysisTests {
     Assert.That(() => ValueRange.Of(null!), Throws.ArgumentNullException);
   }
 
-  /// <summary>Ranges hold on every run of 300 random functions, 16 inputs each.</summary>
+  /// <summary>Ranges hold on every run of 25 random functions, 16 inputs each.</summary>
   [Test]
-  public void RangesAreSoundOnRandomFunctions() {
+  public void RangesAreSoundOnRandomFunctions() => AssertSound(25);
+
+  /// <summary>Ranges hold on every run of 2 000 random functions, 16 inputs each.</summary>
+  [Test, Category("Slow")]
+  public void RangesAreSoundOnTwoThousandRandomFunctions() => AssertSound(2_000);
+
+  private static void AssertSound(int functions) {
     var violations = 0;
-    for (var seed = 0; seed < 300; ++seed) {
+    for (var seed = 0; seed < functions; ++seed) {
       var function = RandomIr.Generate(900 + seed);
       var facts = new ValueFacts(function).Add(new RangeAnalysis(function));
       var locals = function.Parameters.Concat(function.Locals).ToList();

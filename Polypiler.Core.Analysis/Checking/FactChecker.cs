@@ -13,7 +13,7 @@ namespace Polypiler.Core.Analysis.Checking;
 /// </summary>
 public static class FactChecker {
 
-  /// <summary>The most steps one run may take.</summary>
+  /// <summary>The most steps one run may take unless the caller says otherwise.</summary>
   public const long Steps = 1_000_000;
 
   /// <summary>Checks every query of a facade against runs of its function, which calls no other function.</summary>
@@ -29,15 +29,16 @@ public static class FactChecker {
   /// <param name="module">The module the function is a function of, without globals.</param>
   /// <param name="facts">The facade whose queries are checked.</param>
   /// <param name="inputs">The arguments of each run.</param>
+  /// <param name="steps">The most steps one run may take.</param>
   /// <returns>One PLY0302 per refuted query, in the order of the queries; empty when every fact held.</returns>
-  public static IReadOnlyList<Diagnostic> Run(IrModule module, ValueFacts facts, IEnumerable<object[]> inputs) {
+  public static IReadOnlyList<Diagnostic> Run(IrModule module, ValueFacts facts, IEnumerable<object[]> inputs, long steps = Steps) {
     ArgumentNullException.ThrowIfNull(module);
     ArgumentNullException.ThrowIfNull(facts);
     ArgumentNullException.ThrowIfNull(inputs);
     var watcher = new Watcher(facts.Queries);
     foreach (var input in inputs)
       try {
-        IrInterpreter.Call(module, facts.Function.Name, input, watcher, Steps);
+        IrInterpreter.Call(module, facts.Function.Name, input, watcher, steps);
       } catch (Exception exception) when (exception is IrException or IrBudgetException) {
         // What the run observed until it stopped is still checked.
       }

@@ -236,9 +236,9 @@ public sealed class ProvenanceTests {
     Assert.That(domain.Contains(Provenance.Unreachable, new IrObservedPointer(region, 0, 8)), Is.False);
   }
 
-  /// <summary>Test design 12: no fact refuted on 200 seeded pointer functions (the full 2 000 of seed 310 run in the slow tier).</summary>
+  /// <summary>Test design 12: no fact refuted on 25 seeded pointer functions (the full 2 000 of seed 310 run in the slow tier).</summary>
   [Test]
-  public void ProvenanceIsSoundOnRandomPointerFunctions() => AssertSound(310, 200);
+  public void ProvenanceIsSoundOnRandomPointerFunctions() => AssertSound(310, 25);
 
   /// <summary>Test design 12 in full: 2 000 seeded pointer functions, seed 310.</summary>
   [Test, Category("Slow")]

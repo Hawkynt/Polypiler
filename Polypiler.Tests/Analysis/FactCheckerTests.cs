@@ -69,7 +69,7 @@ public sealed class FactCheckerTests {
     var facts = new ValueFacts(function).Add(new ValueFactsTests.FixedProvider(_ => ConstantFact.Of(99)));
     facts.Get<ConstantFact>(X, ProgramPoint.Entry(function.Body));
     facts.Get<ConstantFact>(Y, ProgramPoint.Entry(forever));
-    var reported = FactChecker.Run(facts, [[0u], [1u]]).Select(diagnostic => diagnostic.Message).ToList();
+    var reported = FactChecker.Run(Module(function), facts, [[0u], [1u]], 2_000).Select(diagnostic => diagnostic.Message).ToList();
     Assert.That(reported, Is.EqualTo(new[] {
       "unsound fact: constant claims constant 99 for x at block 0, statement 0, observed 0",
       "unsound fact: constant claims constant 99 for y at block 1, statement 0, observed 10"
@@ -116,9 +116,9 @@ public sealed class FactCheckerTests {
       Assert.That(IrVerifier.Verify(Module(RandomIr.Generate(seed))), Is.Empty, $"seed {seed}");
   }
 
-  /// <summary>Measurement "soundness of the constant domain", the fast share: 300 random functions, 16 inputs each, no violation.</summary>
+  /// <summary>Measurement "soundness of the constant domain", the fast share: 25 random functions, 16 inputs each, no violation.</summary>
   [Test]
-  public void TheConstantDomain_IsSoundOnRandomFunctions() => AssertSound(seed: 300, functions: 300);
+  public void TheConstantDomain_IsSoundOnRandomFunctions() => AssertSound(seed: 300, functions: 25);
 
   /// <summary>Measurement "soundness of the constant domain" in full: 10 000 random functions, seed 300, 16 inputs each.</summary>
   [Test, Category("Slow")]
