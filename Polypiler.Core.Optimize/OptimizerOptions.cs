@@ -45,4 +45,7 @@ public sealed record OptimizerOptions {
   /// <summary>The rules.</summary>
   public RuleTable Rules { get; init; } = RuleTable.Default;
 
+  /// <summary>Functions entered outside ordinary exports, such as the source frontend's test functions.</summary>
+  public IReadOnlySet<string> Roots { get; init; } = new HashSet<string>();
+
 }

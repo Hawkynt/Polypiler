@@ -502,7 +502,8 @@ public sealed class IrPassTests {
 
   [Test]
   public void Pipeline_RunsEveryPassAndKeepsTheResult() {
-    var module = Everything();
+    var original = Everything();
+    var module = original with { Functions = [.. original.Functions, new IrFunction("orphan", false, IrType.Void, [], [], Block(new IrReturn(null)))] };
     var result = IrPassPipeline.Default.Run(module, new OptimizerOptions { Verify = true });
     var effects = IrPassPipeline.Default.Run(Effects(), new OptimizerOptions { Verify = true });
     Assert.That(result.Applications.Concat(effects.Applications).Select(application => application.Id).Distinct().Order(), Is.EqualTo(IrPassPipeline.Default.Ids.Order()));
