@@ -63,7 +63,7 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY0058](PLY0058.md) | error | 1 (EnvironmentError) | `gate record '<file>': fixture '<fixture>' claims '<state>': <reason>` | VER-GATES |
 | [PLY0059](PLY0059.md) (reserved) | error | 5 (SemanticMismatch) | `round trip '<id>' leg <leg> (<opt>): <function>(<arguments>) expected <expected>, got <actual>` | VER-ROUNDTRIP |
 | [PLY0060](PLY0060.md) | error | 1 (EnvironmentError) | `evidence bundle '<directory>' <reason>` | VER-EVIDENCE |
-| [PLY0061](PLY0061.md) (reserved) | error | 1 (EnvironmentError) | `<reason>` | SPEC-CAPABILITIES |
+| [PLY0061](PLY0061.md) | error | 1 (EnvironmentError) | `<reason>` | SPEC-CAPABILITIES |
 | [PLY0062](PLY0062.md) | error | 3 (UnsupportedConstruct) | `proof of <rule>: operation '<operation>' is not modelled by prover '<prover>'` | VER-SMT |
 | [PLY0063](PLY0063.md) | error | 7 (OracleFailure) | `no independent oracle is registered for '<fixture>'` | VER-ORACLE |
 | [PLY0064](PLY0064.md) | error | 2 (UsageError) | `<reason>` | VER-IMAGES |
