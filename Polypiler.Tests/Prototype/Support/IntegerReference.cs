@@ -59,6 +59,15 @@ internal static class IntegerReference {
         return Host(type, Enumerable.Reverse(A()).ToArray());
       case IrIntrinsicOp.IsPow2:
         return !Negative(A(), type.IsSigned) && A().Count(bit => bit) == 1;
+      case IrIntrinsicOp.ISqrt:
+        // The root bit by bit from the top: a bit stays where the square of the root so far is not above the value.
+        var square = Extend(A(), 2 * width, false);
+        var root = new bool[2 * width];
+        for (var bit = width / 2 - 1; bit >= 0; --bit) {
+          root[bit] = true;
+          root[bit] = Compare(Multiply(root, root), square, false) <= 0;
+        }
+        return Host(type, root[..width]);
       case IrIntrinsicOp.RoundUpPow2:
         return Host(type, RoundUp(A()));
       case IrIntrinsicOp.BigMul:

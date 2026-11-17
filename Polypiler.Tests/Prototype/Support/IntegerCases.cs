@@ -59,6 +59,7 @@ internal static class IntegerCases {
       Each(op, Integers, Same, type => [type]);
 
     Each(IrIntrinsicOp.IsPow2, Integers, _ => IrType.Bool, type => [type]);
+    Each(IrIntrinsicOp.ISqrt, Unsigned, Same, type => [type]);
     Each(IrIntrinsicOp.BigMul, [IrType.I32, IrType.U32], type => type.IsSigned ? IrType.I64 : IrType.U64, type => [type, type]);
     foreach (var op in new[] { IrIntrinsicOp.MulHigh, IrIntrinsicOp.DivFloor, IrIntrinsicOp.ModFloor, IrIntrinsicOp.DivEuclid, IrIntrinsicOp.ModEuclid,
                IrIntrinsicOp.Min, IrIntrinsicOp.Max, IrIntrinsicOp.AddSaturate, IrIntrinsicOp.SubSaturate, IrIntrinsicOp.MulSaturate })

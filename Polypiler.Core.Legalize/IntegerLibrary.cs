@@ -98,6 +98,8 @@ public static class IntegerLibrary {
         return Helper(name + (wide ? "64" : "32"), arguments);
       case IrIntrinsicOp.SignExtend or IrIntrinsicOp.ZeroExtend:
         return wide ? Helper(name + "64", arguments) : Helper(name + "32", [.. arguments, Int(bits)]);
+      case IrIntrinsicOp.ISqrt:
+        return Helper(wide ? "ISqrt64" : "ISqrt32", arguments);
       case IrIntrinsicOp.LoadLittle or IrIntrinsicOp.LoadBig or IrIntrinsicOp.StoreLittle or IrIntrinsicOp.StoreBig when !arguments[0].Type.IsArray:
         // An access to a view is the view's own business.
         return null;

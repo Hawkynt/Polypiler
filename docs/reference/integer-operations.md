@@ -31,6 +31,7 @@ Related: [repository README](../../README.md) · [IR and analysis](../architectu
 | | `BitReverse` | `T → T` | all | the lowest bit becomes the highest |
 | Powers of two | `IsPow2` | `T → bool` | all | false for 0 and for every negative value |
 | | `RoundUpPow2` | `T → T` | all | smallest power of two not below the pattern, modulo 2^width: 0 for 0, 0 where it is 2^width, the smallest value of a signed type for 2^(width-1) |
+| Roots | `ISqrt` | `T → T` | unsigned | the largest `r` with `r * r ≤ x`, at most 2^(width/2) - 1; a helper in every target (digit by digit in base 4) |
 | Wide multiply | `BigMul` | `(i32, i32) → i64`, `(u32, u32) → u64` | — | exact |
 | | `MulHigh` | `(T, T) → T` | all | upper half of the product in twice the width, signed or unsigned as `T` |
 | Division | `DivFloor`, `ModFloor` | `(T, T) → T` | all | quotient rounded down; remainder with the sign of the divisor |

@@ -314,6 +314,26 @@ public static partial class FloatOperations {
   /// <returns>The reciprocal.</returns>
   public static double Reciprocal(double x) => 1.0 / x;
 
+  /// <summary>The square <c>x * x</c>, rounded once.</summary>
+  /// <param name="x">The operand.</param>
+  /// <returns>The square.</returns>
+  public static double Square(double x) => x * x;
+
+  /// <summary>The square <c>x * x</c> of <c>float</c>, rounded once.</summary>
+  /// <param name="x">The operand.</param>
+  /// <returns>The square.</returns>
+  public static float SquareF(float x) => x * x;
+
+  /// <summary>The cube <c>(x * x) * x</c>, rounded twice in that order.</summary>
+  /// <param name="x">The operand.</param>
+  /// <returns>The cube.</returns>
+  public static double Cube(double x) => x * x * x;
+
+  /// <summary>The cube <c>(x * x) * x</c> of <c>float</c>, rounded twice in that order.</summary>
+  /// <param name="x">The operand.</param>
+  /// <returns>The cube.</returns>
+  public static float CubeF(float x) => x * x * x;
+
   /// <summary>The reciprocal <c>1 / x</c> of <c>float</c>, rounded once.</summary>
   /// <param name="x">The operand.</param>
   /// <returns>The reciprocal.</returns>

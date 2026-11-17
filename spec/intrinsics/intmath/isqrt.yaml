@@ -1,0 +1,37 @@
+id: INTRINSICS.ISqrt
+title: Integer square root
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-ROOTS
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: ISqrt
+  group: IntMath
+  typeParameters: [{name: T, constraint: unsigned}]
+  parameters: [{name: x, type: T}]
+  returns: [{name: root, type: T}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  algebra: [idempotent]
+  facts: {resultRange: [0, 4294967295]}
+  laneLiftable: true
+  reference:
+    algorithm: "the largest r with r * r <= x, digit by digit in base 4 (binary restoring square root), width / 2 steps"
+    source: "H. S. Warren, Hacker's Delight, 2nd ed., section 11-1"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u32}, inputs: [0], outputs: [0]}
+    - {types: {T: TYPES.u32}, inputs: [15], outputs: [3]}
+    - {types: {T: TYPES.u32}, inputs: [16], outputs: [4]}
+    - {types: {T: TYPES.u32}, inputs: ["0xFFFFFFFF"], outputs: ["0xFFFF"]}
+    - {types: {T: TYPES.u64}, inputs: ["0xFFFFFFFFFFFFFFFF"], outputs: ["0xFFFFFFFF"]}
+    - {types: {T: TYPES.u64}, inputs: ["0xFFFFFFFE00000001"], outputs: ["0xFFFFFFFF"]}
+    - {types: {T: TYPES.u64}, inputs: ["0xFFFFFFFE00000000"], outputs: ["0xFFFFFFFE"]}
+    - {types: {T: TYPES.u8}, inputs: [255], outputs: [15]}
+    - {types: {T: TYPES.u16}, inputs: [65535], outputs: [255]}

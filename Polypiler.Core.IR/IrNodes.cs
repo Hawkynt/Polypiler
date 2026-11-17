@@ -955,7 +955,16 @@ public enum IrIntrinsicOp {
   HighWord,
 
   /// <summary><c>(u32 high, u32 low) → i64</c>: the 64-bit integer of two limbs, the inverse of <see cref="HighWord"/> and the conversion to <c>u32</c>.</summary>
-  JoinWords
+  JoinWords,
+
+  /// <summary><c>f → f</c>: the square <c>x * x</c>, rounded once (#198).</summary>
+  Square,
+
+  /// <summary><c>f → f</c>: the cube <c>(x * x) * x</c>, rounded twice in that order (#198).</summary>
+  Cube,
+
+  /// <summary><c>u → u</c>: the integer square root, the largest <c>r</c> with <c>r * r ≤ x</c>, of an unsigned value (#198).</summary>
+  ISqrt
 
 }
 

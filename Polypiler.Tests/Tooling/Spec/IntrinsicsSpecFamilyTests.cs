@@ -132,7 +132,8 @@ public sealed class IntrinsicsSpecFamilyTests {
     var tree = SpecTree.Load(Path.Combine(PrototypeFixture.RepositoryRoot, "spec"), PrototypeFixture.RepositoryRoot);
     var validation = new SpecValidator(SpecFamilies.All).Run(tree, "intrinsics");
     Assert.That(validation.Diagnostics, Is.Empty);
-    Assert.That(validation.Documents, Is.EqualTo(130));
+    // Every document of the folder is one of the family: a file the validator skipped would be a smaller count.
+    Assert.That(validation.Documents, Is.EqualTo(Directory.EnumerateFiles(Path.Combine(PrototypeFixture.RepositoryRoot, "spec", "intrinsics"), "*.yaml", SearchOption.AllDirectories).Count()).And.GreaterThan(130));
   }
 
   /// <summary>
