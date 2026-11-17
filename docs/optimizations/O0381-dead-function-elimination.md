@@ -31,12 +31,12 @@ func @main() -> void export "main" { Call.void @Used()  Ret.void }
 
 Roots are public functions, the additional entry points in `OptimizerOptions.Roots` (the CLI supplies
 Rust's test functions), the module initializer, every function named by a retained class or interface,
-and calls and function references in every global initializer. Retaining all type declarations means
+and calls and function references in every retained global initializer (every global when O0383 is disabled). Retaining all type declarations means
 retaining their constructors, methods, property accessors, overrides and abstract signatures.
 
 A queue follows `IrCall` and `IrFunctionRef` nodes in each marked body, including nested lambdas and
 untaken branches. Global initializers currently admit pure calls; a factory returning a function
-reference keeps both the factory and its target. All globals remain live. `ReachabilityResult.Roots`
+reference keeps both the factory and its target. With O0383 disabled, all globals remain live; with it enabled, joint marking follows only live initializers and preserves those whose removal is not proven safe. `ReachabilityResult.Roots`
 records the first root that reached each function. No use count, solver or cost query is needed.
 
 ## How it is proven
@@ -64,7 +64,7 @@ must mirror the source file for review is still available.
 
 ## Interactions with other passes
 
-Runs last in each round of `IrPassPipeline`, after inlining, propagation, folding, call evaluation,
+Runs at the end of each round of `IrPassPipeline`, atomically with O0383 when enabled, after inlining, propagation, folding, call evaluation,
 merging, dead-code removal and unrolling. Reachability is recomputed over the whole module on every
 sweep, regardless of the pipeline's dirty-function scope. Removed helper entries leave
 `Implementations`; `Inlined`, `Clones` and `ScopeFunctions` keep their historical provenance so notices

@@ -7,7 +7,7 @@ the page then describes what the code does rather than what is planned. The fami
 "Loop transformations" on are borrowed from PB-Compiler; the [catalog](pb-compiler-catalog.md)
 maps every one of its optimization documents to the page here that covers it.
 
-**30 of 294 implemented** - as prototypes in the pass pipeline of `translate` (#1307), among the passes over the legalized module that optimise the helpers (#1353), specialise functions for the lambdas passed to them (#1360) and evaluate, merge and remove calls by the effect summaries of their functions (#1361), in legalization (#1358) and among the target passes of the backends (#1336), proven by exhaustive and random testing; their full target states stay open.
+**31 of 294 implemented** - in the pass pipeline of `translate` (#1307), among the passes over the legalized module that optimise the helpers (#1353), specialise functions for the lambdas passed to them (#1360) and evaluate, merge and remove calls by the effect summaries of their functions (#1361), in legalization (#1358) and among the target passes of the backends (#1336). Each page records its implemented scope and verification.
 
 ## General passes
 
@@ -267,7 +267,7 @@ maps every one of its optimization documents to the page here that covers it.
 - [ ] [O0380](O0380-interprocedural-constant-propagation.md) — Replace a parameter that receives the same constant at every call site by that constant in the callee (P3)
 - [x] [O0381](O0381-dead-function-elimination.md) — Remove functions that are unreachable from the module's exports, tests and taken addresses (P3)
 - [ ] [O0382](O0382-identical-code-folding.md) — Merge functions with identical bodies and rebind the duplicates' call sites to one copy (P3)
-- [ ] [O0383](O0383-global-dead-code-elimination.md) — Remove unreferenced globals of a module and the functions only their initializers kept alive (P3)
+- [x] [O0383](O0383-global-dead-code-elimination.md) — Remove unreferenced globals of a module and the functions only their initializers kept alive (P3)
 - [ ] [O0384](O0384-dead-parameter-elimination.md) — Remove parameters no path in the callee reads from the signature and from every call site (P3)
 - [ ] [O0385](O0385-call-shape-cloning.md) — Clone a function for the literal argument shape that a strict majority of its call sites share (P3)
 - [ ] [O0386](O0386-return-value-propagation.md) — Replace the result of a call to a function that returns the same constant on every path by that constant (P3)

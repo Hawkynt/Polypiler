@@ -1,6 +1,6 @@
 id: REWRITES.O0381
 title: Remove unreachable functions
-version: 1
+version: 2
 status: normative
 owner: Hawkynt
 issue: "#1153"
@@ -8,15 +8,17 @@ tests:
   - Polypiler.Tests/Optimize/DeadFunctionEliminationTests.cs
   - tests/features/optimize/opt-ipa-deadfunc.feature
 introducedIn: P3
-compatibility: none
-reviewedRevision: 1
+compatibility: additive
+reviewedRevision: 2
 normative: >-
   O0381 MUST remove exactly the functions unreachable from public entry points,
   additional test entry points, the module initializer, retained type declarations
-  and every global initializer. Reachability MUST follow direct calls and function
+  and every retained global initializer (all globals when O0383 is disabled).
+  Reachability MUST follow direct calls and function
   references throughout retained bodies, including lambdas and untaken branches.
-  O0381 MUST preserve live bodies, globals, external declarations and inlined notices.
-  It MUST run last in each round and MUST NOT run when disabled or at opt none.
+  O0381 MUST preserve live bodies, external declarations and inlined notices.
+  It MUST run at the end of each round, atomically with the global sweep when
+  O0383 is enabled, and MUST NOT run when disabled or at opt none.
 spec:
   optimization: O0381
   kind: eliminate
