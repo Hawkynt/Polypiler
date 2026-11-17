@@ -73,6 +73,9 @@ public sealed class CliContext : IDiagnosticSink {
   /// <summary>How the source of a translation is laid out where it has modules and tests of its own, as a Rust crate has; <see langword="null"/> for a source of one module.</summary>
   internal TranslateCommand.CrateLayout? Layout { get; set; }
 
+  /// <summary>Whether <c>--strict</c> is in force: <see cref="Report"/> passes every diagnostic through <see cref="StrictSink.Promote"/>.</summary>
+  public bool Strict { get; set; }
+
   /// <summary>
   /// Keeps a diagnostic, with <see cref="CommandLine"/> as its command, and writes it to
   /// <see cref="Error"/> in <see cref="Format"/>; with <see cref="Quiet"/> only an error is written.
@@ -83,6 +86,9 @@ public sealed class CliContext : IDiagnosticSink {
     ArgumentNullException.ThrowIfNull(diagnostic);
     if (this.CommandLine.Length > 0)
       diagnostic = diagnostic with { Command = this.CommandLine };
+
+    if (this.Strict)
+      diagnostic = StrictSink.Promote(diagnostic);
 
     this.Diagnostics.Report(diagnostic);
     if (this.Quiet && diagnostic.Severity != DiagnosticSeverity.Error)
