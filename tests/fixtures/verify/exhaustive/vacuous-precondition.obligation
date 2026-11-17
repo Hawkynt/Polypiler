@@ -1,0 +1,6 @@
+# Scenario 5, test design 10: no unsigned value is below 0.
+rule: vacuous-precondition
+inputs: x: u<w>
+precondition: %p = ULt.u<w> %x, 0
+before: %r = Add.u<w> %x, 1
+after: %r = Sub.u<w> %x, 1

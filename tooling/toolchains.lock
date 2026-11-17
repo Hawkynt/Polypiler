@@ -200,6 +200,15 @@ toolchains:
     platforms: [linux, windows, macos]
     licence: Apache-2.0 WITH LLVM-exception
     source: https://github.com/llvm/llvm-project/releases
+  microsoft-z3:
+    version: "4.11.2"
+    kind: nuget
+    requires: dotnet-sdk
+    probe: [Microsoft.Z3]
+    versionPattern: '^(?<version>.+)$'
+    platforms: [linux, windows, macos]
+    licence: MIT
+    source: https://www.nuget.org/packages/Microsoft.Z3
   mpfr:
     version: "4.2.2"
     kind: package
