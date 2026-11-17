@@ -390,7 +390,11 @@ public sealed class IntrinsicsSpecFamilyTests {
   [TestCase("laneLiftable: true")]
   [TestCase("requiresRuntime: false")]
   [TestCase("spelling: Bits.PopCount")]
-  public void OptionalProperty_IsValid(string property) => Assert.That(PopCountLines(("  vectors:\n", $"  {property}\n  vectors:\n")), Is.Empty);
+  public void OptionalProperty_IsValid(string property) => Assert.That(PopCountLines(WithProperty(property)), Is.Empty);
+
+  /// <summary>The change that gives <c>popcount.yaml</c> an optional property: the facts it states replaced, any other added before its vectors.</summary>
+  private static (string Old, string New) WithProperty(string property)
+    => property.StartsWith("facts:", StringComparison.Ordinal) ? ("  facts: {resultRange: [0, 64]}\n", $"  {property}\n") : ("  vectors:\n", $"  {property}\n  vectors:\n");
 
   [Test]
   public void Accuracy_IsValidWithTolerance()
@@ -405,7 +409,7 @@ public sealed class IntrinsicsSpecFamilyTests {
   [TestCase("lowersTo: [TYPES.u32]", "/spec/lowersTo/0")]
   [TestCase("attributes: [{name: n, type: TYPES.u32, low: 0, high: \"0\"}]", "/spec/attributes/0/high")]
   public void OptionalPropertyOfTheWrongShape_IsASchemaViolation(string property, string pointer)
-    => Assert.That(PopCountLines(("  vectors:\n", $"  {property}\n  vectors:\n")).Single(), Does.Contain($"error PLY0040: {pointer}:"));
+    => Assert.That(PopCountLines(WithProperty(property)).Single(), Does.Contain($"error PLY0040: {pointer}:"));
 
   [TestCase("ulp(0)")]
   [TestCase("ulp")]

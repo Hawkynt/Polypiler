@@ -26,4 +26,3 @@ spec:
     - {types: {T: TYPES.u8}, inputs: ["0xF0", "0xCC", "0xAA"], outputs: ["0xCA"]}
     - {types: {T: TYPES.u32}, inputs: ["0x510E527F", "0x9B05688C", "0x1F83D9AB"], outputs: ["0x1F85C98C"]}
     - {types: {T: TYPES.u64}, inputs: ["0x00FF00FF00FF00FF", "0x0123456789ABCDEF", "0xFEDCBA9876543210"], outputs: ["0xFE23BA6776AB32EF"]}
-  lowersTo: [INTRINSICS.TernaryLogic]

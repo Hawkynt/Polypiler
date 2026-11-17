@@ -27,4 +27,3 @@ spec:
     - {types: {T: TYPES.u64}, inputs: ["0x0123456789ABCDEF", "0xFEDCBA9876543210", "0x00FF00FF00FF00FF"], outputs: ["0x00FF00FF00FF00FF"]}
     - {types: {T: TYPES.i16}, inputs: ["0x1234", "0xFFFF", "0x8001"], outputs: [-28107]}
   algebra: [commutative]
-  lowersTo: [INTRINSICS.TernaryLogic]
