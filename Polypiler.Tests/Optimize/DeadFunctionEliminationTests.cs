@@ -12,6 +12,7 @@ using Polypiler.Core.Optimize.Passes;
 using Polypiler.Core.Optimize.Interprocedural;
 using Polypiler.Core.Verification.Generators;
 using Polypiler.Prototype.Testing;
+using Polypiler.Backends.Testing;
 
 namespace Polypiler.Tests.Optimize;
 
@@ -211,6 +212,18 @@ public sealed class DeadFunctionEliminationTests {
       TestContext.Out.WriteLine($"{name}: {System.Text.Encoding.UTF8.GetByteCount(original)} -> {System.Text.Encoding.UTF8.GetByteCount(optimized)} source bytes");
       Assert.That(optimized, Is.Not.Empty);
     }
+  }
+
+  [Test]
+  public void RustCratePreparationKeepsTheTestFunctionsGivenToItsEmitter() {
+    var module = new IrModule("M", [Function("api", true), Function("helper", false),
+      new IrFunction("roundtrip", false, IrType.Void, [], [], new IrBlock([
+        new IrExprStmt(new IrCall("helper", IrType.I32, [])), new IrReturn(null)
+      ]))]);
+    var files = RustCrates.Emit(module, options: new RustEmitOptions { TestFunctions = ["roundtrip"] },
+      disabled: IrPassPipeline.Default.Ids.Where(id => id != "O0381").ToHashSet());
+    var source = string.Concat(files.Select(file => file.Content));
+    Assert.That(source, Does.Contain("#[test]").And.Contain("fn roundtrip()").And.Contain("fn helper()"));
   }
 
   /// <summary>Seed 381: an independent BFS over a textual edge list, then eight executions per root.</summary>
