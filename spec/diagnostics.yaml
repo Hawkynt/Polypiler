@@ -101,7 +101,7 @@ codes:
     rule: io.read
     area: infrastructure
     owner: INFRA-TOOLCHAINS
-    surfaces: "standard error of polypiler-tooling toolchains validate and probe; standard error of polypiler as \"input '<path>' does not exist or is not readable\" for an input of the command line; standard error of polypiler-tooling ci as \"'<path>' cannot be read: <reason>\" for a workflow, category file, test listing, lock, changed-file list or test build it needs and cannot read"
+    surfaces: "standard error of polypiler-tooling toolchains validate and probe; standard error of polypiler as \"input '<path>' does not exist or is not readable\" for an input of the command line; standard error of polypiler-tooling ci as \"'<path>' cannot be read: <reason>\" for a workflow, category file, test listing, lock, changed-file list or test build it needs and cannot read; standard error of polypiler-tooling report capabilities as \"'<path>' cannot be read: the spec root does not exist\" or \"... the gate directory does not exist\""
   - code: PLY0005
     severity: error
     exit: EnvironmentError
@@ -110,7 +110,7 @@ codes:
     rule: io.write
     area: infrastructure
     owner: CLI-FOUNDATION
-    surfaces: "standard error of polypiler for an output directory that is not empty without --force, and as \"output path '<path>' cannot be created: <reason>\" for one that is a file or cannot be created or written; standard error of polypiler-tooling report errors as \"the output directory '<path>' cannot be written: <reason>\" when the output directory cannot be created or a page cannot be written or deleted; standard error of polypiler-tooling fuzz run and fuzz minimize, in that form too, after the PLY0070 of a finding whose record under artifacts/fuzz/<target>/ cannot be written"
+    surfaces: "standard error of polypiler for an output directory that is not empty without --force, and as \"output path '<path>' cannot be created: <reason>\" for one that is a file or cannot be created or written; standard error of polypiler-tooling report errors as \"the output directory '<path>' cannot be written: <reason>\" when the output directory cannot be created or a page cannot be written or deleted; standard error of polypiler-tooling fuzz run and fuzz minimize, in that form too, after the PLY0070 of a finding whose record under artifacts/fuzz/<target>/ cannot be written; standard error of polypiler-tooling report capabilities in that form when docs/capabilities.json or docs/capabilities.md cannot be written, leaving no partial file"
   - code: PLY0006
     severity: error
     exit: UsageError
@@ -393,7 +393,7 @@ codes:
     rule: spec.schema
     area: infrastructure
     owner: SPEC-META
-    surfaces: "standard error of polypiler-tooling spec validate as '<file>(<line>,<column>): error PLY0040: <message>', or one JSON line with --diagnostics json"
+    surfaces: "standard error of polypiler-tooling spec validate as '<file>(<line>,<column>): error PLY0040: <message>', or one JSON line with --diagnostics json; standard error of polypiler-tooling report capabilities --check as 'docs/capabilities.json: <json pointer>: <message>' for a committed report that breaks spec/schemas/capabilities.schema.json"
   - code: PLY0041
     severity: error
     exit: EnvironmentError
@@ -559,9 +559,10 @@ codes:
     exit: EnvironmentError
     title: capability claim invalid
     message: "<reason>"
+    rule: capabilities.evidence
     area: infrastructure
     owner: SPEC-CAPABILITIES
-    reserved: true
+    surfaces: "standard error of polypiler-tooling report capabilities as 'gate record '<file>' names a pair with no language or target document' for a valid gate record of a pair that spec/ has no source or target profile for, and under --check as 'docs/capabilities.json: pair <from>/<source profile> -> <to>/<target profile> is committed as '<state>' but the evidence gives '<state>'' for a committed cell above the state its gate records prove"
   - code: PLY0062
     severity: error
     exit: UnsupportedConstruct
@@ -744,7 +745,7 @@ codes:
     rule: docs.generated
     area: infrastructure
     owner: INFRA-DEVDOCS
-    surfaces: "standard error of polypiler-tooling report errors: 'generated document out of date: '<path>' <differs|is missing|has no registered code>' under --check, and for a note of docs/errors/notes 'note '<path>' belongs to no registered code', 'note '<path>' has an unknown section '<heading>'', 'note '<path>' has the section '<heading>' twice' and 'note '<path>' has text before its first section'"
+    surfaces: "standard error of polypiler-tooling report errors: 'generated document out of date: '<path>' <differs|is missing|has no registered code>' under --check, and for a note of docs/errors/notes 'note '<path>' belongs to no registered code', 'note '<path>' has an unknown section '<heading>'', 'note '<path>' has the section '<heading>' twice' and 'note '<path>' has text before its first section'; standard error of polypiler-tooling report capabilities --check as 'docs/capabilities.json is stale: pair <pair> reached '<state>', committed '<state>'', 'docs/capabilities.json is stale: pair <pair> differs from the evidence in its fixtures, evidence or limitations', 'docs/capabilities.json: pair set differs from spec/ (<n> added, <m> removed)', 'docs/capabilities.md does not match docs/capabilities.json' or 'generated document out of date: '<path>' is missing'"
   - code: PLY0100
     severity: error
     exit: InternalError

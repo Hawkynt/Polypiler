@@ -43,4 +43,9 @@
     <EmbeddedResource Include="..\spec\schemas\gate-record.schema.json" LogicalName="Polypiler.Core.Verification.Gates.gate-record.schema.json" Link="Gates\gate-record.schema.json" />
   </ItemGroup>
 
+  <!-- The schema of the capability report travels with the reader of docs/capabilities.json. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\spec\schemas\capabilities.schema.json" LogicalName="Polypiler.Core.Verification.Capabilities.capabilities.schema.json" Link="Capabilities\capabilities.schema.json" />
+  </ItemGroup>
+
 </Project>
