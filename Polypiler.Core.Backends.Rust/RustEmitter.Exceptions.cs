@@ -29,24 +29,46 @@ public static partial class RustEmitter {
     /// <summary>The functions of the module known to trap in no way; computed on demand.</summary>
     private readonly Dictionary<string, bool> _trapFree = new(StringComparer.Ordinal);
 
+    /// <summary>The functions of the module that may run a <c>finally</c> block while an exception leaves them; computed on demand.</summary>
+    private readonly Dictionary<string, bool> _runsFinally = new(StringComparer.Ordinal);
+
+    /// <summary>The throws of an exception of a library class that a catch clause of the same function stands around: values, as the module's own exceptions are.</summary>
+    private readonly HashSet<IrExpr> _coveredThrows = new(ReferenceEqualityComparer.Instance);
+
+    /// <summary>The marks a way out of the body of a <c>try</c> with a <c>finally</c> carries until the form of that body is known.</summary>
+    private const string ReturnedMark = "$returned", ThrownMark = "$thrown", JumpedMark = "$jumped";
+
     /// <summary>
-    /// The labelled block a <c>try</c> body is: an exception thrown in it leaves the block with its
-    /// value, <c>break 't0 Err(e)</c> where the body can also complete (<see cref="Wrapped"/>), else
-    /// <c>break 't0 e</c>; in the body of a <c>finally</c> a <c>return</c> leaves it with the value.
+    /// The labelled block a <c>try</c> body is. Of a <c>try</c> with catch clauses: an exception thrown
+    /// in it leaves the block with its value, <c>break 't0 Err(e)</c> where the body can also complete
+    /// (<see cref="Wrapped"/>), else <c>break 't0 e</c>. Of a <c>try</c> with a <c>finally</c>
+    /// (<see cref="IsFinally"/>): every way out of the body - an exception, a <c>return</c>, a
+    /// <c>break</c> or <c>continue</c> of a loop around it - leaves the block first, so that the
+    /// <c>finally</c> runs, and is made after it.
     /// </summary>
-    private sealed class TryFrame(string label, bool wrapped, bool returns, int breakables) {
+    private sealed class TryFrame(string label, bool wrapped, int breakables) {
 
       public string Label { get; } = label;
 
       public bool Wrapped { get; } = wrapped;
 
-      /// <summary>Whether a <c>return</c> leaves the block with its value, for a <c>finally</c> to run first.</summary>
-      public bool Returns { get; } = returns;
-
       /// <summary>The loops around the <c>try</c>, which a jump out of the body would cross.</summary>
       public int Breakables { get; } = breakables;
 
       public bool Used { get; set; }
+
+      /// <summary>Whether the block is the body of a <c>try</c> with a <c>finally</c>.</summary>
+      public bool IsFinally { get; init; }
+
+      /// <summary>
+      /// The catch clauses of the <c>try</c> where one of them is chosen where the exception is thrown,
+      /// before the <c>finally</c> blocks between run - .NET's first pass, which runs the filters - and
+      /// the exception leaves the body with the number of the clause, <c>(e, 0)</c>; else <see langword="null"/>.
+      /// </summary>
+      public IReadOnlyList<IrCatch>? Selecting { get; init; }
+
+      /// <summary>The jumps out of the body of a <c>try</c> with a <c>finally</c>: the loop or switch, and whether the jump is a <c>continue</c>.</summary>
+      public List<(Breakable Target, bool Continues)> Jumps { get; } = [];
 
     }
 
@@ -64,6 +86,41 @@ public static partial class RustEmitter {
     /// <summary>Whether a throw of an exception class propagates: one of the module. A throw of a class of the library is a trap, a panic, as the library helpers throw them.</summary>
     private static bool IsCatchable(IrType type) => type.ClassType is { IsLibrary: false } declared && IrExceptionClass.IsException(declared);
 
+    /// <summary>Whether a thrown exception propagates as a value: one of a class of the module, or a new one of a class of the library that a catch clause of the same function stands around.</summary>
+    private bool Propagates(IrExpr exception) => IsCatchable(exception.Type) || this._coveredThrows.Contains(exception);
+
+    /// <summary>
+    /// Records the throws of a new exception of a class of the library that a catch clause of that
+    /// class or a base stands around in the same function, the bodies of lambdas left out.
+    /// </summary>
+    private void CoverThrows(IEnumerable<IrStmt> statements, List<IReadOnlyList<IrCatch>> covering) {
+      foreach (var statement in statements) {
+        if (statement is IrTry attempt) {
+          covering.Add(attempt.Catches);
+          this.CoverThrows(attempt.Body.Statements, covering);
+          covering.RemoveAt(covering.Count - 1);
+          foreach (var clause in attempt.Catches)
+            this.CoverThrows(clause.Body.Statements, covering);
+          if (attempt.Finally is { } final)
+            this.CoverThrows(final.Statements, covering);
+          continue;
+        }
+
+        var thrown = IrTree.Expressions(statement).SelectMany(Operations).OfType<IrThrowExpression>().Select(expression => expression.Exception);
+        if (statement is IrThrow throwing)
+          thrown = thrown.Prepend(throwing.Exception);
+        foreach (var exception in thrown)
+          if (exception is IrNew { Type.ClassType: { IsLibrary: true } type } && IrExceptionClass.IsException(type)
+            && covering.Any(catches => catches.Any(clause => type == clause.Class || type.DerivesFrom(clause.Class))))
+            this._coveredThrows.Add(exception);
+
+        this.CoverThrows(statement is IrBlock block ? block.Statements : IrTree.Blocks(statement).SelectMany(nested => nested.Statements), covering);
+      }
+    }
+
+    /// <summary>Every node of an expression, those of the bodies of its lambdas left out.</summary>
+    private static IEnumerable<IrExpr> Operations(IrExpr expression) => IrTree.Operands(expression).SelectMany(Operations).Prepend(expression);
+
     /// <summary>
     /// Prepares the exceptions of a module: the classes, numbered with their bases; the constructors of
     /// the module's exception classes, which are not written (an exception is a <c>PlyError</c>); and
@@ -71,8 +128,10 @@ public static partial class RustEmitter {
     /// </summary>
     private void Exceptions(IrModule module) {
       this._throwing.UnionWith(this._declared);
+      foreach (var function in module.Functions)
+        this.CoverThrows(function.Body.Statements, []);
       var own = module.Types.OfType<IrClassType>().Where(type => !type.IsLibrary && IrExceptionClass.IsException(type)).ToList();
-      if (own.Count == 0 && !module.Functions.Any(function => IrTree.Nodes(function.Body).Any(node => node is IrFieldLoad load && IsError(load.Target.Type)))
+      if (own.Count == 0 && this._coveredThrows.Count == 0 && !module.Functions.Any(function => IrTree.Nodes(function.Body).Any(node => node is IrFieldLoad load && IsError(load.Target.Type)))
         && !(this.Results && module.Functions.Any(function => IrClosures.Within(function.Body).Any(statement => statement is IrTry { Catches.Count: > 0 }))))
         return;
 
@@ -114,14 +173,14 @@ public static partial class RustEmitter {
               || attempt.Finally is { } final && this.Escapes(final.Statements, covering, caught))
               return true;
             continue;
-          case IrThrow throwing when IsCatchable(throwing.Exception.Type) && !Covered(throwing.Exception.Type.ClassType!):
+          case IrThrow throwing when this.Propagates(throwing.Exception) && !Covered(throwing.Exception.Type.ClassType!):
             return true;
           case IrRethrow when caught is null || !Covered(caught):
             return true;
         }
 
         foreach (var node in IrTree.Expressions(statement).SelectMany(IrTree.Nodes)) {
-          if (node is IrThrowExpression thrown && IsCatchable(thrown.Exception.Type) && !Covered(thrown.Exception.Type.ClassType!)
+          if (node is IrThrowExpression thrown && this.Propagates(thrown.Exception) && !Covered(thrown.Exception.Type.ClassType!)
             || node is IrCall call && this._throwing.Contains(call.Function) && !Covered(IrExceptionClass.Exception))
             return true;
         }
@@ -238,22 +297,77 @@ public static partial class RustEmitter {
     /// <summary>
     /// An exception leaving where it is thrown: the block of the innermost <c>try</c> body,
     /// <c>break 't0 Err(e)</c>; else the function, <c>return Err(e)</c>; else, from a public function,
-    /// the panic of an unhandled exception, <c>ply_unhandled(&amp;e)</c>.
+    /// the panic of an unhandled exception, <c>ply_unhandled(&amp;e)</c>. Where the handler it goes to
+    /// chooses its clause where the exception is thrown (<see cref="TryFrame.Selecting"/>), the clause
+    /// is chosen here, unless <paramref name="selected"/> says it has been already.
     /// </summary>
-    private RsExpression Escape(RsExpression error) {
-      if (this._tries.LastOrDefault(frame => !frame.Returns) is { } frame && this._tries.IndexOf(frame) == this._tries.Count - 1) {
-        frame.Used = true;
-        return new RsBreak(frame.Label, frame.Wrapped ? new RsCall(new RsPath("Err"), [error]) : error);
+    private RsExpression Escape(RsExpression error, bool selected = false) {
+      if (this._tries.Count > 0) {
+        var frame = this._tries[^1];
+        if (!selected && this._tries.LastOrDefault(candidate => !candidate.IsFinally) is { Selecting: { } clauses })
+          return this.Selected(error, clauses, frame);
+
+        return Leave(frame, error);
       }
 
-      if (this._tries.Count > 0)
-        return this.RefuseException("an exception thrown inside a finally's body");
       if (this.Results)
         this._escaping.Add(this._function.Name);
       if (this._throwing.Contains(this._function.Name) || this.Results)
         return new RsReturn(new RsCall(new RsPath("Err"), [error]));
 
       return new RsCall(new RsPath(this.StringHelper("ply_unhandled")), [new RsReference(false, error)]);
+    }
+
+    /// <summary>The exception, or the exception with its clause, leaving the block of a <c>try</c> body: in a <c>finally</c>'s, marked until the block's form is known.</summary>
+    private static RsBreak Leave(TryFrame frame, RsExpression error) {
+      frame.Used = true;
+      if (frame.IsFinally)
+        return new RsBreak(frame.Label, new RsCall(new RsPath(ThrownMark), [error]));
+
+      return new RsBreak(frame.Label, frame.Wrapped ? new RsCall(new RsPath("Err"), [error]) : error);
+    }
+
+    /// <summary>
+    /// An exception leaving for a handler that chooses its clause where the exception is thrown, as
+    /// .NET's first pass does before any <c>finally</c> block runs: the exception bound, the number of
+    /// the first clause whose class and filter take it - the count of the clauses where none does -
+    /// and the pair leaving: <c>let selected = if ply_is(e.class, 13) &amp;&amp; f { 0 } else { 1 }; break 't0 (e, selected);</c>.
+    /// </summary>
+    private RsBlockExpression Selected(RsExpression error, IReadOnlyList<IrCatch> clauses, TryFrame frame) {
+      var statements = new List<RsStatement>();
+      string name;
+      if (error is RsPath path) {
+        name = path.Name;
+      } else {
+        name = this.Temporary("thrown");
+        statements.Add(new RsLet(name, false, null, error));
+      }
+
+      RsExpression chain = new RsLiteral(clauses.Count.ToString(CultureInfo.InvariantCulture));
+      for (var index = clauses.Count - 1; index >= 0; --index) {
+        var clause = clauses[index];
+        if (clause.Local is { } local)
+          this._locals[local] = name;
+
+        var number = new RsLiteral(index.ToString(CultureInfo.InvariantCulture));
+        var test = this.ClauseTest(clause, name);
+        chain = test is null ? number : new RsIf(test, new RsBlock([], number), chain is RsIf ? chain : new RsBlockExpression(new RsBlock([], chain)));
+      }
+
+      var selection = this.Temporary("selected");
+      statements.Add(new RsLet(selection, false, null, chain));
+      statements.Add(new RsExpressionStatement(Leave(frame, new RsTuple([new RsPath(name), new RsPath(selection)]))));
+      return new RsBlockExpression(new RsBlock(statements, null));
+    }
+
+    /// <summary>Whether a catch clause takes an exception bound to a name: its class, <c>ply_is(e.class, 13)</c>, and its filter; <see langword="null"/> for a clause that takes every one.</summary>
+    private RsExpression? ClauseTest(IrCatch clause, string error) {
+      RsExpression? test = this.ErrorClass(clause.Class) == 0 ? null
+        : new RsCall(new RsPath(this.StringHelper("ply_is")), [new RsField(new RsPath(error), "class"), new RsLiteral(this.ErrorClass(clause.Class).ToString(CultureInfo.InvariantCulture))]) { Type = IrType.Bool };
+      if (clause.Filter is { } filter)
+        test = test is null ? this.Expression(filter) : this.Binary(test, "&&", this.Expression(filter), IrType.Bool);
+
+      return test;
     }
 
     /// <summary>The call of a function that propagates: inside a <c>try</c> body a <c>match</c> that leaves the body with the error, else <c>f(x)?</c>, from a public function the panic of an unhandled one.</summary>
@@ -263,14 +377,9 @@ public static partial class RustEmitter {
       if (this.Results && this._closureResults.Count > 0)
         return this.LimitResult("a call that may trap inside a closure");
       if (this._tries.Count > 0) {
-        var frame = this._tries[^1];
-        if (frame.Returns)
-          return this.RefuseException("an exception thrown inside a finally's body");
-
-        frame.Used = true;
         return new RsMatch(call, [
           new RsMatchArm(["Ok(value)"], new RsPath("value")),
-          new RsMatchArm(["Err(error)"], new RsBreak(frame.Label, frame.Wrapped ? new RsCall(new RsPath("Err"), [new RsPath("error")]) : new RsPath("error")))
+          new RsMatchArm(["Err(error)"], this.Escape(new RsPath("error")))
         ]) { Type = call.Type };
       }
 
@@ -291,7 +400,7 @@ public static partial class RustEmitter {
       IrExprStmt { Expression: IrThrowExpression } => false,
       IrBlock nested => CanComplete(nested),
       IrIf { Else: { } otherwise } choice => CanComplete(choice.Then) || CanComplete(otherwise),
-      IrTry { Finally: null } attempt => CanComplete(attempt.Body) || attempt.Catches.Any(clause => CanComplete(clause.Body)),
+      IrTry attempt => (CanComplete(attempt.Body) || attempt.Catches.Any(clause => CanComplete(clause.Body))) && (attempt.Finally is not { } final || CanComplete(final)),
       _ => true
     };
 
@@ -299,31 +408,34 @@ public static partial class RustEmitter {
     /// A <c>try</c> with catch clauses, its body a labelled block that gives the exception, its clauses
     /// an <c>if</c> chain over the class - <c>ply_is(error.class, 1)</c> - and the filter, the exception
     /// going on where none takes it. A clause of a class a trap belongs to stands only around a body that
-    /// cannot trap, since a trap is a panic no clause sees; a filter only where no <c>finally</c> lies
-    /// between the throw and the clause, which .NET would run after the filter.
+    /// cannot trap, since a trap is a panic no clause sees. Where a filter stands and a <c>finally</c>
+    /// lies between a throw and the clauses, the clause is chosen where the exception is thrown, before
+    /// the <c>finally</c> runs (<see cref="TryFrame.Selecting"/>). A <c>try</c> with a <c>finally</c> is <see cref="Finally"/>.
     /// </summary>
     private void Try(IrTry attempt, List<RsStatement> into) {
-      if (attempt.Finally is { } final) {
-        if (attempt.Catches.Count > 0)
-          into.Add(new RsExpressionStatement(this.RefuseException("a try with both catch clauses and a finally block")));
-        else
-          this.Finally(attempt.Body, final, into);
+      if (attempt.Finally is not null) {
+        this.Finally(attempt, into);
         return;
       }
 
       var trapped = Enum.GetValues<IrTrap>().Select(IrExceptionClass.Of).Distinct().ToList();
+      var selecting = attempt.Catches.Any(clause => clause.Filter is not null) && IrClosures.Within(attempt.Body).Any(statement => statement is IrTry { Finally: not null });
       foreach (var clause in attempt.Catches) {
         if (!this.Results && trapped.Any(type => type == clause.Class || type.DerivesFrom(clause.Class)) && !this.TrapFree(attempt.Body))
           this.RefuseException("a catch of a class a trap belongs to, around code that may trap");
-        if (clause.Filter is { } filter && (!this.TrapFree(filter) || IrClosures.Within(attempt.Body).Any(statement => statement is IrTry { Finally: not null })
-            || IrTree.Nodes(attempt.Body).Any(node => node is IrCall call && this._throwing.Contains(call.Function))))
+        // A filter is chosen at the throw only for the clauses of this try: a handler inside the body
+        // with a finally inside its own body would hand an exception on after that finally ran; and a
+        // finally inside a function called is run before the call hands the exception back.
+        if (clause.Filter is { } filter && (!this.TrapFree(filter)
+            || selecting && IrClosures.Within(attempt.Body).Any(statement => statement is IrTry { Catches.Count: > 0 } inner && IrClosures.Within(inner.Body).Any(nested => nested is IrTry { Finally: not null }))
+            || IrTree.Nodes(attempt.Body).Any(node => node is IrCall call && this._throwing.Contains(call.Function) && this.RunsFinally(call.Function))))
           this.RefuseException("an exception filter that .NET runs before the finally blocks the exception leaves, or that may trap");
       }
 
       var completes = CanComplete(attempt.Body);
-      var frame = new TryFrame(this.NewLabel("t"), completes, false, this._breakables.Count);
+      var frame = new TryFrame(this.NewLabel("t"), completes, this._breakables.Count) { Selecting = selecting ? attempt.Catches : null };
       this._tries.Add(frame);
-      var body = this.Block(attempt.Body.Statements);
+      var body = Spliced(this.Block(attempt.Body.Statements));
       this._tries.RemoveAt(this._tries.Count - 1);
       if (!frame.Used) {
         // Nothing in the body throws: no clause can run.
@@ -335,39 +447,43 @@ public static partial class RustEmitter {
         body = body with { Tail = new RsCall(new RsPath("Ok"), [new RsTuple([])]) };
 
       var error = this.Temporary("error");
+      var selection = selecting ? this.Temporary("selected") : null;
       // The block's last break out of itself is its value; a block nothing else leaves needs no label (clippy's diverging_sub_expression).
       if (body is { Tail: null, Statements: [.., RsExpressionStatement { Expression: RsBreak { Value: { } last } exit }] } && exit.Label == frame.Label)
         body = new RsBlock([.. body.Statements.Take(body.Statements.Count - 1)], last);
       RsExpression outcome = RustSyntaxRewriter.DescendantsAndSelf(body).Any(node => node is RsBreak other && other.Label == frame.Label) ? new RsLabeledBlock(frame.Label, body)
         : body.Statements.Count == 0 && body.Tail is { } only ? only
         : new RsBlockExpression(body);
-      var dispatch = this.Dispatch(attempt.Catches, error);
+      var dispatch = Spliced(this.Dispatch(attempt.Catches, error, selection));
       // A clause that takes every exception and reads none leaves the exception unnamed (rustc's unused_variables).
       var bound = RustSyntaxRewriter.DescendantsAndSelf(dispatch).Any(node => node is RsPath path && path.Name == error) ? error : "_" + error;
+      var pattern = selection is null ? bound : $"({bound}, {selection})";
+      var payload = selection is null ? ErrorType : $"({ErrorType}, usize)";
       if (!completes) {
-        into.Add(new RsLet(bound, false, ErrorType, outcome));
+        into.Add(new RsLet(pattern, false, payload, outcome));
         into.AddRange(dispatch.Statements);
         return;
       }
 
       var result = this.Temporary("outcome");
-      into.Add(new RsLet(result, false, Fallible(null), outcome));
-      into.Add(new RsExpressionStatement(new RsIf(new RsLetCondition($"Err({bound})", new RsPath(result)), dispatch, null)));
+      into.Add(new RsLet(result, false, Fallible(null, payload), outcome));
+      into.Add(new RsExpressionStatement(new RsIf(new RsLetCondition($"Err({pattern})", new RsPath(result)), dispatch, null)));
     }
 
-    /// <summary>The catch clauses over an exception bound to a name: an <c>if</c> chain, the exception going on where no clause takes it.</summary>
-    private RsBlock Dispatch(IReadOnlyList<IrCatch> catches, string error) {
+    /// <summary>
+    /// The catch clauses over an exception bound to a name: an <c>if</c> chain, the exception going on
+    /// where no clause takes it; over the number of the clause chosen at the throw where there is one.
+    /// </summary>
+    private RsBlock Dispatch(IReadOnlyList<IrCatch> catches, string error, string? selection) {
       RsExpression? chain = null;
       var rest = new RsBlock([new RsExpressionStatement(this.Escape(new RsPath(error)))], null);
-      foreach (var clause in catches.Reverse()) {
+      for (var index = catches.Count - 1; index >= 0; --index) {
+        var clause = catches[index];
         if (clause.Local is { } local)
           this._locals[local] = error;
 
-        RsExpression? test = this.ErrorClass(clause.Class) == 0 ? null
-          : new RsCall(new RsPath(this.StringHelper("ply_is")), [new RsField(new RsPath(error), "class"), new RsLiteral(this.ErrorClass(clause.Class).ToString(CultureInfo.InvariantCulture))]) { Type = IrType.Bool };
-        if (clause.Filter is { } filter)
-          test = test is null ? this.Expression(filter) : this.Binary(test, "&&", this.Expression(filter), IrType.Bool);
-
+        var test = selection is null ? this.ClauseTest(clause, error)
+          : new RsBinary(new RsPath(selection), "==", new RsLiteral(index.ToString(CultureInfo.InvariantCulture))) { Type = IrType.Bool };
         this._caught.Add(error);
         var body = this.Block(clause.Body.Statements);
         this._caught.RemoveAt(this._caught.Count - 1);
@@ -386,27 +502,149 @@ public static partial class RustEmitter {
     }
 
     /// <summary>
-    /// A <c>try</c> with only a <c>finally</c>, around a body that always returns and throws nothing:
-    /// the body a labelled block its <c>return</c> leaves with the value, then the <c>finally</c>, then
-    /// the return. Any other <c>finally</c> is refused.
+    /// A <c>try</c> with a <c>finally</c>: the body - with its catch clauses, where it has any - a block
+    /// every way out of which leaves it first; then the <c>finally</c>; then the way out made. A body
+    /// left in one way only gives what leaves as its value: <c>let value = 'f0: { …; break 'f0 v; … };</c>,
+    /// the <c>finally</c>, <c>return value</c>. A body left in several, or one that may also complete,
+    /// sets a variable for each way before it leaves - <c>returned = Some(v)</c>, <c>thrown = Some(e)</c>,
+    /// <c>jumped = 1</c> - and each is made after the <c>finally</c>, an exception handed on as the
+    /// innermost handler or <c>try</c> around takes it, a <c>return</c> passing any <c>finally</c> around.
     /// </summary>
-    private void Finally(IrBlock body, IrBlock final, List<RsStatement> into) {
-      if (CanComplete(body) || this.Escapes(body.Statements, [], null)) {
-        into.Add(new RsExpressionStatement(this.RefuseException("a finally block around a body that may throw or complete")));
+    private void Finally(IrTry attempt, List<RsStatement> into) {
+      var frame = new TryFrame(this.NewLabel("f"), false, this._breakables.Count) { IsFinally = true };
+      this._tries.Add(frame);
+      var inner = new List<RsStatement>();
+      if (attempt.Catches.Count > 0)
+        this.Try(attempt with { Finally = null }, inner);
+      else
+        this.Statements(attempt.Body.Statements, inner);
+      this._tries.RemoveAt(this._tries.Count - 1);
+      var body = new RsBlock(inner, null);
+      var marks = RustSyntaxRewriter.DescendantsAndSelf(body).OfType<RsBreak>().Where(exit => exit.Label == frame.Label).Select(Mark).ToHashSet(StringComparer.Ordinal);
+      var completes = (CanComplete(attempt.Body) || attempt.Catches.Any(clause => CanComplete(clause.Body))) && !(inner.Count > 0 && Diverges(inner[^1]));
+      var ways = marks.Count(mark => mark != JumpedMark) + frame.Jumps.Count;
+      var final = attempt.Finally!.Statements;
+      if (ways == 0) {
+        into.AddRange(Spliced(body).Statements);
+        this.Statements(final, into);
         return;
       }
 
-      var frame = new TryFrame(this.NewLabel("f"), false, true, this._breakables.Count);
-      this._tries.Add(frame);
-      var written = this.Block(body.Statements);
-      this._tries.RemoveAt(this._tries.Count - 1);
-      var value = this.Temporary("value");
+      if (!CanComplete(attempt.Finally!)) {
+        // A finally that never completes - it throws - makes no way out of the body: each only leaves the body, what it carries evaluated.
+        body = Spliced(RustSyntaxRewriter.Rewrite(body, node => node is RsBreak { Value: RsCall { Callee: RsPath { Name: ReturnedMark or ThrownMark or JumpedMark } } marked } exit && exit.Label == frame.Label
+          ? new RsBlockExpression(new RsBlock([
+            .. marked.Arguments.Where(argument => Mark(exit) != JumpedMark && argument is not (RsPath or RsLiteral)).Select(argument => new RsLet("_", false, null, argument)),
+            new RsExpressionStatement(new RsBreak(frame.Label, null))
+          ], null))
+          : node));
+        into.Add(new RsExpressionStatement(new RsLabeledBlock(frame.Label, body)));
+        this.Statements(final, into);
+        return;
+      }
+
       var returns = this._function.ReturnType != IrType.Void;
-      var block = new RsLabeledBlock(frame.Label, written);
-      into.Add(returns ? new RsLet(value, false, null, block) : new RsExpressionStatement(block));
-      this.Statements(final.Statements, into);
-      into.Add(new RsExpressionStatement(this.Returned(returns ? new RsPath(value) : null)));
+      if (ways == 1 && !completes) {
+        body = Spliced(RustSyntaxRewriter.Rewrite(body, node => node is RsBreak { Value: RsCall { Callee: RsPath { Name: ReturnedMark or ThrownMark or JumpedMark } } marked } exit && exit.Label == frame.Label
+          ? exit with { Value = marked.Arguments.Count > 0 && Mark(exit) != JumpedMark ? marked.Arguments[0] : null }
+          : node));
+        if (body is { Tail: null, Statements: [.., RsExpressionStatement { Expression: RsBreak last }] } && last.Label == frame.Label)
+          body = new RsBlock([.. body.Statements.Take(body.Statements.Count - 1)], last.Value);
+        RsExpression block = RustSyntaxRewriter.DescendantsAndSelf(body).Any(node => node is RsBreak other && other.Label == frame.Label) ? new RsLabeledBlock(frame.Label, body)
+          : body.Statements.Count == 0 && body.Tail is { } only ? only
+          : new RsBlockExpression(body);
+        var thrown = marks.Contains(ThrownMark);
+        var value = thrown ? this.Temporary("thrown") : marks.Contains(ReturnedMark) && returns ? this.Temporary("value") : null;
+        if (value is null && block is RsBlockExpression { Block: { Tail: null } plain })
+          into.AddRange(plain.Statements);
+        else
+          into.Add(value is null ? new RsExpressionStatement(block) : new RsLet(value, false, null, block));
+        this.Statements(final, into);
+        into.AddRange(thrown ? [new RsExpressionStatement(this.Escape(new RsPath(value!), true))]
+          : marks.Contains(ReturnedMark) ? [new RsExpressionStatement(this.Leaving(value is null ? null : new RsPath(value) { Type = this._function.ReturnType }))]
+          : this.Replay(frame.Jumps[0]));
+        return;
+      }
+
+      var returned = marks.Contains(ReturnedMark) ? this.Temporary("returned") : null;
+      var thrownError = marks.Contains(ThrownMark) ? this.Temporary("thrown") : null;
+      var jumped = frame.Jumps.Count > 0 ? this.Temporary("jumped") : null;
+      if (returned is not null)
+        into.Add(new RsLet(returned, true, null, new RsPath(returns ? "None" : "false")));
+      if (thrownError is not null)
+        into.Add(new RsLet(thrownError, true, null, new RsPath("None")));
+      if (jumped is not null)
+        into.Add(new RsLet(jumped, true, null, new RsLiteral(frame.Jumps.Count == 1 ? "false" : "0")));
+      body = Spliced(RustSyntaxRewriter.Rewrite(body, node => {
+        if (node is not RsBreak { Value: RsCall { Callee: RsPath { Name: ReturnedMark or ThrownMark or JumpedMark } } marked } exit || exit.Label != frame.Label)
+          return node;
+
+        var (place, set) = Mark(exit) switch {
+          ReturnedMark => (returned!, returns ? new RsCall(new RsPath("Some"), [marked.Arguments[0]]) : new RsLiteral("true")),
+          ThrownMark => (thrownError!, new RsCall(new RsPath("Some"), [marked.Arguments[0]])),
+          _ => (jumped!, frame.Jumps.Count == 1 ? new RsLiteral("true") : (RsExpression)new RsLiteral((int.Parse(((RsLiteral)marked.Arguments[0]).Text, CultureInfo.InvariantCulture) + 1).ToString(CultureInfo.InvariantCulture)))
+        };
+        return new RsBlockExpression(new RsBlock([new RsExpressionStatement(new RsAssign(new RsPath(place), "=", set)), new RsExpressionStatement(new RsBreak(frame.Label, null))], null));
+      }));
+      into.Add(new RsExpressionStatement(new RsLabeledBlock(frame.Label, body)));
+      this.Statements(final, into);
+      if (thrownError is not null) {
+        var error = this.Temporary("error");
+        into.Add(new RsExpressionStatement(new RsIf(new RsLetCondition($"Some({error})", new RsPath(thrownError)), new RsBlock([new RsExpressionStatement(this.Escape(new RsPath(error), true))], null), null)));
+      }
+
+      if (returned is not null) {
+        var value = returns ? this.Temporary("value") : null;
+        RsExpression condition = value is null ? new RsPath(returned) : new RsLetCondition($"Some({value})", new RsPath(returned));
+        into.Add(new RsExpressionStatement(new RsIf(condition, new RsBlock([new RsExpressionStatement(this.Leaving(value is null ? null : new RsPath(value) { Type = this._function.ReturnType }))], null), null)));
+      }
+
+      if (jumped is not null) {
+        if (frame.Jumps.Count == 1)
+          into.Add(new RsExpressionStatement(new RsIf(new RsPath(jumped), new RsBlock([.. this.Replay(frame.Jumps[0])], null), null)));
+        else
+          into.Add(new RsExpressionStatement(new RsMatch(new RsPath(jumped), [
+            .. frame.Jumps.Select((jump, index) => new RsMatchArm([(index + 1).ToString(CultureInfo.InvariantCulture)], new RsBlockExpression(new RsBlock([.. this.Replay(jump)], null)))),
+            new RsMatchArm(["_"], new RsBlockExpression(RsBlock.Empty))
+          ])));
+      }
+
+      if (!completes)
+        into.Add(new RsExpressionStatement(new RsMacro("unreachable", [])));
     }
+
+    /// <summary>The way out of the body of a <c>try</c> with a <c>finally</c> a break carries: <see cref="ReturnedMark"/>, <see cref="ThrownMark"/> or <see cref="JumpedMark"/>.</summary>
+    private static string Mark(RsBreak exit) => ((RsPath)((RsCall)exit.Value!).Callee).Name;
+
+    /// <summary>A jump out of the body of a <c>try</c> with a <c>finally</c>, made after the <c>finally</c>: the <c>break</c> or <c>continue</c> as it would have been.</summary>
+    private IEnumerable<RsStatement> Replay((Breakable Target, bool Continues) jump)
+      => jump.Continues ? this.ContinueTo(this._breakables.IndexOf(jump.Target)) : [new RsExpressionStatement(this.BreakTo(jump.Target))];
+
+    /// <summary>The innermost <c>try</c> with a <c>finally</c> a jump to the loop or switch at an index of the breakables leaves, or <see langword="null"/>.</summary>
+    private TryFrame? Crossed(int index) => this._tries.LastOrDefault(frame => frame.IsFinally && frame.Breakables > index);
+
+    /// <summary>A jump out of the body of a <c>try</c> with a <c>finally</c>: the break out of the body, marked with the number of the jump, which is made after the <c>finally</c>.</summary>
+    private static RsBreak Jump(TryFrame frame, Breakable target, bool continues) {
+      var index = frame.Jumps.IndexOf((target, continues));
+      if (index < 0) {
+        index = frame.Jumps.Count;
+        frame.Jumps.Add((target, continues));
+      }
+
+      frame.Used = true;
+      return new RsBreak(frame.Label, new RsCall(new RsPath(JumpedMark), [new RsLiteral(index.ToString(CultureInfo.InvariantCulture))]));
+    }
+
+    /// <summary>
+    /// A block with the blocks among its statements that end in a way out - the choice of a clause where
+    /// an exception is thrown, a way out of a <c>finally</c>'s body with the variable it sets - written
+    /// as statements of the block itself, at every depth.
+    /// </summary>
+    private static RsBlock Spliced(RsBlock block) => RustSyntaxRewriter.Rewrite(block, node => node is RsBlock inner && inner.Statements.Any(Splices)
+      ? inner with { Statements = [.. inner.Statements.SelectMany(statement => Splices(statement) ? ((RsBlockExpression)((RsExpressionStatement)statement).Expression).Block.Statements : [statement])] }
+      : node);
+
+    private static bool Splices(RsStatement statement) => statement is RsExpressionStatement { Expression: RsBlockExpression { Block: { Tail: null, Statements: [.., var last] } } } && Diverges(last);
 
     /// <summary><c>return v</c>; in a function that propagates <c>return Ok(v)</c>.</summary>
     private RsReturn Returned(RsExpression? value) {
@@ -417,13 +655,13 @@ public static partial class RustEmitter {
       return new RsReturn(value is RsTry handed ? handed.Operand : new RsCall(new RsPath("Ok"), [value ?? new RsTuple([])]));
     }
 
-    /// <summary>A <c>return</c> inside the body of a <c>finally</c>: <c>break 'f0 value</c>, so that the <c>finally</c> runs first.</summary>
+    /// <summary>A <c>return</c> inside the body of a <c>try</c> with a <c>finally</c>: the break out of the innermost such body, marked, so that the <c>finally</c> runs first.</summary>
     private RsExpression? FinallyReturn(RsExpression? value) {
-      if (this._tries.Count == 0 || !this._tries[^1].Returns)
+      if (this._tries.LastOrDefault(frame => frame.IsFinally) is not { } frame)
         return null;
 
-      this._tries[^1].Used = true;
-      return new RsBreak(this._tries[^1].Label, value);
+      frame.Used = true;
+      return new RsBreak(frame.Label, new RsCall(new RsPath(ReturnedMark), value is null ? [] : [value]));
     }
 
     /// <summary>Whether a statement or an expression traps in no way: what a catch of a class of a trap may stand around.</summary>
@@ -432,14 +670,15 @@ public static partial class RustEmitter {
     private bool TrapFree(IrStmt statement) => statement switch {
       IrBlock or IrIf or IrWhile or IrDoWhile or IrFor or IrDeclare or IrAssign or IrExprStmt or IrReturn or IrRethrow or IrTry or IrBreak or IrContinue
         => IrTree.Expressions(statement).All(this.TrapFree),
-      IrThrow thrown => IsCatchable(thrown.Exception.Type) && this.TrapFree(thrown.Exception),
-      IrGlobalAssign { Global: var global } assign => !IsLocked(global) && this.TrapFree(assign.Value),
+      IrThrow thrown => this.ThrowTrapFree(thrown.Exception),
+      // A global behind a lock traps in no way: its lock is poisoned only by a panic while it was held, which no handler sees.
+      IrGlobalAssign assign => this.TrapFree(assign.Value),
       _ => false
     };
 
     private bool TrapFree(IrExpr expression) => expression switch {
       IrConst or IrLocalRef or IrStrConst or IrNull or IrLambda => true,
-      IrGlobalRef { Global: var global } => !IsLocked(global),
+      IrGlobalRef => true,
       IrBinary { Op: IrBinaryOp.Divide or IrBinaryOp.Remainder } binary when binary.Type.IsInteger && binary.Right is not IrConst { Value: not 0 and not -1 } => false,
       IrBinary { Op: IrBinaryOp.AddChecked or IrBinaryOp.SubtractChecked or IrBinaryOp.MultiplyChecked } => false,
       IrBinary binary => this.TrapFree(binary.Left) && this.TrapFree(binary.Right),
@@ -447,12 +686,28 @@ public static partial class RustEmitter {
       IrConvert { Contract: not IrConversion.Trap } convert => this.TrapFree(convert.Operand),
       IrConditional choice => this.TrapFree(choice.Condition) && this.TrapFree(choice.WhenTrue) && this.TrapFree(choice.WhenFalse),
       IrNew creation when IsCatchable(creation.Type) => creation.Arguments.All(this.TrapFree),
-      IrThrowExpression thrown => IsCatchable(thrown.Exception.Type) && this.TrapFree(thrown.Exception),
+      IrThrowExpression thrown => this.ThrowTrapFree(thrown.Exception),
       IrFieldLoad { Target: IrLocalRef, Field: var field } when field == IrExceptionClass.Message => true,
       IrIntrinsic { Op: IrIntrinsicOp.StrConcat or IrIntrinsicOp.StrEquals or IrIntrinsicOp.StrLength or IrIntrinsicOp.StrFromCodeUnit } operation => operation.Arguments.All(this.TrapFree),
       IrCall call => call.Arguments.All(this.TrapFree) && this.TrapFreeFunction(call.Function),
       _ => false
     };
+
+    /// <summary>Whether the throw of an exception traps in no way: one that propagates as a value, made of what traps in no way.</summary>
+    private bool ThrowTrapFree(IrExpr exception) => this.Propagates(exception) && (exception is IrNew creation ? creation.Arguments.All(this.TrapFree) : this.TrapFree(exception));
+
+    /// <summary>Whether a function of the module may run a <c>finally</c> block while an exception leaves it: it has one, or calls one that may; a recursive one taken to.</summary>
+    private bool RunsFinally(string name) {
+      if (this._runsFinally.TryGetValue(name, out var known))
+        return known;
+
+      this._runsFinally[name] = true;
+      var function = this._module.Functions.FirstOrDefault(candidate => candidate.Name == name);
+      var runs = function is null || IrClosures.Within(function.Body).Any(statement => statement is IrTry { Finally: not null })
+        || IrTree.Nodes(function.Body).Any(node => node is IrCall call && this._throwing.Contains(call.Function) && this.RunsFinally(call.Function));
+      this._runsFinally[name] = runs;
+      return runs;
+    }
 
     /// <summary>Whether a function of the module traps in no way, a recursive one taken to trap.</summary>
     private bool TrapFreeFunction(string name) {

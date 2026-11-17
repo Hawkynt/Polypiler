@@ -249,10 +249,13 @@ public sealed class TrapPolicyEmitTests {
   public void WhatWouldStillPanic_IsRefusedWithPly1552(string methods, string construct)
     => Assert.That(Problems(methods), Has.Some.EqualTo($"PLY1552 trap policy 'result' is not available for '{construct}'").Or.Some.StartsWith($"PLY1552 trap policy 'result' is not available for '{construct}' (in "));
 
+  /// <summary>#1414: a try with catch clauses and a finally under result, a trap of its body caught, the finally run on every path.</summary>
   [Test]
-  public void ExceptionRegionTheAdrLeavesOut_StaysRefusedUnderResult()
-    => Assert.That(Problems("static int s; public static int F(int k) { try { s = checked(k * 2); } catch (System.OverflowException) { s = -1; } finally { s++; } return s; }"),
-      Has.Some.StartsWith("PLY1560 exception region in the function 'F' cannot be emitted under the trap policy 'result': 'a try with both catch clauses and a finally block'"));
+  public void TryWithCatchClausesAndAFinally_IsWrittenUnderResult() {
+    const string Methods = "static int s; public static int F(int k) { try { s = checked(k * 2); } catch (System.OverflowException) { s = -1; } finally { s++; } return s; }";
+    Assert.That(Problems(Methods), Is.Empty);
+    Assert.That(Emitted(Methods), Does.Contain("let mut thrown = None;").And.Contain("thrown = Some(error);"));
+  }
 
   [Test]
   public void WhatWouldStillPanic_IsWrittenUnderPanic()
