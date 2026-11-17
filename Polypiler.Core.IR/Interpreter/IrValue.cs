@@ -140,7 +140,7 @@ public sealed record IrValue {
       (IrTypeKind.F32, float value) => new(type, BitConverter.SingleToUInt32Bits(value), null),
       (IrTypeKind.F64, double value) => new(type, BitConverter.DoubleToUInt64Bits(value), null),
       (IrTypeKind.BigInt, BigInteger value) => new(type, value, null),
-      (>= IrTypeKind.I8 and <= IrTypeKind.U64, sbyte or byte or short or ushort or char or int or uint or long or ulong) => Integer(type, Whole(host)),
+      (_, sbyte or byte or short or ushort or char or int or uint or long or ulong) when plain.IsInteger => Integer(type, Whole(host)),
       _ => throw new ArgumentException($"{host?.GetType().Name ?? "null"} is no host value of {type}.", nameof(host))
     };
   }

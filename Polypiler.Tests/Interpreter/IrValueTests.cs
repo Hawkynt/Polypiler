@@ -39,8 +39,14 @@ public sealed class IrValueTests {
   }
 
   private static IrType Type(string kind) => kind switch {
-    "I8" => IrType.I8, "U8" => IrType.U8, "I16" => IrType.I16, "U16" => IrType.U16,
-    "I32" => IrType.I32, "U32" => IrType.U32, "I64" => IrType.I64, _ => IrType.U64
+    "I8" => IrType.I8,
+    "U8" => IrType.U8,
+    "I16" => IrType.I16,
+    "U16" => IrType.U16,
+    "I32" => IrType.I32,
+    "U32" => IrType.U32,
+    "I64" => IrType.I64,
+    _ => IrType.U64
   };
 
   /// <summary>The largest unsigned 64-bit value and a char cross as their patterns.</summary>
@@ -106,6 +112,7 @@ public sealed class IrValueTests {
       Assert.Throws<ArgumentException>(() => IrValue.FromHost(IrType.I32, "1"));
       Assert.Throws<ArgumentException>(() => IrValue.FromHost(IrType.I32, null));
       Assert.Throws<ArgumentException>(() => IrValue.FromHost(IrType.Bool, 1));
+      Assert.Throws<ArgumentException>(() => IrValue.FromHost(IrType.F64, 1));
     });
   }
 
