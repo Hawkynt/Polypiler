@@ -663,6 +663,8 @@ public static partial class IrInterpreter {
             return IntegerOperations.Evaluate(intrinsic, arguments);
           if (FloatOperationTable.TryEvaluate(intrinsic.Op, arguments, out var computed))
             return computed;
+          if (IeeeOperations.Evaluates(intrinsic))
+            return IeeeOperations.Evaluate(intrinsic, arguments);
 
           return arguments[0] switch {
             float single => Single(intrinsic.Op, single, arguments),

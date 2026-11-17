@@ -66,6 +66,8 @@ public static class IrOperators {
       return integer;
     if (FloatOperationTable.Accepts(op, result, arguments) is { } floating)
       return floating;
+    if (IeeeOperations.Accepts(op, result, arguments) is { } ieee)
+      return ieee;
     if (StringOperations.Accepts(op, result, arguments) is { } text)
       return text;
     if (NumberTextOperations.Accepts(op, result, arguments) is { } number)

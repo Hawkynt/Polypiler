@@ -1,0 +1,32 @@
+id: INTRINSICS.FloatCompare
+title: Compare by an IEEE predicate
+version: 1
+status: draft
+owner: Hawkynt
+issue: IR-FLOAT
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: FloatCompare
+  group: FloatMath
+  typeParameters: [{name: F, constraint: float}]
+  parameters: [{name: x, type: F}, {name: y, type: F}, {name: predicate, type: TYPES.i32}]
+  returns: [{name: result, type: TYPES.bool}]
+  legality:
+    - {id: predicate-constant, text: "predicate is a constant: 0 oeq, 1 one, 2 olt, 3 ole, 4 ogt, 5 oge, 6 ord, 7 ueq, 8 une, 9 ult, 10 ule, 11 ugt, 12 uge, 13 uno", fact: range}
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the comparison of x and y the predicate names; an ordered predicate is false and an unordered one true when an operand is a NaN; -0 equals +0"
+    source: "IEEE Std 754-2019, section 5.11 (comparison predicates)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {F: TYPES.f64}, inputs: ["0x7FF8000000000000", "0x7FF8000000000000", 0], outputs: [0]}
+    - {types: {F: TYPES.f64}, inputs: ["0x7FF8000000000000", "0x7FF8000000000000", 8], outputs: [1]}
+    - {types: {F: TYPES.f64}, inputs: ["0x7FF8000000000000", "0x3FF0000000000000", 2], outputs: [0]}
+    - {types: {F: TYPES.f64}, inputs: ["0x7FF8000000000000", "0x3FF0000000000000", 13], outputs: [1]}
+    - {types: {F: TYPES.f64}, inputs: ["0x8000000000000000", "0x0000000000000000", 0], outputs: [1]}
+    - {types: {F: TYPES.f32}, inputs: ["0xBF800000", "0x3F800000", 9], outputs: [1]}

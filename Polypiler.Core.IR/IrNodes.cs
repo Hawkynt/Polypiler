@@ -955,7 +955,25 @@ public enum IrIntrinsicOp {
   HighWord,
 
   /// <summary><c>(u32 high, u32 low) → i64</c>: the 64-bit integer of two limbs, the inverse of <see cref="HighWord"/> and the conversion to <c>u32</c>.</summary>
-  JoinWords
+  JoinWords,
+
+  /// <summary><c>(F, F, i32 mode) → F</c>: the sum, rounded once in the constant <see cref="RoundingMode"/> (<c>FAdd[rne|rtz|rup|rdn|rna]</c>, <see cref="IeeeOperations"/>).</summary>
+  FloatAdd,
+
+  /// <summary><c>(F, F, i32 mode) → F</c>: the difference, rounded once in the constant <see cref="RoundingMode"/>.</summary>
+  FloatSubtract,
+
+  /// <summary><c>(F, F, i32 mode) → F</c>: the product, rounded once in the constant <see cref="RoundingMode"/>; never fused.</summary>
+  FloatMultiply,
+
+  /// <summary><c>(F, F, i32 mode) → F</c>: the quotient, rounded once in the constant <see cref="RoundingMode"/>.</summary>
+  FloatDivide,
+
+  /// <summary><c>(F, F, i32 predicate) → bool</c>: one of the fourteen comparisons of <see cref="FloatPredicate"/>, a constant (<c>FCmp.&lt;pred&gt;</c>).</summary>
+  FloatCompare,
+
+  /// <summary><c>(F) → u8</c>: the class of the number as the bits of <see cref="FloatClass"/> (<c>FClass</c>).</summary>
+  FloatClassify
 
 }
 

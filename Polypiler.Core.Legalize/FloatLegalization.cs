@@ -44,14 +44,16 @@ public static class FloatLegalization {
 
   /// <summary>
   /// The rewrite of this legalization, for a backend that composes it with its own: an intrinsic with
-  /// a portable implementation that <paramref name="native"/> rejects becomes a call of it.
+  /// a portable implementation that <paramref name="native"/> rejects becomes a call of it, and an
+  /// operation of <see cref="IeeeOperations"/>, which no target writes itself, becomes what
+  /// <see cref="IeeeLegalization"/> makes of it.
   /// </summary>
   /// <param name="native">Whether the target writes an intrinsic itself.</param>
   /// <returns>The rewrite.</returns>
   public static LibraryRewrite Rewrite(Func<IrIntrinsic, bool> native)
-    => (expression, calls) => expression is IrIntrinsic intrinsic && IsReplaceable(intrinsic) && !native(intrinsic)
+    => (expression, calls) => IeeeLegalization.Call(expression, calls) ?? (expression is IrIntrinsic intrinsic && IsReplaceable(intrinsic) && !native(intrinsic)
       ? calls.Call(Implementation(intrinsic), intrinsic.Type, intrinsic.Arguments)
-      : null;
+      : null);
 
   /// <summary>Whether an intrinsic is one the legalization replaces where the target lacks it.</summary>
   /// <param name="intrinsic">The intrinsic.</param>

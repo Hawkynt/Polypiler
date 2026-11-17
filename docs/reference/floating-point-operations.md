@@ -101,6 +101,32 @@ payload through `getFloat64` and `setFloat64`. Preserving payloads across target
 `IsNaN`, `IsInfinity`, `IsFinite`, `IsNegative` (the sign bit, also of -0 and a NaN), `IsNormal`,
 `IsSubnormal` (a zero is neither), `IsInteger` (finite and integral, -0 included), each a truth value.
 
+## Rounding modes, predicates and classes
+
+The operators of the IR (`IrBinary` `Add`, `Subtract`, `Multiply`, `Divide`) round to nearest even.
+An operation in another rounding mode, a comparison other than the six operators state, and the
+class of a number are intrinsics of `Polypiler.Core.IR.IeeeOperations` (#116) that carry the mode or
+the predicate as their last argument, an `i32` constant the verifier checks:
+
+| Operation | Definition |
+| --- | --- |
+| `FloatAdd`, `FloatSubtract`, `FloatMultiply`, `FloatDivide` `(x, y, mode)` | the exact result rounded once to the format of `x` in `mode`: 0 `rne`, 1 `rtz`, 2 `rup`, 3 `rdn`, 4 `rna` (IEEE 754-2019 §4.3); overflow gives ±∞ or the largest finite number as the mode says (§7.4); an exact zero sum is -0 in `rdn` or of two -0, +0 otherwise; a NaN result is the canonical quiet NaN; a product is never fused |
+| `FloatCompare(x, y, predicate)` | one of the fourteen predicates of §5.11: 0 `oeq`, 1 `one`, 2 `olt`, 3 `ole`, 4 `ogt`, 5 `oge`, 6 `ord`, 7 `ueq`, 8 `une`, 9 `ult`, 10 `ule`, 11 `ugt`, 12 `uge`, 13 `uno`; an ordered one is false and an unordered one true with a NaN operand; -0 equals +0 |
+| `FloatClassify(x)` | a `u8` of bits: exactly one of 1 zero, 2 subnormal, 4 normal, 8 infinite, 16 quiet NaN, 32 signalling NaN, and 64 for the sign bit |
+
+The interpreter computes them exactly: `IeeeFormat` forms the exact result as a rational number and
+rounds it once, for any binary format given by the widths of its exponent and fraction. The registry
+`IeeeFormats` holds `binary32` and `binary64`; another format registers its widths and the same
+operations apply to it. Legalization (`IeeeLegalization`, applied for every backend through
+`FloatLegalization.Rewrite`) makes an operation in `rne` the operator of the IR, `oeq`, `une`, `olt`,
+`ole`, `ogt`, `oge` the comparison operators, and everything else a call of its helper:
+`AddRounded32`/`64`, `SubtractRounded…`, `MultiplyRounded…`, `DivideRounded…`, `CompareFloat`,
+`ClassifyFloat32`/`64` in `Polypiler.Core.IR/Helpers/Operations/IeeeRounding.cs`. The helpers compute
+on 64-bit integers - significands with a sticky bit, the round-and-pack step of Berkeley SoftFloat 3 -
+so they need nothing of the target but its integers and its nearest-even arithmetic. They are checked
+bit for bit against the exact arithmetic, and that against the host's arithmetic with an error-free
+transformation (TwoSum, the fused multiply-add) as the oracle of the directed modes.
+
 ## Angle conversion and interpolation
 
 | Operation | Definition |

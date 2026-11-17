@@ -1,0 +1,31 @@
+id: INTRINSICS.FloatClassify
+title: Classify a floating-point number
+version: 1
+status: draft
+owner: Hawkynt
+issue: IR-FLOAT
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: FloatClassify
+  group: FloatMath
+  typeParameters: [{name: F, constraint: float}]
+  parameters: [{name: x, type: F}]
+  returns: [{name: result, type: TYPES.u8}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "a set of bits: exactly one of 1 zero, 2 subnormal, 4 normal, 8 infinite, 16 quiet NaN, 32 signalling NaN, and 64 when the sign bit is set"
+    source: "IEEE Std 754-2019, section 5.7.2 (class)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {F: TYPES.f64}, inputs: ["0x0000000000000000"], outputs: [1]}
+    - {types: {F: TYPES.f64}, inputs: ["0x8000000000000001"], outputs: [66]}
+    - {types: {F: TYPES.f64}, inputs: ["0x3FF0000000000000"], outputs: [4]}
+    - {types: {F: TYPES.f64}, inputs: ["0xFFF0000000000000"], outputs: [72]}
+    - {types: {F: TYPES.f64}, inputs: ["0x7FF8000000000000"], outputs: [16]}
+    - {types: {F: TYPES.f32}, inputs: ["0x7F800001"], outputs: [32]}

@@ -1,0 +1,31 @@
+id: INTRINSICS.FloatDivide
+title: Divide with a rounding mode
+version: 1
+status: draft
+owner: Hawkynt
+issue: IR-FLOAT
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: FloatDivide
+  group: FloatMath
+  typeParameters: [{name: F, constraint: float}]
+  parameters: [{name: x, type: F}, {name: y, type: F}, {name: mode, type: TYPES.i32}]
+  returns: [{name: result, type: F}]
+  legality:
+    - {id: mode-constant, text: "mode is a constant rounding mode: 0 rne, 1 rtz, 2 rup, 3 rdn, 4 rna", fact: range}
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "x / y; a finite non-zero x over a zero y is an infinity, 0/0 and an infinity over an infinity are NaN, rounded once to the format of F in the rounding mode; a NaN result is the canonical quiet NaN"
+    source: "IEEE Std 754-2019, sections 4.3 (rounding-direction attributes) and 5.4.1 (arithmetic operations)"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {F: TYPES.f64}, inputs: ["0x3FF0000000000000", "0x4008000000000000", 0], outputs: ["0x3FD5555555555555"]}
+    - {types: {F: TYPES.f64}, inputs: ["0x3FF0000000000000", "0x4008000000000000", 2], outputs: ["0x3FD5555555555556"]}
+    - {types: {F: TYPES.f64}, inputs: ["0xBFF0000000000000", "0x4008000000000000", 3], outputs: ["0xBFD5555555555556"]}
+    - {types: {F: TYPES.f64}, inputs: ["0x0000000000000001", "0x4000000000000000", 0], outputs: ["0x0000000000000000"]}
+    - {types: {F: TYPES.f64}, inputs: ["0x0000000000000000", "0x0000000000000000", 0], outputs: ["0x7FF8000000000000"]}

@@ -463,6 +463,8 @@ public static partial class IrVerifier {
             this.Require(false, unformatted);
           if (EnumOperations.Problem(intrinsic) is { } unnamed)
             this.Require(false, unnamed);
+          if (IeeeOperations.Problem(intrinsic) is { } unrounded)
+            this.Require(false, unrounded);
 
           this.Declared(intrinsic.Type);
 
