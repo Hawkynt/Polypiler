@@ -13,6 +13,9 @@
 schema: 1
 
 notices:
+  - path: Polypiler.Core.Optimize/THIRD_PARTY_NOTICES.md
+    components:
+      - { name: 'PB-Compiler 0d73acbea185a2597357d53f7ce9acb44758ba76 (GlobalDce)', licence: LGPL-3.0-or-later }
   - path: Polypiler.Cli/THIRD_PARTY_NOTICES.md
     components:
       - { name: 'System.CommandLine 2.0.15', licence: MIT }
