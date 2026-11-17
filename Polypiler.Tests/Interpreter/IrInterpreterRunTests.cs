@@ -266,7 +266,11 @@ public sealed class IrInterpreterRunTests {
   [Test]
   public void AnUndefinedLocal_AbortsWhenRead() {
     var x = new IrLocal("x", IrType.U32);
-    var module = new IrModule("M", [new IrFunction("f", true, IrType.U32, [], [x], new IrBlock([new IrDeclare(x, null), new IrReturn(new IrLocalRef(x))]))]);
+    var module = new IrModule("M", [new IrFunction("f", true, IrType.U32, [], [x], new IrBlock([
+      new IrDeclare(x, null),
+      // Some path assigns x, so the verifier lets the read stand; the path the run takes does not.
+      new IrIf(new IrConst(IrType.Bool, 0), new IrBlock([new IrAssign(x, new IrConst(IrType.U32, 1))]), null),
+      new IrReturn(new IrLocalRef(x))]))]);
     Assert.That(IrVerifier.Verify(module), Is.Empty);
     var result = IrInterpreter.Run(module, "f", [], new() { RecordValues = true });
     Assert.That(result.Outcome, Is.EqualTo(ExecutionOutcome.Aborted));
