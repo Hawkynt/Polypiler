@@ -776,7 +776,7 @@ codes:
     rule: ir.integer.contract
     area: ir
     owner: IR-INT
-    surfaces: "IrVerifier.Verify, for an IrIntegerOp without the overflow contract of Add, Sub, Mul and Neg, the zero-divisor contract of a division or remainder, the ovf contract of SDiv and SRem, or the shift-amount contract of a shift"
+    surfaces: "IrVerifier.Verify, for an IrIntegerOp without the overflow contract of Add, Sub, Mul and Neg, the zero-divisor contract of a division or remainder, the ovf contract of SDiv and SRem, or the shift-amount contract of a shift; and ProfileContracts.Check, as '<operation>[undefined]' is not permitted: source profile '<profile>' does not declare undefinedOverflow, for an [undefined] contract in a module of a profile that does not permit it"
   - code: PLY0800
     severity: error
     exit: UnsupportedConstruct

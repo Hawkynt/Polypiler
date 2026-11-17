@@ -50,7 +50,7 @@ public static class IntegerContractLegalization {
       // A narrow type is computed exactly in 64 bits, and the conversion back traps where the result leaves it.
       IrOverflowKind.Trap => type.IsWideInteger ? new IrBinary(checkedOp, left, right)
         : new IrConvert(type, new IrBinary(op, To(IrType.I64, left), To(IrType.I64, right)), IrConversion.Trap),
-      // Modulo 2^32 and then modulo 2^width is modulo 2^width.
+      // Modulo 2^32 and then modulo 2^width is modulo 2^width; an [undefined] result in range is the wrapped one, and none other is relied on.
       _ => type.IsWideInteger ? new IrBinary(op, left, right) : new IrConvert(type, new IrBinary(op, To(IrType.I32, left), To(IrType.I32, right)))
     };
   }
@@ -96,7 +96,8 @@ public static class IntegerContractLegalization {
     var (value, amount) = (node.Operands[0], node.Operands[1]);
     var unsigned = type.IsSigned ? Counterpart(type) : type;
     var signed = type.IsSigned ? type : Counterpart(type);
-    if (contract.Kind == IrShiftKind.Mask)
+    // Nothing may rely on the value of an [undefined] shift beyond the width, so it is the cheapest one.
+    if (contract.Kind is IrShiftKind.Mask or IrShiftKind.Undefined)
       return Masked(node.Op, type, value, amount, unsigned, signed);
 
     int? trap = contract.Kind switch {

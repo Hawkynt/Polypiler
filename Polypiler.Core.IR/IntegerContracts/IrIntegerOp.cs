@@ -51,7 +51,14 @@ public enum IrOverflowKind {
   Trap,
 
   /// <summary>The result is clamped to the smallest or largest value of the type.</summary>
-  Saturate
+  Saturate,
+
+  /// <summary>
+  /// A result outside the type is undefined behaviour (#122), as signed overflow is in C: a result in
+  /// range is the wrapped one, and the interpreter stops with <see cref="IrUndefinedBehaviourException"/>
+  /// on one outside. Legal only in modules whose source profile declares <c>undefinedOverflow</c>.
+  /// </summary>
+  Undefined
 
 }
 
@@ -79,16 +86,20 @@ public sealed record IrOverflowContract {
   /// <summary><c>[sat]</c>: the nearest bound of the type.</summary>
   public static IrOverflowContract Saturate { get; } = new(IrOverflowKind.Saturate, IrTrap.IntegerOverflow);
 
+  /// <summary><c>[undefined]</c>: a result outside the type is undefined behaviour.</summary>
+  public static IrOverflowContract Undefined { get; } = new(IrOverflowKind.Undefined, IrTrap.IntegerOverflow);
+
   /// <summary><c>[trap &lt;label&gt;]</c>: the operation raises the trap.</summary>
   /// <param name="label">The trap raised; an integer overflow when none is given.</param>
   /// <returns>The contract.</returns>
   public static IrOverflowContract Trap(IrTrap label = IrTrap.IntegerOverflow) => new(IrOverflowKind.Trap, label);
 
-  /// <summary>The contract as the text form writes it inside the brackets: <c>wrap</c>, <c>trap IntegerOverflow</c>, <c>sat</c>.</summary>
+  /// <summary>The contract as the text form writes it inside the brackets: <c>wrap</c>, <c>trap IntegerOverflow</c>, <c>sat</c>, <c>undefined</c>.</summary>
   public override string ToString() => this.Kind switch {
     IrOverflowKind.Wrap => "wrap",
     IrOverflowKind.Trap => $"trap {this.Label}",
-    _ => "sat"
+    IrOverflowKind.Saturate => "sat",
+    _ => "undefined"
   };
 
 }
@@ -100,7 +111,10 @@ public enum IrDivisorKind {
   Trap,
 
   /// <summary><c>divzero=zero</c>: the quotient and the remainder are 0.</summary>
-  Zero
+  Zero,
+
+  /// <summary><c>divzero=undefined</c>: a zero divisor is undefined behaviour (#122).</summary>
+  Undefined
 
 }
 
@@ -126,10 +140,14 @@ public sealed record IrDivisorContract {
   /// <returns>The contract.</returns>
   public static IrDivisorContract Trap(IrTrap label = IrTrap.DivideByZero) => new(IrDivisorKind.Trap, label);
 
-  /// <summary>The contract as the text form writes it: <c>trap DivideByZero</c>, <c>divzero=zero</c>.</summary>
+  /// <summary><c>[divzero=undefined]</c>: a zero divisor is undefined behaviour.</summary>
+  public static IrDivisorContract Undefined { get; } = new(IrDivisorKind.Undefined, IrTrap.DivideByZero);
+
+  /// <summary>The contract as the text form writes it: <c>trap DivideByZero</c>, <c>divzero=zero</c>, <c>divzero=undefined</c>.</summary>
   public override string ToString() => this.Kind switch {
     IrDivisorKind.Trap => $"trap {this.Label}",
-    _ => "divzero=zero"
+    IrDivisorKind.Zero => "divzero=zero",
+    _ => "divzero=undefined"
   };
 
 }
@@ -150,7 +168,10 @@ public enum IrShiftKind {
   /// The amount is promised below the width: a constant amount that is not is a verifier error
   /// (<c>PLY0126</c>), and the interpreter raises <see cref="IrTrap.InvalidOperation"/> for a variable one.
   /// </summary>
-  Strict
+  Strict,
+
+  /// <summary>An amount not below the width is undefined behaviour (#122), as in C.</summary>
+  Undefined
 
 }
 
@@ -182,12 +203,16 @@ public sealed record IrShiftContract {
   /// <returns>The contract.</returns>
   public static IrShiftContract Trap(IrTrap label = IrTrap.IntegerOverflow) => new(IrShiftKind.Trap, label);
 
-  /// <summary>The contract as the text form writes it: <c>mask</c>, <c>unbounded</c>, <c>trap IntegerOverflow</c>, <c>strict</c>.</summary>
+  /// <summary><c>[undefined]</c>: an amount not below the width is undefined behaviour.</summary>
+  public static IrShiftContract Undefined { get; } = new(IrShiftKind.Undefined, IrTrap.InvalidOperation);
+
+  /// <summary>The contract as the text form writes it: <c>mask</c>, <c>unbounded</c>, <c>trap IntegerOverflow</c>, <c>strict</c>, <c>undefined</c>.</summary>
   public override string ToString() => this.Kind switch {
     IrShiftKind.Mask => "mask",
     IrShiftKind.Unbounded => "unbounded",
     IrShiftKind.Trap => $"trap {this.Label}",
-    _ => "strict"
+    IrShiftKind.Strict => "strict",
+    _ => "undefined"
   };
 
 }
@@ -208,6 +233,22 @@ public sealed record IrIntegerContract(IrOverflowContract? Overflow = null, IrDi
   /// <summary>A shift-amount contract alone, that of a shift.</summary>
   /// <param name="shift">The contract.</param>
   public static implicit operator IrIntegerContract(IrShiftContract shift) => new(Shift: shift);
+
+  /// <summary>
+  /// What a source's <c>checked</c> arithmetic means for an opcode (#122): <c>[trap IntegerOverflow]</c> on
+  /// <c>Add</c>, <c>Sub</c>, <c>Mul</c>, <c>Neg</c>; <c>[trap DivideByZero, ovf=trap IntegerOverflow]</c> on
+  /// <c>SDiv</c>, <c>SRem</c>; <c>[trap DivideByZero]</c> on <c>UDiv</c>, <c>URem</c>. It is the expansion the
+  /// withdrawn <c>[checked]</c> text alias stood for.
+  /// </summary>
+  /// <param name="op">An arithmetic operation or a division.</param>
+  /// <returns>The contract.</returns>
+  /// <exception cref="System.ArgumentOutOfRangeException"><paramref name="op"/> is a shift, which has no checked form.</exception>
+  public static IrIntegerContract Checked(IrIntegerOpcode op) => op switch {
+    IrIntegerOpcode.Add or IrIntegerOpcode.Sub or IrIntegerOpcode.Mul or IrIntegerOpcode.Neg => IrOverflowContract.Trap(),
+    IrIntegerOpcode.UDiv or IrIntegerOpcode.URem => IrDivisorContract.Trap(),
+    IrIntegerOpcode.SDiv or IrIntegerOpcode.SRem => new(IrOverflowContract.Trap(), IrDivisorContract.Trap()),
+    _ => throw new System.ArgumentOutOfRangeException(nameof(op), op, "A shift has no checked form.")
+  };
 
   /// <summary>A zero-divisor contract alone, that of an unsigned division or remainder.</summary>
   /// <param name="divisor">The contract.</param>

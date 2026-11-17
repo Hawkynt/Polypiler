@@ -42,6 +42,8 @@ public sealed class IntegerContractTests {
       return Carried(type, value!).ToString(System.Globalization.CultureInfo.InvariantCulture);
     } catch (IrTrapException trap) {
       return "trap " + trap.Trap;
+    } catch (IrUndefinedBehaviourException) {
+      return "undefined";
     } catch (IrException exception) {
       return "throws " + exception.Class.Name;
     }
@@ -65,6 +67,8 @@ public sealed class IntegerContractTests {
       return IrIntegerContracts.Evaluate(node, operands).ToString(System.Globalization.CultureInfo.InvariantCulture);
     } catch (IrTrapException trap) {
       return "trap " + trap.Trap;
+    } catch (IrUndefinedBehaviourException) {
+      return "undefined";
     }
   }
 
@@ -103,6 +107,7 @@ public sealed class IntegerContractTests {
         return contract.Overflow!.Kind switch {
           IrOverflowKind.Wrap => Of(exact),
           IrOverflowKind.Saturate => Of(exact < minimum ? minimum : maximum),
+          IrOverflowKind.Undefined => "undefined",
           _ => "trap " + contract.Overflow.Label
         };
       }
@@ -111,10 +116,18 @@ public sealed class IntegerContractTests {
         var (x, y) = signed ? (Signed(a), Signed(b)) : (Bits(a), Bits(b));
         var quotient = op is IrIntegerOpcode.UDiv or IrIntegerOpcode.SDiv;
         if (y.IsZero)
-          return contract.Divisor!.Kind == IrDivisorKind.Zero ? "0" : "trap " + contract.Divisor.Label;
+          return contract.Divisor!.Kind switch {
+            IrDivisorKind.Zero => "0",
+            IrDivisorKind.Undefined => "undefined",
+            _ => "trap " + contract.Divisor.Label
+          };
 
         if (signed && x == -(modulus / 2) && y == -1)
-          return contract.Overflow!.Kind == IrOverflowKind.Wrap ? Of(quotient ? x : 0) : "trap " + contract.Overflow.Label;
+          return contract.Overflow!.Kind switch {
+            IrOverflowKind.Wrap => Of(quotient ? x : 0),
+            IrOverflowKind.Undefined => "undefined",
+            _ => "trap " + contract.Overflow.Label
+          };
 
         return Of(quotient ? BigInteger.Divide(x, y) : BigInteger.Remainder(x, y));
       }
@@ -130,6 +143,8 @@ public sealed class IntegerContractTests {
               return Of(op == IrIntegerOpcode.AShr && Signed(a) < 0 ? -1 : 0);
             case IrShiftKind.Trap:
               return "trap " + shift.Label;
+            case IrShiftKind.Undefined:
+              return "undefined";
             default:
               return "trap InvalidOperation";
           }
@@ -148,13 +163,14 @@ public sealed class IntegerContractTests {
   // ---------------------------------------------------------------- the cases
 
   private static IEnumerable<IrIntegerContract> Contracts(IrIntegerOpcode op) => op switch {
-    IrIntegerOpcode.Add or IrIntegerOpcode.Sub or IrIntegerOpcode.Mul or IrIntegerOpcode.Neg => [IrOverflowContract.Wrap, IrOverflowContract.Trap(), IrOverflowContract.Saturate],
-    IrIntegerOpcode.UDiv or IrIntegerOpcode.URem => [IrDivisorContract.Trap(), IrDivisorContract.Zero],
+    IrIntegerOpcode.Add or IrIntegerOpcode.Sub or IrIntegerOpcode.Mul or IrIntegerOpcode.Neg => [IrOverflowContract.Wrap, IrOverflowContract.Trap(), IrOverflowContract.Saturate, IrOverflowContract.Undefined],
+    IrIntegerOpcode.UDiv or IrIntegerOpcode.URem => [IrDivisorContract.Trap(), IrDivisorContract.Zero, IrDivisorContract.Undefined],
     IrIntegerOpcode.SDiv or IrIntegerOpcode.SRem => [
       new(IrOverflowContract.Wrap, IrDivisorContract.Trap()), new(IrOverflowContract.Trap(), IrDivisorContract.Trap()),
-      new(IrOverflowContract.Wrap, IrDivisorContract.Zero), new(IrOverflowContract.Trap(), IrDivisorContract.Zero)
+      new(IrOverflowContract.Wrap, IrDivisorContract.Zero), new(IrOverflowContract.Trap(), IrDivisorContract.Zero),
+      new(IrOverflowContract.Undefined, IrDivisorContract.Undefined)
     ],
-    _ => [IrShiftContract.Mask, IrShiftContract.Unbounded, IrShiftContract.Trap(), IrShiftContract.Strict]
+    _ => [IrShiftContract.Mask, IrShiftContract.Unbounded, IrShiftContract.Trap(), IrShiftContract.Strict, IrShiftContract.Undefined]
   };
 
   private static IEnumerable<(IrIntegerOpcode Op, IrType Type, IrIntegerContract Contract)> Combinations(IEnumerable<IrType> types)
@@ -275,7 +291,8 @@ public sealed class IntegerContractTests {
         var expected = Reference(op, type, contract, a, b);
         var operands = op == IrIntegerOpcode.Neg ? new[] { a } : [a, b];
         var (direct, legal) = (Run(module, type, operands), Run(lowered, type, operands));
-        if ((direct != expected || Lowered(legal) != Lowered(expected)) && mismatches.Count < 5)
+        // Nothing may rely on the value the lowered code gives where the contract is [undefined].
+        if ((direct != expected || (expected != "undefined" && Lowered(legal) != Lowered(expected))) && mismatches.Count < 5)
           mismatches.Add($"{a}, {b}: {direct} and lowered {legal}, expected {expected}");
       }
 

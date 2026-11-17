@@ -288,8 +288,38 @@ bit-vector definitions, and the boundaries of every width in the interpreter and
 (`Polypiler.Tests/Integer/IntegerContractTests.cs`).
 
 Withdrawn by [ADR 0009](../adr/0009-structured-tree-ir.md): the `.pir` text input and its aliases (a
-missing contract read as `[wrap]`, `[strict]`, `[trap DivideByZero]`, `ovf=wrap`); every node states its
-contract.
+missing contract read as `[wrap]`, `[strict]`, `[trap DivideByZero]`, `ovf=wrap`; `[checked]`); every node
+states its contract, and `IrIntegerContract.Checked(op)` gives what `[checked]` stood for.
+
+### Undefined behaviour, flag forms and profiles
+
+`[undefined]` (#122) is the overflow contract of C's signed arithmetic: on `Add`, `Sub`, `Mul`, `Neg`,
+as the amount contract of a shift, and as `divzero=undefined` and `ovf=undefined` on a division. A
+result in range is the `[wrap]` one; out of range the reference interpreter stops with
+`IrUndefinedBehaviourException` - the outcome *UndefinedBehaviourReached(instruction)*, which no catch of
+the program sees - and nothing may rely on a value. The lowering writes the plain target operation
+(`[wrap]`, `[mask]`, the trapping division). Only a source profile that declares `undefinedOverflow`
+permits it: `ProfileContracts.Check(module, profile)` reports every other use as `PLY0127`.
+
+`OverflowFlagForms` gives `AddOverflow`, `SubOverflow` and `MulOverflow` - Rust's `overflowing_add`, C's
+`__builtin_add_overflow` - as the `[wrap]` result and the `AddOverflows`/`SubOverflows`/`MulOverflows`
+flag over the same operands; until the IR has tuples (#120) the operands must be constants or variables.
+
+`ProfileContracts.For(profile, op, type, context)` is the one table every frontend looks an operator up in:
+
+| Profile | Context | `+ - *` (signed / unsigned) | `<<` `>>` | `/` `%` signed | `/` `%` unsigned |
+| --- | --- | --- | --- | --- | --- |
+| `c/…` | - | `[undefined]` / `[wrap]` | `[undefined]` | `[divzero=undefined, ovf=undefined]` | `[divzero=undefined]` |
+| `csharp/…` | `unchecked` (default) | `[wrap]` | `[mask]` | `[trap DivideByZero, ovf=trap IntegerOverflow]` | `[trap DivideByZero]` |
+| `csharp/…` | `checked` | `[trap IntegerOverflow]` | `[mask]` | `[trap DivideByZero, ovf=trap IntegerOverflow]` | `[trap DivideByZero]` |
+| `rust/…` | `debug` (default) | `[trap IntegerOverflow]` | `[trap IntegerOverflow]` | `[trap DivideByZero, ovf=trap IntegerOverflow]` | `[trap DivideByZero]` |
+| `rust/…` | `release` | `[wrap]` | `[mask]` | `[trap DivideByZero, ovf=trap IntegerOverflow]` | `[trap DivideByZero]` |
+| `java/…` | - | `[wrap]` | `[mask]` | `[trap DivideByZero, ovf=wrap]` | `[trap DivideByZero]` |
+| `perl/…` | - | the recipe `promote-to-float` | - | - | - |
+
+The recipe `promote-to-float` is named only: Perl continues a result outside `i64` exactly as `u64` up to
+`UV_MAX` and as `f64` beyond it, a value whose type depends on the operands, which the frontend that
+imports Perl builds from existing operations.
 
 ## The arbitrary-precision integer
 

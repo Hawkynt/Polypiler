@@ -35,13 +35,19 @@ public static partial class IrModuleFormat {
       var overflow = this.Part<IrOverflowKind>() is { } o ? o.Kind switch {
         IrOverflowKind.Wrap => IrOverflowContract.Wrap,
         IrOverflowKind.Saturate => IrOverflowContract.Saturate,
+        IrOverflowKind.Undefined => IrOverflowContract.Undefined,
         _ => IrOverflowContract.Trap(o.Label)
       } : null;
-      var divisor = this.Part<IrDivisorKind>() is { } d ? d.Kind == IrDivisorKind.Zero ? IrDivisorContract.Zero : IrDivisorContract.Trap(d.Label) : null;
+      var divisor = this.Part<IrDivisorKind>() is { } d ? d.Kind switch {
+        IrDivisorKind.Zero => IrDivisorContract.Zero,
+        IrDivisorKind.Undefined => IrDivisorContract.Undefined,
+        _ => IrDivisorContract.Trap(d.Label)
+      } : null;
       var shift = this.Part<IrShiftKind>() is { } s ? s.Kind switch {
         IrShiftKind.Mask => IrShiftContract.Mask,
         IrShiftKind.Unbounded => IrShiftContract.Unbounded,
         IrShiftKind.Strict => IrShiftContract.Strict,
+        IrShiftKind.Undefined => IrShiftContract.Undefined,
         _ => IrShiftContract.Trap(s.Label)
       } : null;
       return new IrIntegerOp(op, type, this.Nodes<IrExpr>(), new IrIntegerContract(overflow, divisor, shift));

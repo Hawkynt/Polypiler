@@ -93,6 +93,7 @@ public static class IrIntegerContracts {
   /// <param name="operands">The values of its operands, in order.</param>
   /// <returns>The value of the result.</returns>
   /// <exception cref="IrTrapException">The contract raises a trap for the operands.</exception>
+  /// <exception cref="IrUndefinedBehaviourException">An <c>[undefined]</c> contract meets operands outside it (#122).</exception>
   public static long Evaluate(IrIntegerOp node, IReadOnlyList<long> operands) {
     ArgumentNullException.ThrowIfNull(node);
     ArgumentNullException.ThrowIfNull(operands);
@@ -101,13 +102,13 @@ public static class IrIntegerContracts {
     var left = operands[0];
     switch (node.Op) {
       case IrIntegerOpcode.Neg:
-        return Arithmetic(type, contract.Overflow!, -Number(type, left), -left);
+        return Arithmetic(node, contract.Overflow!, -Number(type, left), -left);
       case IrIntegerOpcode.Add:
-        return Arithmetic(type, contract.Overflow!, Number(type, left) + Number(type, operands[1]), left + operands[1]);
+        return Arithmetic(node, contract.Overflow!, Number(type, left) + Number(type, operands[1]), left + operands[1]);
       case IrIntegerOpcode.Sub:
-        return Arithmetic(type, contract.Overflow!, Number(type, left) - Number(type, operands[1]), left - operands[1]);
+        return Arithmetic(node, contract.Overflow!, Number(type, left) - Number(type, operands[1]), left - operands[1]);
       case IrIntegerOpcode.Mul:
-        return Arithmetic(type, contract.Overflow!, (BigInteger)Number(type, left) * (BigInteger)Number(type, operands[1]), unchecked(left * operands[1]));
+        return Arithmetic(node, contract.Overflow!, (BigInteger)Number(type, left) * (BigInteger)Number(type, operands[1]), unchecked(left * operands[1]));
       case IrIntegerOpcode.UDiv or IrIntegerOpcode.URem:
         return Unsigned(node, Pattern(type, left), Pattern(type, operands[1]));
       case IrIntegerOpcode.SDiv or IrIntegerOpcode.SRem:
@@ -129,7 +130,8 @@ public static class IrIntegerContracts {
   private static bool Signed(IrIntegerOpcode op) => op is IrIntegerOpcode.SDiv or IrIntegerOpcode.SRem;
 
   /// <summary>The result of an arithmetic operation under its overflow contract: the exact result, the wrapped one where it does not fit.</summary>
-  private static long Arithmetic(IrType type, IrOverflowContract contract, BigInteger exact, long wrapped) {
+  private static long Arithmetic(IrIntegerOp node, IrOverflowContract contract, BigInteger exact, long wrapped) {
+    var type = node.Type;
     var (minimum, maximum) = ((BigInteger)IrOperators.Minimum(type), (BigInteger)IrOperators.Maximum(type));
     if (exact >= minimum && exact <= maximum)
       return IrOperators.Wrap(type, wrapped);
@@ -137,6 +139,7 @@ public static class IrIntegerContracts {
     return contract.Kind switch {
       IrOverflowKind.Wrap => IrOperators.Wrap(type, wrapped),
       IrOverflowKind.Saturate => Carried(type, exact < minimum ? minimum : maximum),
+      IrOverflowKind.Undefined => throw new IrUndefinedBehaviourException(node),
       _ => throw new IrTrapException(contract.Label)
     };
   }
@@ -158,6 +161,9 @@ public static class IrIntegerContracts {
       if (ovf.Kind == IrOverflowKind.Trap)
         throw new IrTrapException(ovf.Label);
 
+      if (ovf.Kind == IrOverflowKind.Undefined)
+        throw new IrUndefinedBehaviourException(node);
+
       // ovf=wrap: the quotient is the smallest value again, the remainder 0.
       return node.Op == IrIntegerOpcode.SDiv ? IrOperators.Wrap(node.Type, smallest) : 0;
     }
@@ -165,10 +171,14 @@ public static class IrIntegerContracts {
     return IrOperators.Wrap(node.Type, node.Op == IrIntegerOpcode.SDiv ? dividend / divisor : dividend % divisor);
   }
 
-  /// <summary>A zero divisor under the zero-divisor contract: the trap, or 0.</summary>
+  /// <summary>A zero divisor under the zero-divisor contract: the trap, 0, or undefined behaviour.</summary>
   private static long Zero(IrIntegerOp node) {
     var divisor = node.Contract.Divisor!;
-    return divisor.Kind == IrDivisorKind.Zero ? 0 : throw new IrTrapException(divisor.Label);
+    return divisor.Kind switch {
+      IrDivisorKind.Zero => 0,
+      IrDivisorKind.Undefined => throw new IrUndefinedBehaviourException(node),
+      _ => throw new IrTrapException(divisor.Label)
+    };
   }
 
   private static long Shift(IrIntegerOp node, long value, ulong amount) {
@@ -184,6 +194,8 @@ public static class IrIntegerContracts {
           return node.Op == IrIntegerOpcode.AShr && SignedOf(type, value) < 0 ? IrOperators.Wrap(type, -1) : 0;
         case IrShiftKind.Trap:
           throw new IrTrapException(contract.Label);
+        case IrShiftKind.Undefined:
+          throw new IrUndefinedBehaviourException(node);
         default:
           throw new IrTrapException(IrTrap.InvalidOperation);
       }
