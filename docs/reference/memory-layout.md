@@ -1,7 +1,7 @@
 # Memory layout
 
 How a value of the IR lies in bytes when it lies in memory: the layout of a record under the data model
-of a target. Everything here is library code of `Polypiler.Core.IR` plus nodes the interpreter runs
+of a target and the order of the bytes of a number. Everything here is library code of `Polypiler.Core.IR` plus nodes the interpreter runs
 and `IrLayoutLowering` resolves for one target, so a backend that writes pointers needs nothing of its
 own.
 Related: [repository README](../../README.md) · [IR and analysis](../architecture/IR.md) ·
@@ -58,11 +58,31 @@ does not change what `Compute` gives. A frontend sets it; an analysis may only s
 | `IrLayoutOf(Alignment, T)` | `AlignOf` | as for the size |
 | `IrLayoutOf(Offset, R, f)` | `OffsetOf`: the offset of field `f` of record `R` | `f` is one of `R`'s own |
 | `IrFieldAddress(p, R, f)` | `FieldAddr`: `p` moved by the offset of `f` | `p` is a `u8*`; `f` is one of `R`'s own; the result is `T*` for a number of the profile's order, `u8*` otherwise |
+| `PointerLoadLittle/Big.T(p)` | the number whose bytes lie at `p` in the stated order | `p` is a `u8*`; `T` an integer that is no enum, `f32` or `f64` |
+| `PointerLoadLittle/Big.bigint(p, n)` | the unsigned number of the `n` bytes at `p`: 24 bits, 128 bits, 4096 bits | `n` is an `i32` |
+| `PointerStoreLittle/Big(p, v)`, `(p, n, v)` | the inverse; a `bigint` writes its lowest `n` bytes in two's complement | as for the loads |
 
 A query of a record whose rule is packed(1) or explicit, the size of a number and the alignment of a
 byte have the same answer under every profile and are answered at once. Every other query waits for the
 profile: `IrInterpreter.Call(module, function, arguments, profile)` answers it, and
 `IrLayoutLowering.Lower(module, profile)` replaces each query by its value and each field address by
-`PointerAdd` on the `u8*` and a `PointerCast`. Without a profile the interpreter refuses it. The rule
-`ir.verifier.records.layout` is registered in the standard registry. A field may state its byte order
-(`IrField.ByteOrder`); its address is then a `u8*`.
+`PointerAdd` on the `u8*` and a `PointerCast`. Without a profile the interpreter refuses it. The rules
+`ir.verifier.records.layout` and `ir.verifier.records.field-byte-order` are registered in the standard
+registry.
+
+## Byte order
+
+An ordered load or store reads and writes its bytes one by one, so no host order leaks in; all bytes are
+checked against the region before one is read or written, and no alignment is required. A field with
+`IrField.ByteOrder` set is addressed as bytes and read with the ordered load of its order; the rule
+`ir.verifier.records.field-byte-order` refuses another order, another type, and a cast of its address.
+
+A plain load or store through a pointer that reinterprets bytes - a `u32*` cast from a `u8*`, a byte of an
+`u32[]` - uses the byte order of the profile: the interpreter lays memory out little-endian without a
+profile, and in the profile's order under one. This is the only place where a host order exists.
+
+`IrLayoutLowering` expands an ordered load or store of a number into byte loads or stores, shifts, ors
+and `BitsFloat`/`FloatBits` where its address and value are locals, constants or pointer arithmetic on
+them; a store reads its last byte first so that it traps before it writes. A `bigint` access, or one
+whose address is computed otherwise, stays as it is, and a backend that meets it refuses it as an
+operation it has no form for.

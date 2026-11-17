@@ -51,6 +51,10 @@ public static class IrOperators {
     if (IrPointers.Accepts(op, result, arguments) is { } pointer)
       return pointer;
 
+    // The byte-ordered loads and stores through a pointer to bytes.
+    if (IrOrderedAccess.Accepts(op, result, arguments) is { } ordered)
+      return ordered;
+
     // The stable sort and the range check of the sequence operations.
     if (IrSequenceOps.Accepts(op, result, arguments) is { } sequence)
       return sequence;

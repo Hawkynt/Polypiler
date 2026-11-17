@@ -1,4 +1,5 @@
 using System;
+using System.Numerics;
 using System.Threading;
 
 namespace Polypiler.Core.IR;
@@ -31,6 +32,9 @@ public static partial class IrInterpreter {
     }
   }
 
+  /// <summary>Whether memory lies in big-endian order: under a profile that says so, never without one.</summary>
+  private static bool BigEndian => _profile.Value?.ByteOrder == IrByteOrder.Big;
+
   /// <summary>
   /// The profile a layout query is answered under: the call's, or for a query no profile changes any of them;
   /// a query that depends on the profile is not answered without one.
@@ -51,6 +55,41 @@ public static partial class IrInterpreter {
       var offset = RecordLayout.OffsetOf(address.Record, address.Field, ProfileFor(IrLayoutQuery.Offset, record));
       var pointer = AsPointer(this.Evaluate(address.Base, frame));
       return pointer with { Offset = pointer.Offset + offset };
+    }
+
+    /// <summary>
+    /// An ordered load or store through a pointer to bytes (#113): every byte is checked against the region first,
+    /// then the bytes are read or written one by one, in the stated order whatever the order of memory.
+    /// </summary>
+    private object? Ordered(IrIntrinsic intrinsic, Frame frame) {
+      var arguments = Array.ConvertAll([.. intrinsic.Arguments], argument => this.Evaluate(argument, frame));
+      var pointer = AsPointer(arguments[0]);
+      var store = IrOrderedAccess.IsStore(intrinsic.Op);
+      var little = IrOrderedAccess.OrderOf(intrinsic.Op) == IrByteOrder.Little;
+      var wide = arguments.Length == (store ? 3 : 2);
+      var type = store ? intrinsic.Arguments[^1].Type : intrinsic.Type;
+      var count = wide ? (long)arguments[1] : type.Size;
+      var region = pointer.Region ?? throw new IrTrapException(IrTrap.NullReference);
+      if (count < 0 || pointer.Offset < 0 || pointer.Offset + count > region.Bytes)
+        throw new IrTrapException(IrTrap.IndexOutOfRange);
+
+      var bytes = new byte[count];
+      if (!store) {
+        for (var index = 0; index < bytes.Length; ++index)
+          bytes[index] = (byte)(long)region.At(pointer.Offset + index, IrType.U8).Get(0);
+
+        return wide ? IntegerOperations.LoadWide(bytes, 0, bytes.Length, little) : IntegerOperations.Load(type, bytes, 0, little);
+      }
+
+      if (wide)
+        IntegerOperations.StoreWide(bytes, 0, bytes.Length, (BigInteger)arguments[2], little);
+      else
+        IntegerOperations.Store(type, bytes, 0, arguments[^1], little);
+
+      for (var index = 0; index < bytes.Length; ++index)
+        region.At(pointer.Offset + index, IrType.U8).Set(0, (long)bytes[index]);
+
+      return null;
     }
 
   }

@@ -8,8 +8,12 @@ namespace Polypiler.Core.IR;
 /// Resolves the layout of a module for one target (#110): every <see cref="IrLayoutOf"/> becomes its value under
 /// the target's <see cref="LayoutProfile"/>, and every <see cref="IrFieldAddress"/> the pointer arithmetic it
 /// stands for - the base moved by the field's offset (<see cref="IrIntrinsicOp.PointerAdd"/> on the <c>u8*</c>)
-/// and cast to the field's pointer type (<see cref="IrIntrinsicOp.PointerCast"/>). What is left are nodes every
-/// backend that has pointers writes already, so a backend needs nothing of its own for records in memory.
+/// and cast to the field's pointer type (<see cref="IrIntrinsicOp.PointerCast"/>). An ordered load or store of a
+/// number through a pointer to bytes (#113) becomes byte loads or stores, shifts and ors - the same in every host
+/// order - where its address, and for a store its value, may be evaluated more than once: a local, a constant, or
+/// pointer arithmetic on them. A store first reads its last byte, so that it traps before it writes any byte. What
+/// is left are nodes every backend that has pointers writes already, so a backend needs nothing of its own for
+/// records in memory; an ordered access of a <c>bigint</c>, or one whose address is computed otherwise, stays.
 /// </summary>
 public static class IrLayoutLowering {
 
@@ -61,7 +65,17 @@ public static class IrLayoutLowering {
 
     public bool Changed { get; private set; }
 
-    public IrBlock Block(IrBlock block) => new([.. block.Statements.Select(statement => Map(statement, this.Expression, this.Block))]);
+    public IrBlock Block(IrBlock block) => new([.. block.Statements.Select(this.Statement)]);
+
+    private IrStmt Statement(IrStmt statement) {
+      var mapped = Map(statement, this.Expression, this.Block);
+      if (mapped is not IrExprStmt { Expression: IrIntrinsic { Arguments: [var address, var value] } store } || !IrOrderedAccess.IsStore(store.Op)
+        || !IrOrderedAccess.IsOrderedType(value.Type) || !Repeatable(address) || !Repeatable(value))
+        return mapped;
+
+      this.Changed = true;
+      return new IrBlock([new IrExprStmt(ByteLoad(address, value.Type.Size - 1)), .. Bytes(store.Op, address, value)]);
+    }
 
     private IrExpr Expression(IrExpr expression) {
       if (expression is IrLambda lambda)
@@ -81,11 +95,67 @@ public static class IrLayoutLowering {
           var offset = RecordLayout.OffsetOf(address.Record, address.Field, profile);
           var moved = offset == 0 ? address.Base : new IrIntrinsic(IrIntrinsicOp.PointerAdd, address.Base.Type, [address.Base, new IrConst(IrType.I32, offset)]);
           return address.Type == moved.Type ? moved : new IrIntrinsic(IrIntrinsicOp.PointerCast, address.Type, [moved]);
+        case IrIntrinsic { Arguments: [var address] } load when IrOrderedAccess.IsOrdered(load.Op) && Repeatable(address):
+          this.Changed = true;
+          return Composed(load, address);
         default:
           return expression;
       }
     }
 
+  }
+
+  /// <summary>Whether an expression may be evaluated more than once to the same effect: a local, a constant, or pointer arithmetic on them.</summary>
+  private static bool Repeatable(IrExpr expression) => expression switch {
+    IrLocalRef or IrConst => true,
+    IrIntrinsic { Op: IrIntrinsicOp.PointerAdd or IrIntrinsicOp.PointerCast } arithmetic => arithmetic.Arguments.All(Repeatable),
+    _ => false
+  };
+
+  /// <summary>The byte at an index from a pointer to bytes.</summary>
+  private static IrExpr ByteLoad(IrExpr address, int index)
+    => new IrIntrinsic(IrIntrinsicOp.PointerLoad, IrType.U8, [index == 0 ? address : new IrIntrinsic(IrIntrinsicOp.PointerAdd, address.Type, [address, new IrConst(IrType.I32, index)])]);
+
+  /// <summary>The unsigned integer of 32 or 64 bits the bytes of a type are assembled in.</summary>
+  private static IrType Word(IrType type) => type.Size == 8 ? IrType.U64 : IrType.U32;
+
+  /// <summary>The significance of the byte at an index of a number of a size in an order: 0 for the lowest.</summary>
+  private static int Significance(IrIntrinsicOp op, int index, int size) => IrOrderedAccess.OrderOf(op) == IrByteOrder.Little ? index : size - 1 - index;
+
+  /// <summary>An ordered load as the or of its bytes, each shifted to its significance, converted to the loaded type.</summary>
+  private static IrExpr Composed(IrIntrinsic load, IrExpr address) {
+    var type = load.Type;
+    var word = Word(type);
+    IrExpr? pattern = null;
+    for (var index = 0; index < type.Size; ++index) {
+      IrExpr part = new IrConvert(word, ByteLoad(address, index), IrConversion.Wrap);
+      var shift = 8 * Significance(load.Op, index, type.Size);
+      if (shift > 0)
+        part = new IrBinary(IrBinaryOp.ShiftLeft, part, new IrConst(IrType.I32, shift));
+
+      pattern = pattern is null ? part : new IrBinary(IrBinaryOp.Or, pattern, part);
+    }
+
+    if (!type.IsFloat)
+      return type == word ? pattern! : new IrConvert(type, pattern!, IrConversion.Wrap);
+
+    var bits = word == IrType.U64 ? IrType.I64 : IrType.I32;
+    return new IrIntrinsic(IrIntrinsicOp.BitsFloat, type, [new IrConvert(bits, pattern!, IrConversion.Wrap)]);
+  }
+
+  /// <summary>An ordered store as one byte store per byte, each the value shifted down from its significance.</summary>
+  private static IEnumerable<IrStmt> Bytes(IrIntrinsicOp op, IrExpr address, IrExpr value) {
+    var type = value.Type;
+    var word = Word(type);
+    IrExpr pattern = type.IsFloat
+      ? new IrConvert(word, new IrIntrinsic(IrIntrinsicOp.FloatBits, word == IrType.U64 ? IrType.I64 : IrType.I32, [value]), IrConversion.Wrap)
+      : type == word ? value : new IrConvert(word, value, IrConversion.Wrap);
+    for (var index = 0; index < type.Size; ++index) {
+      var shift = 8 * Significance(op, index, type.Size);
+      var part = shift == 0 ? pattern : new IrBinary(IrBinaryOp.ShiftRightLogical, pattern, new IrConst(IrType.I32, shift));
+      var target = index == 0 ? address : new IrIntrinsic(IrIntrinsicOp.PointerAdd, address.Type, [address, new IrConst(IrType.I32, index)]);
+      yield return new IrExprStmt(new IrIntrinsic(IrIntrinsicOp.PointerStore, IrType.Void, [target, new IrConvert(IrType.U8, part, IrConversion.Wrap)]));
+    }
   }
 
 }

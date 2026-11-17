@@ -61,7 +61,7 @@ public sealed class VerifierRuleTests {
   public void TheStandardRegistryHoldsTheRuleOnLocalsAndIsFrozen() {
     var standard = VerifierRuleRegistry.Standard;
     Assert.That(standard.IsFrozen, Is.True);
-    Assert.That(standard.Rules.Select(rule => rule.Id), Is.EqualTo(new[] { Assigned, "ir.verifier.records.layout" }));
+    Assert.That(standard.Rules.Select(rule => rule.Id), Is.EqualTo(new[] { Assigned, "ir.verifier.records.layout", "ir.verifier.records.field-byte-order" }));
     Assert.That(standard.Find(Assigned)!.Family, Is.EqualTo("locals"));
     Assert.That(standard.Find(Assigned)!.Description, Does.Contain("no path"));
     Assert.That(() => standard.Register(new BareRule("more")), Throws.InvalidOperationException);

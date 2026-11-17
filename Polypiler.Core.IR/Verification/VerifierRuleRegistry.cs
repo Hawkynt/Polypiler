@@ -20,7 +20,8 @@ public sealed class VerifierRuleRegistry {
   /// <returns>The registry, not frozen.</returns>
   public static VerifierRuleRegistry CreateStandard()
     => new VerifierRuleRegistry().Register(new DefiniteAssignmentRule())
-      .Register(new RecordLayoutRule());
+      .Register(new RecordLayoutRule())
+      .Register(new ByteOrderedFieldRule());
 
   /// <summary>Whether the registry takes no more rules.</summary>
   public bool IsFrozen { get; private set; }

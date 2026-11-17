@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 
 namespace Polypiler.Core.IR;
 
@@ -73,6 +74,42 @@ public static partial class IntegerOperations {
     };
     for (var offset = 0; offset < size; ++offset)
       array[index + (little ? offset : size - 1 - offset)] = (byte)(pattern >> (8 * offset));
+  }
+
+  /// <summary>
+  /// The unsigned number whose bytes stand in the array from the index on, lowest first or highest first, for any
+  /// number of bytes (#113): the widths above 64 bits and those that are no integer type of the IR, such as 24 or
+  /// 4096 bits.
+  /// </summary>
+  /// <param name="array">The bytes.</param>
+  /// <param name="index">The position of the first byte.</param>
+  /// <param name="count">How many bytes; 0 reads the number 0.</param>
+  /// <param name="little">Whether the lowest byte comes first; otherwise the highest does.</param>
+  /// <returns>The number, from 0 to 256^count - 1.</returns>
+  /// <exception cref="IrTrapException">A byte lies outside the array, or the count is negative: an index out of range, before anything is read.</exception>
+  public static BigInteger LoadWide(byte[] array, long index, int count, bool little) {
+    Inside(count, array, index);
+    return new BigInteger(array.AsSpan((int)index, count), isUnsigned: true, isBigEndian: !little);
+  }
+
+  /// <summary>Writes the lowest bytes of a number in two's complement into the array from the index on, lowest first or highest first (#113).</summary>
+  /// <param name="array">The bytes.</param>
+  /// <param name="index">The position of the first byte.</param>
+  /// <param name="count">How many bytes.</param>
+  /// <param name="value">The number; only its lowest <paramref name="count"/> bytes are written.</param>
+  /// <param name="little">Whether the lowest byte comes first; otherwise the highest does.</param>
+  /// <exception cref="IrTrapException">A byte lies outside the array, or the count is negative: an index out of range, before anything is written.</exception>
+  public static void StoreWide(byte[] array, long index, int count, BigInteger value, bool little) {
+    Inside(count, array, index);
+    var pattern = value & ((BigInteger.One << (8 * count)) - 1);
+    for (var offset = 0; offset < count; ++offset)
+      array[index + (little ? offset : count - 1 - offset)] = (byte)(pattern >> (8 * offset) & 0xFF);
+  }
+
+  /// <summary>Traps unless a count of bytes from an index lies in the array.</summary>
+  private static void Inside(long count, byte[] array, long index) {
+    if (count < 0 || index < 0 || index + count > array.Length)
+      throw new IrTrapException(IrTrap.IndexOutOfRange);
   }
 
   /// <summary>The number of bytes of the type, all of which have to lie in the array.</summary>

@@ -955,7 +955,26 @@ public enum IrIntrinsicOp {
   HighWord,
 
   /// <summary><c>(u32 high, u32 low) → i64</c>: the 64-bit integer of two limbs, the inverse of <see cref="HighWord"/> and the conversion to <c>u32</c>.</summary>
-  JoinWords
+  JoinWords,
+
+  /// <summary>
+  /// <c>(u8* p) → T</c>: the integer or floating-point number of <c>T</c> whose bytes lie at <c>p</c>, lowest first
+  /// (#113); <c>(u8* p, i32 n) → bigint</c>: the unsigned number of the <c>n</c> bytes there. No alignment is
+  /// required; all bytes are checked against the region before one is read.
+  /// </summary>
+  PointerLoadLittle,
+
+  /// <summary>As <see cref="PointerLoadLittle"/>, the highest byte first (#113).</summary>
+  PointerLoadBig,
+
+  /// <summary>
+  /// <c>(u8* p, T v)</c>: writes the bytes of the number at <c>p</c>, lowest first (#113); <c>(u8* p, i32 n, bigint v)</c>:
+  /// the lowest <c>n</c> bytes of the number in two's complement. All bytes are checked against the region before one is written.
+  /// </summary>
+  PointerStoreLittle,
+
+  /// <summary>As <see cref="PointerStoreLittle"/>, the highest byte first (#113).</summary>
+  PointerStoreBig
 
 }
 

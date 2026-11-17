@@ -10,7 +10,8 @@ public static partial class IrInterpreter {
   /// counted in bytes, and how many elements of which type it has. A view of the array's own element
   /// type that starts on an element reads the array directly; any other view - one that
   /// <see cref="IrIntrinsicOp.Reinterpret"/> made - reads and writes the bytes of the array's elements,
-  /// the lowest byte of each element first, as the IR fixes it.
+  /// the lowest byte of each element first, as the IR fixes it - or the highest first, when the call runs under a
+  /// big-endian <see cref="LayoutProfile"/> (#113).
   /// </summary>
   private sealed class View(Array backing, IrType backingElement, long byteOffset, int length, IrType element) {
 
@@ -50,7 +51,7 @@ public static partial class IrInterpreter {
       var pattern = 0UL;
       var first = byteOffset + ((long)index * this.Size);
       for (var offset = this.Size - 1; offset >= 0; --offset)
-        pattern = (pattern << 8) | this.Byte(first + offset);
+        pattern = (pattern << 8) | this.Byte(first + Order(offset, this.Size));
 
       return FromBits(this.Element, pattern);
     }
@@ -64,24 +65,27 @@ public static partial class IrInterpreter {
       var pattern = Bits(this.Element, value);
       var first = byteOffset + ((long)index * this.Size);
       for (var offset = 0; offset < this.Size; ++offset)
-        this.Byte(first + offset, (byte)(pattern >> (8 * offset)));
+        this.Byte(first + Order(offset, this.Size), (byte)(pattern >> (8 * offset)));
     }
 
     /// <summary>A byte of the memory of the array, by its position from the start of the array.</summary>
     private byte Byte(long position) {
       var size = backingElement.Size;
       var bits = Bits(backingElement, Internal(backing.GetValue(position / size)!));
-      return (byte)(bits >> (int)(8 * (position % size)));
+      return (byte)(bits >> (int)(8 * Order(position % size, size)));
     }
 
     private void Byte(long position, byte value) {
       var size = backingElement.Size;
       var index = position / size;
-      var shift = (int)(8 * (position % size));
+      var shift = (int)(8 * Order(position % size, size));
       var bits = Bits(backingElement, Internal(backing.GetValue(index)!));
       bits = (bits & ~(0xFFUL << shift)) | ((ulong)value << shift);
       backing.SetValue(External(backing.GetType().GetElementType()!, FromBits(backingElement, bits)), index);
     }
+
+    /// <summary>Where the byte of a significance - 0 the lowest - lies among the bytes of a number of a size: there, or mirrored in big-endian memory.</summary>
+    private static long Order(long significance, int size) => BigEndian ? size - 1 - significance : significance;
 
     /// <summary>The bits of a carried number of a type.</summary>
     private static ulong Bits(IrType type, object value) => value switch {
