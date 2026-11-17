@@ -759,6 +759,32 @@ codes:
     area: ir
     owner: PROTOTYPE
     surfaces: "standard error of polypiler translate, as 'error PLY0101: <reason>' with the reason that the executable carries no float-implementations resource or the reason IrModuleFormat refuses its bytes, when a strict float translation needs the float-implementations module the executable embeds and it is absent or does not read back"
+  - code: PLY0300
+    severity: error
+    exit: InternalError
+    title: no provider of a required fact domain
+    message: "no analysis provides facts of domain '<domain>'"
+    rule: analysis.facade.require
+    area: optimization
+    owner: ANA-FACADE
+    surfaces: "the FactException of ValueFacts.Require when no provider of the domain is registered; a defect of the pass that required it"
+  - code: PLY0301
+    severity: info
+    title: analysis stopped at its budget
+    message: "analysis '<domain>' stopped at its budget in '<function>'; affected facts are Unknown"
+    rule: analysis.facade.budget
+    area: optimization
+    owner: ANA-FACADE
+    surfaces: "ValueFacts.Diagnostics, once per domain whose provider ran out of its budget; every fact it would have answered is Unknown"
+  - code: PLY0302
+    severity: error
+    exit: InternalError
+    title: unsound fact
+    message: "unsound fact: <domain> claims <fact> for <value> at <point>, observed <observed>"
+    rule: analysis.facade.soundness
+    area: optimization
+    owner: ANA-FACADE
+    surfaces: "the diagnostics of FactChecker.Run when a run of the interpreter observes a value a queried fact excludes, and the FactException of ValueFacts.Decide when two providers decide a comparison differently"
   - code: PLY0800
     severity: error
     exit: UnsupportedConstruct
