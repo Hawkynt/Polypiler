@@ -35,8 +35,8 @@ internal static class RustCrates {
   /// A module as <c>translate --to rust</c> prepares it, without emitting it: optimized, legalized for
   /// the profile and through the passes over the legalized module, which the CLI checks and emits.
   /// </summary>
-  public static IrModule Prepared(IrModule module, RustProfile? profile = null, OptimizationLevel level = OptimizationLevel.Default, RustCapabilities? capabilities = null, IReadOnlySet<string>? disabled = null)
-    => IrPassPipeline.Default.Run(Legalized(module, profile, level, capabilities), new OptimizerOptions { Level = level, Disabled = disabled ?? new HashSet<string>() }).Module;
+  public static IrModule Prepared(IrModule module, RustProfile? profile = null, OptimizationLevel level = OptimizationLevel.Default, RustCapabilities? capabilities = null, IReadOnlySet<string>? disabled = null, IReadOnlySet<string>? roots = null)
+    => IrPassPipeline.Default.Run(Legalized(module, profile, level, capabilities), new OptimizerOptions { Level = level, Disabled = disabled ?? new HashSet<string>(), Roots = roots ?? new HashSet<string>() }).Module;
 
   /// <summary>
   /// Why the backend refuses a module legalized for a profile, before the passes, which may take a
@@ -48,7 +48,7 @@ internal static class RustCrates {
   /// <summary>The files of the crate of a module: <c>Cargo.toml</c>, <c>src/lib.rs</c> and the module's file.</summary>
   /// <param name="disabled">The passes of the pipeline after legalization not to run, as <c>--disable-opt</c> names them.</param>
   public static IReadOnlyList<GeneratedFile> Emit(IrModule module, RustProfile? profile = null, RustEmitOptions? options = null, OptimizationLevel level = OptimizationLevel.Default, RustCapabilities? capabilities = null, IReadOnlySet<string>? disabled = null)
-    => RustEmitter.Emit(Prepared(module, profile, level, capabilities, disabled), profile ?? RustProfile.Default, capabilities,
+    => RustEmitter.Emit(Prepared(module, profile, level, capabilities, disabled, options?.TestFunctions.ToHashSet(StringComparer.Ordinal)), profile ?? RustProfile.Default, capabilities,
       level == OptimizationLevel.None ? TargetPassOptions.None : TargetPassOptions.Default, options).Files;
 
   /// <summary>The text of the module's file of a crate.</summary>

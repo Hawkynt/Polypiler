@@ -377,6 +377,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     // callee no longer in it.
     var passes = IrPassPipeline.Default.Run(module, new OptimizerOptions {
       Level = LevelOf(options) ?? OptimizationLevel.Default,
+      Roots = context.Layout?.Tests.ToHashSet(StringComparer.Ordinal) ?? [],
       Disabled = options.TryGetValue(DisableOpt, out var disabled) ? disabled.Split(',').ToHashSet() : []
     });
     module = passes.Module;
