@@ -287,7 +287,8 @@ trait `PlyObject` every trait extends: `is_t(&self)` and `into_t(self: Rc<Self>)
 the module tests for or converts to, each struct answering for itself - no `Any`, no trait upcasting,
 which Rust 1.85 has not. An `Rc` of a struct becomes the `Rc<dyn Trait>` of its base class or interface by
 itself; an `Option` of one that may be null does not, and is mapped where it goes to a variable, a
-parameter, a field or a result of the base's type: `b.clone().map(|o| o as Rc<dyn A>)`.
+parameter, a field or a result of the base's type: `b.clone().map(|o| o as Rc<dyn A>)`. A clone of a
+never-null one is cast, `Rc::clone(&b) as Rc<dyn A>`, since Rust would infer the clone's own type as `dyn A`.
 
 ## Function values
 

@@ -76,8 +76,10 @@ public sealed class EnumGlobalEmitTests {
 
   [Test]
   public void NeverNullDerived_ConvertedToItsBase_IsCoercedAsItIs() {
-    var text = Emitted(Hierarchy + "public static class S { static int G(A a) => a.M(); public static int F() { B b = new B(); return G(b); } }");
+    var text = Emitted(Hierarchy + "public static class S { static int G(A a) => a.M(); public static int F() { B b = new B(); return G(b) + G(new B()); } }");
     Assert.That(text, Does.Not.Contain(".map(|"));
+    // Rc::clone(&b) alone would be inferred as the clone of an Rc<dyn A>, and &b rejected (E0308).
+    Assert.That(text, Does.Contain("g(Rc::clone(&b) as Rc<dyn A>)").And.Contain("g(B::new())"));
   }
 
 }
