@@ -1680,16 +1680,18 @@ codes:
     exit: InvalidSource
     title: interrupt vector invalid
     message: "interrupt vector <vector> is outside 0..<last> for machine profile '<profile>'; or: trap kind '<kind>' requires a vector"
+    rule: machine.trap.vector
     area: machine
     owner: MACH-TRAP
-    reserved: true
+    surfaces: the diagnostics of MachineVerifier.Verify for a MachineTrap whose vector lies outside the profile's interruptVectors, or a software interrupt without a vector
   - code: PLY4026
     severity: warning
     title: software interrupt without a service contract
     message: "software interrupt <vector> at <where> has no service contract; all registers and unknown memory are assumed read and written"
+    rule: machine.trap.contract
     area: machine
     owner: MACH-TRAP
-    reserved: true
+    surfaces: the diagnostics of MachineVerifier.Verify for a resuming software interrupt without service(...); MachineEffects then gives it the conservative summary
   - code: PLY4030
     severity: error
     exit: EnvironmentError

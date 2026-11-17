@@ -1,0 +1,22 @@
+id: EFFECTS.machine-trap
+title: Machine trap through the CPU's exception mechanism
+version: 1
+status: draft
+owner: Hawkynt
+issue: MACH-TRAP
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: machine-trap
+  class: trap
+  ordering: strict
+  duplication: forbidden
+  elimination: forbidden
+  reads: [registers, flags, unknown, io]
+  writes: [registers, flags, unknown, io]
+  mayTrap: true
+  defaultForUnknown: false
+  targets: {unsupported: PLY0100}
