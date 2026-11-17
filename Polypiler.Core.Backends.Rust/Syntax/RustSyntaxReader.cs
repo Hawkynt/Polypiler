@@ -625,6 +625,10 @@ public static class RustSyntaxReader {
         var outer = this._noStruct;
         this._noStruct = false;
         try {
+          // The unit value, (): Ok(()).
+          if (this.Accept(")"))
+            return new RsTuple([]);
+
           var inner = this.Expression();
           if (this.Is(",")) {
             var elements = new List<RsExpression> { inner };

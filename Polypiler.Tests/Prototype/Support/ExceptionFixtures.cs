@@ -72,6 +72,23 @@ internal static class ExceptionFixtures {
     }
 
     yield return Call("Classes", "ClassesDemo", "Rethrow");
+    foreach (var fail in new[] { true, false }) {
+      yield return Call("Regions", "RegionsDemo", "Observed", fail);
+      yield return Call("Regions", "RegionsDemo", "Declined", fail);
+    }
+
+    for (var k = -1; k <= 4; ++k) {
+      yield return Call("Regions", "RegionsDemo", "Returned", k);
+      yield return Call("Regions", "RegionsDemo", "Ways", k);
+      yield return Call("Regions", "RegionsDemo", "Passed", k);
+      yield return Call("Regions", "RegionsDemo", "AroundCall", k);
+    }
+
+    for (var n = 0; n <= 7; ++n)
+      yield return Call("Regions", "RegionsDemo", "Jumps", n);
+
+    yield return Call("Regions", "RegionsDemo", "Nested");
+    yield return Call("Regions", "RegionsDemo", "Replaced");
   }
 
 }

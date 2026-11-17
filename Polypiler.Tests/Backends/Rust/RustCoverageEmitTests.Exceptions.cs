@@ -56,22 +56,45 @@ public sealed partial class RustCoverageEmitTests {
       Has.Some.EqualTo(Region + "the function 'F' cannot be emitted under the trap policy 'panic': 'an exception thrown inside a closure' is not supported by the Rust backend"));
 
   [TestCase("static int G(int k) { if (k > 0) throw new X(\"x\"); return k; } public static int F(int k) { int r = 0; try { r = 1; return G(k); } finally { r = 2; } }",
-    TestName = "Finally_AroundACallThatThrows_IsRefused")]
+    "let mut returned = None;", TestName = "Finally_AroundACallThatThrows_IsWritten")]
   [TestCase("public static int F(int k) { try { try { if (k > 0) throw new X(\"a\"); return 1; } finally { k = 2; } } catch (X) { return 3; } }",
-    TestName = "Finally_AroundAThrow_IsRefused")]
-  public void Finally_AroundABodyThatMayThrow_IsRefused(string methods)
-    => Assert.That(ProblemsWithExceptions(methods),
-      Has.Some.EqualTo(Region + "the function 'F' cannot be emitted under the trap policy 'panic': 'a finally block around a body that may throw or complete' is not supported by the Rust backend"));
+    "let mut thrown = None;", TestName = "Finally_AroundAThrow_IsWritten")]
+  public void Finally_AroundABodyThatMayThrow_IsWritten(string methods, string variable) {
+    Assert.That(ProblemsWithExceptions(methods), Is.Empty);
+    Assert.That(EmittedWithExceptions(methods), Does.Contain(variable));
+  }
 
   [Test]
-  public void Finally_OfAFunctionWithoutAResult_RunsAfterTheBlock()
+  public void Finally_OfAFunctionWithoutAResult_RunsAfterTheBody()
     => Assert.That(EmittedWithExceptions("public static void F(int k) { try { k = 1; return; } finally { k = 2; } }"),
-      Does.Contain("    'f0: {\n        _k = 1;\n        break 'f0;\n    }\n    _k = 2;\n}"));
+      Does.Contain("    _k = 1;\n    _k = 2;\n}"));
 
   [Test]
-  public void Filter_AroundACallThatPropagates_IsRefused()
-    => Assert.That(ProblemsWithExceptions("static int G(int k) { if (k > 0) throw new X(\"x\"); return k; } public static int F(int k) { try { return G(k); } catch (X) when (k > 2) { return 3; } }"),
+  public void Filter_AroundACallThatPropagates_IsTheClassTestAndTheFilter()
+    => Assert.That(EmittedWithExceptions("static int G(int k) { if (k > 0) throw new X(\"x\"); return k; } public static int F(int k) { try { return G(k); } catch (X) when (k > 2) { return 3; } }"),
+      Does.Contain("ply_is(error.class, 13) && k > 2"));
+
+  [Test]
+  public void Filter_AroundACallThatRunsAFinally_IsRefused()
+    => Assert.That(ProblemsWithExceptions("static int H(int k) { if (k > 0) throw new X(\"x\"); return k; } static int G(int k) { try { return H(k); } finally { k = 0; } } "
+      + "public static int F(int k) { try { return G(k); } catch (X) when (k > 2) { return 3; } }"),
       Has.Some.EqualTo(Region + "the function 'F' cannot be emitted under the trap policy 'panic': 'an exception filter that .NET runs before the finally blocks the exception leaves, or that may trap' is not supported by the Rust backend"));
+
+  [Test]
+  public void Filter_ThatMayTrap_IsRefused()
+    => Assert.That(ProblemsWithExceptions("public static int F(int k) { try { if (k > 0) throw new X(\"a\"); return 1; } catch (X) when (10 / k > 0) { return 3; } }"),
+      Has.Some.Contain("'an exception filter that .NET runs before the finally blocks the exception leaves, or that may trap'"));
+
+  [Test]
+  public void ClauseChosenAtTheThrow_TakesEveryExceptionWhereItHasNoClass() {
+    var text = EmittedWithExceptions("public static int F(int k) { try { try { throw new X(\"a\"); } finally { k++; } } catch (X) when (k > 2) { return 1; } catch { return 2; } }");
+    Assert.That(text, Does.Contain("let selected = if ply_is(thrown.class, 13) && k > 2 {\n                0\n            } else {\n                1\n            };"));
+  }
+
+  [Test]
+  public void ExceptionFromACallInsideAFinallysBody_IsChosenAtTheCall()
+    => Assert.That(EmittedWithExceptions("static int G(int k) { if (k > 0) throw new X(\"x\"); return k; } public static int F(int k) { try { try { k = G(k); } finally { k++; } } catch (X) when (k > 2) { return 1; } return k; }"),
+      Does.Contain("Err(error) => {\n                    let selected = if ply_is(error.class, 13) && k > 2 {"));
 
   [Test]
   public void Filter_ThatDividesByAConstant_IsTheClassTestAndTheFilter()

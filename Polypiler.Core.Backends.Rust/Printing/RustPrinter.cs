@@ -696,7 +696,9 @@ public static class RustPrinter {
 
   /// <summary>An <c>if</c> over several lines; an <c>else</c> that is another <c>if</c> follows as <c>else if</c>.</summary>
   private static string If(RsIf choice, int indent, int column) {
-    var text = new StringBuilder("if ").Append(Condition(choice.Condition, indent, column + 3, column)).Append(Block(choice.Then, indent));
+    // An empty block before an else spans two lines, as rustfmt writes it: if c {\n} else { … }.
+    var then = choice.Else is not null && choice.Then is { Statements.Count: 0, Tail: null } ? "{\n" + new string(' ', indent) + "}" : Block(choice.Then, indent);
+    var text = new StringBuilder("if ").Append(Condition(choice.Condition, indent, column + 3, column)).Append(then);
     switch (choice.Else) {
       case RsIf next:
         text.Append(" else ").Append(If(next, indent, column));

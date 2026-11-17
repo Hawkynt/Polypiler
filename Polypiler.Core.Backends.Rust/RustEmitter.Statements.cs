@@ -211,7 +211,7 @@ public static partial class RustEmitter {
         case IrContinue:
           into.AddRange(this.Continue());
           return true;
-        case IrReturn { Value: { } thrower } result when this._tries.Count > 0 && IrTree.Nodes(thrower).Any(node => node is IrThrowExpression thrown && IsCatchable(thrown.Exception.Type)):
+        case IrReturn { Value: { } thrower } result when this._tries.Count > 0 && IrTree.Nodes(thrower).Any(node => node is IrThrowExpression thrown && this.Propagates(thrown.Exception)):
           // A value that may throw is bound before the return, which may not hold what leaves (clippy's diverging_sub_expression).
           var held = new IrLocal("$" + this._labels++ + ":returned", thrower.Type);
           this._locals[held] = this.Temporary("value");
@@ -258,7 +258,8 @@ public static partial class RustEmitter {
 
     /// <summary>Whether a statement ends the path it is on: a <c>return</c>, <c>break</c>, <c>continue</c> or a panic.</summary>
     internal static bool Diverges(RsStatement statement)
-      => statement is RsExpressionStatement { Expression: RsReturn or RsBreak or RsContinue or RsMacro { Name: "panic" or "unreachable" } or RsCall { Callee: RsPath { Name: "ply_unhandled" } } };
+      => statement is RsExpressionStatement { Expression: RsReturn or RsBreak or RsContinue or RsMacro { Name: "panic" or "unreachable" } or RsCall { Callee: RsPath { Name: "ply_unhandled" } } }
+        || statement is RsExpressionStatement { Expression: RsBlockExpression { Block: { Tail: null, Statements: [.., var last] } } } && Diverges(last);
 
     /// <summary>A <c>return</c>: inside the body of a <c>finally</c> the break out of it, in a function that propagates <c>return Ok(v)</c>.</summary>
     private RsExpression Leaving(RsExpression? value) => this.FinallyReturn(value) ?? this.Returned(value);
@@ -402,12 +403,21 @@ public static partial class RustEmitter {
       if (target is null)
         return this.Refuse("break outside a loop");
 
-      // A switch is left through its labelled block; a loop by its label where a switch or a labelled
-      // block stands between, since Rust refuses an unlabelled break inside a labelled block (E0695).
-      if (this._tries.Count > 0 && this._breakables.IndexOf(target) < this._tries[^1].Breakables)
-        return this.Refuse("a break out of a try");
+      return this.BreakTo(target);
+    }
 
-      var crossed = this._breakables.Count - 1 > this._breakables.IndexOf(target);
+    /// <summary>
+    /// <c>break</c> of a loop or switch: out of a <c>try</c> with a <c>finally</c> the jump out of its
+    /// body, which the <c>finally</c> runs before it makes it (<see cref="Jump"/>).
+    /// </summary>
+    private RsExpression BreakTo(Breakable target) {
+      var index = this._breakables.IndexOf(target);
+      if (this.Crossed(index) is { } frame)
+        return Jump(frame, target, false);
+
+      // A switch is left through its labelled block; a loop by its label where a switch or a labelled
+      // block - a try body's among them - stands between, since Rust refuses an unlabelled break inside a labelled block (E0695).
+      var crossed = this._breakables.Count - 1 > index || this._tries.Any(between => between.Breakables > index);
       var value = target.Value is null ? null : this.Expression(target.Value);
       if (target.Kind == BreakableKind.Loop && !crossed)
         return new RsBreak(null, value);
@@ -559,16 +569,21 @@ public static partial class RustEmitter {
       if (index < 0)
         return [new RsExpressionStatement(this.Refuse("continue outside a loop"))];
 
+      return this.ContinueTo(index);
+    }
+
+    /// <summary><c>continue</c> of the loop at an index of the breakables: out of a <c>try</c> with a <c>finally</c> the jump out of its body (<see cref="Jump"/>).</summary>
+    private IEnumerable<RsStatement> ContinueTo(int index) {
       var target = this._breakables[index];
-      if (this._tries.Count > 0 && index < this._tries[^1].Breakables)
-        return [new RsExpressionStatement(this.Refuse("a continue out of a try"))];
+      if (this.Crossed(index) is { } frame)
+        return [new RsExpressionStatement(Jump(frame, target, true))];
 
       if (target.Kind == BreakableKind.ContinueBlock) {
         target.Used = true;
         return [new RsExpressionStatement(new RsBreak(target.Label, null))];
       }
 
-      var crossed = this._breakables.Skip(index + 1).Any();
+      var crossed = this._breakables.Skip(index + 1).Any() || this._tries.Any(between => between.Breakables > index);
       if (crossed)
         target.Used = true;
 
@@ -806,7 +821,7 @@ public static partial class RustEmitter {
     /// anything else cannot be written.
     /// </summary>
     private RsExpression Throw(IrExpr exception) {
-      if (IsCatchable(exception.Type) || this.Results && this.PlyErrors && exception is IrNew && IsError(exception.Type))
+      if (this.Propagates(exception) || this.Results && this.PlyErrors && exception is IrNew && IsError(exception.Type))
         return this.Fail(this.ErrorValue(exception));
       if (exception is IrNew { Type.Declaration: IrClassType type } && TrapOf(type) is { } trap)
         return this.Trap(trap);

@@ -212,6 +212,9 @@ public static partial class RustEmitter {
       var rest = arguments.Skip(1).ToList();
       if (rest.Any(part => IrTree.Nodes(part).Any(node => node is IrLocalRef reference && reference.Local == local)))
         return null;
+      // Inside a try a handler sees the variable: a part that may leave would leave the parts before it appended.
+      if (this._tries.Count > 0 && rest.Skip(1).Any(part => !this.TrapFree(part) || IrTree.Nodes(part).Any(node => node is IrThrowExpression || node is IrCall call && this._throwing.Contains(call.Function))))
+        return null;
 
       var target = new RsPath(this._locals[local]) { Type = IrType.String };
       return [.. rest.Select(part => (RsStatement)new RsExpressionStatement(part is IrIntrinsic { Op: IrIntrinsicOp.StrFromCodeUnit } unit

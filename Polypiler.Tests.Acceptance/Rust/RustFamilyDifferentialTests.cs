@@ -15,7 +15,7 @@ namespace Polypiler.Tests.Acceptance.Rust;
 
 /// <summary>
 /// The fixtures of the prototype's families through the Rust backend (#460, #462): bit operations,
-/// value records, strings, enums, numbers as text, classes, dispatch, generics, function values, optional values, module state, collections, exceptions, views,
+/// value records, strings, enums, numbers as text, classes, dispatch, generics, function values, optional values, module state, collections, exceptions (with finally blocks since #1414), views,
 /// floating-point views of bytes. Every fixture of a family that the backend writes is
 /// built by the pinned toolchain and called on the family's cases with overflow checks on and off;
 /// every outcome, the arrays a call was given included, must be what .NET computes of the original
@@ -118,6 +118,12 @@ public sealed class RustFamilyDifferentialTests {
 
     yield return new("exceptions/Classes", () => ExceptionFixtures.Imported("Classes"), () => [.. ExceptionFixtures.Calls().Where(call => call.File == "Classes").Select(call => call.Call)],
       call => PrototypeFixture.InvokedOutcome(ExceptionFixtures.Compiled("ClassesDemo", call.Method), call));
+
+    yield return new("exceptions/Regions", () => ExceptionFixtures.Imported("Regions"), () => [.. ExceptionFixtures.Calls().Where(call => call.File == "Regions").Select(call => call.Call)],
+      call => PrototypeFixture.InvokedOutcome(ExceptionFixtures.Compiled("RegionsDemo", call.Method), call));
+
+    yield return new("exceptions/order", () => ExceptionFixtures.Imported("order"), () => [new PrototypeCall("Run", []) { Returns = typeof(string) }],
+      call => PrototypeFixture.InvokedOutcome(ExceptionFixtures.Compiled("OrderDemo", call.Method), call));
 
     yield return new("optional/Find", OptionalFixtures.Imported, () => [.. OptionalFixtures.Calls()],
       call => PrototypeFixture.InvokedOutcome(OptionalFixtures.Compiled(call.Method), call));

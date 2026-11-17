@@ -408,15 +408,51 @@ with `throw`, is a value instead, which the functions between the throw and the 
 `Result`, so a catch clause sees it in safe Rust. Under the default trap policy `panic` the two never
 meet: a catch clause of a class a trap belongs to (`Exception`, `InvalidOperationException`, …) stands only around a body that cannot trap,
 which the backend proves of every statement and call in it, and a throw of a class of the library
-remains a trap.
+remains a trap - unless a catch clause of its class or a base stands around it in the same function,
+where it is an exception like the module's own (`exceptions/order`).
+
+A `try` with a `finally` (#1414) is a labelled block every way out of which leaves the block first, so
+that the `finally` runs, and is made after it: an exception, a `return`, a `break` or `continue` of a
+loop around the `try`. A body left one way only gives what leaves as the block's value -
+`let value = 'f0: { …; break 'f0 v; … };`, the `finally`, `return value` - and one left several ways,
+or one that may also complete, sets a variable for each way before it leaves and the ways are made
+after the `finally` in turn:
+
+```rust
+let mut returned = None;
+'f0: {
+    if k > 0 {
+        returned = Some(s.wrapping_mul(2));
+        break 'f0;
+    }
+    s = -1;
+}
+s = s.wrapping_add(100);
+if let Some(value) = returned {
+    return value;
+}
+```
+
+`thrown = Some(e)` hands an exception on as the innermost handler or `try` around takes it, a `return`
+passes every `finally` around it, a jump is numbered (`jumped = 1`) and made as the `break` or
+`continue` it was. Catch clauses and a `finally` on one `try` are the catch clauses inside that block. A
+`finally` that throws replaces the way out; what that way carried is still evaluated
+(`let _ = ply_error(…)`). A jump out of a `try` with catch clauses only names its loop, since Rust
+refuses an unlabelled `break` across the labelled block of the body (E0695).
 
 .NET runs the filters of the handlers before the `finally` blocks between the throw and the handler
-(two passes); a `Result` runs those blocks first. A filter is therefore written only where no `finally`
-lies between - no `try`/`finally` in the body and no call that propagates - and only where it cannot trap,
-since .NET takes an exception in a filter for `false`. A `try` with both catch clauses and a `finally`, a
-`finally` around a body that may throw or complete, a `break` or `continue` out of a `try`, an exception in
-a closure and a public function that lets an exception out and is called inside the module are refused
-with `PLY1560`, which names why.
+(two passes); a `Result` runs those blocks first. Where a clause has a filter and a `finally` stands in
+the body of its `try`, the clause is therefore chosen where the exception is thrown, before any
+`finally` runs, and the exception leaves with the number of the clause:
+`let selected = if ply_is(thrown.class, 7) && log(&ply_utf16("W")) { 0 } else { 1 }; (thrown, selected)`,
+the handler then a chain over `selected` (`exceptions/order` gives "W,F,C" as .NET). A filter stays
+refused with `PLY1560` where it may trap (.NET takes an exception in a filter for `false`), where a
+handler inside the body has a `finally` inside its own body (the exception would reach the filter only
+after that `finally`), and around a call of a function that may run a `finally` while the exception
+leaves it - the filter of a caller's handler across functions. An exception in a closure and a public
+function that lets an exception out and is called inside the module are refused with `PLY1560` too,
+which names why. Reading or writing module state behind a lock traps in no way here: its lock is
+poisoned only by a panic while it was held, which no handler sees.
 
 A trap is a panic whose message is the name of the IR trap - `IntegerOverflow`, `DivideByZero`,
 `ArgumentOutOfRange`, … - in every build mode; the verification reads it back with `RustTraps`
@@ -447,7 +483,8 @@ function asserts `assert_eq!(f(1, 0), Err(Error::DivideByZero));`.
 What would still panic is refused with `PLY1552`, naming it: a call of a string or collection helper
 that panics (`ply_list_index`, `ply_parse_i32`, …), a trap inside a closure, a step of an element of
 module state behind a lock, and a type of the module named `Error`. The exception regions of `PLY1560`
-other than catching a trap stay refused under both policies.
+other than catching a trap - a filter that may trap or that a `finally` in a function called would
+run after - stay refused under both policies.
 
 ## Unsafe code
 

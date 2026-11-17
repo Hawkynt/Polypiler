@@ -63,7 +63,8 @@ safe Rust, and how does a crate report a trap to a caller that does not want a p
 The exception regions `PLY1560` refuses under both policies stay refused by this decision: a filter with a
 `finally` between it and the throw (.NET runs the filter first, `exceptions/order`), a `try` with both catch clauses
 and a `finally`, a `finally` around a body that may throw or complete, and a jump out of a `try`. Catching a trap is
-lifted under `result`; under `panic` it stays refused, since a panic reaches no clause.
+lifted under `result`; under `panic` it stays refused, since a panic reaches no clause. (#1414 has since written those
+four regions under both policies without unwinding - see [the Rust backend](../architecture/RUST-BACKEND.md#exceptions).)
 
 ## Evidence
 
