@@ -1,7 +1,8 @@
 # Memory layout
 
 How a value of the IR lies in bytes when it lies in memory: the layout of a record under the data model
-of a target and the order of the bytes of a number. Everything here is library code of `Polypiler.Core.IR` plus nodes the interpreter runs
+of a target, the order of the bytes of a number, and the position of an element of an array of one or
+more dimensions. Everything here is library code of `Polypiler.Core.IR` plus nodes the interpreter runs
 and `IrLayoutLowering` resolves for one target, so a backend that writes pointers needs nothing of its
 own.
 Related: [repository README](../../README.md) · [IR and analysis](../architecture/IR.md) ·
@@ -61,6 +62,7 @@ does not change what `Compute` gives. A frontend sets it; an analysis may only s
 | `PointerLoadLittle/Big.T(p)` | the number whose bytes lie at `p` in the stated order | `p` is a `u8*`; `T` an integer that is no enum, `f32` or `f64` |
 | `PointerLoadLittle/Big.bigint(p, n)` | the unsigned number of the `n` bytes at `p`: 24 bits, 128 bits, 4096 bits | `n` is an `i32` |
 | `PointerStoreLittle/Big(p, v)`, `(p, n, v)` | the inverse; a `bigint` writes its lowest `n` bytes in two's complement | as for the loads |
+| `IrElementAddress(p, shape, i…, checked)` | `ElemAddr`: the element at the indices | below |
 
 A query of a record whose rule is packed(1) or explicit, the size of a number and the alignment of a
 byte have the same answer under every profile and are answered at once. Every other query waits for the
@@ -86,3 +88,20 @@ and `BitsFloat`/`FloatBits` where its address and value are locals, constants or
 them; a store reads its last byte first so that it traps before it writes. A `bigint` access, or one
 whose address is computed otherwise, stays as it is, and a backend that meets it refuses it as an
 operation it has no form for.
+
+## Arrays in memory
+
+`IrArrayShape` describes an array of rank 1 to 8: per dimension a lower bound and an extent, and the
+storage order. The element at `(i_0, …, i_{r-1})` lies at the linear position
+`Σ (i_d − lower_d) · stride_d`; with `row` order the last dimension has the stride 1, with `column` the
+first. `IrArrayShape.Fixed(n)` is `array<T, n>`. In a 3 × 4 array the element at (1, 2) is at 6 in row
+order and at 7 in column order; in a 2 × 3 × 4 array (1, 0, 2) is at 14 and 13.
+
+`IrElementAddress` takes a pointer to the first element, the shape and one integer index per dimension.
+A checked address traps with `IndexOutOfRange` when an index lies outside its own dimension - also when
+the linear position would exist - before anything is read; an unchecked one is formed without a check.
+Every index is extended by its own type: a `u8` of 255 is 255, an `i64` of 2^40 is never truncated.
+The verifier refuses the wrong number of indices, an index that is no integer, and a constant index
+outside its dimension, checked or not. `IrLayoutLowering` writes an unchecked address as `PointerAdd` of
+the linear position, converted to `i32` with a trap on overflow; a checked one stays, for the backends to
+write with their own bounds checks.

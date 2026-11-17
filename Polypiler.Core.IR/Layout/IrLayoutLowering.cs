@@ -14,6 +14,9 @@ namespace Polypiler.Core.IR;
 /// pointer arithmetic on them. A store first reads its last byte, so that it traps before it writes any byte. What
 /// is left are nodes every backend that has pointers writes already, so a backend needs nothing of its own for
 /// records in memory; an ordered access of a <c>bigint</c>, or one whose address is computed otherwise, stays.
+/// An unchecked <see cref="IrElementAddress"/> (#111) becomes the base moved by the linear position of its indices,
+/// computed in <c>i64</c> and converted to <c>i32</c> with a trap where it does not fit; a checked one stays, as
+/// its per-dimension bounds checks have no form among the pointer operations.
 /// </summary>
 public static class IrLayoutLowering {
 
@@ -95,6 +98,9 @@ public static class IrLayoutLowering {
           var offset = RecordLayout.OffsetOf(address.Record, address.Field, profile);
           var moved = offset == 0 ? address.Base : new IrIntrinsic(IrIntrinsicOp.PointerAdd, address.Base.Type, [address.Base, new IrConst(IrType.I32, offset)]);
           return address.Type == moved.Type ? moved : new IrIntrinsic(IrIntrinsicOp.PointerCast, address.Type, [moved]);
+        case IrElementAddress { Checked: false } element:
+          this.Changed = true;
+          return new IrIntrinsic(IrIntrinsicOp.PointerAdd, element.Type, [element.Base, Position(element)]);
         case IrIntrinsic { Arguments: [var address] } load when IrOrderedAccess.IsOrdered(load.Op) && Repeatable(address):
           this.Changed = true;
           return Composed(load, address);
@@ -103,6 +109,30 @@ public static class IrLayoutLowering {
       }
     }
 
+  }
+
+  /// <summary>The linear position of the element an address names, as an <c>i32</c>: <c>Σ (i_d − lower_d) · stride_d</c>, folded where the indices are constants.</summary>
+  private static IrExpr Position(IrElementAddress element) {
+    var shape = element.Shape;
+    if (element.Indices.All(index => index is IrConst)) {
+      var linear = shape.Unchecked([.. element.Indices.Select(index => ((IrConst)index).Value)]);
+      return linear is >= int.MinValue and <= int.MaxValue ? new IrConst(IrType.I32, linear) : new IrConvert(IrType.I32, new IrConst(IrType.I64, linear), IrConversion.Trap);
+    }
+
+    var strides = shape.Strides;
+    IrExpr? sum = null;
+    for (var dimension = 0; dimension < shape.Rank; ++dimension) {
+      var index = element.Indices[dimension];
+      IrExpr term = index.Type == IrType.I64 ? index : new IrConvert(IrType.I64, index, IrConversion.Wrap);
+      if (shape.Dimensions[dimension].Lower != 0)
+        term = new IrBinary(IrBinaryOp.Subtract, term, new IrConst(IrType.I64, shape.Dimensions[dimension].Lower));
+      if (strides[dimension] != 1)
+        term = new IrBinary(IrBinaryOp.Multiply, term, new IrConst(IrType.I64, strides[dimension]));
+
+      sum = sum is null ? term : new IrBinary(IrBinaryOp.Add, sum, term);
+    }
+
+    return new IrConvert(IrType.I32, sum!, IrConversion.Trap);
   }
 
   /// <summary>Whether an expression may be evaluated more than once to the same effect: a local, a constant, or pointer arithmetic on them.</summary>

@@ -621,6 +621,8 @@ public static partial class IrInterpreter {
           return this.Foreign(expression, frame);
         case IrLayoutOf or IrFieldAddress:
           return this.Layout(expression, frame);
+        case IrElementAddress address:
+          return this.ElementAddress(address, frame);
         default:
           throw new NotSupportedException($"Unknown expression {expression.GetType().Name}.");
       }

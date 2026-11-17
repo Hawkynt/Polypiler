@@ -490,6 +490,9 @@ public static partial class IrVerifier {
         case IrLayoutOf or IrFieldAddress:
           this.Layout(expression);
           break;
+        case IrElementAddress address:
+          this.ElementAddress(address);
+          break;
         default:
           this.Require(false, $"unknown expression {expression.GetType().Name}");
           break;

@@ -48,6 +48,7 @@ public static class IrTree {
     IrAsync operation => operation.Arguments,
     IrForeignCall call => call.Arguments,
     IrFieldAddress address => [address.Base],
+    IrElementAddress address => [address.Base, .. address.Indices],
     _ => []
   };
 
@@ -138,6 +139,7 @@ public static class IrTree {
     IrAsync operation => operation with { Arguments = operands },
     IrForeignCall call => call with { Arguments = operands },
     IrFieldAddress address => address with { Base = operands[0] },
+    IrElementAddress address => address with { Base = operands[0], Indices = [.. operands.Skip(1)] },
     _ => expression
   };
 

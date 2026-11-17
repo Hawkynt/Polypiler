@@ -48,7 +48,8 @@ public static partial class IrModuleFormat {
     Await, Async,
     ForeignCall, LastError,
     BigConst,
-    LayoutOf, FieldAddress
+    LayoutOf, FieldAddress,
+    ElementAddress
   }
 
   /// <summary>The kinds of declaration, as the byte after the name of a declaration says.</summary>
@@ -693,6 +694,7 @@ public static partial class IrModuleFormat {
       IrBigConst => Tag.BigConst,
       IrLayoutOf => Tag.LayoutOf,
       IrFieldAddress => Tag.FieldAddress,
+      IrElementAddress => Tag.ElementAddress,
       _ => throw new ArgumentException($"The expression {expression.GetType().Name} has no form in bytes.", nameof(module))
     };
 
@@ -746,6 +748,9 @@ public static partial class IrModuleFormat {
           break;
         case IrLayoutOf or IrFieldAddress:
           this.Layout(expression);
+          break;
+        case IrElementAddress address:
+          this.ElementAddress(address);
           break;
         case IrUnary unary:
           this.Count((int)unary.Op);
@@ -1340,12 +1345,12 @@ public static partial class IrModuleFormat {
         return Of(this._nodes, index, "node") as T ?? throw new InvalidDataException($"The node {index} is no {typeof(T).Name}.");
       }
 
-      if (tag > Tag.FieldAddress)
+      if (tag > Tag.ElementAddress)
         throw new InvalidDataException($"{(int)tag} is no kind of node.");
 
       var slot = this._nodes.Count;
       this._nodes.Add(null);
-      object node = tag >= Tag.Block && tag is not (Tag.ArraySequence or Tag.Sequence or Tag.Await or Tag.Async or Tag.ForeignCall or Tag.LastError or Tag.BigConst or Tag.LayoutOf or Tag.FieldAddress) ? this.Statement(tag) : this.Expression(tag);
+      object node = tag >= Tag.Block && tag is not (Tag.ArraySequence or Tag.Sequence or Tag.Await or Tag.Async or Tag.ForeignCall or Tag.LastError or Tag.BigConst or Tag.LayoutOf or Tag.FieldAddress or Tag.ElementAddress) ? this.Statement(tag) : this.Expression(tag);
       this._nodes[slot] = node;
       return node as T ?? throw new InvalidDataException($"A {node.GetType().Name} stands where a {typeof(T).Name} belongs.");
     }
@@ -1401,6 +1406,7 @@ public static partial class IrModuleFormat {
         Tag.ForeignCall => new IrForeignCall(reader.ReadString(), type, this.Nodes<IrExpr>()),
         Tag.LastError => new IrLastError(reader.ReadBoolean()),
         Tag.LayoutOf or Tag.FieldAddress => this.Layout(tag),
+        Tag.ElementAddress => this.ElementAddress(),
         _ => new IrInvoke(type, this.Node<IrExpr>(), this.Nodes<IrExpr>())
       };
       return expression.Type == type ? expression : expression with { Type = type };

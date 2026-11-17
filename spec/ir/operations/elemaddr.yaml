@@ -1,0 +1,43 @@
+id: IR.elemaddr
+title: Element address
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#111"
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  ElemAddr takes a pointer to the first element of an array that lies in memory, the shape of the array
+  and one integer index per dimension, and gives a pointer to the element the indices name. A shape has
+  rank 1 to 8; each dimension d has a lower bound lower_d and an extent extent_d of at least 0, and the
+  shape has the storage order row or column. The element lies at the linear position
+  L = sum over d of (i_d - lower_d) * stride_d, counted in elements. With row order the last dimension
+  has the stride 1 and every other dimension the product of the extents of the dimensions after it; with
+  column order the first dimension has the stride 1 and every other dimension the product of the extents
+  of the dimensions before it. Each index MUST be extended by its own type, signed or unsigned, and MUST
+  NOT be truncated before it is checked. ElemAddr[bounds] MUST trap with bounds when an index lies outside
+  lower_d to lower_d + extent_d - 1 of its own dimension, also when L would lie inside the array, before
+  anything is read. ElemAddr[unchecked] forms the pointer without a check; the load or store through it
+  checks the region. A constant index outside its dimension is a verification error under either flag.
+  Examples of a 3 by 4 array: indices (1, 2) are at L = 6 in row order and at L = 7 in column order; in a
+  2 by 3 by 4 array (1, 0, 2) is at 14 and at 13. The prototype's structured IR (Polypiler.Core.IR)
+  implements it as IrElementAddress over an IrArrayShape; the examples are of rank 1 with the lower bound
+  0 and the extent 10, the base 0 and an element of one byte.
+spec:
+  kind: operation
+  mnemonic: ElemAddr
+  category: memory
+  typeParameters: [{name: P, constraint: pointer}, {name: I, constraint: integer}]
+  operands: [{name: base, type: P}, {name: index, type: I}]
+  result: {type: P}
+  flags: [bounds, unchecked]
+  effects: [pure]
+  traps: [{when: "flag bounds and an index lies outside its own dimension", kind: bounds}]
+  stages: {from: IR.stage.source-semantic, to: IR.stage.legalized-target}
+  examples:
+    - {flag: bounds, operands: [0, 9], result: 9}
+    - {flag: bounds, operands: [0, 10], trap: bounds}
+    - {flag: bounds, operands: [0, -1], trap: bounds}
+    - {flag: unchecked, operands: [0, 10], result: 10}
