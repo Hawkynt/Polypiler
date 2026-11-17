@@ -1,0 +1,17 @@
+{
+  "regions": [
+    {
+      "name": "text",
+      "start": "0x00400000",
+      "end": "0x00410000",
+      "kind": "rom",
+      "executable": true
+    },
+    {
+      "name": "stack",
+      "start": "0x00500000",
+      "end": "0x00510000",
+      "kind": "stack"
+    }
+  ]
+}
