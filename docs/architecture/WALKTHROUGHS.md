@@ -12,7 +12,7 @@ Each walk describes a vertical slice: **real input → precise IR contract → t
 
 ```mermaid
 flowchart LR
-  JS["Cipher JS<br/>and type facts"] --> IR["Typed SSA with JS<br/>coercions and effects"]
+  JS["Cipher JS<br/>and type facts"] --> IR["Typed tree IR with JS<br/>coercions and effects"]
   IR --> CS["Recover operations;<br/>emit C# and helpers"]
   CS --> Verify["Build, execute<br/>and compare"]
   Oracle["Independent JS oracle<br/>and known-answer vectors"] --> Verify
@@ -28,7 +28,7 @@ Assertions: preserve 32-bit JS bitwise coercions, byte truncation and input/outp
 
 ```mermaid
 flowchart TB
-  PB["PowerBASIC parser and dialect binder"] --> SSA["Canonical SSA"]
+  PB["PowerBASIC parser and dialect binder"] --> SSA["Typed tree IR"]
   SSA --> CS["C# emitter"]
   CS --> Dotnet["Build and run under .NET"]
   PBOracle["Independent PowerBASIC oracle"] --> PBCompare["Compare PB to C# behavior"]

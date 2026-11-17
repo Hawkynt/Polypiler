@@ -23,7 +23,7 @@ Optimization decisions SHALL distinguish: (1) instruction/operation semantics kn
 <a id="s17-2"></a>
 ### 17.2 Effects are data dependencies, not giant barriers
 
-Represent partial state explicitly, preferably by SSA tokens per effect class/region. Core effect dimensions:
+Represent partial state explicitly, as per-function effect summaries over places and effect classes ([ADR 0009](../adr/0009-structured-tree-ir.md)); a pass that reorders proves non-interference from them. Core effect dimensions:
 
 | Effect | Must describe | Required behavior |
 |---|---|---|
