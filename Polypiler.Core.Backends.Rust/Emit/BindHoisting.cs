@@ -126,7 +126,7 @@ internal static class BindHoisting {
 
   /// <summary>Whether evaluating an expression has no effect and cannot trap, so that a later bind may be evaluated before it.</summary>
   public static bool Pure(IrExpr expression) => expression switch {
-    IrLocalRef or IrConst or IrConstRef or IrNone or IrNull => true,
+    IrLocalRef or IrConst or IrConstRef or IrNone or IrNull or IrStrConst => true,
     IrSome some => Pure(some.Value),
     IrIsNone test => Pure(test.Value),
     IrIsNull test => Pure(test.Value),

@@ -117,6 +117,7 @@ public static partial class RustEmitter {
             declare.Initializer switch {
               null => null,
               var value when declare.Local.Type.IsArray => this.ArrayInitial(declare.Local, value),
+              var value when declare.Local.Type.IsString && this.IsNullableString(declare.Local) => this.NullableStringValue(value),
               var value when declare.Local.Type.IsString => this.StringValue(value),
               var value when IsError(declare.Local.Type) => this.ErrorValue(value),
               var value when declare.Local.Type.IsObject => this.ObjectValue(value, this.MayBeNull(declare.Local)),
@@ -132,6 +133,9 @@ public static partial class RustEmitter {
           return false;
         case IrStore store:
           this.Store(store, into);
+          return false;
+        case IrGlobalAssign assign when IsThreadLocalType(assign.Global.Type):
+          this.ThreadLocalAssign(assign, into);
           return false;
         case IrGlobalAssign assign when IsLocked(assign.Global):
           this.LockedAssign(assign, into);
@@ -154,7 +158,7 @@ public static partial class RustEmitter {
         case IrExprStmt { Expression: IrIntrinsic { Op: IrIntrinsicOp.StoreLittle or IrIntrinsicOp.StoreBig } store }:
           into.AddRange(((RsBlockExpression)this.EndianStore(store)).Block.Statements);
           return false;
-        case IrAssign { Local.Type.IsString: true } assign when this.Appended(assign.Local, assign.Value) is { } appended:
+        case IrAssign { Local.Type.IsString: true } assign when !this.IsNullableString(assign.Local) && this.Appended(assign.Local, assign.Value) is { } appended:
           into.AddRange(appended);
           return false;
         case IrAssign assign:
@@ -217,6 +221,7 @@ public static partial class RustEmitter {
           into.Add(new RsExpressionStatement(this.Leaving(result.Value switch {
             null => null,
             { Type.IsArray: true } value => this.ArrayResult(this._function, value),
+            { Type.IsString: true } value when this._stringNulls.ReturnsNull(this._function.Name) => this.NullableStringValue(value),
             { Type.IsString: true } value => this.StringValue(value, true),
             IrLocalRef { Type.IsBigInt: true } value when !this._shared.Contains(value.Local) => new RsPath(this._locals[value.Local]) { Type = IrType.BigInt },
             { Type.IsObject: true } value => this.ObjectValue(value, this._nullness.ReturnsNull(this._function.Name)),
@@ -228,9 +233,17 @@ public static partial class RustEmitter {
         case IrRethrow:
           into.Add(new RsExpressionStatement(this._caught.Count == 0 ? this.Refuse("a rethrow outside a catch clause") : this.Escape(this.Cloned(new RsReference(false, new RsPath(this._caught[^1]))))));
           return true;
-        case IrThrow thrown:
-          into.Add(new RsExpressionStatement(this.Throw(thrown.Exception)));
+        case IrThrow thrown: {
+          var written = this.Throw(thrown.Exception);
+          // The panic of an unhandled exception after the statements that make its message.
+          if (written is RsBlockExpression { Block: { Tail: RsMacro panic } prepared }) {
+            into.AddRange(prepared.Statements);
+            written = panic;
+          }
+
+          into.Add(new RsExpressionStatement(written));
           return true;
+        }
         case IrForEachSequence loop:
           this.ForEachSequence(loop, into);
           return false;
@@ -262,7 +275,7 @@ public static partial class RustEmitter {
       if (local.Type.IsArray)
         return new RsAssign(place, "=", this.ArrayInitial(local, value));
       if (local.Type.IsString)
-        return new RsAssign(place, "=", this.StringValue(value));
+        return new RsAssign(place, "=", this.IsNullableString(local) ? this.NullableStringValue(value) : this.StringValue(value));
       if (local.Type.IsObject)
         return new RsAssign(place, "=", this.ObjectValue(value, this.MayBeNull(local)));
       if (local.Type.IsFunction)
@@ -797,8 +810,28 @@ public static partial class RustEmitter {
         return this.Fail(this.ErrorValue(exception));
       if (exception is IrNew { Type.Declaration: IrClassType type } && TrapOf(type) is { } trap)
         return this.Trap(trap);
+      if (exception is IrNew { Type.Declaration: IrClassType { IsLibrary: true } library } creation && IsError(creation.Type) && !this.Results)
+        return this.Unhandled(library, creation.Arguments);
 
       return this.Refuse("the throw of an exception that is no new object");
+    }
+
+    /// <summary>
+    /// A new exception of the library that no trap is, thrown where the crate panics (#1422): the panic
+    /// with its message, <c>panic!("{}", String::from_utf16_lossy(&amp;message))</c>, or its class's name
+    /// without one - what .NET prints of an unhandled exception, which nothing in the module catches.
+    /// </summary>
+    private RsExpression Unhandled(IrClassType library, IReadOnlyList<IrExpr> arguments) {
+      if (arguments is not [{ Type.IsString: true } message])
+        return new RsMacro("panic", [new RsString(library.Name[(library.Name.LastIndexOf('.') + 1)..])]);
+
+      if (message is IrStrConst constant && !HasLoneSurrogate(constant.Value))
+        return new RsMacro("panic", [new RsString("{}"), new RsString(constant.Value)]);
+
+      // The message made first, then the panic that prints it.
+      var name = this.Temporary("message");
+      return new RsBlockExpression(new RsBlock([new RsLet(name, false, null, this.StringValue(message))],
+        new RsMacro("panic", [new RsString("{}"), new RsCall(new RsPath("String::from_utf16_lossy"), [new RsReference(false, new RsPath(name))])])));
     }
 
     /// <summary>The trap whose class an exception class of the library is; the first one where several share it.</summary>

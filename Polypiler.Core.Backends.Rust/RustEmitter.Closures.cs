@@ -262,7 +262,7 @@ public static partial class RustEmitter {
     };
 
     /// <summary>A value as an argument of a call or a function value: a function value shared, any other as it is.</summary>
-    private RsExpression Argument(IrExpr argument) => argument.Type.IsFunction ? this.FunctionValue(argument) : this.Expression(argument);
+    private RsExpression Argument(IrExpr argument) => argument.Type.IsFunction ? this.FunctionValue(argument) : argument.Type.IsString ? this.StringArgument(argument) : this.Expression(argument);
 
     /// <summary>
     /// A call of a function value: <c>f(a, b)</c>, a local function by its name. A value that may be

@@ -433,13 +433,13 @@ public static partial class RustEmitter {
       IrBlock or IrIf or IrWhile or IrDoWhile or IrFor or IrDeclare or IrAssign or IrExprStmt or IrReturn or IrRethrow or IrTry or IrBreak or IrContinue
         => IrTree.Expressions(statement).All(this.TrapFree),
       IrThrow thrown => IsCatchable(thrown.Exception.Type) && this.TrapFree(thrown.Exception),
-      IrGlobalAssign { Global: var global } assign => !IsLocked(global) && this.TrapFree(assign.Value),
+      IrGlobalAssign { Global: var global } assign => !IsLocked(global) && !IsThreadLocalType(global.Type) && this.TrapFree(assign.Value),
       _ => false
     };
 
     private bool TrapFree(IrExpr expression) => expression switch {
       IrConst or IrLocalRef or IrStrConst or IrNull or IrLambda => true,
-      IrGlobalRef { Global: var global } => !IsLocked(global),
+      IrGlobalRef { Global: var global } => !IsLocked(global) && !IsThreadLocalType(global.Type),
       IrBinary { Op: IrBinaryOp.Divide or IrBinaryOp.Remainder } binary when binary.Type.IsInteger && binary.Right is not IrConst { Value: not 0 and not -1 } => false,
       IrBinary { Op: IrBinaryOp.AddChecked or IrBinaryOp.SubtractChecked or IrBinaryOp.MultiplyChecked } => false,
       IrBinary binary => this.TrapFree(binary.Left) && this.TrapFree(binary.Right),

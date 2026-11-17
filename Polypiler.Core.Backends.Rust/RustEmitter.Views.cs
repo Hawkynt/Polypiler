@@ -32,7 +32,7 @@ public static partial class RustEmitter {
         case IrIntrinsicOp.ViewLength:
           return this.Cast(new RsMethodCall(this.ViewSource(arguments[0], false), "len", []) { Type = IrType.U64 }, IrType.I32);
         case IrIntrinsicOp.ViewToArray:
-          return new RsMethodCall(this.ViewSource(arguments[0], false), "to_vec", []) { Type = operation.Type };
+          return new RsMethodCall(this.Receiver(this.ViewSource(arguments[0], false)), "to_vec", []) { Type = operation.Type };
         case IrIntrinsicOp.ViewEqual when !arguments[0].Type.Element!.IsFloat:
           return this.Binary(this.ViewSource(arguments[0], false), "==", this.ViewSource(arguments[1], false), IrType.Bool);
         case IrIntrinsicOp.ViewFill:

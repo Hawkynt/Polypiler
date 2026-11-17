@@ -22,8 +22,8 @@ public sealed class CollectionEmitTests {
   public void List_IsAVec() {
     var text = Emitted("public static int F(int i) { var list = new List<int>(); list.Add(3); list.Insert(0, 7); list[1] = 4; list.RemoveAt(0); list.Add(2); "
       + "return list[i] + list.Count + list.IndexOf(2) + (list.Contains(4) ? 1 : 0); }");
-    Assert.That(text, Does.Contain("let mut list: Vec<i32> = Vec::new();"));
-    Assert.That(text, Does.Contain("list.push(3);"));
+    Assert.That(text, Does.Contain("let mut list: Vec<i32> = vec![3];"), "the add right after the declaration is its element (clippy's vec_init_then_push)");
+    Assert.That(text, Does.Contain("list.push(2);"));
     Assert.That(text, Does.Contain("list.insert(ply_list_insert_index(0, list.len()), 7);"));
     Assert.That(text, Does.Contain("let index = ply_list_index(1, list.len());\n    list[index] = 4;"));
     Assert.That(text, Does.Contain("list.remove(ply_list_index(0, list.len()));"));
@@ -40,7 +40,7 @@ public sealed class CollectionEmitTests {
       + "return a.IndexOf(v) + (a.Contains(v) ? 1 : 0) + b[1].Length + b.IndexOf(s); }");
     Assert.That(text, Does.Contain("a.iter()\n        .position(|element| ply_same_value_f64(*element, v))"));
     Assert.That(text, Does.Contain("a.iter().any(|element| ply_same_value_f64(*element, v))"));
-    Assert.That(text, Does.Contain("b.push(s.to_vec());"));
+    Assert.That(text, Does.Contain("let b: Vec<Vec<u16>> = vec![ply_utf16(\"x\"), s.to_vec()];"));
     Assert.That(text, Does.Contain("b[ply_list_index(1, b.len())].clone().len()"));
   }
 
@@ -116,7 +116,7 @@ public sealed class CollectionEmitTests {
     Assert.That(text, Does.Not.Contain("while"));
   }
 
-  [TestCase("public sealed class Box { public int V; } public static class S { public static int F() { var list = new List<Box>(); return list.Count; } }", "'a list of Box'")]
+  [TestCase("public sealed class Box { public int V; } public static class S { public static int F() { var map = new Dictionary<int, Box>(); return map.Count; } }", "'the collection map<i32, Box, slotreuse>'")]
   [TestCase("public static class S { public static int F() { var map = new Dictionary<double, int>(); return map.Count; } }", "'the collection map<f64, i32, slotreuse>'")]
   [TestCase("public static class S { public static int F() { var list = new List<int> { 1 }; foreach (var v in list) list.Add(v); return list.Count; } }", "'a collection changed in a loop over it'")]
   [TestCase("public static class S { public static int F(bool c) { var a = new List<int>(); var d = new List<int>(); var b = c ? a : d; b.Add(1); return a.Count; } }", "'a collection held by two variables'")]

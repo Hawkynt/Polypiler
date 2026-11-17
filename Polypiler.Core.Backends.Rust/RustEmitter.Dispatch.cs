@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Polypiler.Core.Backends.Rust.Emit;
 using Polypiler.Core.Backends.Rust.Naming;
 using Polypiler.Core.Backends.Rust.Syntax;
 using Polypiler.Core.IR;
@@ -22,6 +23,52 @@ public static partial class RustEmitter {
 
     /// <summary>The functions of the methods of a hierarchy, each a function of the module with the object as a reference first, with the class that declares it.</summary>
     private readonly Dictionary<string, IrClassType> _free = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// The functions of a hierarchy whose object is a struct no class derives from and which pass the
+    /// object on - store it, return it, give it to a constructor (#1422): they take its <c>Rc</c>,
+    /// <c>this: &amp;Rc&lt;Adler&gt;</c>, which they can clone.
+    /// </summary>
+    private readonly HashSet<string> _rcFree = new(StringComparer.Ordinal);
+
+    /// <summary>The slots one of whose methods takes the <c>Rc</c> of its object: the trait's method takes <c>self: Rc&lt;Self&gt;</c>, which a <c>dyn</c> trait dispatches on.</summary>
+    private readonly HashSet<IrMethod> _rcSlots = new(ReferenceEqualityComparer.Instance);
+
+    /// <summary>Whether a slot's method takes the <c>Rc</c> of its object.</summary>
+    private bool IsRcSlot(IrMethod method) => this._rcSlots.Contains(method.Root);
+
+    /// <summary>
+    /// Finds the functions of a hierarchy that pass their object on and the slots they make take an
+    /// <c>Rc</c>, a fixed point: a call of a method through such a slot passes the object on too. A
+    /// function of a class something derives from that passes its object on is refused where it is written.
+    /// </summary>
+    private void SharedObjects(IrModule module) {
+      var functions = module.Functions.ToDictionary(function => function.Name, StringComparer.Ordinal);
+      for (var changed = true; changed;) {
+        changed = false;
+        foreach (var (name, owner) in this._free) {
+          if (this._rcFree.Contains(name) || this._traits.Contains(owner) || !functions.TryGetValue(name, out var function) || function.Parameters.Count == 0 || !this.PassesOnFree(function))
+            continue;
+
+          changed |= this._rcFree.Add(name);
+          foreach (var method in this._classes.SelectMany(type => type.Methods).Where(method => method.Function == name && method.IsVirtual))
+            this._rcSlots.Add(method.Root);
+        }
+      }
+    }
+
+    /// <summary>Whether a function of a hierarchy uses its object otherwise than through a field, or as the object of a call that needs no <c>Rc</c>.</summary>
+    private bool PassesOnFree(IrFunction function) {
+      var self = function.Parameters[0];
+      bool Self(IrExpr? value) => value is IrLocalRef reference && reference.Local == self;
+      var nodes = ArrayOwnership.Statements(function.Body).SelectMany(statement => IrTree.Expressions(statement)).SelectMany(IrTree.Nodes).ToList();
+      var uses = nodes.Count(Self);
+      var plain = nodes.Count(node => node is IrFieldLoad load && Self(load.Target)
+        || node is IrCall { Arguments: [var receiver, ..] } call && Self(receiver) && this._free.ContainsKey(call.Function) && !this._rcFree.Contains(call.Function)
+        || node is IrMethodCall { Target: var target } virtualCall && Self(target) && !this.IsRcSlot(virtualCall.Method));
+      plain += ArrayOwnership.Statements(function.Body).Count(statement => statement is IrFieldStore store && Self(store.Target));
+      return uses > plain;
+    }
 
     /// <summary>The functions nothing writes: the methods of interfaces and the abstract methods, which have no body.</summary>
     private readonly HashSet<string> _bodiless = new(StringComparer.Ordinal);
@@ -111,10 +158,10 @@ public static partial class RustEmitter {
     /// <summary>A call that the object's class selects the method of: the method of its slot's trait, <c>Trait::m(&amp;*o, ..)</c>.</summary>
     private RsExpression VirtualCall(IrMethodCall call) {
       var (trait, name) = this.Slot(call.Method);
-      var arguments = new List<RsExpression> { this.ObjectRef(call.Target!, true) };
+      var arguments = new List<RsExpression> { this.IsRcSlot(call.Method) ? this.ObjectValue(call.Target!, false) : this.ObjectRef(call.Target!, true) };
       var callee = this._module.Functions.FirstOrDefault(function => function.Name == call.Method.Function);
       arguments.AddRange(call.Arguments.Select((argument, index) => argument.Type.IsObject ? this.ObjectArgument(call.Method.Function, index + 1, argument)
-        : argument.Type.IsString ? this.StringArgument(argument)
+        : argument.Type.IsString ? (this.TakesNullString(call.Method.Function, index + 1) ? this.NullableStringValue(argument) : this.StringArgument(argument))
         : argument.Type.IsArray ? this.Borrow(argument, callee is not null && this._arrays.TryGetValue(callee.Name, out var facts) && facts.MutableParameters.Contains(index + 1))
         : this.Expression(argument)));
       return new RsCall(new RsPath($"{trait}::{name}"), arguments) { Type = call.Type };
@@ -122,7 +169,9 @@ public static partial class RustEmitter {
 
     /// <summary>A field of an object of a trait: through the accessor the trait of the field's class has, <c>Trait::field_f(o)</c>.</summary>
     private RsExpression FieldCell(IrExpr target, IrField field) {
-      var owner = this._classes.FirstOrDefault(type => type.Fields.Contains(field));
+      // The class of the object's lineage that declares the field: two classes may each have a field of one name and type.
+      var owner = target.Type.ClassType?.Lineage.FirstOrDefault(type => type.Fields.Any(declared => ReferenceEquals(declared, field)))
+        ?? this._classes.FirstOrDefault(type => type.Fields.Contains(field));
       if (owner is null || !this.IsPolymorphic(target.Type))
         return new RsField(this.ObjectReceiver(target), this.FieldName(field));
 
@@ -274,8 +323,18 @@ public static partial class RustEmitter {
         return new RsFunction(name, "", [new RsParameter("&self", "")], null, Abstract);
 
       var (parameters, returns) = this.Signature(source);
-      var body = function is null ? Abstract : new RsBlock([], new RsCall(new RsPath(this._functions[function]), [new RsPath("self"), .. parameters.Skip(1).Select(parameter => (RsExpression)new RsPath(parameter.Name))]));
+      if (this.IsRcSlot(method))
+        parameters[0] = new RsParameter("self", "Rc<Self>");
+      var body = function is null ? Abstract : new RsBlock([], new RsCall(new RsPath(this._functions[function]), [this.SelfFor(method, function), .. parameters.Skip(1).Select(parameter => (RsExpression)new RsPath(parameter.Name))]));
       return new RsFunction(name, "", parameters, returns, body);
+    }
+
+    /// <summary>The object a method of a trait hands the function it calls: <c>self</c>; of a method that takes the <c>Rc</c>, <c>&amp;self</c> to a function that takes it too, <c>&amp;*self</c> to any other.</summary>
+    private RsExpression SelfFor(IrMethod slot, string? function) {
+      if (!this.IsRcSlot(slot))
+        return new RsPath("self");
+
+      return function is not null && this._rcFree.Contains(function) ? new RsReference(false, new RsPath("self")) : new RsReference(false, new RsUnary("*", new RsPath("self")));
     }
 
     /// <summary>The parameters and the result of a method of a trait, the object as <c>&amp;self</c>.</summary>
@@ -327,7 +386,14 @@ public static partial class RustEmitter {
     private RsFunction Delegate(IrMethod slot, string? function, string? method) {
       var source = this._module.Functions.First(candidate => candidate.Name == slot.Function);
       var (parameters, returns) = this.Signature(source);
-      var arguments = new List<RsExpression> { new RsPath("self") };
+      if (this.IsRcSlot(slot)) {
+        if (function is null)
+          this.Refuse("an interface method whose implementation takes the Rc of its object");
+        parameters[0] = new RsParameter("self", "Rc<Self>");
+      }
+
+      var callee = function is null ? null : this._functions.FirstOrDefault(pair => pair.Value == function).Key;
+      var arguments = new List<RsExpression> { this.SelfFor(slot, callee) };
       arguments.AddRange(parameters.Skip(1).Select(parameter => (RsExpression)new RsPath(parameter.Name)));
       return new RsFunction(this._slots.GetValueOrDefault(slot.Root) ?? RustNames.Snake(slot.Name, this.Edition), "", parameters, returns,
         new RsBlock([], new RsCall(new RsPath(function ?? method!), arguments)));
