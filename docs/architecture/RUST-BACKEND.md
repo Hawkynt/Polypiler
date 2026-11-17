@@ -6,7 +6,8 @@ arrays and slices, structs, enums, classes, interfaces and module state since
 [#460](https://github.com/Hawkynt/Polypiler/issues/460) and [#462](https://github.com/Hawkynt/Polypiler/issues/462);
 closures, function values, optional values, module state behind a `Mutex`, lists, maps and sets and
 exceptions as `Result` since phase 2; lazy sequences as `Iterator` state machines since
-[#1391](https://github.com/Hawkynt/Polypiler/issues/1391). The runner that builds
+[#1391](https://github.com/Hawkynt/Polypiler/issues/1391); shared collections, module state of objects, the module's initializer and
+strings that may be null since [#1422](https://github.com/Hawkynt/Polypiler/issues/1422), which runs the Cipher framework. The runner that builds
 and executes the output is [#468](https://github.com/Hawkynt/Polypiler/issues/468).
 Related: [backends](BACKENDS.md) · [pipeline](PIPELINE.md) · [exceptions](../reference/exceptions.md) ·
 [integer operations](../reference/integer-operations.md).
@@ -64,6 +65,7 @@ name escapes as a raw identifier (`r#gen`). The MSRV decides the rows of `RustCa
 | `reverse_bits` | 1.37 | the helper of the library |
 | `is_subnormal` | 1.53 | the portable implementation |
 | `rust-version` key of `Cargo.toml` | 1.56 | left out |
+| a `const` first value of a static of each thread (`const_thread_local`) | 1.59 | `thread_local!` without `const { }`, checked at each use |
 | `Mutex::new` in a `static` (`const_mutex_new`) | 1.63 | a global that has no atomic form is refused (`PLY1550`) |
 | labelled blocks (`label_break_value`) | 1.65 | a `continue` in a `do`-`while` and a `break` inside a switch section are refused (`PLY1550`) |
 | `round_ties_even` | 1.77 | the helper `RoundEven` of the library |
@@ -127,7 +129,15 @@ name escapes as a raw identifier (`r#gen`). The MSRV decides the rows of `RustCa
 | a generic method (#1394) | one Rust generic function, `pub fn max<T: Ord + Copy>(a: T, b: T) -> T`, where its template does nothing with a value of a parameter but hold, pass, store and load it in an array of it (`Copy`), make its default (`T::default()`, `Default`), compare it with `Equals` (`a == b`, `Eq`) and test the sign of `CompareTo` (`a >= b`, `Ord`); bounds inline for one parameter with at most two, else a `where` clause; a call names the type arguments where Rust cannot infer them, `def::<i32>()`. See [Generic methods](#generic-methods) |
 | an instantiation the generic function does not take, a generic class | one function or struct per instantiation the module uses (`max_f64`, `RingI64`); `IEquatable`/`IComparable` at the instantiated type, a floating-point one by `ply_same_value_f64`, `ply_compare_f64` |
 | a global (static field) | `static NAME: AtomicI32 = AtomicI32::new(0);` read and written with `Ordering::Relaxed`, `++` as `fetch_add` - process-wide as .NET's static fields are |
-| a global that has no atomic form: an array, a string, a floating-point number | a static behind a `Mutex`: `static BUCKETS: Mutex<[u32; 4]> = Mutex::new([0; 4]);` (an array is the fixed array it always is), `static TEXT: Mutex<Vec<u16>> = Mutex::new(Vec::new());`, a first value made at run time in a `LazyLock`; accessed through `ply_with(&BUCKETS, \|buckets\| buckets[i])`, which holds the lock for that one access and takes a poisoned one over, every operand that may take a lock (a call, another such global) evaluated into a binding first; the length of an array is its constant. Not `thread_local!`, which would give each thread a global of its own |
+| a global that has no atomic form: an array, a string, a floating-point number | a static behind a `Mutex`: `static BUCKETS: Mutex<[u32; 4]> = Mutex::new([0; 4]);` (an array is the fixed array it always is), `static TEXT: Mutex<Vec<u16>> = Mutex::new(Vec::new());`, a first value made at run time in a `LazyLock`; accessed through `ply_with(&BUCKETS, \|buckets\| buckets[i])`, which holds the lock for that one access and takes a poisoned one over, every operand that may take a lock (a call, another such global) evaluated into a binding first; the length of an array is its constant. Not `thread_local!`, which would give each thread a global of its own; a table nothing writes assigned whole, a copy, `ply_with(&TABLE, \|table\| table.to_vec())` |
+| a global of an object, a collection or a function value (#1422) | a static of each thread, `thread_local! { static ALGORITHMS: RefCell<Rc<RefCell<Vec<Rc<dyn Algorithm>>>>> = RefCell::new(…); }` (an object `RefCell<Option<Rc<T>>>`, `const { RefCell::new(None) }` from Rust 1.59): an `Rc` is no `Send`, so no `static` of the process may hold one, and each thread has module state of its own where .NET has one for the process; read `ALGORITHMS.with(\|algorithms\| algorithms.borrow().clone())`, written `*name.borrow_mut() = v` after the value; a public reader per such global, `pub fn algorithms() -> Vec<Rc<dyn Algorithm>>`, a copy of a collection's elements or the value |
+| the module's initializer (a JavaScript file's top level) | `fn ply_load()`, which runs it once per thread through `PLY_LOADED`, called first by every function that reads or writes module state and by the readers - as .NET runs a static constructor before the state is first used; the flag is set before the initializer runs, so module state it touches itself does not run it again. An initializer that lets an exception out is refused |
+| a collection a field, a global, another collection or array, an optional or a function signature names (a shared collection, #1422) | `Rc<RefCell<Vec<T>>>` - every holder reads and changes the one collection, as .NET's references do; `Rc::new(RefCell::new(vec![a, b]))`, a variable cloned as its `Rc` where a place takes it, a parameter by value; `c.borrow().len()`, `c.borrow()[ply_list_index(i, c.borrow().len())].clone()`, `c.borrow_mut().push(v)` with every operand that may read a collection bound before the exclusive borrow; a loop over it holds `c.borrow()`, so a change through another holder panics where .NET traps. A collection only variables hold stays the vector one variable owns |
+| a list of objects, of arrays, of shared collections | `Vec<Rc<T>>` (`Vec<Option<Rc<T>>>` where the module puts a value that may be null into a list of the type), `Vec<Vec<T>>`, `Vec<Rc<RefCell<…>>>`; an element cloned out, an array element read in place, `perm.borrow()[ply_list_index(i, len)][d]`; a new list filled right after its declaration made of its elements, `vec![a, b]` (clippy's `vec_init_then_push`), an object of a trait converted, `Thing::new(1) as Rc<dyn Base>` |
+| a string that may be null (#1422): a variable, parameter, result or field the module gives null or a value that may be, or tests for null | `Option<Vec<u16>>` (a field `RefCell<Option<Vec<u16>>>`, null until a constructor writes it), `x.is_none()`; used as a string `ply_non_null(&x)`, which panics with `NullReference`; `string.Equals` and `===` null-safe, `a.as_deref() == b.as_deref()`; a string that is never null given to it `Some(…)` |
+| an array field the module gives null or tests for null, an optional value field | `RefCell<Option<Vec<T>>>`, read through `ply_non_null(&o.f.borrow())`; `Cell<Option<i32>>` |
+| a choice of a field's array and another one in a variable, `t.e != null ? t.e : []` | a copy of the field's, as a read of the whole field is - only where neither array is written, which .NET shares |
+| a throw of a new library exception that is no trap, with nothing in the function to catch it, under `panic` | `panic!("{}", String::from_utf16_lossy(&message))` after the message is made, its class's name without one - what .NET prints of an unhandled exception |
 | a view (`Span<T>`, `ReadOnlySpan<T>`) | a slice, `&[T]`, `&mut [T]` where the function writes it (also through a view made of it); `AsSpan(start, length)` `ply_view(a, start, length)`, which panics with `ArgumentOutOfRange` outside the source; `Length` `s.len() as i32`; a view of a new array of a known length borrows an array, `&mut [0u8; 3]` |
 | a counted loop from 0 to the shorter of two arrays, `Min(a.Length, b.Length)` directly or in the variables Rust's `zip` lowers to, that uses the counter only to read and write the two arrays' elements (#460) | `for (&s, d) in src.iter().zip(dst.iter_mut()) { *d = …; }`: `iter()` for an array only read, `iter_mut()` for one written, `_` for one not touched; `zip` stops at the shorter side as the bound does, the bound's variables are left out; any other loop keeps its index, `data[i as usize]`, which clippy's `needless_range_loop` does not flag |
 | `x = y` of two array variables outside every loop, where `y` holds a vector the function made and nothing after names `y` | a move, `let mut b = a;` - one owner after the other, not two owners of one shared array |
@@ -246,7 +256,7 @@ has two forms for that, and the backend picks by what the module does with the c
 - **One owner at a time** - an object created, passed on by move or borrowed, never stored twice -
   is a plain struct with an `impl` block (#1393): `pub struct Xorshift32 { state: u32 }`,
   `pub fn new(seed: u32) -> Self`, `pub fn next(&mut self) -> u32`.
-- **Shared** - an object two variables may hold, or that may be null - is an `Rc<Name>`, its fields
+- **Shared** - an object two variables may hold, a collection or module state holds, or that may be null - is an `Rc<Name>`, its fields
   each in a `Cell` (a value) or a `RefCell` (a string, an array, another object). A cell per field
   rather than one `RefCell<Name>` around the whole object: a `RefCell` borrow lives to the end of the
   statement that takes it, so a method that writes the object while an expression of its caller still
@@ -286,6 +296,15 @@ a base call (`base.M()`) calls the base's function. A test or a conversion to a 
 trait `PlyObject` every trait extends: `is_t(&self)` and `into_t(self: Rc<Self>) -> Option<…>` per type
 the module tests for or converts to, each struct answering for itself - no `Any`, no trait upcasting,
 which Rust 1.85 has not.
+
+A method of a struct no class derives from that passes its object on - stores it, returns it, gives it
+to a constructor (`new AdlerInstance(this)`) - takes the object's `Rc`, `this: &Rc<AdlerAlgorithm>`, and the
+slot of its trait takes `self: Rc<Self>`, which a `dyn` trait dispatches on (#1422): `algorithm.create_instance(false)`
+moves a clone of the `Rc` in. The nullness of the methods of one slot is one: where one returns null or takes
+null as a parameter, every method of the slot does, as the trait has one signature. A struct's `Rc` given where
+the trait object of a base is taken and nothing around it says the type - `Rc::clone(&x)`, an element of `vec!` -
+is converted, `Rc::clone(&x) as Rc<dyn Algorithm>`; one that may be null `x.map(\|o\| o as Rc<dyn Algorithm>)`.
+A method of a class something derives from that passes its object on is still refused.
 
 ## Function values
 
@@ -464,14 +483,14 @@ is made or of an array that may be null, a wider pointer into memory that is not
 memory the function writes, a written overlay of other numbers than bytes, a copy between a view variable
 and its own array, a view made on the stack, an optional value of a type that
 is no value, an array that may be null and is written (`an array that may be null and is written`) or
-is a borrowed result, a collection in the order of insertion (JavaScript's `Map` and `Set`), one of
-objects or with floating-point keys, a collection changed in a loop over it, held by two variables or
-passed on where no variable holds it, a variable that names a field's array where the function touches the field otherwise while it
+is a borrowed result, a collection in the order of insertion (JavaScript's `Map` and `Set`), a map or a set of
+objects or with floating-point keys, a collection changed in a loop over it, a collection only variables hold
+held by two of them or passed on where no variable holds it, an array a shared list holds written in place, a variable that names a field's array where the function touches the field otherwise while it
 lives or gives the array away whole, a function value that takes or gives more than values and other function values, two function values
 compared with each other, a closure that captures the object of a method, an array it captures that is
 written, or a variable other than a value that is assigned, collections (`Collection`), `using`, a global
-array without a first value of a known length or used as a whole (passed on, iterated as a slice),
-a global of another type, a record with a floating-point field,
+array without a first value of a known length or used as a whole (passed on, iterated as a slice) unless it is a
+table nothing writes, a global function value without a first value, a module initializer that lets an exception out, a record with a floating-point field,
 a method that passes on the object of a hierarchy; an array safe Rust cannot own (written and shared by two variables while both live, or a parameter and a new
 array in one written variable), a struct with a field that is neither a value nor an array of values, a struct holding an array copied while its
 variable lives on or given an array a variable still holds. A struct layout without a safe form - explicit field offsets, a packing, a size of
@@ -493,7 +512,8 @@ refused by that place's own rule (`a list of bigint`, `a closure that captures a
 `clippy::manual_clamp` and `clippy::min_max` (a minimum and a maximum whose bounds may be out of
 order, where `clamp` would panic), `clippy::manual_range_contains`, `clippy::neg_cmp_op_on_partial_ord`
 and `clippy::nonminimal_bool` (a negated ordering of floating-point numbers), `clippy::too_many_arguments`,
-`clippy::type_complexity` (a function value that takes or gives another one, a type the source named in one word),
+`clippy::type_complexity` (a function value that takes or gives another one, a field, a global or a binding of a shared collection
+of objects whose score passes clippy's 250 - types the source named in one word, `List<Algorithm>`),
 `clippy::manual_find` (a search the source wrote as a loop that returns `Some(i)`, then `None`),
 `clippy::unnecessary_literal_unwrap` (an optional value made of a value and then read, as the source has it),
 `clippy::manual_swap` (two variables, or elements of two arrays, swapped through a third, as `std::mem::swap` lowers),
@@ -514,6 +534,9 @@ option handed on is `?` (`question_mark`), a struct literal in a condition is pa
 - `ZipAndViewEmitTests`, `PointerEmitTests`, `OverlayEmitTests`: parallel loops, moves, view copies, `split_at_mut`,
   pointers and overlay views, their forms, refusals and the unsafe audit over every prototype fixture.
 - `MemoryEmitTests`, `TypeEmitTests`, `ObjectEmitTests`, `ClosureEmitTests`, `OptionalEmitTests`, `StateEmitTests`, `CollectionEmitTests`, `FieldAliasEmitTests`, `ExceptionEmitTests`, `IteratorEmitTests`: arrays, ownership and aliasing, structs, classes, traits, module state, function values, optional values and arrays that may be null, lazy sequences, their forms and refusals.
+- `SharedStateEmitTests` (#1422): shared collections, module state of each thread and its readers, the initializer run
+  once, strings, array fields and optional fields that may be null, methods that pass their object on, upcasts,
+  the throw of a library exception, the refusals and the `const_thread_local` row by profile.
 - `BigIntEmitTests`: the form of every operation and conversion of `bigint`, the boundaries of a
   constant's `i128` literal, the helpers a crate carries and their origin, the refusals.
 - `RustBigIntTests` (layer `rust`): every operation and conversion of `BigIntCases` - zero, the signs,
@@ -539,8 +562,7 @@ option handed on is `?` (`question_mark`), a struct literal in a condition is pa
 - `RustUnsafeAuditTests` (layer `rust`): the crate of a written overlay under `allowUnsafe` builds, passes
   clippy and `cargo fmt --check`, its test gives the value the bytes say, and it passes Miri on the `rust-miri`
   nightly (ignored, naming the toolchain, where it is not installed); no crate without `allowUnsafe` needs Miri.
-- `RustRoundTripTests` (layer `rust`): every Rust fixture the backend writes (fourteen of fifteen; the
-  other, `objects`, is listed in `RustFixture.BackendPending` and refused by name), imported by the Rust frontend
+- `RustRoundTripTests` (layer `rust`): every Rust fixture - all fifteen since `objects` (#1422) - imported by the Rust frontend
   in each overflow mode, comes back as a crate that is built with overflow checks on and off; every
   outcome is what rustc recorded for the original in the mode of the import.
 - `RustSingleOwnerTests` and `be-rs-single-owner.feature` (layer `rust`, #1393): Xorshift32 as a plain struct
@@ -583,7 +605,7 @@ translation declares, through the syntax tree and `RustPrinter`. A translation i
 
 | What the vector does | What the crate must have |
 | --- | --- |
-| look the algorithm up by name | a `pub fn algorithms()` without parameters giving `Vec<Rc<dyn Algorithm>>` (or `Vec<Rc<Struct>>`), each with an accessor `field_name` giving `&RefCell<Vec<u16>>`, `Vec<u16>` or `&[u16]` |
+| look the algorithm up by name | a `pub fn algorithms()` without parameters giving `Vec<Rc<dyn Algorithm>>` (or `Vec<Rc<Struct>>`) - the reader of the framework's registry - each with an accessor `field_name` giving `&RefCell<Vec<u16>>`, `&RefCell<Option<Vec<u16>>>`, `Vec<u16>` or `&[u16]` |
 | `CreateInstance(isInverse)` | a method `create_instance` of the algorithm's type or of a trait it has, giving `Rc<dyn Instance>`, also in an `Option` or a `Result` |
 | call a method, `Feed`, `Result` | a method of the instance's type or of a trait it has, named in `snake_case`, with as many parameters; `result` giving a vector, slice or array of numbers |
 | set a property | an accessor `field_<name>` giving `&Cell<T>` or `&RefCell<T>` |
@@ -591,5 +613,6 @@ translation declares, through the syntax tree and `RustPrinter`. A translation i
 Where the crate lacks the registry or the name, the file counts as translated and nothing runs; where
 it lacks what one vector needs, that vector's test fails with the reason. A failing comparison names
 the first differing byte, a panic of the translation its message, a crate that does not compile the
-compiler's first error. Today every Cipher file is still refused before that (the registry is a
-global list of objects, `PLY1550`).
+compiler's first error. Since #1422 the framework's registry, metadata and instances translate: `checksum/adler.js`
+(11 of 11), `checksum/check-digit.js` (12 of 12) and `checksum/isbn.js` (6 of 6) pass every checked vector, their
+crates clean under `cargo clippy -- -D warnings` (`CipherKatRustTests`, layer `rust`).
