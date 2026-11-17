@@ -50,7 +50,10 @@ public static class BinaryDiagnostics {
   /// <param name="path">The file.</param>
   /// <returns>The diagnostic.</returns>
   public static Diagnostic Unreadable(string path)
-    => new("PLY0004", DiagnosticSeverity.Error, $"input '{path}' does not exist or is not readable", path) { ExitCode = ExitCode.EnvironmentError, Rule = "io.read" };
+    => _unreadable.At($"input '{path}' does not exist or is not readable", path);
+
+  /// <summary><c>PLY0004</c> as the command line registers it; declared there, so not marked here.</summary>
+  private static readonly DiagnosticDescriptor _unreadable = new("PLY0004", DiagnosticSeverity.Error, ExitCode.EnvironmentError, "{0}", "io.read");
 
   /// <summary>An address as the manifest writes it: <c>0x</c> and at least eight upper-case hexadecimal digits.</summary>
   /// <param name="address">The address.</param>

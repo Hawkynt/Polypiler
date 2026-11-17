@@ -301,9 +301,11 @@ public sealed class ImageBuilderTests {
   /// <summary>A memory map whose regions overlap is the address map's <c>PLY4009</c>.</summary>
   [Test]
   public void OverlappingMemoryMap_IsRefused() {
-    var map = new JsonObject { ["regions"] = new JsonArray(
+    var map = new JsonObject {
+      ["regions"] = new JsonArray(
       new JsonObject { ["name"] = "a", ["start"] = "0x10", ["end"] = "0x20", ["kind"] = "ram" },
-      new JsonObject { ["name"] = "b", ["start"] = "0x18", ["end"] = "0x30", ["kind"] = "ram" }) };
+      new JsonObject { ["name"] = "b", ["start"] = "0x18", ["end"] = "0x30", ["kind"] = "ram" })
+    };
     Assert.That(this.Refusal(Min(json => json["memoryMap"] = map)).Code, Is.EqualTo("PLY4009"));
   }
 

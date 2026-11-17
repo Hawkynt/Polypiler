@@ -112,7 +112,7 @@ public sealed class DocumentationSteps {
   [Given("^README.md and all (\\w+) architecture guides$")]
   public void ReadmeAndGuides(string count) {
     this._documents = [.. ArchitecturePaths()];
-    var expected = System.Array.IndexOf(["eight", "nine", "ten", "eleven", "twelve"], count) + 8;
+    var expected = System.Array.IndexOf(["eight", "nine", "ten", "eleven", "twelve", "thirteen"], count) + 8;
     Assert.That(this._documents.Count(path => Path.GetDirectoryName(path)!.EndsWith("architecture", StringComparison.Ordinal)), Is.EqualTo(expected));
     Assert.That(this._documents, Does.Contain(Path.Combine(Root, "README.md")));
   }
