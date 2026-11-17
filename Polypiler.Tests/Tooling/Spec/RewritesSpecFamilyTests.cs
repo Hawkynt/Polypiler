@@ -116,7 +116,11 @@ public sealed class RewritesSpecFamilyTests {
   [Test]
   public void GeneratedDocument_IsValid() => Assert.That(Lines("O0001"), Is.Empty);
 
-  [TestCase("id-in-block.yaml", "rewrites/O0150.yaml(13,17): error PLY0046: O0150 is outside the rewrite blocks O0001-O0099 and O0230-O0299 (rule: id-in-block)")]
+  [Test]
+  public void StructuralDeadFunctionElimination_IsARewrite()
+    => Assert.That(Lines("O0381", ("proof", "{class: structural}")), Is.Empty);
+
+  [TestCase("id-in-block.yaml", "rewrites/O0150.yaml(13,17): error PLY0046: O0150 is outside the rewrite blocks O0001-O0099, O0230-O0299 and O0380-O0396 (rule: id-in-block)")]
   [TestCase("no-unproven-reassociation.yaml", "rewrites/O0002.yaml(19,12): error PLY0046: floating-point reassociation requires proof class float-exactness, found smt-bitvector (rule: no-unproven-reassociation)")]
   [TestCase("float-flags-consistent.yaml", "rewrites/O0002.yaml(25,19): error PLY0046: floatingPoint.reassociates is true but touchesFloat is false (rule: float-flags-consistent)")]
   [TestCase("interaction-acyclic", "rewrites/O0001.yaml(30,13): error PLY0046: interaction cycle O0001 -> O0002 -> O0001 (rule: interaction-acyclic)")]
@@ -177,7 +181,7 @@ public sealed class RewritesSpecFamilyTests {
 
   [Test]
   public void Enumerations_HaveTheDeclaredSizes()
-    => Assert.That((Kinds().Count(), ProofClasses().Count(), Facts().Count(), OptLevels().Count()), Is.EqualTo((10, 6, 6, 4)));
+    => Assert.That((Kinds().Count(), ProofClasses().Count(), Facts().Count(), OptLevels().Count()), Is.EqualTo((10, 7, 6, 4)));
 
   [TestCaseSource(nameof(Kinds))]
   public void EachKind_IsValid(string kind) => Assert.That(Lines("O0001", ("kind", kind)), Is.Empty);
@@ -238,8 +242,13 @@ public sealed class RewritesSpecFamilyTests {
   [TestCase("O0230", true)]
   [TestCase("O0299", true)]
   [TestCase("O0300", false)]
+  [TestCase("O0379", false)]
+  [TestCase("O0380", true)]
+  [TestCase("O0381", true)]
+  [TestCase("O0396", true)]
+  [TestCase("O0397", false)]
   public void IdAtBlockEdge(string optimization, bool valid) {
-    var expected = valid ? [] : new[] { $"rewrites/{optimization}.yaml(13,17): " + Rule($"{optimization} is outside the rewrite blocks O0001-O0099 and O0230-O0299", "id-in-block") };
+    var expected = valid ? [] : new[] { $"rewrites/{optimization}.yaml(13,17): " + Rule($"{optimization} is outside the rewrite blocks O0001-O0099, O0230-O0299 and O0380-O0396", "id-in-block") };
     Assert.That((RewritesSpecFamily.InBlock(optimization), Lines(optimization)), Is.EqualTo((valid, expected)));
   }
 

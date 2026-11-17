@@ -168,7 +168,7 @@ follow once their tolerance documents exist.
 
 ## Family `ir`
 
-The IR operations, stages and version (PRD §4.1–§4.3, [ADR 0001](../docs/adr/0001-ir-stage-invariants.md)),
+The IR operations, stages and version (PRD §4.1–§4.3, [ADR 0001](../docs/adr/0001-ir-stage-invariants.md); a stage names a legality set per [ADR 0009](../docs/adr/0009-structured-tree-ir.md)),
 checked by [`schemas/ir.schema.json`](schemas/ir.schema.json) and `IrSpecFamily`. The body's `kind`
 selects the shape, and the path follows from it:
 
@@ -288,7 +288,7 @@ there is no mode for an unguarded guess. `RecoverySpecFamily` adds the rules `la
 ## Family `rewrites`
 
 `spec/rewrites/O####.yaml`, ID `REWRITES.O####`: one semantics-preserving transformation of the blocks
-`O0001`–`O0099` and `O0230`–`O0299` — its `before` and `after` IR text, `predicates`, `proof` class,
+`O0001`–`O0099`, `O0230`–`O0299` and `O0380`–`O0396` — its `before` and `after` IR text, `predicates`, `proof` class,
 `floatingPoint` claims, `negativeFixtures`, `switch`, `optLevels`, `interactions` and optimization page
 ([`schemas/rewrites.schema.json`](schemas/rewrites.schema.json)). Recognition rules (`O0100`–`O0169`)
 are not rewrites of this family. Its rules, each `PLY0046`:
@@ -296,7 +296,7 @@ are not rewrites of this family. Its rules, each `PLY0046`:
 | Rule | What it refuses |
 | --- | --- |
 | `layout` | a path other than `rewrites/O####.yaml`, or an ID, `optimization` or `document` that does not follow from the file name; stops the other rules |
-| `id-in-block` | a number outside `O0001`–`O0099` and `O0230`–`O0299` |
+| `id-in-block` | a number outside `O0001`–`O0099`, `O0230`–`O0299` and `O0380`–`O0396` |
 | `no-unproven-reassociation` | `reassociates` or `contracts` without proof class `float-exactness` and a predicate with fact `float-exactness`; there is no waiver |
 | `float-flags-consistent` | `reassociates` or `contracts` while `touchesFloat` is false |
 | `interaction-acyclic` | a cycle of `interactions.after` over all documents, reported once at its smallest optimization |
@@ -305,6 +305,9 @@ are not rewrites of this family. Its rules, each `PLY0046`:
 
 Every optimization under `interactions` must have a document (`PLY0043`). The valid example and one
 fixture per rule and per required property live in `tests/fixtures/spec/rewrites/`.
+
+Proof class `structural` records a graph argument such as O0381's complete reachability census;
+it does not waive the `float-exactness` requirement for reassociation or contraction.
 
 ## Family `types`
 

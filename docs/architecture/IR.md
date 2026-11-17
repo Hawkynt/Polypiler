@@ -2,14 +2,14 @@
 
 **Status:** proposed semantics, not a claim that these types or passes exist. See [PRD §4](../prd/02-core-architecture.md#s4), [§17](../prd/05-semantics-and-recovery.md#s17) and [§§29–30](../prd/08-interop-and-language-semantics.md).
 
-The IR is language-independent **without erasing source-language behavior**. Some source rules must remain as explicit operations or policies until they are legally lowered. The IR verifier should run at every representation boundary; [ADR 0001](../adr/0001-ir-stage-invariants.md) decides the stages and what the verifier enforces at each.
+The IR is language-independent **without erasing source-language behavior**. Some source rules must remain as explicit operations or policies until they are legally lowered. The IR is the structured typed tree of `Polypiler.Core.IR` ([ADR 0009](../adr/0009-structured-tree-ir.md), superseding the SSA parts of [ADR 0001](../adr/0001-ir-stage-invariants.md)); the verifier runs on every module before it is interpreted or emitted, and target legality is checked per profile by legalization and the backend's capability table.
 
 ## Core data model
 
-- **Values/SSA:** typed constants, instructions, block arguments/phi, control-flow graph, explicit source locations.
+- **Values and control:** typed expressions over named locals in structured statements (blocks, `if`, loops, `switch`, `break`/`continue`, `return`), explicit source locations. No SSA storage form; an analysis may derive an SSA view and map its results back to tree nodes.
 - **Semantic types:** sized integers, arbitrary precision when required, floats with format and rounding, fixed point, encoded values, structures, variants, functions, ownership and dynamic shapes.
 - **Memory:** allocations, address spaces, provenance, alias classes, byte/bit offsets, alignment, lifetime and storage identity.
-- **Effects:** writes/reads, potential faults, exceptions, synchronization, device I/O, external calls, stack/register/flag state and dynamic control flow.
+- **Effects:** per-function summaries (`IrEffects`) of writes/reads, potential faults, exceptions, synchronization, device I/O, external calls, stack/register/flag state and dynamic control flow.
 - **Iteration:** induction variables, access functions, strides, reductions, dependences, mutation and evaluation order.
 - **Object/runtime:** classes, interface dispatch, generic instantiations, type identity, [cleanup, continuations and error-handler regions](LANGUAGE-LOWERING.md).
 - **Machine:** explicit registers/flags and instruction effects for binary lifting/inline ASM; uninterpreted operations only with conservative effect summaries. These live on a level of their own, [MachineIR](MACHINE-IR.md), which is raised to and lowered from this IR.

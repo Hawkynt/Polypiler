@@ -46,7 +46,7 @@ public sealed partial class RewritesSpecFamily : ISpecFamily {
     var body = document.Body!;
     var problems = new List<Diagnostic>();
     if (!InBlock(optimization))
-      problems.Add(SpecDiagnostics.Rule(document, "/spec/optimization", $"{optimization} is outside the rewrite blocks O0001-O0099 and O0230-O0299", "id-in-block"));
+      problems.Add(SpecDiagnostics.Rule(document, "/spec/optimization", $"{optimization} is outside the rewrite blocks O0001-O0099, O0230-O0299 and O0380-O0396", "id-in-block"));
 
     problems.AddRange(FloatingPoint(document, body));
     if (Cycle(document, optimization, tree) is { } cycle)
@@ -69,13 +69,13 @@ public sealed partial class RewritesSpecFamily : ISpecFamily {
     return problems;
   }
 
-  /// <summary>Whether an optimization number lies in a block of this family: <c>O0001</c>–<c>O0099</c> or <c>O0230</c>–<c>O0299</c>.</summary>
+  /// <summary>Whether a number lies in a rewrite block: O0001–O0099, O0230–O0299 or the interprocedural block O0380–O0396.</summary>
   /// <param name="optimization">The number, <c>O</c> and four digits.</param>
   /// <returns><see langword="true"/> inside a block.</returns>
   public static bool InBlock(string optimization) {
     ArgumentNullException.ThrowIfNull(optimization);
     var number = int.Parse(optimization.AsSpan(1), System.Globalization.CultureInfo.InvariantCulture);
-    return number is >= 1 and <= 99 or >= 230 and <= 299;
+    return number is >= 1 and <= 99 or >= 230 and <= 299 or >= 380 and <= 396;
   }
 
   /// <summary>Rule <c>layout</c>: the path, and the ID, the optimization and the page that follow from the file name.</summary>

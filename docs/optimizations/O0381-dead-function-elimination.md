@@ -1,15 +1,13 @@
 # O0381 — Remove functions that are unreachable from the module's exports, tests and taken addresses
 
-<!-- status: planned -->
-> **Status: planned.** Not implemented yet. Once implemented it is switched off with `--disable-opt O0381`.
+> Implemented in the pass pipeline of `translate`. Disable with `--disable-opt O0381`.
 
 ## What it does
 
-After the middle end has run, a module carries functions nothing can reach: helpers of features the program
-does not use, and every function [#159](https://github.com/Hawkynt/Polypiler/issues/159) inlined at all of its call sites. [#156](https://github.com/Hawkynt/Polypiler/issues/156) and [#159](https://github.com/Hawkynt/Polypiler/issues/159)
-both name their removal as not planned. Left in, they are emitted, compiled and shipped — on a 64 KB target
-that is the difference between fitting and not — and inlining a small helper becomes a size *loss* instead of
-a win. PRD §4.8 (DCE, inlining).
+`ModuleReachability.Compute` marks the functions reachable from retained roots. `DeadFunctionElimination`
+removes every unmarked function in source order, including dead recursive cycles and helpers whose
+last call was inlined. Live function objects and bodies stay unchanged. This implements PRD §4.8's
+module dead-code removal on the structured tree IR.
 
 ## Example
 
@@ -31,13 +29,15 @@ func @main() -> void export "main" { Call.void @Used()  Ret.void }
 
 ## When it applies
 
-A function is deleted iff it is not marked. Marking: (1) roots are all functions with an `export`
-attribute and all `test` functions ([#125](https://github.com/Hawkynt/Polypiler/issues/125)); (2) a marked function marks every function it names in a
-`Call` and in a `FuncRef` ([#480](https://github.com/Hawkynt/Polypiler/issues/480)), in all of its blocks; (3) a `FuncRef` in the initializer of any
-global marks its function — every global counts as live in this issue. External declarations without a body
-are not functions of the module and are neither marked nor deleted. Nothing else is considered: a non-exported
-function cannot be named from outside the module. Removal has no alternative form, so there is no cost
-query.
+Roots are public functions, the additional entry points in `OptimizerOptions.Roots` (the CLI supplies
+Rust's test functions), the module initializer, every function named by a retained class or interface,
+and calls and function references in every global initializer. Retaining all type declarations means
+retaining their constructors, methods, property accessors, overrides and abstract signatures.
+
+A queue follows `IrCall` and `IrFunctionRef` nodes in each marked body, including nested lambdas and
+untaken branches. Global initializers currently admit pure calls; a factory returning a function
+reference keeps both the factory and its target. All globals remain live. `ReachabilityResult.Roots`
+records the first root that reached each function. No use count, solver or cost query is needed.
 
 ## How it is proven
 
@@ -47,7 +47,7 @@ query.
 
 - "No users" instead of reachability: `@Unused` and `@AlsoUnused` call each other, each has a user, both are dead.
 - A function referenced only by `FuncRef` in a global dispatch table: no `Call` names it, an indirect call reaches it.
-- A `test` function: nothing calls it, the test runner does.
+- A test function listed in `OptimizerOptions.Roots`: nothing calls it, the test runner does.
 - An exported function nothing in the module calls: the caller is outside.
 - Deleting a function while a `FuncRef` to it remains in an unreachable block of a live function: the verifier rejects the dangling reference; unreachable blocks must be gone or their references followed.
 
@@ -59,8 +59,31 @@ must mirror the source file for review is still available.
 
 ## Switching it off
 
-`--disable-opt O0381`; active at `--opt balanced`, `speed`, `size` and `memory`, off at `--opt none`.
+`--disable-opt O0381`; active at every non-`none` level the prototype accepts (`balanced`, `speed`,
+`size` and `memory` select the same default pipeline). `--opt none` runs no pass.
 
 ## Interactions with other passes
 
-module pass in phase `optimize`, last in each iteration, after [#159](https://github.com/Hawkynt/Polypiler/issues/159) and [#164](https://github.com/Hawkynt/Polypiler/issues/164); enables `OPT-IPA-CONSTARG` and `OPT-IPA-DEADPARAM` (fewer call sites to agree) and makes inlining a size win.
+Runs last in each round of `IrPassPipeline`, after inlining, propagation, folding, call evaluation,
+merging, dead-code removal and unrolling. Reachability is recomputed over the whole module on every
+sweep, regardless of the pipeline's dirty-function scope. Removed helper entries leave
+`Implementations`; `Inlined`, `Clones` and `ScopeFunctions` keep their historical provenance so notices
+for code copied into a live body survive. Foreign declarations remain unchanged.
+
+The opt report names each removed function, its statement-plus-expression size and proof class
+`structural`. There are no refusal entries for reachable functions.
+
+## Verification and provenance
+
+The acceptance scenarios of [#1153](https://github.com/Hawkynt/Polypiler/issues/1153) run on hand-built
+tree IR; `tests/fixtures/optimize/o0381/*.pir` records those trees, rather than claiming a textual IR
+parser. The print trace is an observable global write, and tests enter through explicit roots.
+Unit tests cover initialization, indirect calls, closures, retained type members, switches, empty
+modules, inlined notices and argument errors. Seed 381 generates 2,000 call graphs of 3–20 functions:
+an independent breadth-first search over a textual edge list checks survivors; eight inputs per root
+compare interpreter results, traps and global writes before and after removal.
+
+Converted from PB-Compiler's `GlobalDce` and its tests at
+`0d73acbea185a2597357d53f7ce9acb44758ba76` (LGPL-3.0-or-later), which describe dead procedures as
+O0022 and fully inlined procedures as O0201. Marking roots also removes cycles the upstream use-count
+sweep leaves alive. See `Polypiler.Core.Optimize/THIRD_PARTY_NOTICES.md` and `spec/rewrites/O0381.yaml`.

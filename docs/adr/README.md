@@ -12,7 +12,7 @@ Probe programs and recorded output a record measured live under `docs/adr/eviden
 
 | Number | Title | Status | Issue |
 | --- | --- | --- | --- |
-| [0001](0001-ir-stage-invariants.md) | IR stage invariants | accepted | [#19](https://github.com/Hawkynt/Polypiler/issues/19) |
+| [0001](0001-ir-stage-invariants.md) | IR stage invariants | superseded in part by [0009](0009-structured-tree-ir.md) | [#19](https://github.com/Hawkynt/Polypiler/issues/19) |
 | [0002](0002-numeric-contracts.md) | Numeric contracts: integer overflow, shift, division and rounding | accepted | [#21](https://github.com/Hawkynt/Polypiler/issues/21) |
 | [0003](0003-diagnostics-and-exit-codes.md) | Diagnostics registry, renderings and exit codes | accepted | [#17](https://github.com/Hawkynt/Polypiler/issues/17) |
 | [0004](0004-cli-design.md) | Command-line grammar, option naming and output conventions | accepted | [#16](https://github.com/Hawkynt/Polypiler/issues/16) |
@@ -20,6 +20,7 @@ Probe programs and recorded output a record measured live under `docs/adr/eviden
 | [0006](0006-performance-budgets.md) | Performance budgets | accepted | [#22](https://github.com/Hawkynt/Polypiler/issues/22) |
 | [0007](0007-javascript-native-calls.md) | Native calls in JavaScript through a user-supplied binding | accepted | [#1332](https://github.com/Hawkynt/Polypiler/issues/1332) |
 | [0008](0008-rust-trap-policy.md) | Traps in generated Rust: a trap policy of panics or error values | accepted | [#1392](https://github.com/Hawkynt/Polypiler/issues/1392) |
+| [0009](0009-structured-tree-ir.md) | The structured typed tree IR is the IR | accepted | — |
 | [0030](0030-cipher-source-licence.md) | Cipher source licence and its lowest pin | accepted | [#588](https://github.com/Hawkynt/Polypiler/issues/588) |
 
 Related: [documentation index](../README.md) · [IR and analysis contracts](../architecture/IR.md) · [compilation pipeline](../architecture/PIPELINE.md).

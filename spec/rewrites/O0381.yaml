@@ -1,0 +1,38 @@
+id: REWRITES.O0381
+title: Remove unreachable functions
+version: 1
+status: normative
+owner: Hawkynt
+issue: "#1153"
+tests:
+  - Polypiler.Tests/Optimize/DeadFunctionEliminationTests.cs
+  - tests/features/optimize/opt-ipa-deadfunc.feature
+introducedIn: P3
+compatibility: none
+reviewedRevision: 1
+normative: >-
+  O0381 MUST remove exactly the functions unreachable from public entry points,
+  additional test entry points, the module initializer, retained type declarations
+  and every global initializer. Reachability MUST follow direct calls and function
+  references throughout retained bodies, including lambdas and untaken branches.
+  O0381 MUST preserve live bodies, globals, external declarations and inlined notices.
+  It MUST run last in each round and MUST NOT run when disabled or at opt none.
+spec:
+  optimization: O0381
+  kind: eliminate
+  before: 'export main calls Used; Unused calls AlsoUnused; AlsoUnused calls Unused'
+  after: 'export main calls Used; Used retained; Unused and AlsoUnused removed'
+  predicates:
+    - id: unreachable
+      text: No path from any retained root reaches the removed function.
+      fact: none
+    - id: declarations-retained
+      text: Every function named by a retained type or initializer is a root.
+      fact: none
+  proof: {class: structural}
+  floatingPoint: {touchesFloat: false, reassociates: false, contracts: false}
+  negativeFixtures: [tests/fixtures/optimize/o0381/table.pir, tests/fixtures/optimize/o0381/roots.pir]
+  switch: '--disable-opt O0381'
+  optLevels: [balanced, speed, size, memory]
+  interactions: {after: [], enables: []}
+  document: docs/optimizations/O0381-dead-function-elimination.md

@@ -2,7 +2,7 @@
 
 Area: foundation
 
-**Status:** accepted · **Date:** 2026-11-13 · **Issue:** [#19](https://github.com/Hawkynt/Polypiler/issues/19) (`ADR-IR-STAGES`) · **Index:** [decision records](README.md)
+**Status:** superseded in part by [ADR 0009](0009-structured-tree-ir.md) — the SSA storage form, the nine stages, effect tokens and the `.pir` dump are withdrawn; the IR is the structured typed tree of `Polypiler.Core.IR` · **Date:** 2026-11-13 · **Issue:** [#19](https://github.com/Hawkynt/Polypiler/issues/19) (`ADR-IR-STAGES`) · **Index:** [decision records](README.md)
 
 **Decides:** [PRD §4.2](../prd/02-core-architecture.md#s4-2), [§4.3](../prd/02-core-architecture.md#s4-3) "stage legality", [§8 P0](../prd/04-roadmap-and-delivery.md#s8) "document initial IR stage invariants". Background: [IR and analysis contracts](../architecture/IR.md), [compilation pipeline](../architecture/PIPELINE.md).
 

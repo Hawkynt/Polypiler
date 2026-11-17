@@ -391,7 +391,7 @@ example before and after, the conditions under which it applies, the cases in wh
 fire, and a switch to turn it off.
 
 **[The optimization checklist](docs/optimizations/README.md)** lists all of them with their state:
-29 of 294 are implemented today, as prototypes in the pipeline of `translate`. The families from "Loop transformations" on are borrowed from
+30 of 294 are implemented today, as prototypes in the pipeline of `translate`. The families from "Loop transformations" on are borrowed from
 [PB-Compiler](https://github.com/Hawkynt/PB-Compiler); the
 [catalog](docs/optimizations/pb-compiler-catalog.md) maps each of its 424 optimization documents to the
 page here that covers it.
