@@ -61,6 +61,10 @@ generated code — a row changes only in the pull request that makes it true.
 
 `✅` full for the declared subset · `⚠️` partial, explained in the row · `—` not yet (planned).
 
+The state of every source-profile and target-profile pair, as far as gate records prove it, is the
+generated [capability report](docs/capabilities.md) ([JSON](docs/capabilities.json)); a pair without
+evidence reads `planned` there.
+
 ### Languages
 
 | Language | Dialect / version | Frontend | Backend | Notes |
