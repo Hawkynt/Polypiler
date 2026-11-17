@@ -1,0 +1,14 @@
+id: TARGETS.csharp.net10
+title: "csharp target net10"
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#49"
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  language: LANGUAGES.csharp
+  profile: net10
