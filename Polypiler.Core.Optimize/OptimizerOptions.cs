@@ -42,6 +42,9 @@ public sealed record OptimizerOptions {
   /// <summary>What the target says about the costs some rules ask for.</summary>
   public RuleTarget Target { get; init; } = RuleTarget.Neutral;
 
+  /// <summary>The host's equivalence prover for proof-dependent recognition rules; absent refuses those rules.</summary>
+  public IRecognitionProver? Prover { get; init; }
+
   /// <summary>The rules.</summary>
   public RuleTable Rules { get; init; } = RuleTable.Default;
 

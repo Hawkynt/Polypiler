@@ -4,6 +4,13 @@
 
 The compiler first recovers **what** an operation means and only later chooses **how** to implement it. This allows optimized legacy code to become a simple canonical operation, then to be re-optimized for a different CPU or language.
 
+Implemented on the tree IR: O0105 bit-reversal cascades and counted bit loops,
+and O0106 byte assemblies, rotation-ending cascades and counted byte loops.
+Both require an SMT equivalence proof after exact bit-provenance checks.
+Unknown, timeout and unavailable proofs preserve the original candidate. Their
+optimization pages document the executable subset and rejection cases; the
+general permutation-synthesis subsystem described below remains design work.
+
 ## Recoverable patterns
 
 | Low-level pattern | Candidate recovered operation | Non-negotiable conditions |

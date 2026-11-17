@@ -121,8 +121,13 @@ public sealed class RecognitionSpecFamilyTests {
     Assert.That(seed.Select(document => (string)document.Body!["optimization"]!), Is.EquivalentTo(RuleTable.Default.Ids));
     foreach (var document in seed) {
       var page = File.ReadAllText(Path.Combine(_repository, (string)document.Body!["document"]!));
-      Assert.That(page, Does.Contain("<!-- status: implemented (prototype) -->"), document.Path);
-      Assert.That(document.Meta!.Status, Is.EqualTo("draft"), document.Path + ": the proof obligations are not discharged yet");
+      var proved = (string)document.Body!["optimization"]! is "O0105" or "O0106";
+      Assert.That(page, Does.Contain(proved ? "<!-- status: implemented -->" : "<!-- status: implemented (prototype) -->"), document.Path);
+      Assert.That(document.Meta!.Status, Is.EqualTo(proved ? "normative" : "draft"), document.Path);
+      if (proved) {
+        Assert.That((string)document.Body!["level"]!, Is.EqualTo("typed-tree"));
+        Assert.That(document.Body!["proofObligations"]!.AsArray().Any(obligation => (string?)obligation!["class"] == "smt-bitvector"), Is.True);
+      }
     }
   }
 
@@ -156,13 +161,14 @@ public sealed class RecognitionSpecFamilyTests {
 
   [Test]
   public void EveryEnumeration_IsDeclaredByTheSchema() {
-    Assert.That(SchemaEnum("/properties/level/enum"), Is.EquivalentTo(new[] { "source-ast", "typed-ssa" }));
+    Assert.That(SchemaEnum("/properties/level/enum"), Is.EquivalentTo(new[] { "source-ast", "typed-tree", "typed-ssa" }));
     Assert.That(SchemaEnum("/properties/proofObligations/items/properties/class/enum"), Is.EquivalentTo(new[] { "exhaustive-8bit", "exhaustive-16bit", "smt-bitvector", "range-facts", "alias-facts" }));
     Assert.That(SchemaEnum("/properties/preconditions/items/properties/fact/enum"), Is.EquivalentTo(new[] { "none", "range", "known-bits", "alias", "effect", "type" }));
-    Assert.That(SchemaEnum("/properties/optLevels/items/enum"), Is.EquivalentTo(new[] { "balanced", "speed", "size", "memory" }));
+    Assert.That(SchemaEnum("/properties/optLevels/items/enum"), Is.EquivalentTo(new[] { "default", "balanced", "speed", "size", "memory" }));
   }
 
   [TestCase("source-ast")]
+  [TestCase("typed-tree")]
   [TestCase("typed-ssa")]
   public void EveryLevel_IsValid(string level) => Assert.That(Lines(("level: typed-ssa", "level: " + level)), Is.Empty);
 

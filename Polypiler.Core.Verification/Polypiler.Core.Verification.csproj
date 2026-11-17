@@ -8,6 +8,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Polypiler.Core\Polypiler.Core.csproj" />
     <ProjectReference Include="..\Polypiler.Core.IR\Polypiler.Core.IR.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Recognize\Polypiler.Core.Recognize.csproj" />
     <PackageReference Include="YamlDotNet" Version="18.1.0" />
     <PackageReference Include="JsonSchema.Net" Version="8.0.5" />
     <PackageReference Include="Microsoft.Z3" Version="4.11.2" />
