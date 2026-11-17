@@ -61,7 +61,7 @@ public sealed class VerifierRuleTests {
   public void TheStandardRegistryHoldsTheRuleOnLocalsAndIsFrozen() {
     var standard = VerifierRuleRegistry.Standard;
     Assert.That(standard.IsFrozen, Is.True);
-    Assert.That(standard.Rules.Select(rule => rule.Id), Is.EqualTo(new[] { Assigned }));
+    Assert.That(standard.Rules.Select(rule => rule.Id), Is.EqualTo(new[] { Assigned, "ir.verifier.records.layout" }));
     Assert.That(standard.Find(Assigned)!.Family, Is.EqualTo("locals"));
     Assert.That(standard.Find(Assigned)!.Description, Does.Contain("no path"));
     Assert.That(() => standard.Register(new BareRule("more")), Throws.InvalidOperationException);
@@ -72,7 +72,8 @@ public sealed class VerifierRuleTests {
     var rules = VerifierRuleRegistry.CreateStandard();
     Assert.That(rules.IsFrozen, Is.False);
     Assert.That(rules.Register(new BareRule("test.a")).Register(new BareRule("test.b")), Is.SameAs(rules));
-    Assert.That(rules.Rules.Select(rule => rule.Id), Is.EqualTo(new[] { Assigned, "test.a", "test.b" }));
+    Assert.That(rules.Rules.Select(rule => rule.Id).Skip(rules.Rules.Count - 2), Is.EqualTo(new[] { "test.a", "test.b" }));
+    Assert.That(rules.Rules[0].Id, Is.EqualTo(Assigned));
     Assert.That(rules.Find("test.c"), Is.Null);
     Assert.That(() => rules.Register(new BareRule("test.a")), Throws.ArgumentException.With.Message.Contains("test.a"));
     Assert.That(() => rules.Register(new BareRule(" ")), Throws.ArgumentException);

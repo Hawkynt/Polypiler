@@ -25,7 +25,7 @@ namespace Polypiler.Core.IR;
 public static partial class IrModuleFormat {
 
   /// <summary>The version of the layout; bytes of another version are refused.</summary>
-  public const int Version = 11;
+  public const int Version = 12;
 
   /// <summary>The byte that stands for the kind of an enum type, followed by its declaration: the kind of an enum type is that of its underlying type.</summary>
   private const byte EnumType = 0xFF;
@@ -47,7 +47,8 @@ public static partial class IrModuleFormat {
     Sequence,
     Await, Async,
     ForeignCall, LastError,
-    BigConst
+    BigConst,
+    LayoutOf, FieldAddress
   }
 
   /// <summary>The kinds of declaration, as the byte after the name of a declaration says.</summary>
@@ -244,6 +245,7 @@ public static partial class IrModuleFormat {
           writer.Write(structure.IsEquatable);
           writer.Write(structure.IsDefined);
           this.Layout(structure.Layout);
+          writer.Write(structure.LayoutObservable);
           break;
         case IrEnumType named:
           writer.Write((byte)Declared.Enum);
@@ -315,6 +317,7 @@ public static partial class IrModuleFormat {
         this.Type(field.Type);
         writer.Write(field.IsReadOnly);
         this.Count((int)field.Visibility);
+        this.Count(field.ByteOrder is { } order ? (int)order + 1 : 0);
       }
     }
 
@@ -688,6 +691,8 @@ public static partial class IrModuleFormat {
       IrForeignCall => Tag.ForeignCall,
       IrLastError => Tag.LastError,
       IrBigConst => Tag.BigConst,
+      IrLayoutOf => Tag.LayoutOf,
+      IrFieldAddress => Tag.FieldAddress,
       _ => throw new ArgumentException($"The expression {expression.GetType().Name} has no form in bytes.", nameof(module))
     };
 
@@ -738,6 +743,9 @@ public static partial class IrModuleFormat {
           break;
         case IrBigConst big:
           this.Text(big.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+          break;
+        case IrLayoutOf or IrFieldAddress:
+          this.Layout(expression);
           break;
         case IrUnary unary:
           this.Count((int)unary.Op);
@@ -1080,7 +1088,7 @@ public static partial class IrModuleFormat {
       switch (reader.ReadByte()) {
         case (byte)Declared.Struct:
           bool equatable = reader.ReadBoolean(), isDefinedStruct = reader.ReadBoolean();
-          var structure = new IrStructType(declared) { IsEquatable = equatable, Layout = this.Layout() };
+          var structure = new IrStructType(declared) { IsEquatable = equatable, Layout = this.Layout(), LayoutObservable = reader.ReadBoolean() };
           if (isDefinedStruct)
             defined.Add(structure);
 
@@ -1124,7 +1132,7 @@ public static partial class IrModuleFormat {
 
     private void Body(IrTypeDeclaration declaration, List<IrTypeDeclaration> defined, List<IrClassType> hierarchies) {
       if (defined.Contains(declaration))
-        declaration.Define(this.List(() => new IrField(reader.ReadString(), this.Type(), reader.ReadBoolean()) { Visibility = this.Enum<IrVisibility>() }));
+        declaration.Define(this.List(() => new IrField(reader.ReadString(), this.Type(), reader.ReadBoolean()) { Visibility = this.Enum<IrVisibility>(), ByteOrder = this.ByteOrder() }));
 
       if (declaration is not IrClassType type)
         return;
@@ -1332,12 +1340,12 @@ public static partial class IrModuleFormat {
         return Of(this._nodes, index, "node") as T ?? throw new InvalidDataException($"The node {index} is no {typeof(T).Name}.");
       }
 
-      if (tag > Tag.BigConst)
+      if (tag > Tag.FieldAddress)
         throw new InvalidDataException($"{(int)tag} is no kind of node.");
 
       var slot = this._nodes.Count;
       this._nodes.Add(null);
-      object node = tag >= Tag.Block && tag is not (Tag.ArraySequence or Tag.Sequence or Tag.Await or Tag.Async or Tag.ForeignCall or Tag.LastError or Tag.BigConst) ? this.Statement(tag) : this.Expression(tag);
+      object node = tag >= Tag.Block && tag is not (Tag.ArraySequence or Tag.Sequence or Tag.Await or Tag.Async or Tag.ForeignCall or Tag.LastError or Tag.BigConst or Tag.LayoutOf or Tag.FieldAddress) ? this.Statement(tag) : this.Expression(tag);
       this._nodes[slot] = node;
       return node as T ?? throw new InvalidDataException($"A {node.GetType().Name} stands where a {typeof(T).Name} belongs.");
     }
@@ -1392,6 +1400,7 @@ public static partial class IrModuleFormat {
         Tag.Async => new IrAsync(this.Enum<IrAsyncOp>(), type, this.Nodes<IrExpr>()),
         Tag.ForeignCall => new IrForeignCall(reader.ReadString(), type, this.Nodes<IrExpr>()),
         Tag.LastError => new IrLastError(reader.ReadBoolean()),
+        Tag.LayoutOf or Tag.FieldAddress => this.Layout(tag),
         _ => new IrInvoke(type, this.Node<IrExpr>(), this.Nodes<IrExpr>())
       };
       return expression.Type == type ? expression : expression with { Type = type };

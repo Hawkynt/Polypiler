@@ -119,5 +119,6 @@ optimizer's rule engine verifies the one function a rewrite changed this way.
 | Rule | Family | Requires |
 | --- | --- | --- |
 | `ir.verifier.locals.assigned-before-read` | locals | a local declared without a value is not read where no path has assigned it; a may-analysis, so a loop's top sees what its body assigns, a handler what its `try` assigns, and a lambda is checked against its own declarations |
+| `ir.verifier.records.layout` | records | a record whose layout a function asks for (`IrLayoutOf`) or whose field it addresses (`IrFieldAddress`) has a layout under every standard profile: no field without bytes, no overlapping explicit fields, no stated size short of the fields, no packing that is no power of two ([memory layout](../reference/memory-layout.md)) |
 
 Related: [PRD and architecture index](../PRD.md#architecture-guides) · [pipeline](PIPELINE.md) · [semantic recovery](SEMANTIC-RECOVERY.md) · [foreign interop](INTEROP.md).

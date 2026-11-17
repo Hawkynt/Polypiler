@@ -487,6 +487,9 @@ public static partial class IrVerifier {
           this.Require(step.Type.IsNumeric, $"a step of the type {step.Type}");
           this.Require(!step.Trap || !step.Type.IsFloat, $"a trapping step of the type {step.Type}");
           break;
+        case IrLayoutOf or IrFieldAddress:
+          this.Layout(expression);
+          break;
         default:
           this.Require(false, $"unknown expression {expression.GetType().Name}");
           break;

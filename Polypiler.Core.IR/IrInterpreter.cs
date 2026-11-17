@@ -617,6 +617,8 @@ public static partial class IrInterpreter {
           return this.AsyncOperation(operation, frame);
         case IrForeignCall or IrLastError:
           return this.Foreign(expression, frame);
+        case IrLayoutOf or IrFieldAddress:
+          return this.Layout(expression, frame);
         default:
           throw new NotSupportedException($"Unknown expression {expression.GetType().Name}.");
       }

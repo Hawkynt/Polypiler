@@ -13,6 +13,14 @@ public sealed record IrField(string Name, IrType Type, bool IsReadOnly) {
   /// <summary>Who may name the field: everybody, the assembly, or only the members of its own declaration.</summary>
   public IrVisibility Visibility { get; init; } = IrVisibility.Public;
 
+  /// <summary>
+  /// The byte order the field is stored in when its record lies in memory (#113), or <see langword="null"/> for
+  /// the order of the target's profile. A field of a stated order is addressed as bytes
+  /// (<see cref="IrFieldAddress"/>) and read and written with the ordered loads and stores of that order; its value
+  /// is the same either way.
+  /// </summary>
+  public IrByteOrder? ByteOrder { get; init; }
+
 }
 
 /// <summary>
@@ -107,5 +115,14 @@ public sealed class IrStructType : IrTypeDeclaration {
   /// <see langword="null"/> for none: the runtime's own.
   /// </summary>
   public IrStructLayout? Layout { get; init; }
+
+  /// <summary>
+  /// Whether the bytes of a value of the record can be seen from outside the program (#110): it is read from or
+  /// written to a file or a stream, crosses an ABI boundary, is overlaid, or its address reaches unknown code. Such
+  /// a record keeps its declared layout exactly; one that is not may be laid out anew by an optimization. A
+  /// frontend sets it from the source; an analysis may only set it, never clear it. It does not change the
+  /// <see cref="RecordLayout"/> computed for the record.
+  /// </summary>
+  public bool LayoutObservable { get; init; }
 
 }

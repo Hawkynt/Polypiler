@@ -19,7 +19,8 @@ public sealed class VerifierRuleRegistry {
   /// <summary>A new registry that holds the rules of the IR's own operation families and takes more.</summary>
   /// <returns>The registry, not frozen.</returns>
   public static VerifierRuleRegistry CreateStandard()
-    => new VerifierRuleRegistry().Register(new DefiniteAssignmentRule());
+    => new VerifierRuleRegistry().Register(new DefiniteAssignmentRule())
+      .Register(new RecordLayoutRule());
 
   /// <summary>Whether the registry takes no more rules.</summary>
   public bool IsFrozen { get; private set; }
