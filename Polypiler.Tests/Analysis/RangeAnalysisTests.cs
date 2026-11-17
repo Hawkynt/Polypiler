@@ -98,8 +98,11 @@ public sealed class RangeAnalysisTests {
     var (then, otherwise) = (Block(), Block());
     var function = Function([X], new IrIf(Op(op, R(X), K(10)), then, otherwise), new IrReturn(K(0)));
     var flipped = Function([X], new IrIf(Op(op switch {
-      IrBinaryOp.Less => IrBinaryOp.Greater, IrBinaryOp.LessOrEqual => IrBinaryOp.GreaterOrEqual,
-      IrBinaryOp.Greater => IrBinaryOp.Less, IrBinaryOp.GreaterOrEqual => IrBinaryOp.LessOrEqual, _ => op
+      IrBinaryOp.Less => IrBinaryOp.Greater,
+      IrBinaryOp.LessOrEqual => IrBinaryOp.GreaterOrEqual,
+      IrBinaryOp.Greater => IrBinaryOp.Less,
+      IrBinaryOp.GreaterOrEqual => IrBinaryOp.LessOrEqual,
+      _ => op
     }, K(10), R(X)), then, otherwise), new IrReturn(K(0)));
     var expected = new ValueRange(min, max);
     Assert.That(new RangeAnalysis(function).At(R(X), ProgramPoint.Entry(edge ? then : otherwise)), Is.EqualTo(expected));
