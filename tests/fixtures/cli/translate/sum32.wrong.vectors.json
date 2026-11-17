@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "fixture": "cli/translate/sum32-wrong",
+  "provenance": {
+    "kind": "published",
+    "source": "ECMA-334 7th edition, 12.10.5 Addition operator",
+    "detail": "a deliberately wrong expected value, 1 + 2 = 4, so that a mismatch is reported",
+    "generatedBy": "hand"
+  },
+  "export": "Add",
+  "signature": {
+    "parameters": [ { "name": "a", "type": "u32" }, { "name": "b", "type": "u32" } ],
+    "result": "u32"
+  },
+  "vectors": [
+    { "name": "Add(1, 2)", "input": { "hex": "0100000002000000" }, "expected": { "hex": "04000000" } }
+  ]
+}

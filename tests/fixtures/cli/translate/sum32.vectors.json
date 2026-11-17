@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "fixture": "cli/translate/sum32",
+  "provenance": {
+    "kind": "published",
+    "source": "ECMA-334 7th edition, 12.10.5 Addition operator",
+    "detail": "uint operator +(uint x, uint y) in an unchecked context: the low 32 bits of the sum, computed by hand",
+    "generatedBy": "hand"
+  },
+  "export": "Add",
+  "signature": {
+    "parameters": [ { "name": "a", "type": "u32" }, { "name": "b", "type": "u32" } ],
+    "result": "u32"
+  },
+  "vectors": [
+    { "name": "Add(1, 2)", "input": { "hex": "0100000002000000" }, "expected": { "hex": "03000000" } },
+    { "name": "Add(0xFFFFFFFF, 1)", "input": { "hex": "ffffffff01000000" }, "expected": { "hex": "00000000" } },
+    { "name": "Add(0x80000000, 0x80000000)", "input": { "hex": "0000008000000080" }, "expected": { "hex": "00000000" } }
+  ]
+}

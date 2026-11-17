@@ -2132,6 +2132,16 @@
       "bytes": 75808
     },
     {
+      "path": "tests/fixtures/cli/translate/sum32.vectors.json",
+      "sha256": "e8822651b508295ce4f164275e7b05284fba897f56c00a8e9ebce5990b18a4d8",
+      "bytes": 817
+    },
+    {
+      "path": "tests/fixtures/cli/translate/sum32.wrong.vectors.json",
+      "sha256": "1bd044fe21f51024ad00a424ff8ad8fd8b5136f7073fae517144f9d7de701285",
+      "bytes": 565
+    },
+    {
       "path": "tests/fixtures/corpus/cipher/aead/ace.kat.json",
       "sha256": "bd40457fafa345e4e0515de9853fafe1ef4ce73012466ded4d80739e96c3d146",
       "bytes": 4428
