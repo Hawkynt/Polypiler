@@ -208,7 +208,7 @@ public sealed class SmtBitvectorProverTests {
   /// <summary>Test design 16: a binding other than the lock's is refused before any query.</summary>
   [Test]
   public void ABindingOfAnotherVersionThanTheLock_IsRefused() {
-    var lockText = File.ReadAllText(Path.Combine(PrototypeFixture.RepositoryRoot, "tooling/toolchains.lock"));
+    var lockText = File.ReadAllText(Path.Combine(PrototypeFixture.RepositoryRoot, "tooling/toolchains.lock")).Replace("\r\n", "\n", StringComparison.Ordinal);
     Assert.That(Z3Solver.Pinned(lockText), Is.EqualTo(Z3Solver.BindingVersion()));
     var altered = lockText.Replace($"version: \"{Z3Solver.Pinned(lockText)}\"\n    kind: nuget\n    requires: dotnet-sdk\n    probe: [Microsoft.Z3]", "version: \"9.9.9\"\n    kind: nuget\n    requires: dotnet-sdk\n    probe: [Microsoft.Z3]", StringComparison.Ordinal);
     var exception = Assert.Throws<ProverUnavailableException>(() => _ = new Z3Solver(altered));
@@ -251,7 +251,7 @@ public sealed class SmtBitvectorProverTests {
       var dumped = File.ReadAllText(Path.Combine(directory, "rotate-constant-w16.smt2"));
       Assert.That(dumped, Does.StartWith("; rule: rotate-constant\n; width: 16\n; verdict: unsat\n; elapsed: "));
       var query = string.Concat(dumped.Split('\n').Where(line => !line.StartsWith(';')).Select(line => line + "\n")).TrimEnd('\n') + "\n";
-      Assert.That(query, Is.EqualTo(File.ReadAllText(Path.Combine(PrototypeFixture.RepositoryRoot, Folder, "rotate-constant-w16.smt2"))));
+      Assert.That(query, Is.EqualTo(File.ReadAllText(Path.Combine(PrototypeFixture.RepositoryRoot, Folder, "rotate-constant-w16.smt2")).Replace("\r\n", "\n", StringComparison.Ordinal)));
       Assert.That(query, Is.EqualTo(SmtEncoder.ToSmtLib(Fixture("rotate-constant"), 16)));
 
       var quiet = Path.Combine(directory, "quiet");

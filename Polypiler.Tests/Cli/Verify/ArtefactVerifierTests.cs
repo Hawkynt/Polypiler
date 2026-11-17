@@ -40,7 +40,7 @@ public sealed class ArtefactVerifierTests {
   private VerificationOutcome Verify(string? vectors = VerifyWorkspace.Vectors, bool update = true, string? evidence = null, string directory = "copy")
     => new ArtefactVerifier(this._output, this._workspace.Root, this._node, RunLimits.Default).Run(new VerifyRequest(directory, vectors, update, evidence), this._diagnostics);
 
-  private string[] Lines => this._output.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries);
+  private string[] Lines => this._output.ToString().Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
   private string[] Codes => [.. this._diagnostics.Items.Select(diagnostic => diagnostic.Code)];
 

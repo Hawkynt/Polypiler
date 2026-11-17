@@ -16,7 +16,7 @@ public sealed class EmbeddedCapabilitiesTests {
   public void TheExecutable_CarriesTheCommittedReport() {
     using var resource = typeof(EmbeddedCapabilities).Assembly.GetManifestResourceStream(EmbeddedCapabilities.ResourceName)!;
     using var reader = new StreamReader(resource);
-    Assert.That(reader.ReadToEnd(), Is.EqualTo(File.ReadAllText(Path.Combine(PrototypeFixture.RepositoryRoot, "docs", CapabilityReport.JsonFile)).Replace("\r\n", "\n", StringComparison.Ordinal)));
+    Assert.That(reader.ReadToEnd().Replace("\r\n", "\n", StringComparison.Ordinal), Is.EqualTo(File.ReadAllText(Path.Combine(PrototypeFixture.RepositoryRoot, "docs", CapabilityReport.JsonFile)).Replace("\r\n", "\n", StringComparison.Ordinal)));
 
     var report = EmbeddedCapabilities.Load();
     Assert.That(report.Pairs, Is.Not.Empty);
