@@ -87,6 +87,44 @@ An example IR fragment is illustrative, **not** a proposed parser grammar:
     Store8(program_ram, base + 2, %sum.value)
     ObserveFlags(%sum.flags)  // retained only if flags are live
 
+## Source locations and provenance
+
+What exists today, on the prototype's tree IR (`Polypiler.Core.IR`), where an instruction is a
+statement (`IrStmt`) other than a block:
+
+- **Sources.** `IrModule.Sources` lists the `SourceArtifact`s a module was made from: repository,
+  commit, path relative to the repository, SHA-256 of the file and dialect ID (`pb/3.5`). Never an
+  absolute local path, never the text.
+- **Origins.** `IrStmt.Origins` and `IrExpr.Origins` hold, in order, any number of `SourceSpan`
+  (source index, 1-based start and end line and column, end exclusive, columns in UTF-16 code units;
+  `SourceSpan.FromOffsets` computes one from text offsets), `AddressSpan` (source index, byte offset,
+  length, for binary inputs) and `Synthetic` (the ID of the pass that made the node). Origins take no
+  part in equality, hashing or `ToString`: two nodes that differ only in origins are equal and
+  interchangeable for every pass.
+- **Rewrites.** A `with` expression copies origins, and `IrTree.With` keeps them also for the
+  expressions it rebuilds with `new`. `IrOrigins.Replace(replacement, replaced...)` gives a
+  replacement the origins of everything it replaces, in their order (one for a replacement, N for a
+  merge); `IrOrigins.MarkSynthetic(node, passId)` marks a node a pass inserted; `IrOrigins.Split`
+  leaves both halves of a split block the block's origins. A missing origin is never borrowed from a
+  neighbour.
+- **Verification.** `IrVerifier.Verify` runs `OriginRule`: a malformed origin or source is PLY0116,
+  an origin naming a source index at or past `Sources.Count` is PLY0117, and in a module that declares
+  sources every instruction without an origin is PLY0115. A module that declares no sources is exempt
+  from PLY0115: no frontend records locations yet, and the optimizer's passes do not yet carry them,
+  so the rule binds exactly the modules made by something that tracks them. The IR has no stages, so
+  the rule is the same wherever it runs.
+- **Text form.** There is no textual IR; the suffixes `!loc(0:12:5-12:18)`, `!addr(0:0x1F40+3)` and
+  `!synthetic("O0100")` are printed by `Origin.Format` and read by `Origin.TryParse`, and the
+  `sources { 0: "repo@commit:path" sha256:<hex> dialect:"pb/3.5" }` header by
+  `SourceArtifact.FormatTable` and `SourceArtifact.TryParseTable`.
+- **Bytes.** `IrModuleFormat` keeps sources and origins exactly. A node with origins is preceded by a
+  marker byte and its origins, and a module with sources ends with their table; a module without
+  either writes the bytes it always wrote, so the layout version stays 11.
+- **Export.** `SourceMapWriter.Write(module, function)` writes a function's `*.map.json` per
+  [`spec/ir/sourcemap.schema.json`](../../spec/ir/sourcemap.schema.json): the ECMA-426 field names
+  where the concepts coincide (`version`, `sources`), the hashes (`sourcesSha256`) where ECMA-426
+  embeds content, and one mapping per instruction with its number, kind and origins.
+
 ## Pass contract and invariants
 
 Every transformation needs:
