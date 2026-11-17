@@ -819,6 +819,24 @@ codes:
     area: optimization
     owner: ANA-FACADE
     surfaces: "the diagnostics of FactChecker.Run when a run of the interpreter observes a value a queried fact excludes, and the FactException of ValueFacts.Decide when two providers decide a comparison differently"
+  - code: PLY0355
+    severity: error
+    exit: UnsupportedConstruct
+    title: no cost profile for the target profile
+    message: "target profile '<language>/<profile>' has no cost profile"
+    rule: opt-cost.profile-missing
+    area: optimization
+    owner: OPT-COST
+    surfaces: "the CostProfileException of TargetCostProfile.ForTarget and CostModel.ForTarget when spec/targets/<language>/<profile>/cost.yaml does not exist; the cost model never falls back to a default profile"
+  - code: PLY0356
+    severity: error
+    exit: InvalidSource
+    title: cost profile malformed
+    message: "cost profile '<path>': <key>: <problem>"
+    rule: opt-cost.profile-invalid
+    area: optimization
+    owner: OPT-COST
+    surfaces: "the CostProfileException of TargetCostProfile.Load and Parse, at the line and column of the offending node: invalid YAML, a missing required key such as default, a negative or non-integer number, an unknown key, or an operation name the IR's operator enums and scalar types do not know"
   - code: PLY0800
     severity: error
     exit: UnsupportedConstruct

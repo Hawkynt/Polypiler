@@ -13,6 +13,8 @@ spec/
                           evidence.schema.json: evidence.json of a BDD scenario's evidence bundle, not a spec document
                           gate-record.schema.json: artifacts/gates/<pair>.json, how far each fixture of a pair got
   <family>/**/*.yaml      the documents of one family
+  targets/**/cost.yaml    not spec documents: the cost profiles beside the target documents
+                          (schemas/cost-profile.schema.json, targets/README.md), checked by the cost model
   adapters/<adapter>/     not spec documents: the adapter licence audits (schemas/adapter-audit.schema.json),
                           checked by polypiler-tooling catalog audit-adapter
 ```
