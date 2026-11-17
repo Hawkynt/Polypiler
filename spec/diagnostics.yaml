@@ -759,6 +759,60 @@ codes:
     area: ir
     owner: PROTOTYPE
     surfaces: "standard error of polypiler translate, as 'error PLY0101: <reason>' with the reason that the executable carries no float-implementations resource or the reason IrModuleFormat refuses its bytes, when a strict float translation needs the float-implementations module the executable embeds and it is absent or does not read back"
+  - code: PLY0120
+    severity: error
+    exit: InternalError
+    title: no evaluation for an operation
+    message: "no evaluator is registered for '<operation>' | 'Undef' value '%<local>' was evaluated"
+    rule: ir.interpreter.evaluation
+    area: ir
+    owner: IR-INTERP
+    surfaces: "the Diagnostic of an Aborted ExecutionResult of IrInterpreter.Run, when a run reaches an operation whose own evaluation the evaluator registry withholds and supplies none, or reads a local nothing was assigned to"
+  - code: PLY0121
+    severity: error
+    exit: BudgetExceeded
+    title: interpreter budget exceeded
+    message: "step budget of <steps> exceeded in '@<function>' | call depth <depth> exceeded"
+    rule: ir.interpreter.budget
+    area: ir
+    owner: IR-INTERP
+    surfaces: "the Diagnostic of an Aborted ExecutionResult of IrInterpreter.Run, when the run needs more steps than InterpreterOptions.MaxSteps or more frames at once than InterpreterOptions.MaxCallDepth"
+  - code: PLY0122
+    severity: error
+    exit: UsageError
+    title: arguments do not fit the function run
+    message: "'@<function>' expects (<parameter types>), got (<argument types>)"
+    rule: ir.interpreter.arguments
+    area: ir
+    owner: IR-INTERP
+    surfaces: "the Diagnostic of an Aborted ExecutionResult of IrInterpreter.Run, when the number of arguments or the type of one differs from the parameters of the function, before anything runs"
+  - code: PLY0123
+    severity: error
+    exit: MissingDependency
+    title: external function without a model
+    message: "external '@<function>' has no model"
+    rule: ir.interpreter.external
+    area: ir
+    owner: IR-INTERP
+    surfaces: "the Diagnostic of an Aborted ExecutionResult of IrInterpreter.Run, when the run calls a foreign function and InterpreterOptions.Externals is absent or does not model it; nothing is traced for the call"
+  - code: PLY0124
+    severity: error
+    exit: InternalError
+    title: interpreted module does not verify
+    message: "module does not verify: <count> diagnostics"
+    rule: ir.interpreter.verified
+    area: ir
+    owner: IR-INTERP
+    surfaces: "the Diagnostic of an Aborted ExecutionResult of IrInterpreter.Run, with the verifier's PLY0100 diagnostics in ExecutionResult.Diagnostics, when the module does not verify; nothing runs"
+  - code: PLY0142
+    severity: error
+    exit: InternalError
+    title: access outside its region
+    message: "access of <count> elements at offset <offset> exceeds region '<region>' of <length> elements"
+    rule: ir.memory.bounds
+    area: ir
+    owner: IR-INTERP
+    surfaces: "the Diagnostic of an Aborted ExecutionResult of IrInterpreter.Run under BoundsMode.CheckAll, when an evaluator reports an access outside its region through EvaluationContext.Access"
   - code: PLY0800
     severity: error
     exit: UnsupportedConstruct

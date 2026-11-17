@@ -361,6 +361,9 @@ public static partial class IrInterpreter {
 
     private bool _budgeted;
 
+    /// <summary>The most calls in progress at once within a budget.</summary>
+    private int _depthLimit = BudgetDepth;
+
     /// <summary>Sets the budget of the run: the most steps, and calls nested no deeper than <see cref="BudgetDepth"/>.</summary>
     public void Limit(long steps) {
       this._steps = steps;
@@ -378,9 +381,10 @@ public static partial class IrInterpreter {
         return this.Body(function, arguments);
 
       this.Step();
-      if (++this._depth > BudgetDepth)
-        throw new IrBudgetException($"The call nests calls deeper than {BudgetDepth}.");
+      if (++this._depth > this._depthLimit)
+        throw new IrBudgetException($"The call nests calls deeper than {this._depthLimit}.");
 
+      this.Probe?.Enter(this._depth, function);
       try {
         return this.Body(function, arguments);
       } finally {
@@ -407,9 +411,12 @@ public static partial class IrInterpreter {
       return frame.Result;
     }
 
-    /// <summary>Executes a statement and says how it ended; a statement other than a block is a step of the budget.</summary>
+    /// <summary>
+    /// Executes a statement and says how it ended; a statement other than a block is a step of the budget, and so is
+    /// an empty block, so that a loop with an empty body runs out of a budget too (#119).
+    /// </summary>
     private Flow Run(IrStmt statement, Frame frame) {
-      if (statement is not IrBlock)
+      if (statement is not IrBlock { Statements.Count: > 0 })
         this.Step();
 
       switch (statement) {
@@ -506,6 +513,9 @@ public static partial class IrInterpreter {
     }
 
     private object Evaluate(IrExpr expression, Frame frame) {
+      if (this.Probe is not null && this.Intercepted(expression, frame, out var intercepted))
+        return intercepted!;
+
       switch (expression) {
         case IrConst constant:
           return Constant(constant.Type, constant.Value);
@@ -518,7 +528,7 @@ public static partial class IrInterpreter {
         case IrIntrinsic intrinsic:
           return this.Intrinsic(intrinsic, frame)!;
         case IrLocalRef reference:
-          return Copied(frame.Get(reference.Local));
+          return Copied(this.Read(frame, reference.Local));
         case IrGlobalRef reference:
           return Copied(globals[reference.Global]);
         case IrStrConst text:
@@ -993,6 +1003,7 @@ public static partial class IrInterpreter {
 
     /// <summary>Writes a variable: the cell it has, or a new one for a variable that has none yet.</summary>
     public void Set(IrLocal local, object value) {
+      Recorded(local, value);
       if (this.Locals.TryGetValue(local, out var cell))
         cell.Value = value;
       else
@@ -1000,7 +1011,10 @@ public static partial class IrInterpreter {
     }
 
     /// <summary>A new variable, in a cell of its own.</summary>
-    public void Declare(IrLocal local, object? value) => this.Locals[local] = new Cell(value);
+    public void Declare(IrLocal local, object? value) {
+      Recorded(local, value);
+      this.Locals[local] = new Cell(value);
+    }
 
     /// <summary>Gives each variable a new cell that starts with the value of its old one, which a closure made before keeps.</summary>
     public void Renew(IReadOnlyList<IrLocal> variables) {
