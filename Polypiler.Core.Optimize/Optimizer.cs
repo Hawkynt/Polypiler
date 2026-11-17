@@ -141,7 +141,8 @@ public static class Optimizer {
 
       var functions = module.Functions.ToList();
       functions[index] = this.Current();
-      var problems = IrVerifier.Verify(module with { Functions = functions });
+      // A rule rewrites one function; it is that function the verifier checks again.
+      var problems = IrVerifier.Verify(module with { Functions = functions }, [this._function.Name]);
       if (problems.Count > 0)
         throw new InvalidOperationException($"{rule} left '{this._function.Name}' ill-typed: {string.Join("; ", problems)}");
     }

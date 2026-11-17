@@ -100,4 +100,24 @@ Every transformation needs:
 
 Unknown is **not false** and not **proven safe**. A timeout never counts as a proof.
 
+## Verifier rules
+
+`IrVerifier.Verify(module)` checks the types and declarations of a module and then runs the rules
+of `VerifierRuleRegistry.Standard` on every function. A rule (`IVerifierRule`) belongs to one
+operation family, has a stable id `ir.verifier.<family>.<name>`, and reports through its context; a
+rule about one kind of node derives from `IrNodeRule<TNode>` and is called once per such node,
+lambda bodies included. Every diagnostic is `PLY0100` and names the function, the node and the rule:
+
+    ill-typed IR in 'F': IrLocalRef 'x': 'x' is read where no path has given it a value [ir.verifier.locals.assigned-before-read]
+
+The standard registry is frozen; a pass or a test that needs more rules starts from
+`VerifierRuleRegistry.CreateStandard()` and registers its own, then calls `Verify(module, rules)`.
+`Verify(module, functions, rules)` checks only the named functions against the rest of the module -
+what a pass changed - and leaves the declarations of the module to the whole-module check; the
+optimizer's rule engine verifies the one function a rewrite changed this way.
+
+| Rule | Family | Requires |
+| --- | --- | --- |
+| `ir.verifier.locals.assigned-before-read` | locals | a local declared without a value is not read where no path has assigned it; a may-analysis, so a loop's top sees what its body assigns, a handler what its `try` assigns, and a lambda is checked against its own declarations |
+
 Related: [PRD and architecture index](../PRD.md#architecture-guides) · [pipeline](PIPELINE.md) · [semantic recovery](SEMANTIC-RECOVERY.md) · [foreign interop](INTEROP.md).

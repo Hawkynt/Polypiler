@@ -16,8 +16,17 @@ public static partial class IrVerifier {
   /// <summary>Checks every function of a module.</summary>
   /// <param name="module">The module to check.</param>
   /// <returns>One diagnostic per violated rule; empty when the module is well-typed.</returns>
-  public static IReadOnlyList<Diagnostic> Verify(IrModule module) {
-    var diagnostics = new List<Diagnostic>();
+  public static IReadOnlyList<Diagnostic> Verify(IrModule module) => Run(module, null, VerifierRuleRegistry.Standard);
+
+  /// <summary>
+  /// The checks of a module: of its declarations, reported only when <paramref name="only"/> is
+  /// <see langword="null"/>, and of its functions - all of them, or those <paramref name="only"/> names -
+  /// each followed by the rules of the registry.
+  /// </summary>
+  private static List<Diagnostic> Run(IrModule module, IReadOnlySet<string>? only, VerifierRuleRegistry rules) {
+    var reported = new List<Diagnostic>();
+    // A check of some functions reads the declarations but leaves what they violate to the check of the module.
+    var diagnostics = only is null ? reported : [];
     var functions = new Dictionary<string, IrFunction>();
     foreach (var function in module.Functions)
       if (!functions.TryAdd(function.Name, function))
@@ -58,14 +67,16 @@ public static partial class IrVerifier {
         && !(functions.TryGetValue(initializer, out var start) && start is { IsPublic: false, Parameters.Count: 0, IsAsync: false } && start.ReturnType == IrType.Void))
       diagnostics.Add(Error(initializer, "the initializer of the module is no private function of the module that takes and gives nothing"));
 
-    foreach (var function in module.Functions)
-      new FunctionCheck(function, functions, constants, types, diagnostics) { Globals = globals, Members = members, Signatures = signatures, ForeignFunctions = foreign }.Run();
+    foreach (var function in module.Functions.Where(function => only?.Contains(function.Name) != false)) {
+      new FunctionCheck(function, functions, constants, types, reported) { Globals = globals, Members = members, Signatures = signatures, ForeignFunctions = foreign }.Run();
+      RunRules(module, function, rules, reported);
+    }
 
-    if (diagnostics.Count == 0)
-      foreach (var (constructor, call) in IrConstruction.VirtualCalls(module))
-        diagnostics.Add(Error(constructor, $"a virtual call of '{call.Method.Name}' on 'this' during construction"));
+    if (diagnostics.Count == 0 && reported.Count == 0)
+      foreach (var (constructor, call) in IrConstruction.VirtualCalls(module).Where(found => only?.Contains(found.Constructor) != false))
+        reported.Add(Error(constructor, $"a virtual call of '{call.Method.Name}' on 'this' during construction"));
 
-    return diagnostics;
+    return reported;
   }
 
   /// <summary>What the verifier says of a view that would outlive the stack: in a field, a constant or an array.</summary>
