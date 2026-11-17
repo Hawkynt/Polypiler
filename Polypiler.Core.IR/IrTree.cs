@@ -98,7 +98,13 @@ public static class IrTree {
   /// <param name="expression">The expression.</param>
   /// <param name="operands">The new operands, as many as it has.</param>
   /// <returns>The expression rebuilt; one without operands as it is.</returns>
-  public static IrExpr With(IrExpr expression, IReadOnlyList<IrExpr> operands) => expression switch {
+  /// <remarks>An expression rebuilt keeps the <see cref="IrExpr.Origins"/> of the one it replaces.</remarks>
+  public static IrExpr With(IrExpr expression, IReadOnlyList<IrExpr> operands) {
+    var rebuilt = Rebuilt(expression, operands);
+    return expression.Origins.Count == 0 || ReferenceEquals(rebuilt.Origins, expression.Origins) ? rebuilt : rebuilt with { Origins = expression.Origins };
+  }
+
+  private static IrExpr Rebuilt(IrExpr expression, IReadOnlyList<IrExpr> operands) => expression switch {
     IrUnary unary => new IrUnary(unary.Op, operands[0]),
     IrBinary binary => new IrBinary(binary.Op, operands[0], operands[1]),
     IrConvert conversion => conversion with { Operand = operands[0] },
