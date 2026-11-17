@@ -1587,3 +1587,218 @@ codes:
     area: tokenized-basic
     owner: FMT-GWBASIC-ORACLE
     surfaces: "the PcBasicException of a conversion to ASCII or to a token file, and the diagnostics of a PcBasicRun, when PC-BASIC exited non-zero, hit a runner limit (the cause names the runner's PLY0031, PLY0032 or PLY0033), wrote no conversion, or wrote an empty one for an input that is not empty"
+  - code: PLY4000
+    severity: error
+    exit: InvalidSource
+    title: unknown machine register or flag
+    message: "'<name>' is not a register or flag of machine profile '<profile>'"
+    rule: machine.ir.storage
+    area: machine
+    owner: MACH-IR
+    surfaces: the diagnostics of MachineVerifier.Verify for a RegRead, RegWrite, FlagRead, FlagWrite or FlagUndef that names storage its module's profile does not declare
+  - code: PLY4001
+    severity: error
+    exit: InvalidSource
+    title: machine access of the wrong width
+    message: "'<instruction>' has type <type> but register '<register>' is <bits> bits wide"
+    rule: machine.ir.width
+    area: machine
+    owner: MACH-IR
+    surfaces: the diagnostics of MachineVerifier.Verify for a register access whose type is not as wide as the register
+  - code: PLY4002
+    severity: error
+    exit: InvalidSource
+    title: read of an undefined flag
+    message: "flag '<flag>' is read at <where> but is undefined after <undefined at>"
+    rule: machine.ir.undefined-flag
+    area: machine
+    owner: MACH-IR
+    surfaces: the diagnostics of MachineVerifier.Verify for a FlagRead that only a FlagUndef reaches on every path
+  - code: PLY4003
+    severity: error
+    exit: InvalidSource
+    title: machine profile missing or invalid
+    message: "'@<function>' uses machine operations but module '<module>' declares no machine profile; or: machine profile '<profile>': <reason>"
+    rule: machine.ir.profile
+    area: machine
+    owner: MACH-IR
+    surfaces: "the diagnostics of MachineVerifier.Verify for machine operations in a module without a machine line; the MachineException of IsaProfile.Load, ProfileLoader.Parse and MachineSyntax.Parse for a profile file that breaks a rule (duplicate name, unknown or cyclic parent, sub-register exceeding its parent, flag outside its register) or an unknown profile ID"
+  - code: PLY4004
+    severity: error
+    exit: InvalidSource
+    title: sub-register after normalization
+    message: "'<instruction>' is not allowed in '@<function>' after normalization to root registers"
+    rule: machine.ir.normalized
+    area: machine
+    owner: MACH-IR
+    surfaces: the diagnostics of MachineVerifier.Verify for a sub-register access in a function with the attribute root-registers
+  - code: PLY4005
+    severity: error
+    exit: InvalidSource
+    title: malformed MachineIR
+    message: "'@<function>' is not well-formed MachineIR: <problem>"
+    rule: machine.ir.well-formed
+    area: machine
+    owner: MACH-IR
+    surfaces: "the diagnostics of MachineVerifier.Verify for a block without a terminator or with an instruction after it, a duplicate label, an unknown jump target, a value used before its definition or defined twice, and operands or types an opcode does not take"
+  - code: PLY4006
+    severity: error
+    exit: InvalidSource
+    title: MachineIR text not valid
+    message: "MachineIR text is not valid: <problem>"
+    rule: machine.ir.syntax
+    area: machine
+    owner: MACH-IR
+    surfaces: the MachineException of MachineSyntax.Parse, naming the line
+  - code: PLY4009
+    severity: error
+    exit: InvalidSource
+    title: address ranges overlap
+    message: "address ranges '<a>' and '<b>' overlap at <address>"
+    rule: machine.regions.overlap
+    area: machine
+    owner: MACH-REGIONS
+    surfaces: the MachineException of new AddressMap and the diagnostics of AddressMap.Validate
+  - code: PLY4010
+    severity: warning
+    title: constant address outside every region
+    message: "'<instruction>' at <where> accesses constant address <address>, which no declared region covers; treated as unknown memory"
+    area: machine
+    owner: MACH-REGIONS
+    reserved: true
+  - code: PLY4011
+    severity: error
+    exit: InvalidSource
+    title: address range invalid
+    message: "address range '<name>' ends before it starts; or: address range '<name>' exceeds the <bits>-bit address space of '<isa>'"
+    rule: machine.regions.range
+    area: machine
+    owner: MACH-REGIONS
+    surfaces: the MachineException of new AddressMap and the diagnostics of AddressMap.Validate
+  - code: PLY4025
+    severity: error
+    exit: InvalidSource
+    title: interrupt vector invalid
+    message: "interrupt vector <vector> is outside 0..<last> for machine profile '<profile>'; or: trap kind '<kind>' requires a vector"
+    area: machine
+    owner: MACH-TRAP
+    reserved: true
+  - code: PLY4026
+    severity: warning
+    title: software interrupt without a service contract
+    message: "software interrupt <vector> at <where> has no service contract; all registers and unknown memory are assumed read and written"
+    area: machine
+    owner: MACH-TRAP
+    reserved: true
+  - code: PLY4030
+    severity: error
+    exit: EnvironmentError
+    title: machine vector file not valid
+    message: "machine vector file '<file>' is not valid: <reason>"
+    area: machine
+    owner: MACH-TRACE
+    reserved: true
+  - code: PLY4031
+    severity: error
+    exit: SemanticMismatch
+    title: machine trace differs
+    message: "'<fixture>' vector '<vector>': <what> expected <expected>, actual <actual>"
+    area: machine
+    owner: MACH-TRACE
+    reserved: true
+  - code: PLY4032
+    severity: error
+    exit: EnvironmentError
+    title: observed storage not in the profile
+    message: "'<file>' observes '<name>', which machine profile '<profile>' does not define"
+    area: machine
+    owner: MACH-TRACE
+    reserved: true
+  - code: PLY4033
+    severity: error
+    exit: EnvironmentError
+    title: reference reports unobserved events
+    message: "'<fixture>' vector '<vector>': the reference produced <count> event(s) of kind '<kind>' but the projection does not observe that kind"
+    area: machine
+    owner: MACH-TRACE
+    reserved: true
+  - code: PLY4034
+    severity: error
+    exit: UnsupportedConstruct
+    title: opaque instruction not interpretable
+    message: "opaque instruction <id> at <where> cannot be interpreted"
+    area: machine
+    owner: MACH-INTERP
+    reserved: true
+  - code: PLY4035
+    severity: error
+    exit: SemanticMismatch
+    title: undefined machine state read
+    message: "undefined flag '<flag>' is read at <where>; or: uninitialized register '<register>' is read at <where>"
+    area: machine
+    owner: MACH-INTERP
+    reserved: true
+  - code: PLY4036
+    severity: error
+    exit: SemanticMismatch
+    title: device model exhausted
+    message: "device model has no value for a <bits>-bit read of <space>:<address>"
+    area: machine
+    owner: MACH-INTERP
+    reserved: true
+  - code: PLY4037
+    severity: error
+    exit: UnsupportedConstruct
+    title: code write over a lifted instruction
+    message: "code write at <address> overlaps the lifted instruction at <instruction>"
+    area: machine
+    owner: MACH-INTERP
+    reserved: true
+  - code: PLY4038
+    severity: error
+    exit: SemanticMismatch
+    title: indirect jump outside its targets
+    message: "indirect jump at <where> went to <address>, which is not among its listed targets; or: indirect jump at <where> has unresolved targets"
+    area: machine
+    owner: MACH-INTERP
+    reserved: true
+  - code: PLY4055
+    severity: error
+    exit: EnvironmentError
+    title: binary manifest not valid
+    message: "binary manifest '<file>' is not valid: <reason>"
+    area: machine
+    owner: MACH-BIN-MANIFEST
+    reserved: true
+  - code: PLY4056
+    severity: error
+    exit: EnvironmentError
+    title: image hash mismatch
+    message: "'<image>' has SHA-256 <actual>, the manifest expects <expected>"
+    area: machine
+    owner: MACH-BIN-MANIFEST
+    reserved: true
+  - code: PLY4057
+    severity: error
+    exit: EnvironmentError
+    title: manifest contradicted
+    message: "manifest states <field> '<value>' but <other> states '<other value>'"
+    area: machine
+    owner: MACH-BIN-MANIFEST
+    reserved: true
+  - code: PLY4058
+    severity: error
+    exit: EnvironmentError
+    title: entry or range outside the image
+    message: "entry '<name>' at <address> is not inside executable code; or: range <start>..<end> lies outside the image"
+    area: machine
+    owner: MACH-BIN-MANIFEST
+    reserved: true
+  - code: PLY4059
+    severity: error
+    exit: EnvironmentError
+    title: container not recognized
+    message: "'<file>' is not a recognized container; give the manifest field 'container' or use a raw profile"
+    area: machine
+    owner: MACH-BIN-MANIFEST
+    reserved: true
