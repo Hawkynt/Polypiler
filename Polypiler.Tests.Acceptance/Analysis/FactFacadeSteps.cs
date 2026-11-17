@@ -32,7 +32,7 @@ public sealed class FactFacadeSteps {
 
   private IrIf Branch => this.Function.Body.Statements.OfType<IrIf>().Single();
 
-  [Given("^the C# method \"(.*)\"$")]
+  [Given("^the analysed C# method \"(.*)\"$")]
   public void Method(string method) => this._module = PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(method));
 
   [Given("^the constant domain is registered$")]
