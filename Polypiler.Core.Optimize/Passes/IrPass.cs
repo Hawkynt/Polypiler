@@ -31,8 +31,9 @@ public interface IIrPass {
 /// The passes that run over a legalized module, in table order, round after round until a round
 /// changes nothing or <see cref="RoundLimit"/> rounds have run: specialisation for the function values
 /// passed (O0463), inlining (O0006), constant propagation (O0003), constant folding (O0001),
-/// compile-time evaluation of pure calls (O0002), merging of identical calls (O0464), dead-code removal (O0005)
-/// and full unrolling (O0023). Each makes work for the next - a lifted lambda and the copy of its
+/// compile-time evaluation of pure calls (O0002), merging of identical calls (O0464), dead-code removal (O0005),
+/// full unrolling (O0023) and module-wide dead function elimination (O0381). Each makes work for the next -
+/// a lifted lambda and the copy of its
 /// callee are direct calls to inline, an inlined helper has constant parameters, a constant condition
 /// a dead branch, an unrolled loop constant indices - and none of them changes what a module computes,
 /// its traps and the point they happen at included. The passes that work from the effect summaries of
@@ -52,7 +53,7 @@ public sealed class IrPassPipeline {
   /// <summary>The pipeline of <c>translate</c>.</summary>
   public static IrPassPipeline Default { get; } = new([
     new O0463LambdaSpecialisation(), new O0006Inlining(), new O0003ConstantPropagation(), new O0001ConstantFolding(), new O0002CallEvaluation(), new O0464CallMerging(),
-    new O0005DeadCode(), new O0023Unrolling()
+    new O0005DeadCode(), new O0023Unrolling(), new DeadFunctionElimination()
   ]);
 
   /// <summary>Makes a pipeline of passes.</summary>
@@ -108,6 +109,7 @@ public sealed class IrPassPipeline {
         module = pass switch {
           O0463LambdaSpecialisation specialisation => specialisation.Run(module, Looked, Applied, Note),
           O0002CallEvaluation evaluation => evaluation.Run(module, Looked, Applied, Note),
+          DeadFunctionElimination elimination => elimination.Run(module, Looked, Applied, Note, options.Roots),
           _ => pass.Run(module, Looked, Applied)
         };
         // What specialisation made - lifted lambdas and copies - is looked at like the helpers.

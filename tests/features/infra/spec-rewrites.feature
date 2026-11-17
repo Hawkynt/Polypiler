@@ -21,7 +21,7 @@ Feature: Schema and validator for spec/rewrites/
 
     Examples:
       | fixture                      | code    | message                                                                                                 |
-      | id-in-block.yaml             | PLY0046 | O0150 is outside the rewrite blocks O0001-O0099 and O0230-O0299 (rule: id-in-block)                     |
+      | id-in-block.yaml             | PLY0046 | O0150 is outside the rewrite blocks O0001-O0099, O0230-O0299 and O0380-O0396 (rule: id-in-block)                     |
       | float-flags-consistent.yaml  | PLY0046 | floatingPoint.reassociates is true but touchesFloat is false (rule: float-flags-consistent)             |
       | interaction-acyclic          | PLY0046 | interaction cycle O0001 -> O0002 -> O0001 (rule: interaction-acyclic)                                   |
       | switch-matches.yaml          | PLY0046 | switch '--disable-opt O0002' does not disable O0001 (rule: switch-matches)                              |
