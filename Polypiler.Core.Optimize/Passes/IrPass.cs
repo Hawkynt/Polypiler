@@ -30,16 +30,17 @@ public interface IIrPass {
 /// <summary>
 /// The passes that run over a legalized module, in table order, round after round until a round
 /// changes nothing or <see cref="RoundLimit"/> rounds have run: specialisation for the function values
-/// passed (O0463), inlining (O0006), constant propagation (O0003), constant folding (O0001),
-/// compile-time evaluation of pure calls (O0002), merging of identical calls (O0464), dead-code removal (O0005)
-/// and full unrolling (O0023). Each makes work for the next - a lifted lambda and the copy of its
+/// passed (O0463), inlining (O0006), propagation of the literal every call passes a parameter into the
+/// function (O0380), localization of a global only one function uses (O0389), constant propagation
+/// (O0003), constant folding (O0001), compile-time evaluation of pure calls (O0002), merging of
+/// identical calls (O0464), dead-code removal (O0005) and full unrolling (O0023). Each makes work for the next - a lifted lambda and the copy of its
 /// callee are direct calls to inline, an inlined helper has constant parameters, a constant condition
 /// a dead branch, an unrolled loop constant indices - and none of them changes what a module computes,
 /// its traps and the point they happen at included. The passes that work from the effect summaries of
-/// the functions (<see cref="IrEffects"/>) - merging and evaluation - look at every function, as
-/// specialisation and inlining do; the others at the functions legalization copied in from the
-/// libraries, the functions specialisation made and every function one of those four changed; the
-/// rest of the program stays as the frontend made it. The last round only cleans up:
+/// the functions (<see cref="IrEffects"/>) - merging and evaluation - and the two that look across the
+/// calls of the module - O0380 and O0389 - look at every function, as specialisation and inlining
+/// do; the others at the functions legalization copied in from the libraries, the functions
+/// specialisation made and every function one of those changed; the rest of the program stays as the frontend made it. The last round only cleans up:
 /// specialisation, inlining and unrolling, which make code, sit it out, so that what they made in the
 /// round before is propagated, folded and removed. After the first round the passes look only at the
 /// functions the round before changed and at their callers.
@@ -51,7 +52,7 @@ public sealed class IrPassPipeline {
 
   /// <summary>The pipeline of <c>translate</c>.</summary>
   public static IrPassPipeline Default { get; } = new([
-    new O0463LambdaSpecialisation(), new O0006Inlining(), new O0003ConstantPropagation(), new O0001ConstantFolding(), new O0002CallEvaluation(), new O0464CallMerging(),
+    new O0463LambdaSpecialisation(), new O0006Inlining(), new O0380ArgumentConstantPropagation(), new O0389GlobalLocalization(), new O0003ConstantPropagation(), new O0001ConstantFolding(), new O0002CallEvaluation(), new O0464CallMerging(),
     new O0005DeadCode(), new O0023Unrolling()
   ]);
 
@@ -96,7 +97,8 @@ public sealed class IrPassPipeline {
         if (round == RoundLimit - 1 && pass is O0463LambdaSpecialisation or O0006Inlining or O0023Unrolling)
           continue;
 
-        var everywhere = pass is O0463LambdaSpecialisation or O0006Inlining or O0464CallMerging or O0002CallEvaluation;
+        var everywhere = pass is O0463LambdaSpecialisation or O0006Inlining or O0464CallMerging or O0002CallEvaluation
+          or O0380ArgumentConstantPropagation or O0389GlobalLocalization;
         bool Looked(IrFunction function) => (dirty is null || dirty.Contains(function.Name)) && (everywhere || scope.Contains(function.Name));
         void Applied(string function, string position) {
           applications.Add(new(pass.Id, pass.Name, function, position));
@@ -108,6 +110,8 @@ public sealed class IrPassPipeline {
         module = pass switch {
           O0463LambdaSpecialisation specialisation => specialisation.Run(module, Looked, Applied, Note),
           O0002CallEvaluation evaluation => evaluation.Run(module, Looked, Applied, Note),
+          O0380ArgumentConstantPropagation arguments => arguments.Run(module, Looked, Applied, Note),
+          O0389GlobalLocalization globals => globals.Run(module, Looked, Applied, Note),
           _ => pass.Run(module, Looked, Applied)
         };
         // What specialisation made - lifted lambdas and copies - is looked at like the helpers.
