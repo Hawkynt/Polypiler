@@ -2132,6 +2132,16 @@
       "bytes": 75808
     },
     {
+      "path": "tests/fixtures/cli/verify/adler32.vectors.json",
+      "sha256": "5a81cd2868043d8431c8a648cc70a93b6a405462b3b8d512b6c7fddf7a2da005",
+      "bytes": 1111
+    },
+    {
+      "path": "tests/fixtures/cli/verify/adler32.wrong.vectors.json",
+      "sha256": "f186ee3365af6774f1254946f8e4b57c50e28302365b2a721b46d85f023bf22a",
+      "bytes": 620
+    },
+    {
       "path": "tests/fixtures/corpus/cipher/aead/ace.kat.json",
       "sha256": "bd40457fafa345e4e0515de9853fafe1ef4ce73012466ded4d80739e96c3d146",
       "bytes": 4428
