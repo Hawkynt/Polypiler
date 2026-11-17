@@ -41,15 +41,8 @@ public static partial class IrInterpreter {
   public static IrModuleInstance Instantiate(IrModule module) {
     var program = _programs.GetValue(module, Index);
     var globals = new Dictionary<IrGlobal, object>(ReferenceEqualityComparer.Instance);
-    var machine = new Machine(program, globals);
-    foreach (var global in module.Globals)
-      globals[global] = global.Initializer is { } initializer ? machine.Initial(initializer)
-        : global.Type.IsObject || global.Type.IsCollection ? NullReference.Value
-        : Constant(global.Type, 0);
-
     // The statements of the module run once, when it is loaded, after its globals have their values.
-    if (module.Initializer is { } start)
-      Call(program, globals, module, start, []);
+    Initialise(new Machine(program, globals), program, module, globals);
 
     return new IrModuleInstance(module, (function, arguments) => Call(program, globals, module, function, arguments));
   }

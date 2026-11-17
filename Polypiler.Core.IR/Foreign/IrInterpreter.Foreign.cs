@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace Polypiler.Core.IR;
 
 public static partial class IrInterpreter {
@@ -10,8 +12,10 @@ public static partial class IrInterpreter {
     /// - the <see cref="IrForeign.Trap"/>.
     /// </summary>
     private object Foreign(IrExpr expression, Frame frame) {
-      foreach (var argument in IrTree.Operands(expression))
-        this.Evaluate(argument, frame);
+      var arguments = IrTree.Operands(expression).Select(argument => this.Evaluate(argument, frame)).ToList();
+      // A run resolves the call through its external model (#119).
+      if (this.Probe is { } probe && expression is IrForeignCall call)
+        return this.Modelled(probe, call, arguments)!;
 
       throw new IrTrapException(IrTrap.InvalidOperation);
     }

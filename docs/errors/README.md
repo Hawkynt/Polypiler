@@ -92,6 +92,12 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | --- | --- | --- | --- | --- |
 | [PLY0100](PLY0100.md) | error | 70 (InternalError) | `ill-typed IR in '<member>': <reason>` | PROTOTYPE |
 | [PLY0101](PLY0101.md) | error | 70 (InternalError) | `<reason>` | PROTOTYPE |
+| [PLY0120](PLY0120.md) | error | 70 (InternalError) | `no evaluator is registered for '<operation>' \| 'Undef' value '%<local>' was evaluated` | IR-INTERP |
+| [PLY0121](PLY0121.md) | error | 10 (BudgetExceeded) | `step budget of <steps> exceeded in '@<function>' \| call depth <depth> exceeded` | IR-INTERP |
+| [PLY0122](PLY0122.md) | error | 2 (UsageError) | `'@<function>' expects (<parameter types>), got (<argument types>)` | IR-INTERP |
+| [PLY0123](PLY0123.md) | error | 9 (MissingDependency) | `external '@<function>' has no model` | IR-INTERP |
+| [PLY0124](PLY0124.md) | error | 70 (InternalError) | `module does not verify: <count> diagnostics` | IR-INTERP |
+| [PLY0142](PLY0142.md) | error | 70 (InternalError) | `access of <count> elements at offset <offset> exceeds region '<region>' of <length> elements` | IR-INTERP |
 
 ## PLY0500–PLY0599 · legalization
 
