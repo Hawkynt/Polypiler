@@ -102,9 +102,9 @@ public static partial class RustEmitter {
 
       var optional = this._nullness.ElementsMayBeNull(list);
       if (optional && entry is RsCall { Callee: RsPath { Name: "Some" }, Arguments: [var some] })
-        return new RsCall(new RsPath("Some"), [some is RsCast ? some : this.Upcast(some, false, list.Element!)]) { Type = element.Type };
+        return new RsCall(new RsPath("Some"), [some is RsCast ? some : this.Converted(some, false, list.Element!)]) { Type = element.Type };
 
-      return this.Upcast(entry, optional, list.Element!);
+      return this.Converted(entry, optional, list.Element!);
     }
 
     /// <summary>

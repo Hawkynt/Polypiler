@@ -120,7 +120,7 @@ public static partial class RustEmitter {
               var value when declare.Local.Type.IsString && this.IsNullableString(declare.Local) => this.NullableStringValue(value),
               var value when declare.Local.Type.IsString => this.StringValue(value),
               var value when IsError(declare.Local.Type) => this.ErrorValue(value),
-              var value when declare.Local.Type.IsObject => this.ObjectValue(value, this.MayBeNull(declare.Local)),
+              var value when declare.Local.Type.IsObject => this.ObjectValueAs(value, this.MayBeNull(declare.Local), declare.Local.Type),
               var value when declare.Local.Type.IsView => this.ViewSource(value, this.WritesView(declare.Local)),
               var value when declare.Local.Type.IsFunction => this.FunctionValue(value),
               var value when declare.Local.Type.IsCollection && this.IsBorrowedCollection(declare.Local) => this.BorrowedCollection(declare.Local, value),
@@ -224,7 +224,7 @@ public static partial class RustEmitter {
             { Type.IsString: true } value when this._stringNulls.ReturnsNull(this._function.Name) => this.NullableStringValue(value),
             { Type.IsString: true } value => this.StringValue(value, true),
             IrLocalRef { Type.IsBigInt: true } value when !this._shared.Contains(value.Local) => new RsPath(this._locals[value.Local]) { Type = IrType.BigInt },
-            { Type.IsObject: true } value => this.ObjectValue(value, this._nullness.ReturnsNull(this._function.Name)),
+            { Type.IsObject: true } value => this.ObjectValueAs(value, this._nullness.ReturnsNull(this._function.Name), this._function.ReturnType),
             { Type.IsFunction: true } value => this.FunctionValue(value),
             { Type.IsCollection: true } value => this.CollectionValue(value),
             var value => this.Expression(value)
@@ -278,7 +278,7 @@ public static partial class RustEmitter {
       if (local.Type.IsString)
         return new RsAssign(place, "=", this.IsNullableString(local) ? this.NullableStringValue(value) : this.StringValue(value));
       if (local.Type.IsObject)
-        return new RsAssign(place, "=", this.ObjectValue(value, this.MayBeNull(local)));
+        return new RsAssign(place, "=", this.ObjectValueAs(value, this.MayBeNull(local), local.Type));
       if (local.Type.IsFunction)
         return new RsAssign(place, "=", this.FunctionValue(value));
       if (local.Type.IsCollection)

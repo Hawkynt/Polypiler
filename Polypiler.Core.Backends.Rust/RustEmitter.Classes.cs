@@ -226,14 +226,13 @@ public static partial class RustEmitter {
     /// class, a base class), which an <c>Rc</c> of a struct is by itself.
     /// </summary>
     private RsExpression ObjectValue(IrExpr value, bool optional, IrType target) {
-      if (this.IsPolymorphic(target) && !this.IsPolymorphic(value.Type) && value.Type != target && value is not IrNull && value.Type.IsAssignableTo(target)) {
-        // Rc::clone(&x) takes its type from what receives it, which a struct's Rc then is not: the clone is converted.
-        // A value that is never null is converted before it is wrapped: Some(x as Rc<dyn T>), never Some(x).map(..).
+      if (this.IsUpcast(value, optional, target)) {
+        // A value that is never null is converted before it is wrapped: Some(Rc::clone(&b) as Rc<dyn A>),
+        // whose clone Rust would otherwise make of the trait object's type (#1422).
         if (optional && !this.MayBeNull(value))
           return new RsCall(new RsPath("Some"), [this.ObjectValue(value, false, target)]) { Type = target };
 
-        var converted = this.ObjectValue(value, optional);
-        return converted is RsCall { Callee: RsPath { Name: "Rc::clone" } } || optional && converted is not RsCall { Callee: RsPath { Name: "Some" } } ? this.Upcast(converted, optional, target) : converted;
+        return this.Upcast(this.ObjectValue(value, optional), optional, target);
       }
       if (!this.IsPolymorphic(target) || !this.IsPolymorphic(value.Type) || value.Type == target || value is IrNull)
         return this.ObjectValue(value, optional);
@@ -243,12 +242,35 @@ public static partial class RustEmitter {
       return this.Checked(this.Method(this.ObjectValue(value, false), this.Conversion("into_", target), target), IrTrap.InvalidCast);
     }
 
+    /// <summary>A value of a class type as a variable or a result of a type holds it: converted to the type's trait where it is an <c>Option</c> of a struct, else as it is.</summary>
+    private RsExpression ObjectValueAs(IrExpr value, bool optional, IrType target)
+      => this.IsUpcast(value, optional, target) ? this.ObjectValue(value, optional, target) : this.ObjectValue(value, optional);
+
+    /// <summary>Whether a value is of a struct and goes to a place of a trait.</summary>
+    private bool IsUpcast(IrExpr value, bool optional, IrType target)
+      => value is not IrNull && value.Type != target && this.IsPolymorphic(target) && !this.IsPolymorphic(value.Type) && !this.IsPlain(value.Type);
+
     /// <summary>
-    /// The <c>Rc</c> of a struct as the trait object of a class it derives from (#1422): <c>x as Rc&lt;dyn Base&gt;</c>,
-    /// <c>x.map(|o| o as Rc&lt;dyn Base&gt;)</c> of one that may be null - where nothing around it says the
-    /// type, as <c>Rc::clone</c> or an element of <c>vec!</c>, which would otherwise take the struct's.
+    /// An <c>Option&lt;Rc&lt;B&gt;&gt;</c> of a struct as the <c>Option</c> of a trait it implements:
+    /// <c>b.map(|o| o as Rc&lt;dyn A&gt;)</c>, as an <c>Rc</c> of a struct is converted by itself and an
+    /// <c>Option</c> of one is not; <c>Some(B::new())</c> is left as it is, its <c>Rc</c> converted where it is made.
+    /// An <c>Rc</c> that is never null is converted by itself, apart from <c>Rc::clone(&amp;b)</c>, which Rust would
+    /// make an <c>Rc&lt;dyn A&gt;</c> of the clone's own type parameter and then reject <c>&amp;b</c>: it is cast,
+    /// <c>Rc::clone(&amp;b) as Rc&lt;dyn A&gt;</c>.
     /// </summary>
-    private RsExpression Upcast(RsExpression shared, bool optional, IrType target) {
+    private RsExpression Upcast(RsExpression shared, bool optional, IrType target) => shared switch {
+      RsCall { Callee: RsPath { Name: "Some" } } => shared,
+      RsCall { Callee: RsPath { Name: "Rc::clone" } } when !optional => new RsCast(shared, this.ObjectType(target, false)) { Type = target },
+      _ when !optional => shared,
+      _ => this.Method(shared, "map", target, new RsClosure(false, [new RsParameter("o", "")], new RsCast(new RsPath("o"), this.ObjectType(target, false))))
+    };
+
+    /// <summary>
+    /// The <c>Rc</c> of a struct as the trait object of a class it derives from, whatever made it (#1422):
+    /// <c>x as Rc&lt;dyn Base&gt;</c>, <c>x.map(|o| o as Rc&lt;dyn Base&gt;)</c> of one that may be null - where
+    /// nothing around it says the type, as an element of <c>vec!</c>, which would otherwise take the struct's.
+    /// </summary>
+    private RsExpression Converted(RsExpression shared, bool optional, IrType target) {
       var type = $"Rc<{this.ClassName(target)}>";
       if (!optional)
         return new RsCast(this.Operand(shared, 12), type) { Type = target };
@@ -577,8 +599,8 @@ public static partial class RustEmitter {
 
     private readonly Dictionary<string, string> _globals = new(StringComparer.Ordinal);
 
-    /// <summary>The atomic type of the standard library a global of a type is, or <see langword="null"/>.</summary>
-    private static string? Atomic(IrType type) => type.Kind switch {
+    /// <summary>The atomic type of the standard library a global of a type is, or <see langword="null"/>: none for an enum, which is a type of its own.</summary>
+    private static string? Atomic(IrType type) => type.IsEnum ? null : type.Kind switch {
       IrTypeKind.Bool => "AtomicBool",
       IrTypeKind.I8 or IrTypeKind.U8 or IrTypeKind.I16 or IrTypeKind.U16 or IrTypeKind.I32 or IrTypeKind.U32 or IrTypeKind.I64 or IrTypeKind.U64
         => "Atomic" + char.ToUpperInvariant(TypeName(type)![0]) + TypeName(type)![1..],
