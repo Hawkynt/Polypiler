@@ -52,4 +52,13 @@ public sealed class VerifierRuleContext {
     this._diagnostics.Add(IrVerifier.RuleError(this.Function.Name, this._rule.Id, IrVerifier.Describe(node), message));
   }
 
+  /// <summary>Reports a violation under a diagnostic of its own rather than <see cref="IrVerifier.Code"/>, with the message as it stands.</summary>
+  /// <param name="descriptor">The registered diagnostic, whose message format takes the message as its one argument.</param>
+  /// <param name="message">The whole message.</param>
+  public void Report(DiagnosticDescriptor descriptor, string message) {
+    ArgumentNullException.ThrowIfNull(descriptor);
+    ArgumentNullException.ThrowIfNull(message);
+    this._diagnostics.Add(descriptor.At(message));
+  }
+
 }

@@ -190,6 +190,41 @@ stands. `IrThrow` states the semantics once for every implementation:
 
 The interpreter tests the clauses in a .NET exception filter, which gives the CLR's two passes.
 
+## Trap kinds and labels
+
+Every trap has one of the 16 kinds of [`spec/ir/traps.yaml`](../../spec/ir/traps.yaml) (`TrapKind`):
+`Overflow`, `DivideByZero`, `IndexOutOfRange`, `LengthMismatch`, `EmptySequence`, `ShapeMismatch`,
+`OverlappingCopy`, `NullReference`, `InvalidCast`, `InvalidOperation`, `AssertionFailed`,
+`ContractViolation`, `OutOfMemory`, `StackOverflow`, `Unreachable` and `User`. Each `IrTrap` of an
+operation has the kind the document lists it under (`TrapKinds.Of`): `KeyNotFound` and
+`ArgumentOutOfRange` are `IndexOutOfRange`, `MissingValue` is `NullReference`, `DuplicateKey`,
+`CollectionModified`, `InvalidFormat` and `UnknownName` are `InvalidOperation`.
+
+A trap carries a **label** (`TrapLabel(Name, Kind, ExceptionType?)`, `IrException.Label`), the name the
+source language gives the failure. The built-in labels are the kind names and `ArithmeticOverflow`
+(kind `Overflow`) and `DivisionByZero` (kind `DivideByZero`); a trap of an operation carries its kind's.
+Any other label is the source's own exception type, spelled as the source spells it, declared with its
+kind in the module's trap table `IrModule.Traps` - `OverflowException`, `ZeroDivisionError`,
+`std::out_of_range`. Rust and Go panics, C and BASIC use the kind's name. `Panic<Kind>` and a kind
+joined to another word by `_` are invented spellings and are refused; so is an undeclared label, a
+built-in label in the table and a label declared twice (`PLY0178`).
+
+- **`IrAssert(Condition, Label)`** traps with its label when the condition is false;
+  `IrAssert.Fail(label)` always does. A kind that an operation also raises fails as that operation
+  (`IrTrapException` with its `IrTrap`); any other kind throws an object of the kind's class
+  (`TrapKinds.Class`) as `IrKindTrapException`.
+- **`IrTrapAttribute(Operation, Label)`** is the attribute `[trap <label>]`: a trap of the label's kind
+  that the operation raises itself - not one of its operands - carries the label. The operation must be
+  able to fail with that kind (`TrapKinds.Possible`); a select, a call or a constant cannot carry one.
+- **`IrTrapMatches(Labels)`**, in the filter of a catch clause, selects a trap when the list is empty or
+  one of its labels selects the trap's: the same label, or a built-in label of the trap's kind.
+  `[Overflow]` catches every overflow, `[OverflowException]` only those so labelled. An exception the
+  program throws is no trap and is selected by none; a trap caught and thrown again keeps its label.
+- A handler around a call is the tree form of an unwind edge (ADR 0009): a trap in the callee reaches
+  it with the callee's label. Landing pads and unwind targets do not exist in the tree.
+
+`IrEffects` counts an assertion as a trap, so no pass drops it as dead code.
+
 ## Frontends
 
 - **C#:** `try`, `catch`, `catch (T)`, `catch (T e)`, `when` filters, `finally`, `throw e`, `throw;`,

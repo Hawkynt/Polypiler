@@ -1,0 +1,20 @@
+# at: ir/traps.yaml
+# expect: PLY0046: alias 'Oops' stands for 'Missing', which is no kind (rule: trap-label)
+id: IR.traps
+title: "Trap kinds"
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#115"
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: traps
+  kinds:
+    - {name: Overflow, class: OverflowException, irTraps: [IntegerOverflow]}
+    - {name: DivideByZero, class: DivideByZeroException, irTraps: [DivideByZero]}
+  aliases:
+    - {name: Oops, kind: Missing}

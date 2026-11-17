@@ -439,6 +439,9 @@ public sealed class IrEffectTable {
         case IrForEachCollection or IrForEachSequence or IrUsing or IrYield or IrYieldFrom:
           this.Worst();
           break;
+        case IrAssert:
+          this._mayTrap = true;
+          break;
       }
 
       foreach (var block in IrTree.Blocks(statement))

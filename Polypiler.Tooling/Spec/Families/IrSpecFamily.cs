@@ -8,8 +8,8 @@ namespace Polypiler.Tooling.Spec.Families;
 
 /// <summary>
 /// The family <c>ir</c> (PRD §4.1–§4.3, ADR 0001): one document per IR operation under
-/// <c>spec/ir/operations/</c>, one per IR stage under <c>spec/ir/stages/</c> and the IR version in
-/// <c>spec/ir/version.yaml</c>. The schema <c>spec/schemas/ir.schema.json</c> states the shape of each;
+/// <c>spec/ir/operations/</c>, one per IR stage under <c>spec/ir/stages/</c>, the IR version in
+/// <c>spec/ir/version.yaml</c> and the trap kinds with the built-in trap labels in <c>spec/ir/traps.yaml</c>. The schema <c>spec/schemas/ir.schema.json</c> states the shape of each;
 /// <see cref="Check"/> adds the rules across fields and files.
 /// </summary>
 public sealed class IrSpecFamily : ISpecFamily {
@@ -17,6 +17,7 @@ public sealed class IrSpecFamily : ISpecFamily {
   private const string OperationsFolder = "operations";
   private const string StagesFolder = "stages";
   private const string VersionFile = "version.yaml";
+  private const string TrapsFile = "traps.yaml";
 
   /// <inheritdoc />
   public string Folder => "ir";
@@ -28,7 +29,9 @@ public sealed class IrSpecFamily : ISpecFamily {
   /// The rules of the family, each <c>PLY0046</c> at the offending value: <c>layout</c> (the path follows
   /// from the kind, the ID and the mnemonic), <c>stage-range</c>, <c>example-arity</c>,
   /// <c>flag-declared</c>, <c>trap-declared</c>, <c>type-declared</c>, <c>unique-mnemonic</c> and
-  /// <c>unique-stage-order</c> (both reported at the later document in path order). Every stage,
+  /// <c>unique-stage-order</c> (both reported at the later document in path order), and
+  /// <c>trap-label</c> (the kinds and aliases of the trap document have distinct names, an alias names
+  /// a kind, and each trap of the IR belongs to one kind). Every stage,
   /// effect and <c>TYPES.</c> ID must name a document (<c>PLY0043</c>).
   /// </summary>
   /// <param name="document">The document, whose body conforms to the schema.</param>
@@ -51,6 +54,9 @@ public sealed class IrSpecFamily : ISpecFamily {
         if (Earlier(document, tree, "stage", "order", body["order"]!.ToJsonString()) is { } holder)
           problems.Add(SpecDiagnostics.Rule(document, "/spec/order", $"stage order {body["order"]} is already used by {holder.Id}", "unique-stage-order"));
         break;
+      case "traps":
+        problems.AddRange(TrapLabels(document, body));
+        break;
     }
 
     return problems;
@@ -72,8 +78,11 @@ public sealed class IrSpecFamily : ISpecFamily {
       case [_, StagesFolder, var file]:
         (expectedKind, expectedId) = ("stage", "IR.stage." + file[..^5]);
         break;
+      case [_, TrapsFile]:
+        (expectedKind, expectedId) = ("traps", "IR.traps");
+        break;
       default:
-        return SpecDiagnostics.Rule(document, "", $"path {shown} is outside the layout of spec/ir/: operations/<mnemonic>.yaml, stages/<name>.yaml or version.yaml", "layout");
+        return SpecDiagnostics.Rule(document, "", $"path {shown} is outside the layout of spec/ir/: operations/<mnemonic>.yaml, stages/<name>.yaml, version.yaml or traps.yaml", "layout");
     }
 
     if (kind != expectedKind)
@@ -174,6 +183,34 @@ public sealed class IrSpecFamily : ISpecFamily {
 
       if (example["trap"] is { } trapNode && (string)trapNode! is var trap && !traps.Contains(trap))
         yield return SpecDiagnostics.Rule(document, pointer + "/trap", $"example {number} traps with '{trap}', {Declared("traps", traps)}", "trap-declared");
+    }
+  }
+
+  /// <summary>Rule <c>trap-label</c>: kinds and aliases have distinct names, an alias names a kind, a trap of the IR belongs to one kind.</summary>
+  private static IEnumerable<Diagnostic> TrapLabels(SpecDocument document, JsonObject body) {
+    var names = new HashSet<string>(StringComparer.Ordinal);
+    var traps = new HashSet<string>(StringComparer.Ordinal);
+    var kinds = (JsonArray)body["kinds"]!;
+    for (var index = 0; index < kinds.Count; ++index) {
+      var name = (string)kinds[index]!["name"]!;
+      if (!names.Add(name))
+        yield return SpecDiagnostics.Rule(document, $"/spec/kinds/{index}/name", $"trap label '{name}' is named twice", "trap-label");
+
+      var irTraps = (JsonArray)kinds[index]!["irTraps"]!;
+      for (var trap = 0; trap < irTraps.Count; ++trap)
+        if ((string)irTraps[trap]! is var named && !traps.Add(named))
+          yield return SpecDiagnostics.Rule(document, $"/spec/kinds/{index}/irTraps/{trap}", $"the trap '{named}' of the IR belongs to two kinds", "trap-label");
+    }
+
+    var kindNames = new HashSet<string>(names, StringComparer.Ordinal);
+    var aliases = (JsonArray)body["aliases"]!;
+    for (var index = 0; index < aliases.Count; ++index) {
+      var name = (string)aliases[index]!["name"]!;
+      var kind = (string)aliases[index]!["kind"]!;
+      if (!names.Add(name))
+        yield return SpecDiagnostics.Rule(document, $"/spec/aliases/{index}/name", $"trap label '{name}' is named twice", "trap-label");
+      if (!kindNames.Contains(kind))
+        yield return SpecDiagnostics.Rule(document, $"/spec/aliases/{index}/kind", $"alias '{name}' stands for '{kind}', which is no kind", "trap-label");
     }
   }
 

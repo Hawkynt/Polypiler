@@ -92,6 +92,20 @@ public class IrException : System.Exception {
   /// <summary>Makes the exception for an object the IR throws, which is no trap.</summary>
   internal static IrException Thrown(object exception, IrClassType type, string message) => new(exception, type, message);
 
+  private TrapLabel? _label;
+
+  /// <summary>
+  /// The label of a trap (#115): that of its kind, or the one an attribute or an explicit trap gave it;
+  /// <see langword="null"/> for an exception the IR throws, which is no trap.
+  /// </summary>
+  public TrapLabel? Label {
+    get => this._label ?? this.DefaultLabel;
+    internal set => this._label = value;
+  }
+
+  /// <summary>The label of the exception before anything gives it one.</summary>
+  private protected virtual TrapLabel? DefaultLabel => null;
+
 }
 
 /// <summary>
@@ -106,6 +120,9 @@ public sealed class IrTrapException : IrException {
 
   /// <summary>What went wrong.</summary>
   public IrTrap Trap { get; }
+
+  /// <summary>The label of the trap's kind (<see cref="TrapLabel.Of(IrTrap)"/>).</summary>
+  private protected override TrapLabel? DefaultLabel => TrapLabel.Of(this.Trap);
 
   /// <summary>The message every implementation of the IR reports for a trap.</summary>
   /// <param name="trap">The trap.</param>
@@ -501,7 +518,7 @@ public static partial class IrInterpreter {
         case IrUsing scope:
           return this.Using(scope, frame);
         default:
-          return this.ExceptionStatement(statement, frame) ?? this.SequenceStatement(statement, frame) ?? throw new NotSupportedException($"Unknown statement {statement.GetType().Name}.");
+          return this.ExceptionStatement(statement, frame) ?? this.SequenceStatement(statement, frame) ?? this.TrapStatement(statement, frame) ?? throw new NotSupportedException($"Unknown statement {statement.GetType().Name}.");
       }
     }
 
@@ -617,6 +634,10 @@ public static partial class IrInterpreter {
           return this.AsyncOperation(operation, frame);
         case IrForeignCall or IrLastError:
           return this.Foreign(expression, frame);
+        case IrTrapAttribute attribute:
+          return this.Attributed(attribute, frame)!;
+        case IrTrapMatches matches:
+          return this.Matches(matches);
         default:
           throw new NotSupportedException($"Unknown expression {expression.GetType().Name}.");
       }

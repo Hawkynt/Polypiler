@@ -62,6 +62,7 @@ public static partial class IrVerifier {
     Pointers(module, diagnostics);
     Timed(module, diagnostics);
     var foreign = Foreign(module, names, types, diagnostics);
+    Traps(module, diagnostics);
     // The initializer runs once at load: it takes nothing, gives nothing and nothing outside calls it.
     if (module.Initializer is { } initializer
         && !(functions.TryGetValue(initializer, out var start) && start is { IsPublic: false, Parameters.Count: 0, IsAsync: false } && start.ReturnType == IrType.Void))
@@ -253,7 +254,7 @@ public static partial class IrVerifier {
           this.Using(scope);
           break;
         default:
-          if (!this.ExceptionStatement(statement) && !this.SequenceStatement(statement))
+          if (!this.ExceptionStatement(statement) && !this.SequenceStatement(statement) && !this.TrapStatement(statement))
             this.Require(false, $"unknown statement {statement.GetType().Name}");
 
           break;
@@ -488,7 +489,7 @@ public static partial class IrVerifier {
           this.Require(!step.Trap || !step.Type.IsFloat, $"a trapping step of the type {step.Type}");
           break;
         default:
-          this.Require(false, $"unknown expression {expression.GetType().Name}");
+          this.Require(this.TrapExpression(expression), $"unknown expression {expression.GetType().Name}");
           break;
       }
     }

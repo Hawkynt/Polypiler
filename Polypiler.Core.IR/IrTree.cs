@@ -47,6 +47,7 @@ public static class IrTree {
     IrAwait awaited => [awaited.Operand],
     IrAsync operation => operation.Arguments,
     IrForeignCall call => call.Arguments,
+    IrTrapAttribute attribute => [attribute.Operation],
     _ => []
   };
 
@@ -73,6 +74,7 @@ public static class IrTree {
     IrYield produced => [produced.Value],
     IrYieldFrom delegated => [delegated.Sequence],
     IrForEachSequence loop => [loop.Sequence],
+    IrAssert assertion => [assertion.Condition],
     _ => []
   };
 
@@ -136,6 +138,7 @@ public static class IrTree {
     IrAwait => new IrAwait(operands[0]),
     IrAsync operation => operation with { Arguments = operands },
     IrForeignCall call => call with { Arguments = operands },
+    IrTrapAttribute attribute => attribute with { Operation = operands[0] },
     _ => expression
   };
 
@@ -189,6 +192,8 @@ public static class IrTree {
         return delegated with { Sequence = expressions[0] };
       case IrForEachSequence loop:
         return loop with { Sequence = expressions[0], Body = blocks[0] };
+      case IrAssert assertion:
+        return assertion with { Condition = expressions[0] };
       default:
         return statement;
     }

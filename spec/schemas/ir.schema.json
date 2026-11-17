@@ -2,16 +2,17 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/ir.schema.json",
   "title": "Polypiler spec family 'ir'",
-  "description": "The body under 'spec' of a document in spec/ir/ (PRD §4.1-§4.3, ADR 0001): an IR operation (spec/ir/operations/<mnemonic in lower case>.yaml), an IR stage (spec/ir/stages/<name>.yaml) or the IR version (spec/ir/version.yaml); 'kind' selects which. Rules the schema cannot state (PLY0046): layout, stage-range, example-arity, flag-declared, trap-declared, type-declared, unique-mnemonic, unique-stage-order; every stage, effect and TYPES. id names an existing spec document (PLY0043).",
+  "description": "The body under 'spec' of a document in spec/ir/ (PRD §4.1-§4.3, ADR 0001): an IR operation (spec/ir/operations/<mnemonic in lower case>.yaml), an IR stage (spec/ir/stages/<name>.yaml), the IR version (spec/ir/version.yaml) or the trap kinds and built-in trap labels (spec/ir/traps.yaml); 'kind' selects which. Rules the schema cannot state (PLY0046): layout, stage-range, example-arity, flag-declared, trap-declared, type-declared, unique-mnemonic, unique-stage-order, trap-label; every stage, effect and TYPES. id names an existing spec document (PLY0043).",
   "type": "object",
   "required": ["kind"],
   "properties": {
-    "kind": { "enum": ["operation", "stage", "version"] }
+    "kind": { "enum": ["operation", "stage", "version", "traps"] }
   },
   "allOf": [
     { "if": { "required": ["kind"], "properties": { "kind": { "const": "operation" } } }, "then": { "$ref": "#/$defs/operation" } },
     { "if": { "required": ["kind"], "properties": { "kind": { "const": "stage" } } }, "then": { "$ref": "#/$defs/stage" } },
-    { "if": { "required": ["kind"], "properties": { "kind": { "const": "version" } } }, "then": { "$ref": "#/$defs/version" } }
+    { "if": { "required": ["kind"], "properties": { "kind": { "const": "version" } } }, "then": { "$ref": "#/$defs/version" } },
+    { "if": { "required": ["kind"], "properties": { "kind": { "const": "traps" } } }, "then": { "$ref": "#/$defs/traps" } }
   ],
   "$defs": {
     "operation": {
@@ -147,6 +148,46 @@
         "serializationVersion": { "type": "integer", "minimum": 1, "maximum": 2147483647 }
       }
     },
+    "traps": {
+      "type": "object",
+      "required": ["kind", "kinds", "aliases"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "traps" },
+        "kinds": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["name", "class", "irTraps"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "$ref": "#/$defs/trapLabel", "description": "The canonical name of the kind; unique among kinds and aliases (trap-label)." },
+              "class": { "type": "string", "pattern": "^[A-Z][A-Za-z]*$", "description": "The library exception class whose object an explicit trap of the kind throws." },
+              "irTraps": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": { "type": "string", "pattern": "^[A-Z][A-Za-z]*$" },
+                "description": "The traps of the IR's operations (IrTrap) that have the kind; each belongs to one kind (trap-label)."
+              }
+            }
+          }
+        },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "kind"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "$ref": "#/$defs/trapLabel", "description": "Another built-in spelling of a kind; unique among kinds and aliases (trap-label)." },
+              "kind": { "$ref": "#/$defs/trapLabel", "description": "The kind it stands for; a name of 'kinds' (trap-label)." }
+            }
+          }
+        }
+      }
+    },
+    "trapLabel": { "type": "string", "pattern": "^[A-Z][A-Za-z]*$" },
     "typeParameterName": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]*$" },
     "type": {
       "type": "string",

@@ -106,7 +106,8 @@ Unknown is **not false** and not **proven safe**. A timeout never counts as a pr
 of `VerifierRuleRegistry.Standard` on every function. A rule (`IVerifierRule`) belongs to one
 operation family, has a stable id `ir.verifier.<family>.<name>`, and reports through its context; a
 rule about one kind of node derives from `IrNodeRule<TNode>` and is called once per such node,
-lambda bodies included. Every diagnostic is `PLY0100` and names the function, the node and the rule:
+lambda bodies included. A diagnostic is `PLY0100` and names the function, the node and the rule,
+unless the rule reports under a code of its own (`VerifierRuleContext.Report(descriptor, message)`):
 
     ill-typed IR in 'F': IrLocalRef 'x': 'x' is read where no path has given it a value [ir.verifier.locals.assigned-before-read]
 
@@ -119,5 +120,6 @@ optimizer's rule engine verifies the one function a rewrite changed this way.
 | Rule | Family | Requires |
 | --- | --- | --- |
 | `ir.verifier.locals.assigned-before-read` | locals | a local declared without a value is not read where no path has assigned it; a may-analysis, so a loop's top sees what its body assigns, a handler what its `try` assigns, and a lambda is checked against its own declarations |
+| `ir.verifier.traps.label-declared` | traps | every trap label an `IrAssert`, an `IrTrapAttribute` or an `IrTrapMatches` names is built in or declared in the module's trap table, and an attribute stands on an operation that can fail with its label's kind (`PLY0178`); `IrTrapMatches` stands only in the filter of a catch clause, outside its lambdas (`PLY0100`) |
 
 Related: [PRD and architecture index](../PRD.md#architecture-guides) · [pipeline](PIPELINE.md) · [semantic recovery](SEMANTIC-RECOVERY.md) · [foreign interop](INTEROP.md).

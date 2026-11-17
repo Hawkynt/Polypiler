@@ -1,0 +1,44 @@
+id: IR.traps
+title: Trap kinds and built-in trap labels
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#115"
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  Every trap of the IR MUST have exactly one of the kinds listed here, under exactly these names. A
+  trap's label MUST be either built in - the name of a kind, or an alias listed here - or declared in
+  the trap table of its module (IrModule.Traps) under the source language's own name of the exception
+  type, spelled as that language spells it (OverflowException, ZeroDivisionError, std::out_of_range),
+  with its kind. A language whose failures have no type MUST use the kind's name. Invented spellings
+  (Panic<Kind>, a kind joined to another word by an underscore) MUST NOT be declared; the verifier
+  refuses an undeclared label with PLY0178. A trap MUST happen at its operation: every effect before
+  it is visible and none after it happens. A handler selects a trap when its label list is empty,
+  contains the trap's label, or contains a built-in label of the trap's kind. irTraps lists the traps
+  the operations of the IR raise (IrTrap) that have the kind; class is the library exception class
+  whose object an explicit trap of the kind throws.
+spec:
+  kind: traps
+  kinds:
+    - {name: Overflow, class: OverflowException, irTraps: [IntegerOverflow]}
+    - {name: DivideByZero, class: DivideByZeroException, irTraps: [DivideByZero]}
+    - {name: IndexOutOfRange, class: IndexOutOfRangeException, irTraps: [IndexOutOfRange, ArgumentOutOfRange, KeyNotFound]}
+    - {name: LengthMismatch, class: ArgumentException, irTraps: []}
+    - {name: EmptySequence, class: InvalidOperationException, irTraps: []}
+    - {name: ShapeMismatch, class: ArgumentException, irTraps: []}
+    - {name: OverlappingCopy, class: ArgumentException, irTraps: []}
+    - {name: NullReference, class: NullReferenceException, irTraps: [NullReference, MissingValue]}
+    - {name: InvalidCast, class: InvalidCastException, irTraps: [InvalidCast]}
+    - {name: InvalidOperation, class: InvalidOperationException, irTraps: [InvalidOperation, DuplicateKey, CollectionModified, InvalidFormat, UnknownName]}
+    - {name: AssertionFailed, class: AssertionException, irTraps: []}
+    - {name: ContractViolation, class: InvalidOperationException, irTraps: []}
+    - {name: OutOfMemory, class: Exception, irTraps: []}
+    - {name: StackOverflow, class: Exception, irTraps: []}
+    - {name: Unreachable, class: InvalidOperationException, irTraps: []}
+    - {name: User, class: Exception, irTraps: []}
+  aliases:
+    - {name: ArithmeticOverflow, kind: Overflow}
+    - {name: DivisionByZero, kind: DivideByZero}

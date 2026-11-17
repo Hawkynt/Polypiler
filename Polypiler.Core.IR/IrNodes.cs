@@ -1175,4 +1175,11 @@ public sealed record IrModule(string Name, IReadOnlyList<IrFunction> Functions, 
   /// </summary>
   public IReadOnlyList<IrClone> Clones { get; init; } = [];
 
+  /// <summary>
+  /// The trap table of the module (#115): the labels it declares beyond the built-in ones
+  /// (<see cref="TrapLabel.BuiltIn"/>), each the source's own name of an exception type with its kind,
+  /// in source order.
+  /// </summary>
+  public IReadOnlyList<TrapLabel> Traps { get; init; } = [];
+
 }

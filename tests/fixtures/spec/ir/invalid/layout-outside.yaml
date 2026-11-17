@@ -1,5 +1,5 @@
 # at: ir/shl.yaml
-# expect: PLY0046: path spec/ir/shl.yaml is outside the layout of spec/ir/: operations/<mnemonic>.yaml, stages/<name>.yaml or version.yaml (rule: layout)
+# expect: PLY0046: path spec/ir/shl.yaml is outside the layout of spec/ir/: operations/<mnemonic>.yaml, stages/<name>.yaml, version.yaml or traps.yaml (rule: layout)
 id: IR.shl
 title: "Shift left"
 version: 1

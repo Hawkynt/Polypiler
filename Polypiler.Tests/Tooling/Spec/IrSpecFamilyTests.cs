@@ -22,7 +22,7 @@ public sealed class IrSpecFamilyTests {
 
   private static readonly string _valid = Path.Combine(_fixtures, "valid");
 
-  private static readonly string[] _rules = ["layout", "stage-range", "example-arity", "flag-declared", "trap-declared", "type-declared", "unique-mnemonic", "unique-stage-order"];
+  private static readonly string[] _rules = ["layout", "stage-range", "example-arity", "flag-declared", "trap-declared", "type-declared", "unique-mnemonic", "unique-stage-order", "trap-label"];
 
   /// <summary>A fixture file: where it goes in the tree (<c># at:</c>), what it must produce (<c># expect:</c>) and its ID.</summary>
   public sealed record Fixture(string Name, string At, string Expect, string Id, string Text) {
@@ -184,11 +184,11 @@ public sealed class IrSpecFamilyTests {
           Walk(kind, child["items"] ?? child, $"{path}{name}-");
     }
 
-    foreach (var kind in new[] { "operation", "stage", "version" })
+    foreach (var kind in new[] { "operation", "stage", "version", "traps" })
       Walk(kind, definitions[kind]!, "");
     var present = Directory.EnumerateFiles(Path.Combine(_fixtures, "invalid"), "missing-*.yaml").Select(Path.GetFileName).ToHashSet(StringComparer.Ordinal);
     Assert.That(expected.Where(name => !present.Contains(name)), Is.Empty);
-    Assert.That(expected, Has.Count.EqualTo(27));
+    Assert.That(expected, Has.Count.EqualTo(34));
   }
 
   /// <summary>Test design 3: each kind validates.</summary>
@@ -196,6 +196,27 @@ public sealed class IrSpecFamilyTests {
   public void EachKind_Validates() {
     var version = File.ReadAllText(Path.Combine(_fixtures, "variants", "version.yaml"));
     Assert.That(Lines(("ir/version.yaml", version)), Is.Empty);
+    Assert.That(Lines(("ir/traps.yaml", Traps)), Is.Empty);
+  }
+
+  private static string Traps => File.ReadAllText(Path.Combine(_fixtures, "variants", "traps.yaml"));
+
+  /// <summary>Rule <c>trap-label</c>: a kind or an alias named twice, and a trap of the IR in two kinds, each at its value.</summary>
+  [Test]
+  public void TrapLabels_NamedTwiceOrSharedAreRefused() {
+    var kindTwice = Change(Traps, ("{name: DivideByZero, class:", "{name: Overflow, class:"));
+    Assert.That(Lines(("ir/traps.yaml", kindTwice)).Single(), Does.StartWith("ir/traps.yaml(17,").And.Contain("trap label 'Overflow' is named twice (rule: trap-label)"));
+    var aliasTwice = Change(Traps, ("{name: ArithmeticOverflow, kind: Overflow}", "{name: DivideByZero, kind: Overflow}"));
+    Assert.That(Lines(("ir/traps.yaml", aliasTwice)).Single(), Does.StartWith("ir/traps.yaml(19,").And.Contain("trap label 'DivideByZero' is named twice"));
+    var shared = Change(Traps, ("irTraps: [DivideByZero]", "irTraps: [IntegerOverflow]"));
+    Assert.That(Lines(("ir/traps.yaml", shared)).Single(), Does.StartWith("ir/traps.yaml(17,").And.Contain("the trap 'IntegerOverflow' of the IR belongs to two kinds"));
+  }
+
+  /// <summary>The trap document's kind must match its path, and nothing but <c>traps.yaml</c> may hold it.</summary>
+  [Test]
+  public void TrapsDocument_FollowsTheLayout() {
+    Assert.That(Lines(("ir/traps.yaml", Change(Traps, ("id: IR.traps", "id: IR.trapz")))).Single(), Does.Contain("id 'IR.trapz' does not match path spec/ir/traps.yaml, expected 'IR.traps'"));
+    Assert.That(Lines(("ir/version.yaml", Change(Traps, ("id: IR.traps", "id: IR.version")))).Single(), Does.Contain("kind 'traps' does not match path spec/ir/version.yaml, expected 'version'"));
   }
 
   [Test]

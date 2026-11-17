@@ -25,7 +25,7 @@ namespace Polypiler.Core.IR;
 public static partial class IrModuleFormat {
 
   /// <summary>The version of the layout; bytes of another version are refused.</summary>
-  public const int Version = 11;
+  public const int Version = 12;
 
   /// <summary>The byte that stands for the kind of an enum type, followed by its declaration: the kind of an enum type is that of its underlying type.</summary>
   private const byte EnumType = 0xFF;
@@ -47,7 +47,8 @@ public static partial class IrModuleFormat {
     Sequence,
     Await, Async,
     ForeignCall, LastError,
-    BigConst
+    BigConst,
+    Assert, TrapAttribute, TrapMatches
   }
 
   /// <summary>The kinds of declaration, as the byte after the name of a declaration says.</summary>
@@ -220,6 +221,8 @@ public static partial class IrModuleFormat {
       writer.Write(module.Initializer is not null);
       if (module.Initializer is not null)
         writer.Write(module.Initializer);
+
+      this.Labels(module.Traps);
     }
 
     /// <summary>The declarations that stand for the type parameters of the templates the functions of a module reach.</summary>
@@ -688,6 +691,8 @@ public static partial class IrModuleFormat {
       IrForeignCall => Tag.ForeignCall,
       IrLastError => Tag.LastError,
       IrBigConst => Tag.BigConst,
+      IrTrapAttribute => Tag.TrapAttribute,
+      IrTrapMatches => Tag.TrapMatches,
       _ => throw new ArgumentException($"The expression {expression.GetType().Name} has no form in bytes.", nameof(module))
     };
 
@@ -716,6 +721,7 @@ public static partial class IrModuleFormat {
       IrYieldBreak => Tag.YieldBreak,
       IrYieldFrom => Tag.YieldFrom,
       IrForEachSequence => Tag.ForEachSequence,
+      IrAssert => Tag.Assert,
       _ => throw new ArgumentException($"The statement {statement.GetType().Name} has no form in bytes.", nameof(module))
     };
 
@@ -889,6 +895,13 @@ public static partial class IrModuleFormat {
         case IrLastError error:
           writer.Write(error.PInvoke);
           break;
+        case IrTrapAttribute attribute:
+          this.Node(attribute.Operation);
+          this.Label(attribute.Label);
+          break;
+        case IrTrapMatches matches:
+          this.Labels(matches.Labels);
+          break;
         default:
           var invocation = (IrInvoke)expression;
           this.Node(invocation.Callee);
@@ -998,6 +1011,10 @@ public static partial class IrModuleFormat {
           this.Node(loop.Sequence);
           this.Node(loop.Body);
           break;
+        case IrAssert assertion:
+          this.Node(assertion.Condition);
+          this.Label(assertion.Label);
+          break;
       }
     }
 
@@ -1071,7 +1088,7 @@ public static partial class IrModuleFormat {
       var functions = this.List(this.Function);
       return new IrModule(name, functions, constants) {
         Types = [.. this._declarations.Take(owned)], Globals = [.. this._globals], Caveats = caveats, ForeignFunctions = this.ForeignFunctions(),
-        Initializer = reader.ReadBoolean() ? reader.ReadString() : null
+        Initializer = reader.ReadBoolean() ? reader.ReadString() : null, Traps = this.Labels()
       };
     }
 
@@ -1332,12 +1349,12 @@ public static partial class IrModuleFormat {
         return Of(this._nodes, index, "node") as T ?? throw new InvalidDataException($"The node {index} is no {typeof(T).Name}.");
       }
 
-      if (tag > Tag.BigConst)
+      if (tag > Tag.TrapMatches)
         throw new InvalidDataException($"{(int)tag} is no kind of node.");
 
       var slot = this._nodes.Count;
       this._nodes.Add(null);
-      object node = tag >= Tag.Block && tag is not (Tag.ArraySequence or Tag.Sequence or Tag.Await or Tag.Async or Tag.ForeignCall or Tag.LastError or Tag.BigConst) ? this.Statement(tag) : this.Expression(tag);
+      object node = tag >= Tag.Block && tag is not (Tag.ArraySequence or Tag.Sequence or Tag.Await or Tag.Async or Tag.ForeignCall or Tag.LastError or Tag.BigConst or Tag.TrapAttribute or Tag.TrapMatches) ? this.Statement(tag) : this.Expression(tag);
       this._nodes[slot] = node;
       return node as T ?? throw new InvalidDataException($"A {node.GetType().Name} stands where a {typeof(T).Name} belongs.");
     }
@@ -1392,6 +1409,8 @@ public static partial class IrModuleFormat {
         Tag.Async => new IrAsync(this.Enum<IrAsyncOp>(), type, this.Nodes<IrExpr>()),
         Tag.ForeignCall => new IrForeignCall(reader.ReadString(), type, this.Nodes<IrExpr>()),
         Tag.LastError => new IrLastError(reader.ReadBoolean()),
+        Tag.TrapAttribute => new IrTrapAttribute(this.Node<IrExpr>(), this.Label()),
+        Tag.TrapMatches => new IrTrapMatches(this.Labels()),
         _ => new IrInvoke(type, this.Node<IrExpr>(), this.Nodes<IrExpr>())
       };
       return expression.Type == type ? expression : expression with { Type = type };
@@ -1436,6 +1455,7 @@ public static partial class IrModuleFormat {
       Tag.YieldBreak => new IrYieldBreak(),
       Tag.YieldFrom => new IrYieldFrom(this.Node<IrExpr>()),
       Tag.ForEachSequence => new IrForEachSequence(this.Local(), this.Node<IrExpr>(), this.Node<IrBlock>()),
+      Tag.Assert => new IrAssert(this.Node<IrExpr>(), this.Label()),
       _ => new IrForEachCollection(this.Node<IrExpr>(), this.Enum<EnumerationMode>(), this.OptionalLocal(), this.OptionalLocal(), this.Node<IrBlock>())
     };
 

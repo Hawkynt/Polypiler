@@ -759,6 +759,15 @@ codes:
     area: ir
     owner: PROTOTYPE
     surfaces: "standard error of polypiler translate, as 'error PLY0101: <reason>' with the reason that the executable carries no float-implementations resource or the reason IrModuleFormat refuses its bytes, when a strict float translation needs the float-implementations module the executable embeds and it is absent or does not read back"
+  - code: PLY0178
+    severity: error
+    exit: InternalError
+    title: undeclared or misplaced trap label
+    message: "<reason>"
+    rule: ir.verifier.traps.label-declared
+    area: ir
+    owner: IR-EXCEPT
+    surfaces: "IrVerifier.Verify, from the rule ir.verifier.traps.label-declared of the standard rule registry and from the check of a module's trap table: 'trap label '<label>' is not declared in module '<module>'', ''<operation>' cannot carry a trap attribute [trap <label>]', a label of the trap table that is empty, built in or an invented spelling of a kind, and a label declared twice"
   - code: PLY0800
     severity: error
     exit: UnsupportedConstruct

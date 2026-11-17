@@ -62,11 +62,14 @@ public static partial class IrInterpreter {
         if (clause.Filter is null)
           return clause;
 
+        this._filtering.Push(thrown);
         try {
           if ((bool)this.Evaluate(clause.Filter, frame))
             return clause;
         } catch (IrException) {
           // ECMA-335 Partition I, 12.4.2.4: an exception in a filter is swallowed and the filter fails.
+        } finally {
+          this._filtering.Pop();
         }
       }
 
