@@ -1728,18 +1728,20 @@ codes:
     severity: error
     exit: UnsupportedConstruct
     title: opaque instruction not interpretable
-    message: "opaque instruction <id> at <where> cannot be interpreted"
+    message: "opaque instruction <id> at <where> cannot be interpreted; or: <kind> trap <id> at <where> resumes but no trap model handles it"
+    rule: machine.interp.opaque
     area: machine
     owner: MACH-INTERP
-    reserved: true
+    surfaces: the Diagnostics of MachineInterpreter.Run with outcome Aborted for a resuming MachineTrap that no ITrapModel handles
   - code: PLY4035
     severity: error
     exit: SemanticMismatch
     title: undefined machine state read
-    message: "undefined flag '<flag>' is read at <where>; or: uninitialized register '<register>' is read at <where>"
+    message: "undefined flag '<flag>' is read at <where>; or: uninitialized register '<register>' is read at <where>; or: unwritten memory at <address> is read at <where>"
+    rule: machine.interp.undefined
     area: machine
     owner: MACH-INTERP
-    reserved: true
+    surfaces: the Diagnostics of MachineInterpreter.Run with outcome Aborted for a read of an undefined flag, an uninitialized register or unwritten memory
   - code: PLY4036
     severity: error
     exit: SemanticMismatch
@@ -1761,9 +1763,19 @@ codes:
     exit: SemanticMismatch
     title: indirect jump outside its targets
     message: "indirect jump at <where> went to <address>, which is not among its listed targets; or: indirect jump at <where> has unresolved targets"
+    rule: machine.interp.indirect-jump
     area: machine
     owner: MACH-INTERP
-    reserved: true
+    surfaces: the Diagnostics of MachineInterpreter.Run with outcome Aborted for an IndirectJump whose address is no listed target's origin, or whose targets are unresolved
+  - code: PLY4039
+    severity: error
+    exit: BudgetExceeded
+    title: machine interpretation over budget
+    message: "the interpretation of '@<function>' exceeded its budget of <steps> steps"
+    rule: machine.interp.budget
+    area: machine
+    owner: MACH-INTERP
+    surfaces: the Diagnostics of MachineInterpreter.Run with outcome BudgetExceeded
   - code: PLY4055
     severity: error
     exit: EnvironmentError

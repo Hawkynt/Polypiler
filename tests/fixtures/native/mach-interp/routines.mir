@@ -1,0 +1,82 @@
+# The routines of the machine-state interpreter's fixtures, on test-m32. Each is described in
+# README.md; the C programs beside them compute the same routines from those descriptions.
+machine test-m32
+
+# r0 := r0 + r1 (mod 2^32); c = unsigned carry out, z = result is 0, s = bit 31 of the result,
+# o = signed overflow (both operands have the same sign and the result the other one).
+@addc {
+entry:
+  %a = RegRead.u32 @r0
+  %b = RegRead.u32 @r1
+  %r = Add.u32 %a, %b
+  RegWrite.u32 @r0, %r
+  %c = ULt.u32 %r, %a
+  FlagWrite @c, %c
+  %z = Eq.u32 %r, 0
+  FlagWrite @z, %z
+  %s = SLt.u32 %r, 0
+  FlagWrite @s, %s
+  %x1 = Xor.u32 %a, %r
+  %x2 = Xor.u32 %b, %r
+  %x = And.u32 %x1, %x2
+  %o = SLt.u32 %x, 0
+  FlagWrite @o, %o
+  Ret
+}
+
+# r0l := low byte of r1, then r0h := low byte of r2; the other bits of r0 are kept.
+@subreg {
+entry:
+  %lo = RegRead.u8 @r0l
+  %b1 = RegRead.u32 @r1
+  %l = Truncate.u8 %b1
+  RegWrite.u8 @r0l, %l
+  %b2 = RegRead.u32 @r2
+  %h = Truncate.u8 %b2
+  RegWrite.u8 @r0h, %h
+  Ret
+}
+
+# r2 := sum of the r1 bytes from address r0, each zero-extended; then r0 := r2, r1 := 0.
+@bytesum {
+entry:
+  RegWrite.u32 @r2, 0
+  Jump loop
+loop:
+  %n = RegRead.u32 @r1
+  %done = Eq.u32 %n, 0
+  Branch %done, out, body
+body:
+  %p = RegRead.u32 @r0
+  %b = Load.u8 %p
+  %w = ZeroExtend.u32 %b
+  %s = RegRead.u32 @r2
+  %t = Add.u32 %s, %w
+  RegWrite.u32 @r2, %t
+  %p1 = Add.u32 %p, 1
+  RegWrite.u32 @r0, %p1
+  %n1 = Sub.u32 %n, 1
+  RegWrite.u32 @r1, %n1
+  Jump loop
+out:
+  %sum = RegRead.u32 @r2
+  RegWrite.u32 @r0, %sum
+  Ret
+}
+
+# Stores 0xAA at 0x2000, then raises the undefined-instruction trap (vector 6), which does not resume.
+@ud {
+entry:
+  Store.u8 0x2000, 0xAA !at(0x00401000, "C6 05 00 20 00 00 AA")
+  MachineTrap[kind=undefined-instruction, vector=6, resumes=false, id=ud] !at(0x00401007, "0F 0B")
+}
+
+# Stores the low byte of r1 at address r0, then returns; run with the pc-vga address map.
+@wild {
+entry:
+  %p = RegRead.u32 @r0
+  %v = RegRead.u32 @r1
+  %b = Truncate.u8 %v
+  Store.u8 %p, %b
+  Ret
+}
