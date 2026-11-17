@@ -9,11 +9,12 @@ namespace Polypiler.Core.Optimize;
 /// <summary>One rule application: which rule, where.</summary>
 /// <param name="Id">The optimization number of the rule.</param>
 /// <param name="Name">What the rule does.</param>
-/// <param name="Function">The function it applied in.</param>
+/// <param name="Function">The function it applied in, or the global removed by a module sweep.</param>
 /// <param name="Position">
 /// The statement it applied to, as the path of 1-based statement positions from the body of the
 /// function inwards - <c>3.1</c> is the first statement in a block of the third statement. The
-/// prototype IR carries no source lines, so this is the position the IR has.
+/// prototype IR carries no source lines, so this is the position the IR has. Module sweeps use
+/// <c>module</c> for functions and <c>module global</c> for globals.
 /// </param>
 public sealed record RuleApplication(string Id, string Name, string Function, string Position) {
 
@@ -27,7 +28,7 @@ public sealed record RuleApplication(string Id, string Name, string Function, st
 /// <param name="Applications">Every rule application, in the order they happened.</param>
 public sealed record OptimizationResult(IrModule Module, IReadOnlyList<RuleApplication> Applications) {
 
-  /// <summary>What a pass did not do and why, such as a call a budget left as it is, each once, as <c>--explain-opt</c> prints it.</summary>
+  /// <summary>Explanations of applications and refusals, each once, as <c>--explain-opt</c> prints them.</summary>
   public IReadOnlyList<string> Notes { get; init; } = [];
 
 }

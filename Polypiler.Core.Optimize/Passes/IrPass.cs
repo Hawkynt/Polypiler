@@ -32,7 +32,7 @@ public interface IIrPass {
 /// changes nothing or <see cref="RoundLimit"/> rounds have run: specialisation for the function values
 /// passed (O0463), inlining (O0006), constant propagation (O0003), constant folding (O0001),
 /// compile-time evaluation of pure calls (O0002), merging of identical calls (O0464), dead-code removal (O0005),
-/// full unrolling (O0023) and module-wide dead function elimination (O0381). Each makes work for the next -
+/// full unrolling (O0023) and joint module-wide dead function/global elimination (O0381/O0383). Each makes work for the next -
 /// a lifted lambda and the copy of its
 /// callee are direct calls to inline, an inlined helper has constant parameters, a constant condition
 /// a dead branch, an unrolled loop constant indices - and none of them changes what a module computes,
@@ -53,7 +53,7 @@ public sealed class IrPassPipeline {
   /// <summary>The pipeline of <c>translate</c>.</summary>
   public static IrPassPipeline Default { get; } = new([
     new O0463LambdaSpecialisation(), new O0006Inlining(), new O0003ConstantPropagation(), new O0001ConstantFolding(), new O0002CallEvaluation(), new O0464CallMerging(),
-    new O0005DeadCode(), new O0023Unrolling(), new DeadFunctionElimination()
+    new O0005DeadCode(), new O0023Unrolling(), new DeadFunctionElimination(), new DeadGlobalElimination()
   ]);
 
   /// <summary>Makes a pipeline of passes.</summary>
@@ -88,12 +88,16 @@ public sealed class IrPassPipeline {
       return new(module, applications);
 
     var passes = this.Passes.Where(pass => !options.Disabled.Contains(pass.Id)).ToList();
+    var jointSweep = passes.Any(pass => pass is DeadFunctionElimination) && passes.Any(pass => pass is DeadGlobalElimination);
     var scope = module.Implementations.Select(pair => pair.Function).ToHashSet(StringComparer.Ordinal);
     HashSet<string>? dirty = null;
     for (var round = 0; round < RoundLimit; ++round) {
       var before = applications.Count;
       var start = module.Functions;
       foreach (var pass in passes) {
+        if (jointSweep && pass is DeadFunctionElimination)
+          continue;
+
         if (round == RoundLimit - 1 && pass is O0463LambdaSpecialisation or O0006Inlining or O0023Unrolling)
           continue;
 
@@ -110,6 +114,8 @@ public sealed class IrPassPipeline {
           O0463LambdaSpecialisation specialisation => specialisation.Run(module, Looked, Applied, Note),
           O0002CallEvaluation evaluation => evaluation.Run(module, Looked, Applied, Note),
           DeadFunctionElimination elimination => elimination.Run(module, Looked, Applied, Note, options.Roots),
+          DeadGlobalElimination elimination => elimination.Run(module, Looked, Applied, Note, options.Roots, options.GlobalRoots,
+            jointSweep ? (function, position) => applications.Add(new("O0381", "dead function elimination", function, position)) : null),
           _ => pass.Run(module, Looked, Applied)
         };
         // What specialisation made - lifted lambdas and copies - is looked at like the helpers.
