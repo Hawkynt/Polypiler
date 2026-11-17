@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
 using System.Linq;
+using Polypiler.Cli.Options;
 using Polypiler.Core;
 
 namespace Polypiler.Cli;
@@ -25,15 +27,23 @@ internal static class CliHelp {
       output.WriteLine($"  {command.Name.PadRight(width)}  {command.Description}");
   }
 
-  /// <summary>The help of one command: its usage, its description, its operands, its options and the global options.</summary>
-  internal static void Command(TextWriter output, ICliCommand command) {
-    var (root, symbol) = CommandLineParser.Build(command);
+  /// <summary>
+  /// The help of one command: its usage, its description, its operands, its own options, the options
+  /// contributed to it under <c>Options from &lt;owner&gt;:</c>, one group per owner in owner order, each
+  /// in name order (ordinal), and the global options.
+  /// </summary>
+  internal static void Command(TextWriter output, ICliCommand command, OptionContributions contributions) {
+    var (root, symbol) = CommandLineParser.Build(command, contributions);
+    var groups = contributions.HelpGroups(command.Name);
+    var contributed = groups.SelectMany(group => group.Names).ToHashSet(StringComparer.Ordinal);
     var operands = string.Concat(symbol.Arguments.Select(operand => " " + Operand(operand)));
     output.WriteLine($"{ProductInfo.Name} {ProductInfo.Version}");
     output.WriteLine($"usage: {ProductInfo.Name} {command.Name}{operands} [options]");
     output.WriteLine(command.Description);
     Section(output, "arguments", symbol.Arguments.Select(operand => (Operand(operand), operand.Description)));
-    Section(output, "options", symbol.Options.Select(option => (Syntax(option), Described(option))));
+    Section(output, "options", symbol.Options.Where(option => !contributed.Contains(option.Name)).Select(option => (Syntax(option), Described(option))));
+    foreach (var (owner, names) in groups)
+      Section(output, $"Options from {owner}", names.Select(name => symbol.Options.First(option => option.Name == name)).Select(option => (Syntax(option), Described(option))));
     Section(output, "global options", root.Options.Select(option => (option.Name == "--help" ? "-h, --help" : Syntax(option), option.Name == "--help" ? "show this help" : option.Description)));
   }
 

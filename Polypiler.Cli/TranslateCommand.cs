@@ -232,7 +232,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     var symbol = parse.CommandResult.Command;
     var file = parse.GetValue((Argument<string>)symbol.Arguments[0])!;
     var options = new Dictionary<string, string>(StringComparer.Ordinal);
-    foreach (var option in symbol.Options)
+    // The options contributed to the command belong to their areas, which read them; the command reads its own.
+    foreach (var option in symbol.Options.Where(option => _descriptions.ContainsKey(option.Name)))
       if (parse.GetResult(option) is { Implicit: false })
         options[option.Name] = option switch {
           Option<bool> => "",
@@ -728,6 +729,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     foreach (var (name, value) in options.Where(option => !_required.Contains(option.Key)))
       command.AddRange(name is ExplainOpt or ExplainTypes or TypedArrays or AllowUnsafe ? [name] : [name, value]);
 
+    command.AddRange(context.ContributedArguments);
     var mode = FloatModeOf(options);
     return new Manifest {
       Compiler = new(ProductInfo.Name, ProductInfo.Version, IrModuleFormat.Version),
