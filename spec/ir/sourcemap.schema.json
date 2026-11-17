@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/ir/sourcemap.schema.json",
+  "title": "Polypiler IR source map",
+  "description": "The *.map.json of one function, written by SourceMapWriter: where every instruction of the function came from. The field names follow the Source Map specification (ECMA-426) where the concepts coincide ('version', 'sources'); 'sourcesSha256' stands where ECMA-426 has 'sourcesContent', so no source text is ever embedded, and 'mappings' lists the instructions instead of a VLQ string. A source is named as repository@commit:path, never by an absolute local path.",
+  "type": "object",
+  "required": ["version", "function", "sources", "sourcesSha256", "dialects", "mappings"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": 1 },
+    "function": { "type": "string", "minLength": 1 },
+    "sources": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[^@\\s]+@[^:\\s]+:(?![/\\\\])[^\\s\\\\:]+$" }
+    },
+    "sourcesSha256": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+    },
+    "dialects": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "mappings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["instruction", "kind", "origins"],
+        "additionalProperties": false,
+        "properties": {
+          "instruction": { "type": "integer", "minimum": 1 },
+          "kind": { "type": "string", "minLength": 1 },
+          "origins": { "type": "array", "items": { "$ref": "#/$defs/origin" } }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "origin": {
+      "oneOf": [
+        {
+          "type": "object",
+          "description": "A span of a text source: 1-based lines and columns, the end exclusive, columns in UTF-16 code units.",
+          "required": ["source", "startLine", "startColumn", "endLine", "endColumn"],
+          "additionalProperties": false,
+          "properties": {
+            "source": { "type": "integer", "minimum": 0 },
+            "startLine": { "type": "integer", "minimum": 1 },
+            "startColumn": { "type": "integer", "minimum": 1 },
+            "endLine": { "type": "integer", "minimum": 1 },
+            "endColumn": { "type": "integer", "minimum": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "description": "A range of bytes of a binary input.",
+          "required": ["source", "offset", "length"],
+          "additionalProperties": false,
+          "properties": {
+            "source": { "type": "integer", "minimum": 0 },
+            "offset": { "type": "integer", "minimum": 0 },
+            "length": { "type": "integer", "minimum": 0 }
+          }
+        },
+        {
+          "type": "object",
+          "description": "An instruction a pass made, by the ID of the pass.",
+          "required": ["synthetic"],
+          "additionalProperties": false,
+          "properties": {
+            "synthetic": { "type": "string", "pattern": "^[^\"\\s]+$" }
+          }
+        }
+      ]
+    }
+  }
+}

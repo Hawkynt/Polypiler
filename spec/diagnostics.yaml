@@ -759,6 +759,33 @@ codes:
     area: ir
     owner: PROTOTYPE
     surfaces: "standard error of polypiler translate, as 'error PLY0101: <reason>' with the reason that the executable carries no float-implementations resource or the reason IrModuleFormat refuses its bytes, when a strict float translation needs the float-implementations module the executable embeds and it is absent or does not read back"
+  - code: PLY0115
+    severity: error
+    exit: InternalError
+    title: instruction without origin
+    message: "instruction <number> (<kind>) in '@<function>' has no origin and is not marked synthetic"
+    rule: ir.sourcemap.origin
+    area: ir
+    owner: IR-SOURCEMAP
+    surfaces: "IrVerifier.Verify and OriginRule.Check, for a statement that is no block, in a module that declares its sources (IrModule.Sources), whose Origins are empty; a module that declares no sources is exempt"
+  - code: PLY0116
+    severity: error
+    exit: InvalidSource
+    title: malformed location
+    message: "malformed location '<text>'"
+    rule: ir.sourcemap.syntax
+    area: ir
+    owner: IR-SOURCEMAP
+    surfaces: "Origin.TryParse for a suffix that is not !loc(s:l:c-l:c), !addr(s:0x<hex>+n) or !synthetic(\"<pass>\") or describes no span (a line or column below 1, an end before the start, a negative offset); SourceArtifact.TryParseTable for a sources table or entry that is malformed, out of order or names an absolute path; IrVerifier.Verify for such an origin or source in a module"
+  - code: PLY0117
+    severity: error
+    exit: InvalidSource
+    title: location names an undeclared source
+    message: "location refers to source <index>, but the module declares <count> sources"
+    rule: ir.sourcemap.source
+    area: ir
+    owner: IR-SOURCEMAP
+    surfaces: "Origin.TryParse and IrVerifier.Verify, for a !loc or !addr whose source index is not below the number of sources the module declares"
   - code: PLY0800
     severity: error
     exit: UnsupportedConstruct

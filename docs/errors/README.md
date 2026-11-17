@@ -92,6 +92,9 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | --- | --- | --- | --- | --- |
 | [PLY0100](PLY0100.md) | error | 70 (InternalError) | `ill-typed IR in '<member>': <reason>` | PROTOTYPE |
 | [PLY0101](PLY0101.md) | error | 70 (InternalError) | `<reason>` | PROTOTYPE |
+| [PLY0115](PLY0115.md) | error | 70 (InternalError) | `instruction <number> (<kind>) in '@<function>' has no origin and is not marked synthetic` | IR-SOURCEMAP |
+| [PLY0116](PLY0116.md) | error | 4 (InvalidSource) | `malformed location '<text>'` | IR-SOURCEMAP |
+| [PLY0117](PLY0117.md) | error | 4 (InvalidSource) | `location refers to source <index>, but the module declares <count> sources` | IR-SOURCEMAP |
 
 ## PLY0800–PLY0899 · permutation
 
