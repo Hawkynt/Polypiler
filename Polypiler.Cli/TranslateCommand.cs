@@ -372,6 +372,14 @@ public sealed partial class TranslateCommand : ICliCommand {
       return InternalError;
     }
 
+    // The helpers legalization bound into the module are optimised with the code that calls them; the
+    // backend checks the module it is going to write, a function value the passes bound to its one
+    // callee no longer in it.
+    var passes = IrPassPipeline.Default.Run(module, new OptimizerOptions {
+      Level = LevelOf(options) ?? OptimizationLevel.Default,
+      Disabled = options.TryGetValue(DisableOpt, out var disabled) ? disabled.Split(',').ToHashSet() : []
+    });
+    module = passes.Module;
     var problems = backend.Check(module, options);
     if (problems.Count > 0) {
       foreach (var problem in problems)
@@ -379,13 +387,6 @@ public sealed partial class TranslateCommand : ICliCommand {
 
       return problems.Any(problem => problem.Code == IrVerifier.Code) ? InternalError : UnsupportedConstruct;
     }
-
-    // The helpers legalization bound into the module are optimised with the code that calls them.
-    var passes = IrPassPipeline.Default.Run(module, new OptimizerOptions {
-      Level = LevelOf(options) ?? OptimizationLevel.Default,
-      Disabled = options.TryGetValue(DisableOpt, out var disabled) ? disabled.Split(',').ToHashSet() : []
-    });
-    module = passes.Module;
     if (record is not null) {
       if (options.ContainsKey(ExplainOpt)) {
         foreach (var application in passes.Applications)
