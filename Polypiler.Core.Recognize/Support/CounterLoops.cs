@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Polypiler.Core.IR;
 
@@ -21,7 +22,7 @@ internal static class CounterLoops {
   /// <param name="recognize">The final value of a variable in the rule's operation, or <see langword="null"/>.</param>
   /// <param name="rewrite">The replacement of the initialization and the loop.</param>
   /// <returns><see langword="true"/> when the loop is replaced.</returns>
-  public static bool TryReplace(IReadOnlyList<IrStmt> statements, int index, RuleContext context, Func<IrLocal, IrExpr, IrExpr?> recognize, out StatementRewrite? rewrite) {
+  public static bool TryReplace(IReadOnlyList<IrStmt> statements, int index, RuleContext context, Func<IrLocal, IrExpr, IrExpr?> recognize, [NotNullWhen(true)] out StatementRewrite? rewrite) {
     rewrite = null;
     if (CounterLoop.At(statements, index, context) is not { } loop || loop.Passes() is not { } passes)
       return false;

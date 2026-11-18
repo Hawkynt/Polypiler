@@ -109,36 +109,61 @@ public sealed class Z3Solver : ISmtSolver {
     ArgumentNullException.ThrowIfNull(query);
     ArgumentNullException.ThrowIfNull(constants);
     using var context = new Context(new Dictionary<string, string> { ["model"] = "true" });
-    var solver = context.MkSolver();
-    var parameters = context.MkParams();
-    parameters.Add("timeout", (uint)Math.Clamp(timeout.TotalMilliseconds, 1, uint.MaxValue));
-    parameters.Add("random_seed", 0u);
+    using var solver = context.MkSolver();
+    using var parameters = context.MkParams();
+    // The string overload creates undisposed Symbols in this binding. Every wrapper holds a
+    // context reference, so even a disposed Context otherwise retains native memory until GC.
+    using var timeoutParameter = context.MkSymbol("timeout");
+    using var seedParameter = context.MkSymbol("random_seed");
+    parameters.Add(timeoutParameter, (uint)Math.Clamp(timeout.TotalMilliseconds, 1, uint.MaxValue));
+    parameters.Add(seedParameter, 0u);
     solver.Parameters = parameters;
 
     // The API's parser reads declarations and assertions; the commands of the script are the solver's calls here.
     var script = string.Join('\n', query.Split('\n').Where(line => !line.StartsWith("(set-logic", StringComparison.Ordinal) && !line.StartsWith("(check-sat", StringComparison.Ordinal)));
-    solver.Assert(context.ParseSMTLIB2String(script));
+    // Parse directly into the solver: ParseSMTLIB2String's ASTVector conversion in 4.11.2
+    // leaves temporary AST wrappers for finalization even when the returned array is disposed.
+    solver.FromString(script);
     switch (solver.Check()) {
       case Status.UNSATISFIABLE:
         return new(SmtStatus.Unsat, new Dictionary<string, ulong>());
       case Status.SATISFIABLE:
-        var model = solver.Model;
-        var values = new Dictionary<string, ulong>(StringComparer.Ordinal);
-        foreach (var name in constants) {
-          var declaration = model.ConstDecls.FirstOrDefault(candidate => candidate.Name.ToString().Trim('|') == name);
-          values[name] = declaration is null ? 0 : Value(model.ConstInterp(declaration));
-        }
-
-        return new(SmtStatus.Sat, values);
+        return new(SmtStatus.Sat, ModelValues(solver, constants));
       default:
         var reason = solver.ReasonUnknown;
         return new(SmtStatus.Unknown, new Dictionary<string, ulong>(), reason is "timeout" or "canceled" ? "timeout" : reason);
     }
   }
 
+  private static IReadOnlyDictionary<string, ulong> ModelValues(Solver solver, IReadOnlyList<string> constants) {
+    using var model = solver.Model;
+    var declarations = model.ConstDecls;
+    var values = new Dictionary<string, ulong>(StringComparer.Ordinal);
+    foreach (var name in constants)
+      values[name] = 0;
+
+    try {
+      foreach (var declaration in declarations) {
+        using var symbol = declaration.Name;
+        var name = symbol.ToString().Trim('|');
+        if (!values.ContainsKey(name))
+          continue;
+
+        using var expression = model.ConstInterp(declaration);
+        values[name] = Value(expression);
+      }
+
+      return values;
+    } finally {
+      foreach (var declaration in declarations)
+        declaration.Dispose();
+    }
+  }
+
   private static ulong Value(Expr value) => value switch {
     BitVecNum number => ulong.Parse(number.BigInteger.ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture),
-    _ => value.IsTrue ? 1UL : 0UL
+    // IsTrue accesses FuncDecl through a new wrapper; text of a Boolean constant needs none.
+    _ => value.ToString() == "true" ? 1UL : 0UL
   };
 
   private static string EmbeddedLock() {

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Polypiler.Core.IR;
@@ -40,6 +41,7 @@ public sealed class RuleContext {
   private readonly Dictionary<IrLocal, IrExpr> _initializers = [];
   private readonly HashSet<IrLocal> _parameters;
   private readonly List<RuleFrame> _frames = [];
+  private string? _proofNote;
 
   /// <summary>Collects the facts of a function.</summary>
   /// <param name="function">The function.</param>
@@ -92,6 +94,38 @@ public sealed class RuleContext {
 
   /// <summary>What the target says about costs.</summary>
   public RuleTarget Target { get; }
+
+  /// <summary>The host's equivalence prover; absent means proof-dependent rules cannot fire.</summary>
+  public IRecognitionProver? Prover { get; init; }
+
+  /// <summary>Receives proof verdicts and precondition refusals.</summary>
+  public Action<string>? Note { get; init; }
+
+  /// <summary>Starts a rule attempt, discarding any uncommitted proof report from the previous attempt.</summary>
+  public void BeginAttempt() => this._proofNote = null;
+
+  /// <summary>Reports the proof of a replacement only after the host has committed that replacement.</summary>
+  public void ReportApplication() {
+    if (this._proofNote is { } note)
+      this.Note?.Invoke(note);
+
+    this._proofNote = null;
+  }
+
+  /// <summary>Proves a replacement; refusals are immediate, while success is reported by <see cref="ReportApplication"/>.</summary>
+  /// <param name="id">The rule.</param>
+  /// <param name="before">The candidate.</param>
+  /// <param name="after">The replacement.</param>
+  /// <param name="description">The recovered operation and source form for the report.</param>
+  /// <returns>The replacement only when proved.</returns>
+  public IrExpr? Confirm(string id, IrExpr before, IrExpr after, string description) {
+    var proof = this.Prover?.Prove(id, before, after, this) ?? new RecognitionProof(false, "proof unavailable");
+    if (proof.Proved)
+      this._proofNote = $"{id} applied: {description} [proof: {proof.Detail}]";
+    else
+      this.Note?.Invoke($"{id} not applied: {proof.Detail}");
+    return proof.Proved ? after : null;
+  }
 
   /// <summary>The blocks around the statements a rule is asked about, the outermost first; empty for the body of the function.</summary>
   public IReadOnlyList<RuleFrame> Frames => this._frames;
