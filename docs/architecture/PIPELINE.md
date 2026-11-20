@@ -66,6 +66,14 @@ refusals. Library hosts enable these proof-dependent rules with
 dependency on the verification module. `CreateObligation` exports the same
 obligation for independent exhaustive checks and evidence.
 
+O0126 reciprocal division asks no solver: a 32-bit division by a constant does
+not finish within the budget and a 64-bit high product would need 128 bits.
+It derives the divisor from the multiplier and the shift and checks an exact
+certificate in `BigInteger` arithmetic, which is the proof (`validated-rule`);
+its tests validate the rule exhaustively and with Z3 at 16 bits. It reports
+through `RuleContext.Certify`, which, like a proof, publishes the application
+only after the optimizer commits it.
+
 Each solver query releases its native wrappers before closing the context. The
 pinned Z3 binding's array parser retains temporary AST wrappers until collection,
 so the integration loads assertions directly into the solver. The resource
