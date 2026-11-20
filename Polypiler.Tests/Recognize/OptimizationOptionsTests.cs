@@ -82,8 +82,9 @@ public sealed class OptimizationOptionsTests {
     // The rules first, in the order they applied; then the passes over the helpers legalization bound in.
     Assert.That(lines[0], Does.EndWith("Snippet.cs: opt O0100 rotate from a shift pair: 'F' statement 1"));
     Assert.That(lines[1], Does.EndWith("Snippet.cs: opt O0121 wrapping absolute value from a sign mask or a selection: 'G' statement 1"));
-    Assert.That(lines[2], Does.EndWith("Snippet.cs: opt O0006 inlining: 'F' statement 1"));
-    Assert.That(lines.Skip(2), Has.All.Matches<string>(line => System.Text.RegularExpressions.Regex.IsMatch(line, @"Snippet\.cs: opt O00(01|03|05|06|23) ")));
+    Assert.That(lines[2], Does.EndWith("Snippet.cs: opt O0121 applied: Abs.i32[wrap] from compare-select [proof: smt-bitvector]"));
+    Assert.That(lines[3], Does.EndWith("Snippet.cs: opt O0006 inlining: 'F' statement 1"));
+    Assert.That(lines.Skip(3), Has.All.Matches<string>(line => System.Text.RegularExpressions.Regex.IsMatch(line, @"Snippet\.cs: opt O00(01|03|05|06|23) ")));
   }
 
   [Test]

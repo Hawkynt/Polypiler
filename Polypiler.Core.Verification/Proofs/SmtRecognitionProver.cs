@@ -9,7 +9,7 @@ using Polypiler.Core.Recognize;
 namespace Polypiler.Core.Verification.Proofs;
 
 /// <summary>
-/// Checks actual tree-IR permutation candidates with the bitvector prover. Integer boundaries not
+/// Checks actual tree-IR recognition candidates with the bitvector prover. Integer boundaries not
 /// modeled by the encoder are independent inputs, so a proof holds for every value they can produce.
 /// The bounded cache contains only proved obligations and belongs to this host instance.
 /// </summary>
@@ -91,7 +91,7 @@ public sealed class SmtRecognitionProver : IRecognitionProver {
       return string.Join("\n", this._lines);
     }
 
-    private static string Type(IrExpr expression) => "u" + expression.Type.Bits.ToString(CultureInfo.InvariantCulture);
+    private static string Type(IrExpr expression) => expression.Type == IrType.Bool ? "bool" : "u" + expression.Type.Bits.ToString(CultureInfo.InvariantCulture);
 
     private string Emit(string op, IrExpr expression, params string[] arguments) {
       var name = "%v" + this._lines.Count.ToString(CultureInfo.InvariantCulture);
@@ -104,11 +104,15 @@ public sealed class SmtRecognitionProver : IRecognitionProver {
         return known;
 
       var result = expression switch {
+        IrConst { Type.Kind: IrTypeKind.Bool } constant => constant.Value == 0 ? "false" : "true",
         IrConst constant => "0x" + ((ulong)constant.Value & Mask(constant.Type.Bits)).ToString("X", CultureInfo.InvariantCulture),
         IrLocalRef reference when context.Definition(reference.Local) is { } definition => this.Value(definition),
         IrConvert { Contract: IrConversion.Wrap, Operand.Type.IsInteger: true } convert => this.Convert(convert),
         IrUnary { Op: IrUnaryOp.Negate or IrUnaryOp.BitNot } unary => this.Emit(unary.Op == IrUnaryOp.Negate ? "Neg" : "Not", unary, this.Value(unary.Operand)),
         IrBinary binary when Operator(binary) is { } op => this.Binary(binary, op),
+        IrBinary { Left.Type.IsInteger: true } comparison when Predicate(comparison) is { } predicate => this.Compare(comparison.Left, comparison.Right, predicate),
+        IrConditional choice => this.Emit("Select", choice, this.Value(choice.Condition), this.Value(choice.WhenTrue), this.Value(choice.WhenFalse)),
+        IrIntrinsic { Op: IrIntrinsicOp.AbsWrap } absolute => this.Absolute(absolute),
         IrIntrinsic { Op: IrIntrinsicOp.BitReverse or IrIntrinsicOp.ByteSwap } intrinsic => this.Reverse(intrinsic),
         IrIntrinsic { Op: IrIntrinsicOp.RotateLeft or IrIntrinsicOp.RotateRight } rotate
           => this.Emit(rotate.Op.ToString(), rotate, this.Value(rotate.Arguments[0]), this.Value(rotate.Arguments[1])),
@@ -154,6 +158,32 @@ public sealed class SmtRecognitionProver : IRecognitionProver {
       IrBinaryOp.ShiftRightLogical => "LShr",
       _ => null
     };
+
+    private static string? Predicate(IrBinary comparison) {
+      var sign = comparison.Left.Type.IsSigned ? "S" : "U";
+      return comparison.Op switch {
+        IrBinaryOp.Less => sign + "Lt",
+        IrBinaryOp.LessOrEqual => sign + "Le",
+        IrBinaryOp.Greater => sign + "Gt",
+        IrBinaryOp.GreaterOrEqual => sign + "Ge",
+        _ => null
+      };
+    }
+
+    private string Compare(IrExpr left, IrExpr right, string predicate)
+      => this.Emit(predicate, left, this.Value(left), this.Value(right));
+
+    /// <summary>A signed magnitude by comparison and negation, independent of sign-mask matching.</summary>
+    private string Absolute(IrIntrinsic absolute) {
+      var input = absolute.Arguments[0];
+      var value = this.Value(input);
+      if (!input.Type.IsSigned)
+        return value;
+
+      var negative = this.Emit("SLt", input, value, "0");
+      var negated = this.Emit("Neg", input, value);
+      return this.Emit("Select", absolute, negative, negated, value);
+    }
 
     private string Binary(IrBinary binary, string op) {
       var left = this.Value(binary.Left);

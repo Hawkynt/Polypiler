@@ -75,4 +75,53 @@ public sealed class SmtRecognitionProverTests {
     var proof = new SmtRecognitionProver().Prove("O0105", shifted, unsigned, _context);
     Assert.That(proof.Proved, Is.EqualTo(operation == IrBinaryOp.ShiftRightLogical));
   }
+
+  [TestCase(8)]
+  [TestCase(16)]
+  [TestCase(32)]
+  [TestCase(64)]
+  public void UnsignedMagnitude_IsIdentity(int width) {
+    var type = width switch { 8 => IrType.U8, 16 => IrType.U16, 32 => IrType.U32, _ => IrType.U64 };
+    var x = new IrLocal("x", type);
+    var value = new IrLocalRef(x);
+    var function = new IrFunction("U", true, type, [x], [], new([new IrReturn(value)]));
+    var context = new RuleContext(function, RuleTarget.Neutral);
+    var absolute = new IrIntrinsic(IrIntrinsicOp.AbsWrap, type, [value]);
+    Assert.That(new SmtRecognitionProver().Prove("O0121", value, absolute, context), Is.EqualTo(new RecognitionProof(true, "smt-bitvector")));
+  }
+
+  [TestCase(true)]
+  [TestCase(false)]
+  public void BooleanConstants_SelectTheActualArm(bool selected) {
+    var negated = new IrUnary(IrUnaryOp.Negate, _value);
+    var before = new IrConditional(new IrConst(IrType.Bool, selected ? 1 : 0), _value, negated);
+    Assert.That(new SmtRecognitionProver().Prove("O0121", before, selected ? _value : negated, _context).Proved, Is.True);
+  }
+
+  [TestCase(IrBinaryOp.Less)]
+  [TestCase(IrBinaryOp.LessOrEqual)]
+  [TestCase(IrBinaryOp.Greater)]
+  [TestCase(IrBinaryOp.GreaterOrEqual)]
+  public void AnUnsignedZeroComparison_DoesNotProveSignedMagnitude(IrBinaryOp comparison) {
+    var condition = new IrBinary(comparison, new IrConvert(IrType.U32, _value), new IrConst(IrType.U32, 0));
+    var before = new IrConditional(condition, new IrUnary(IrUnaryOp.Negate, _value), _value);
+    var after = new IrIntrinsic(IrIntrinsicOp.AbsWrap, IrType.I32, [_value]);
+    Assert.That(new SmtRecognitionProver().Prove("O0121", before, after, _context), Is.EqualTo(new RecognitionProof(false, "not equivalent")));
+  }
+
+  [Test]
+  public void UnsignedMagnitude_IsNotASignedMagnitudeOnTheSameBits() {
+    var value = new IrConvert(IrType.U32, _value);
+    var condition = new IrBinary(IrBinaryOp.Less, _value, new IrConst(IrType.I32, 0));
+    var signedMagnitude = new IrConditional(condition, new IrBinary(IrBinaryOp.Subtract, new IrConst(IrType.U32, 0), value), value);
+    var unsignedMagnitude = new IrIntrinsic(IrIntrinsicOp.AbsWrap, IrType.U32, [value]);
+    Assert.That(new SmtRecognitionProver().Prove("O0121", signedMagnitude, unsignedMagnitude, _context), Is.EqualTo(new RecognitionProof(false, "not equivalent")));
+  }
+
+  [Test]
+  public void AnIndependentBooleanInput_KeepsItsBooleanType() {
+    var flag = new IrLocalRef(new IrLocal("flag", IrType.Bool));
+    var choice = new IrConditional(flag, _value, _value);
+    Assert.That(new SmtRecognitionProver().Prove("O0121", choice, _value, _context).Proved, Is.True);
+  }
 }
