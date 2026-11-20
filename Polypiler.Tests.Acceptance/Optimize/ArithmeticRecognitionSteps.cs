@@ -12,7 +12,7 @@ using Reqnroll;
 namespace Polypiler.Tests.Acceptance.Optimize;
 
 /// <summary>Arithmetic recognition contracts on executable source imported into the current tree IR.</summary>
-[Binding, Scope(Feature = "Proved wrapping absolute value recognition"), Scope(Feature = "Proved shift-add multiplication recognition"), Scope(Feature = "Proved single-bit recognition"), Scope(Feature = "Proved minimum and maximum recognition"), Scope(Feature = "Proved signum recognition")]
+[Binding, Scope(Feature = "Proved wrapping absolute value recognition"), Scope(Feature = "Proved parity recognition"), Scope(Feature = "Proved shift-add multiplication recognition"), Scope(Feature = "Proved single-bit recognition"), Scope(Feature = "Proved minimum and maximum recognition"), Scope(Feature = "Proved signum recognition")]
 public sealed class ArithmeticRecognitionSteps {
 
   private IrModule _before = null!;
@@ -78,6 +78,10 @@ public sealed class ArithmeticRecognitionSteps {
       IrTypeKind.I8 => (object)unchecked((sbyte)bits),
       IrTypeKind.I16 => (object)unchecked((short)bits),
       IrTypeKind.I32 => (object)unchecked((int)bits),
+      IrTypeKind.U8 => unchecked((byte)bits),
+      IrTypeKind.U16 => unchecked((ushort)bits),
+      IrTypeKind.U32 => unchecked((uint)bits),
+      IrTypeKind.U64 => bits,
       _ => unchecked((long)bits)
     };
     var before = IrInterpreter.Call(this._before, function.Name, [argument]);

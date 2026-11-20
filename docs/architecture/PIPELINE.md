@@ -54,8 +54,9 @@ Stage 8 is built for the C# and the JavaScript backend of the prototype: each bu
 
 O0105 bit reversal and O0106 byte swap use exact weighted-bit provenance as a
 structural check; O0108 checks single-bit test, set, clear and toggle with a
-shifted one; O0120 minimum and maximum checks compare-select, mask-select
-and subtract-sign forms; O0121 wrapping magnitude checks sign masks and signed
+shifted one; O0110 parity evaluates folds and nibble lookups as exclusive ors
+of atom bits; O0120 minimum and maximum checks compare-select, mask-select and
+subtract-sign forms; O0121 wrapping magnitude checks sign masks and signed
 compare-select forms, including promoted narrow arithmetic; O0122 signum
 evaluates comparison differences and selections for the three sign classes and
 checks the shift-or form. These rules ask the host's `IRecognitionProver` to

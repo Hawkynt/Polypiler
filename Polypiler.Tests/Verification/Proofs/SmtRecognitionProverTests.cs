@@ -118,6 +118,22 @@ public sealed class SmtRecognitionProverTests {
     Assert.That(new SmtRecognitionProver().Prove("O0121", signedMagnitude, unsignedMagnitude, _context), Is.EqualTo(new RecognitionProof(false, "not equivalent")));
   }
 
+  [TestCase(8)]
+  [TestCase(16)]
+  [TestCase(32)]
+  public void ParityAndPopCount_AreDefinedBitByBit(int width) {
+    var type = width switch { 8 => IrType.U8, 16 => IrType.U16, 32 => IrType.U32, _ => IrType.U64 };
+    var x = new IrLocal("x", type);
+    var value = new IrLocalRef(x);
+    var context = new RuleContext(new IrFunction("P", true, IrType.I32, [x], [], new([new IrReturn(new IrConst(IrType.I32, 0))])), RuleTarget.Neutral);
+    var parity = new IrIntrinsic(IrIntrinsicOp.Parity, IrType.I32, [value]);
+    var masked = new IrBinary(IrBinaryOp.And, new IrIntrinsic(IrIntrinsicOp.PopCount, IrType.I32, [value]), new IrConst(IrType.I32, 1));
+    var prover = new SmtRecognitionProver();
+    Assert.That(prover.Prove("O0110", masked, parity, context), Is.EqualTo(new RecognitionProof(true, "smt-bitvector")));
+    var complement = new IrBinary(IrBinaryOp.Xor, parity, new IrConst(IrType.I32, 1));
+    Assert.That(prover.Prove("O0110", complement, parity, context), Is.EqualTo(new RecognitionProof(false, "not equivalent")));
+  }
+
   [Test]
   public void AnIndependentBooleanInput_KeepsItsBooleanType() {
     var flag = new IrLocalRef(new IrLocal("flag", IrType.Bool));
