@@ -148,7 +148,7 @@ public sealed class ShiftAddMultiplyRecognitionTests {
     _ => bits
   };
 
-  private static ulong Bits(object result) => result is ulong unsigned ? unsigned : unchecked((ulong)Convert.ToInt64(result, CultureInfo.InvariantCulture));
+  private static ulong Bits(object? result) => result is ulong unsigned ? unsigned : unchecked((ulong)Convert.ToInt64(result, CultureInfo.InvariantCulture));
 
   /// <summary>Both versions agree with the wrapping product computed by the BCL.</summary>
   private static void Agrees(IrModule before, IrModule after, int width, bool signed, string form, ulong bits) {

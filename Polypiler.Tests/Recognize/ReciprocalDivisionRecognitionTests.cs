@@ -30,7 +30,7 @@ public sealed class ReciprocalDivisionRecognitionTests {
 
   private static IrModule Source(string method) => PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(method));
 
-  private static BigInteger Number(object value) => value switch {
+  private static BigInteger Number(object? value) => value switch {
     ulong unsigned => unsigned,
     _ => Convert.ToInt64(value, CultureInfo.InvariantCulture)
   };

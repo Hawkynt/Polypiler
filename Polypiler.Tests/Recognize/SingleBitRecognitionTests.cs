@@ -126,7 +126,7 @@ public sealed class SingleBitRecognitionTests {
   private static ulong Mask(int width) => width == 64 ? ulong.MaxValue : (1UL << width) - 1;
 
   /// <summary>The bits of a result, a truth value as 0 or 1.</summary>
-  private static ulong Bits(object result) => result switch {
+  private static ulong Bits(object? result) => result switch {
     bool truth => truth ? 1UL : 0UL,
     ulong unsigned => unsigned,
     _ => unchecked((ulong)Convert.ToInt64(result, CultureInfo.InvariantCulture))

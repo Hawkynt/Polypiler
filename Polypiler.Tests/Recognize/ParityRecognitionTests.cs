@@ -121,7 +121,7 @@ public sealed class ParityRecognitionTests {
 
   private static ulong Mask(int width) => width == 64 ? ulong.MaxValue : (1UL << width) - 1;
 
-  private static long Number(object value) => value is ulong unsigned ? unchecked((long)unsigned) : Convert.ToInt64(value, CultureInfo.InvariantCulture);
+  private static long Number(object? value) => value is ulong unsigned ? unchecked((long)unsigned) : Convert.ToInt64(value, CultureInfo.InvariantCulture);
 
   /// <summary>Both versions agree with the BCL's population count of the value's bits, masked to its lowest bit.</summary>
   private static void Agrees(IrModule before, IrModule after, int width, ulong bits) {

@@ -146,7 +146,7 @@ public sealed class MinMaxRecognitionTests {
     _ => bits
   };
 
-  private static Int128 Number(object value) => value is ulong unsigned ? unsigned : Convert.ToInt64(value, CultureInfo.InvariantCulture);
+  private static Int128 Number(object? value) => value is ulong unsigned ? unsigned : Convert.ToInt64(value, CultureInfo.InvariantCulture);
 
   /// <summary>Both versions agree with the BCL's minimum or maximum of the two arguments' values.</summary>
   private static void Agrees(IrModule before, IrModule after, bool minimum, ulong first, ulong second) {
