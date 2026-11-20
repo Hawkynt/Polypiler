@@ -66,6 +66,13 @@ refusals. Library hosts enable these proof-dependent rules with
 dependency on the verification module. `CreateObligation` exports the same
 obligation for independent exhaustive checks and evidence.
 
+O0103 proves loops that end early the same way: it unrolls the bit-scanning
+loop symbolically into the chain of its passes' exit values (`c0 ? (c1 ? … : v1)
+: v0`) and asks the prover to equate the final counter and shifted variable with
+`TrailingZeroCount` or `LeadingZeroCount`, whose definitions test every bit
+position. A loop that does not end for zero is proved only under the non-zero
+fact a dominating `if (x == 0) return` or an enclosing `if (x != 0)` supplies.
+
 Each solver query releases its native wrappers before closing the context. The
 pinned Z3 binding's array parser retains temporary AST wrappers until collection,
 so the integration loads assertions directly into the solver. The resource

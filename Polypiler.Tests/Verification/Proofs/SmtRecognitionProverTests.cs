@@ -124,4 +124,27 @@ public sealed class SmtRecognitionProverTests {
     var choice = new IrConditional(flag, _value, _value);
     Assert.That(new SmtRecognitionProver().Prove("O0121", choice, _value, _context).Proved, Is.True);
   }
+
+  [TestCase(IrIntrinsicOp.TrailingZeroCount)]
+  [TestCase(IrIntrinsicOp.LeadingZeroCount)]
+  public void ZeroCounts_AreTheWidthForZeroAndDifferFromEachOther(IrIntrinsicOp op) {
+    var x = new IrLocal("x", IrType.U32);
+    var value = new IrLocalRef(x);
+    var context = new RuleContext(new IrFunction("Z", true, IrType.I32, [x], [], new([new IrReturn(new IrConst(IrType.I32, 0))])), RuleTarget.Neutral);
+    var count = new IrIntrinsic(op, IrType.I32, [value]);
+    var other = new IrIntrinsic(op == IrIntrinsicOp.TrailingZeroCount ? IrIntrinsicOp.LeadingZeroCount : IrIntrinsicOp.TrailingZeroCount, IrType.I32, [value]);
+    var prover = new SmtRecognitionProver();
+    // For x = 0 both are 32; a zero test selecting 32 or the count leaves the count unchanged.
+    var guarded = new IrConditional(new IrBinary(IrBinaryOp.Equal, value, new IrConst(IrType.U32, 0)), new IrConst(IrType.I32, 32), count);
+    Assert.That(prover.Prove("O0103", guarded, count, context).Proved, Is.True);
+    Assert.That(prover.Prove("O0103", count, other, context), Is.EqualTo(new RecognitionProof(false, "not equivalent")));
+  }
+
+  [Test]
+  public void TheTrailingZeroCountOfOne_IsZero() {
+    var one = new IrIntrinsic(IrIntrinsicOp.TrailingZeroCount, IrType.I32, [new IrConst(IrType.U64, 1)]);
+    var top = new IrIntrinsic(IrIntrinsicOp.LeadingZeroCount, IrType.I32, [new IrConst(IrType.U64, 1)]);
+    Assert.That(new SmtRecognitionProver().Prove("O0103", one, new IrConst(IrType.I32, 0), _context).Proved, Is.True);
+    Assert.That(new SmtRecognitionProver().Prove("O0103", top, new IrConst(IrType.I32, 63), _context).Proved, Is.True);
+  }
 }
