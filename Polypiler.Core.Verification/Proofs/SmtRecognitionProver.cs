@@ -115,6 +115,7 @@ public sealed class SmtRecognitionProver : IRecognitionProver {
         IrBinary { Left.Type.IsInteger: true } comparison when Predicate(comparison) is { } predicate => this.Compare(comparison.Left, comparison.Right, predicate),
         IrConditional choice => this.Emit("Select", choice, this.Value(choice.Condition), this.Value(choice.WhenTrue), this.Value(choice.WhenFalse)),
         IrIntrinsic { Op: IrIntrinsicOp.AbsWrap } absolute => this.Absolute(absolute),
+        IrIntrinsic { Op: IrIntrinsicOp.MulHigh, Type.Bits: <= 32, Arguments: [var left, var right] } high => this.High(high, left, right),
         IrIntrinsic { Op: IrIntrinsicOp.TrailingZeroCount or IrIntrinsicOp.LeadingZeroCount, Arguments: [{ Type.IsInteger: true } input] } count => this.ZeroCount(count, input),
         IrIntrinsic { Op: IrIntrinsicOp.Parity or IrIntrinsicOp.PopCount, Arguments: [{ Type.IsInteger: true } counted] } count => this.Count(count, counted),
         IrIntrinsic { Op: IrIntrinsicOp.TestBit or IrIntrinsicOp.SetBit or IrIntrinsicOp.ClearBit or IrIntrinsicOp.ToggleBit, Arguments: [var value, var position] } bit
@@ -164,6 +165,8 @@ public sealed class SmtRecognitionProver : IRecognitionProver {
       IrBinaryOp.ShiftLeft => "Shl",
       IrBinaryOp.ShiftRight => binary.Type.IsSigned ? "AShr" : "LShr",
       IrBinaryOp.ShiftRightLogical => "LShr",
+      IrBinaryOp.Divide => binary.Type.IsSigned ? "SDiv" : "UDiv",
+      IrBinaryOp.Remainder => binary.Type.IsSigned ? "SRem" : "URem",
       _ => null
     };
 
@@ -193,6 +196,17 @@ public sealed class SmtRecognitionProver : IRecognitionProver {
       var negative = this.Emit("SLt", input, value, "0");
       var negated = this.Emit("Neg", input, value);
       return this.Emit("Select", absolute, negative, negated, value);
+    }
+
+    /// <summary>The upper half of the full product, by its definition at twice the width; a 64-bit one would need 128 bits and stays an input.</summary>
+    private string High(IrIntrinsic high, IrExpr left, IrExpr right) {
+      var wide = new IrConvert(high.Type.IsSigned ? IrType.I64 : IrType.U64, left);
+      var extend = high.Type.IsSigned ? "SignExtend" : "ZeroExtend";
+      var a = this.Emit(extend, wide, this.Value(left));
+      var b = this.Emit(extend, wide, this.Value(right));
+      var product = this.Emit("Mul", wide, a, b);
+      var shifted = this.Emit(high.Type.IsSigned ? "AShr" : "LShr", wide, product, high.Type.Bits.ToString(CultureInfo.InvariantCulture));
+      return this.Emit("Truncate", high, shifted);
     }
 
     /// <summary>

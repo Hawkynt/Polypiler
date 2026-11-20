@@ -77,6 +77,14 @@ refusals. Library hosts enable these proof-dependent rules with
 dependency on the verification module. `CreateObligation` exports the same
 obligation for independent exhaustive checks and evidence.
 
+O0126 reciprocal division asks no solver: a 32-bit division by a constant does
+not finish within the budget and a 64-bit high product would need 128 bits.
+It derives the divisor from the multiplier and the shift and checks an exact
+certificate in `BigInteger` arithmetic, which is the proof (`validated-rule`);
+its tests validate the rule exhaustively and with Z3 at 16 bits. It reports
+through `RuleContext.Certify`, which, like a proof, publishes the application
+only after the optimizer commits it.
+
 O0103 proves loops that end early the same way: it unrolls the bit-scanning
 loop symbolically into the chain of its passes' exit values (`c0 ? (c1 ? … : v1)
 : v0`) and asks the prover to equate the final counter and shifted variable with

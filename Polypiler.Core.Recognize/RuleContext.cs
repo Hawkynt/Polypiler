@@ -134,6 +134,20 @@ public sealed class RuleContext {
     return proof.Proved ? after : null;
   }
 
+  /// <summary>
+  /// Accepts a replacement on a checked certificate instead of a solver run, for a rule whose precondition is
+  /// itself the proof; like a proved replacement, it is reported only by <see cref="ReportApplication"/>.
+  /// </summary>
+  /// <param name="id">The rule.</param>
+  /// <param name="after">The replacement.</param>
+  /// <param name="description">The recovered operation and the certificate's numbers.</param>
+  /// <param name="proofClass">The proof class the certificate belongs to.</param>
+  /// <returns>The replacement.</returns>
+  public IrExpr Certify(string id, IrExpr after, string description, string proofClass) {
+    this._proofNote = $"{id} applied: {description} [proof: {proofClass}]";
+    return after;
+  }
+
   /// <summary>The blocks around the statements a rule is asked about, the outermost first; empty for the body of the function.</summary>
   public IReadOnlyList<RuleFrame> Frames => this._frames;
 

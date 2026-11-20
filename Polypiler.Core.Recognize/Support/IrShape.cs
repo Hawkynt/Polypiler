@@ -163,6 +163,8 @@ public static class IrShape {
     IrConst or IrBigConst or IrLocalRef => true,
     IrConstRef reference => !reference.Type.IsArray,
     IrUnary unary => unary.Op != IrUnaryOp.NegateChecked,
+    IrBinary { Op: IrBinaryOp.Divide or IrBinaryOp.Remainder, Left.Type.IsInteger: true, Right: IrConst { Type.IsInteger: true } divisor }
+      => IsSafeDivisor(divisor),
     IrBinary binary => !IrOperators.Traps(binary.Op) && !((binary.Left.Type.IsInteger || binary.Left.Type.IsBigInt) && binary.Op is IrBinaryOp.Divide or IrBinaryOp.Remainder),
     IrConvert conversion => conversion.Contract == IrConversion.Wrap && !conversion.Operand.Type.IsFloat,
     IrConditional => true,
@@ -172,6 +174,13 @@ public static class IrShape {
     IrIntrinsic intrinsic => intrinsic.Arguments.Count > 0 && intrinsic.Arguments[0].Type.IsInteger && _total.Contains(intrinsic.Op),
     _ => false
   };
+
+  /// <summary>
+  /// Whether an integer division by a constant has a result for every dividend: the divisor is not zero
+  /// and, for a signed division, not -1, the only divisor whose quotient of the smallest value overflows.
+  /// </summary>
+  private static bool IsSafeDivisor(IrConst divisor)
+    => IrOperators.Number(divisor.Type, divisor.Value) is var number && number != 0 && (!divisor.Type.IsSigned || number != -1);
 
   /// <summary>
   /// Whether a bit position is always within a width: a constant from 0 to <c>width - 1</c>, or an
@@ -189,7 +198,7 @@ public static class IrShape {
   /// <summary>The operations on integers that have a result for every operand.</summary>
   private static readonly HashSet<IrIntrinsicOp> _total = [
     IrIntrinsicOp.RotateLeft, IrIntrinsicOp.RotateRight, IrIntrinsicOp.PopCount, IrIntrinsicOp.LeadingZeroCount, IrIntrinsicOp.TrailingZeroCount,
-    IrIntrinsicOp.Parity, IrIntrinsicOp.ByteSwap, IrIntrinsicOp.BitReverse, IrIntrinsicOp.Min, IrIntrinsicOp.Max, IrIntrinsicOp.AbsWrap,
+    IrIntrinsicOp.Parity, IrIntrinsicOp.ByteSwap, IrIntrinsicOp.BitReverse, IrIntrinsicOp.Min, IrIntrinsicOp.Max, IrIntrinsicOp.AbsWrap, IrIntrinsicOp.MulHigh,
     IrIntrinsicOp.Sign, IrIntrinsicOp.Log2, IrIntrinsicOp.IsolateLowestSet, IrIntrinsicOp.ClearLowestSet, IrIntrinsicOp.MaskToLowestSet
   ];
 
