@@ -1,0 +1,30 @@
+id: IR.srem
+title: Signed remainder
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#565"
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  SRem is the remainder of the truncating signed division of two integers, x - SDiv(x, d) * d, with the
+  sign of x. It MUST trap with divide-by-zero when the divisor is 0 and with overflow when the smallest
+  value of T is divided by -1. The prototype's structured IR (Polypiler.Core.IR) implements it as
+  IrBinaryOp.Remainder on a signed type. The examples are of T = TYPES.i32.
+spec:
+  kind: operation
+  mnemonic: SRem
+  category: arithmetic
+  typeParameters: [{name: T, constraint: integer}]
+  operands: [{name: left, type: T}, {name: right, type: T}]
+  result: {type: T}
+  flags: []
+  effects: [pure]
+  traps: [{when: "the divisor is 0", kind: divide-by-zero}, {when: "the smallest value of T divided by -1", kind: overflow}]
+  stages: {from: IR.stage.source-semantic, to: IR.stage.legalized-target}
+  examples:
+    - {operands: [-17, 10], result: -7}
+    - {operands: [1, 0], trap: divide-by-zero}
+    - {operands: [-2147483648, -1], trap: overflow}

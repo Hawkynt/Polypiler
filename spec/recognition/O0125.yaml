@@ -1,59 +1,77 @@
 id: RECOGNITION.O0125
 title: Recognize multiplication by a constant from shift-add and shift-subtract chains
-version: 1
-status: draft
+version: 2
+status: normative
 owner: Hawkynt
 issue: "#572"
 tests:
+  - Polypiler.Tests/Recognize/ShiftAddMultiplyRecognitionTests.cs
+  - Polypiler.Tests/Verification/Proofs/SmtRecognitionProverTests.cs
+  - tests/features/recognize/rec-mulconst.feature
+  - Polypiler.Tests.Acceptance/Optimize/ArithmeticRecognitionSteps.cs
   - Polypiler.Tests/Recognize/RecognitionFixtureTests.cs
   - tests/fixtures/prototype/recognize/RecognizeMultiply.cs
   - tests/fixtures/prototype/recognize/multiply.js
 introducedIn: P2
-compatibility: none
-reviewedRevision: 0
+compatibility: additive
+reviewedRevision: 2
 normative: >-
-  A sum or difference of shifted copies of one value MUST become a wrapping multiplication by the
-  constant they add up to, only with wrapping arithmetic and a factor that is not 0, 1, -1 or a power
-  of two. The prototype rule O0125ShiftAddMultiply in Polypiler.Core.Recognize matches the structured
-  IR of Polypiler.Core.IR, not the typed SSA IR: pattern.before and replacement.after are written in
-  that structured form, and matching typed SSA graphs belongs to REC-ENGINE (#276).
-  RecognitionFixtureTests is the evidence the prototype has: it checks that the rule fires exactly on
-  the marked functions of its fixtures, that --disable-opt O0125 keeps it from firing, and that the IR
-  interpreter computes the same before and after the rule - result, kind of trap and the arrays a trap
-  leaves behind - for every value of each 8- and 16-bit parameter and for the edges and 10 000 random
-  tuples of the wider ones. The proof obligations below are planned and not discharged yet: exhaustive
-  checks with VER-EXHAUSTIVE (#70), bit-vector proofs with VER-SMT (#71). The prototype knows only the
-  levels default, where the rule is on, and none; the optLevels name the levels of the target state.
-  The document stays a draft until its obligations are discharged.
+  O0125 MUST recognize multiplication by a constant at widths 8, 16, 32 and 64
+  in the structured tree IR of ADR 0009. An expression is read as a linear form
+  c · x modulo 2^w: wrapping addition and subtraction, negation, shifts to the
+  left by a constant (taken modulo the width) and multiplications by a
+  constant, through same-width conversions and stable definitions. The one
+  value x MUST occur at least twice; values of 8 and 16 bits are matched on the
+  promoted operation the frontend wrote. A coefficient of 0, 1 or a power of
+  two MUST be left as written; negative coefficients are rewritten. Checked
+  arithmetic, | or ^ as combiner of scaled terms, a second value among at least
+  two scaled terms, a shift by a variable amount and a value that may trap or
+  act MUST be refused with their reasons. The host-supplied IRecognitionProver
+  MUST prove the actual candidate equivalent to its replacement. The CLI
+  supplies SmtRecognitionProver, which encodes a multiplication by a constant
+  as the sum of the other operand shifted to the constant's set bits, or the
+  negation of that sum for the negated constant, derived from the constant
+  alone. The solver budget is five seconds. Missing, unknown, unsupported,
+  unavailable, refuted and timed-out proofs MUST leave the candidate unchanged.
+  Successful proof notes MUST be emitted only after the replacement is
+  committed. --opt none and --disable-opt O0125 disable matching, proof
+  requests and reports.
 spec:
   optimization: O0125
-  level: typed-ssa
+  level: typed-tree
   pattern:
-    before: "%r = Add.i32 Shl.i32(%x, 3), Shl.i32(%x, 1)"
+    before: "%r = Add.u32 Shl.u32(%x, 3), Shl.u32(%x, 1)"
     bindings:
       - {name: x, role: "multiplied value"}
   replacement:
-    after: "%r = Mul.i32[wrap] %x, 10"
+    after: "%r = Mul.u32[wrap] %x, 10"
     introduces: [IR.mul]
   preconditions:
-    - {id: one-value, text: "every term is a shift of the same value", fact: none}
-    - {id: wrapping, text: "only wrapping arithmetic takes part; an operation that traps is a value of its own", fact: effect}
-    - {id: factor, text: "the factor is not 0, 1, -1 or a power of two, which stay a shift or a negation", fact: range}
-    - {id: has-sum, text: "the expression holds an addition or a subtraction", fact: none}
+    - {id: one-value, text: "every leaf of the linear form is the same value, occurring at least twice", fact: none}
+    - {id: wrapping, text: "only wrapping arithmetic takes part; checked operations are refused", fact: effect}
+    - {id: constant-shifts, text: "every shift amount is a constant, taken modulo the width", fact: none}
+    - {id: factor, text: "the coefficient modulo 2^w is not 0, 1 or a power of two", fact: range}
     - {id: trap-free, text: "the multiplied value has no effect and cannot trap: the replacement evaluates it once", fact: effect}
   proofObligations:
-    - {id: shift-add-8, class: exhaustive-8bit, widths: [8]}
-    - {id: shift-add-16, class: exhaustive-16bit, widths: [16]}
-    - {id: shift-add-wide, class: smt-bitvector, widths: [32, 64], budgetSeconds: 10}
+    - {id: shift-add-exhaustive, class: exhaustive-8bit, widths: [8]}
+    - {id: shift-add-actual-candidate, class: smt-bitvector, widths: [8, 16, 32, 64], budgetSeconds: 5}
   counterexamples:
-    - description: "trapping arithmetic"
-      input: "x = 0x0CCCCCCD, i32, checked((x << 3) + (x << 1))"
-      naive: "trap overflow"
-      correct: "0x80000002"
+    - description: "| in place of +"
+      input: "x = 5, u32, (x << 3) | (x << 1)"
+      naive: "Mul(x, 10) = 50"
+      correct: "original = 42"
+    - description: "checked addition"
+      input: "x = 0x10000000, i32, checked((x << 3) + (x << 1))"
+      naive: "checked(x * 10) traps overflow"
+      correct: "original = 0xA0000000 without a trap"
     - description: "two different values"
-      input: "x = 1, y = 0, i32, (x << 3) + (y << 1)"
-      naive: "0x00000008"
-      correct: "0x0000000A"
+      input: "x = 1, y = 0, u32, (x << 3) + (y << 1)"
+      naive: "Mul(x, 10) = 0x0000000A"
+      correct: "original = 0x00000008"
+    - description: "a right shift in the chain"
+      input: "x = 3, u32, (x << 3) + (x >> 1)"
+      naive: "not linear in x"
+      correct: "original = 25"
   switch: "--disable-opt O0125"
-  optLevels: [balanced, speed, size, memory]
+  optLevels: [default]
   document: docs/optimizations/O0125-shift-add-multiply-recognition.md

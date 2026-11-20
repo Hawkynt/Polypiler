@@ -1,0 +1,74 @@
+id: RECOGNITION.O0126
+title: Recognize division and remainder by a constant from reciprocal multiplications
+version: 1
+status: normative
+owner: Hawkynt
+issue: "#565"
+tests:
+  - Polypiler.Tests/Recognize/ReciprocalDivisionRecognitionTests.cs
+  - tests/features/recognize/rec-divconst.feature
+  - Polypiler.Tests.Acceptance/Optimize/ReciprocalDivisionSteps.cs
+  - tests/fixtures/recognize/o0126/divide.cs
+introducedIn: P2
+compatibility: none
+reviewedRevision: 1
+normative: >-
+  O0126 MUST recover unsigned and truncating signed division and remainder by
+  a constant from reciprocal multiplications in the structured tree IR of ADR
+  0009: the high product MulHigh(x, M) or a widened multiplication shifted and
+  truncated, a narrow operand multiplied in a wider type, the add-back form
+  with effective multiplier 2^w + M, the signed form corrected by the sign of
+  x, and x - q * d for such a quotient or for x / d. The divisor MUST be
+  derived as the integer nearest to 2^k / M and certified in exact integers,
+  never looked up: unsigned, 2 <= d <= (X+1)/2, e = M*d - 2^k >= 0,
+  e*x' < 2^k for the largest x' <= X with remainder d-1 and
+  e*X < 2^k*(d - X mod d); signed, 2 <= d <= 2^(w-1), 0 < M < 2^(w-1),
+  0 < e and e*2^(w-1) <= 2^k. The full product MUST fit the type it is
+  computed in. The certificate is the proof (validated-rule): the rule is
+  validated exhaustively at 16 bits and by Z3 at 16 bits in its tests; no
+  solver is consulted while rewriting. Refusals MUST be reported as
+  "reciprocal is not exact for the operand range", "multiplication may wrap",
+  "divisor out of range", "missing sign correction", "remainder uses another
+  divisor" and "operand may trap or have effects", and only for multipliers
+  near a reciprocal. A target preferring the remainder from the quotient keeps
+  x - q * d. --opt none and --disable-opt O0126 disable matching and reports.
+spec:
+  optimization: O0126
+  level: typed-tree
+  pattern:
+    before: "%q = Truncate.u32 LShr.u64(Mul.u64(ZExt.u64 %x, 0xCCCCCCCD), 35)"
+    bindings:
+      - {name: x, role: "dividend"}
+  replacement:
+    after: "%q = UDiv.u32 %x, 10"
+    introduces: [IR.udiv, IR.sdiv, IR.urem, IR.srem]
+  preconditions:
+    - {id: certificate, text: "the derived divisor and its excess satisfy the unsigned or signed certificate in exact integers", fact: range}
+    - {id: no-wrap, text: "the full product fits the type it is computed in, and a truncated high product its narrower type", fact: range}
+    - {id: sign-correction, text: "a signed quotient is corrected by the sign bit of the same dividend", fact: none}
+    - {id: same-divisor, text: "a remainder multiplies by the divisor of a quotient of the same dividend", fact: none}
+    - {id: trap-free, text: "the dividend has no effect and cannot trap", fact: effect}
+  proofObligations:
+    - {id: reciprocal-exhaustive-16, class: exhaustive-16bit, widths: [16]}
+    - {id: reciprocal-smt-16, class: smt-bitvector, widths: [16], budgetSeconds: 300}
+    - {id: reciprocal-certificate, class: range-facts, widths: [16, 32, 64]}
+  counterexamples:
+    - description: "a magic constant off by one"
+      input: "x = 10, u32, (u32)(((u64)x * 0xCCCCCCCC) >> 35)"
+      naive: "x / 10 = 1"
+      correct: "original = 0"
+    - description: "a 16-bit reciprocal on an unbounded 32-bit value"
+      input: "x = 81920, u32, (x * 0xCCCD) >> 19"
+      naive: "x / 10 = 8192"
+      correct: "original = 0"
+    - description: "the signed sequence without its correction"
+      input: "x = -17, i32, (i32)(((i64)x * 0x66666667) >> 34)"
+      naive: "x / 10 = -1"
+      correct: "original = -2"
+    - description: "a remainder by another divisor"
+      input: "x = 19, u32, q = x / 10, x - q * 9"
+      naive: "x % 10 = 9"
+      correct: "original = 10"
+  switch: "--disable-opt O0126"
+  optLevels: [default]
+  document: docs/optimizations/O0126-reciprocal-division-recognition.md

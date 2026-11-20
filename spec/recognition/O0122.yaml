@@ -1,59 +1,78 @@
 id: RECOGNITION.O0122
-title: Recognize signum from comparison difference and shift-or
-version: 1
-status: draft
+title: Recognize signum from comparison difference, shift-or and select
+version: 2
+status: normative
 owner: Hawkynt
 issue: "#579"
 tests:
+  - Polypiler.Tests/Recognize/SignRecognitionTests.cs
+  - Polypiler.Tests/Verification/Proofs/SmtRecognitionProverTests.cs
+  - tests/features/recognize/rec-sign.feature
+  - Polypiler.Tests.Acceptance/Optimize/ArithmeticRecognitionSteps.cs
   - Polypiler.Tests/Recognize/RecognitionFixtureTests.cs
   - tests/fixtures/prototype/recognize/RecognizeSign.cs
   - tests/fixtures/prototype/recognize/sign.js
 introducedIn: P2
-compatibility: none
-reviewedRevision: 0
+compatibility: additive
+reviewedRevision: 2
 normative: >-
-  The comparison difference and the shift-or idiom MUST become Sign only when they give -1, 0 and 1
-  for negative, zero and positive values. The prototype rule O0122Sign in Polypiler.Core.Recognize
-  matches the structured IR of Polypiler.Core.IR, not the typed SSA IR: pattern.before and
-  replacement.after are written in that structured form, and matching typed SSA graphs belongs to REC-
-  ENGINE (#276). RecognitionFixtureTests is the evidence the prototype has: it checks that the rule
-  fires exactly on the marked functions of its fixtures, that --disable-opt O0122 keeps it from
-  firing, and that the IR interpreter computes the same before and after the rule - result, kind of
-  trap and the arrays a trap leaves behind - for every value of each 8- and 16-bit parameter and for
-  the edges and 10 000 random tuples of the wider ones. The proof obligations below are planned and
-  not discharged yet: exhaustive checks with VER-EXHAUSTIVE (#70), bit-vector proofs with VER-SMT
-  (#71). The prototype knows only the levels default, where the rule is on, and none; the optLevels
-  name the levels of the target state. The document stays a draft until its obligations are
-  discharged.
+  O0122 MUST recognize the three-way sign of signed integers of widths 8, 16,
+  32 and 64 in the structured tree IR of ADR 0009. An expression built only of
+  integer constants, comparisons of one value with zero, selections and
+  wrapping sums or differences MUST be evaluated for the negative, zero and
+  positive class of that value and MUST become Sign only when it gives -1, 0
+  and 1; this covers the comparison difference and nested selections in every
+  order and spelling. The shift-or form MUST or an arithmetic shift of x by
+  w-1 with a logical shift by w-1 of the wrapping negation of x. Narrow
+  arithmetic MUST use the existing promoted operations and explicit
+  conversions, all of which MUST be proved. Unsigned relational comparisons,
+  comparisons of different values, the two-valued sign mask, an arithmetic
+  shift of the negation and operands that may trap or act MUST be refused; an
+  expression that does not separate the three classes MUST NOT be reported.
+  The host-supplied IRecognitionProver MUST prove the actual candidate
+  equivalent to its replacement. The CLI supplies SmtRecognitionProver, whose
+  independent definition of Sign uses signed comparisons with zero, and
+  x != 0 for an unsigned value. The solver budget is five seconds. Missing,
+  unknown, unsupported, unavailable, refuted and timed-out proofs MUST leave the
+  candidate unchanged. Successful proof notes MUST be emitted only after the
+  replacement is committed. --opt none and --disable-opt O0122 disable
+  matching, proof requests and reports.
 spec:
   optimization: O0122
-  level: typed-ssa
+  level: typed-tree
   pattern:
-    before: "%r = Or.i32 AShr.i32(%x, 31), LShr.u32(Neg.i32(%x), 31)"
+    before: "%r = Sub.i32 Select.i32(SGt(%x, 0), 1, 0), Select.i32(SLt(%x, 0), 1, 0)"
     bindings:
-      - {name: x, role: "value"}
+      - {name: x, role: "signed value"}
   replacement:
     after: "%r = Sign.i32 %x"
     introduces: [INTRINSICS.Sign]
   preconditions:
-    - {id: difference-order, text: "the difference is (x > 0) - (x < 0), not the swapped one", fact: none}
-    - {id: same-value, text: "both comparisons, or both shifts, read the same value", fact: none}
-    - {id: shift-kinds, text: "the first shift is arithmetic, the second logical and of -x", fact: known-bits}
-    - {id: wide-signed, text: "the shift-or form takes a signed 32- or 64-bit x", fact: type}
+    - {id: three-classes, text: "the expression gives -1, 0 and 1 for negative, zero and positive x", fact: none}
+    - {id: same-value, text: "every comparison, or both shifts, read the same value", fact: none}
+    - {id: signed-comparison, text: "relational comparisons with zero are signed", fact: type}
+    - {id: shift-kinds, text: "the first shift is arithmetic by w-1, the second logical by w-1 and of -x", fact: known-bits}
     - {id: trap-free, text: "the value has no effect and cannot trap: the replacement evaluates it once", fact: effect}
   proofObligations:
-    - {id: sign-8, class: exhaustive-8bit, widths: [8]}
-    - {id: sign-16, class: exhaustive-16bit, widths: [16]}
-    - {id: sign-wide, class: smt-bitvector, widths: [32, 64], budgetSeconds: 10}
+    - {id: sign-exhaustive, class: exhaustive-8bit, widths: [8]}
+    - {id: sign-actual-candidate, class: smt-bitvector, widths: [8, 16, 32, 64], budgetSeconds: 5}
   counterexamples:
+    - description: "the two-valued sign mask"
+      input: "x = 0, i32, (x >> 31) | 1"
+      naive: "Sign(x) = 0"
+      correct: "original = 1"
+    - description: "an arithmetic shift of the negation"
+      input: "x = 5, i32, (x >> 31) | (-x >> 31)"
+      naive: "Sign(x) = 1"
+      correct: "original = -1"
     - description: "the swapped difference"
       input: "x = 5, i32, (x < 0 ? 1 : 0) - (x > 0 ? 1 : 0)"
-      naive: "-1"
-      correct: "1"
-    - description: "a logical shift of x instead of -x"
-      input: "x = 5, i32, (x >> 31) | (int)((uint)x >> 31)"
-      naive: "0"
-      correct: "1"
+      naive: "Sign(x) = 1"
+      correct: "original = -1"
+    - description: "unsigned comparisons"
+      input: "x = 0xFFFFFFFB, u32, (x > 0 ? 1 : 0) - (x < 0 ? 1 : 0)"
+      naive: "Sign((i32)x) = -1"
+      correct: "original = 1"
   switch: "--disable-opt O0122"
-  optLevels: [balanced, speed, size, memory]
+  optLevels: [default]
   document: docs/optimizations/O0122-signum-recognition.md
