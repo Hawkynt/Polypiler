@@ -53,7 +53,8 @@ Stage 8 is built for the C# and the JavaScript backend of the prototype: each bu
 ## Semantic recognition is not mandatory rewriting
 
 O0105 bit reversal and O0106 byte swap use exact weighted-bit provenance as a
-structural check; O0121 wrapping magnitude checks sign masks and signed
+structural check; O0110 parity evaluates folds and nibble lookups as exclusive
+ors of atom bits; O0121 wrapping magnitude checks sign masks and signed
 compare-select forms, including promoted narrow arithmetic. These rules ask
 the host's `IRecognitionProver` to prove the actual tree expression and
 replacement equivalent. `translate` supplies `SmtRecognitionProver`, which
