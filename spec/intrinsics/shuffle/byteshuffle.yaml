@@ -1,0 +1,32 @@
+id: INTRINSICS.ByteShuffle
+title: Byte shuffle with PSHUFB semantics
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-PERMUTE-SHUFFLE
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: ByteShuffle
+  group: Shuffle
+  typeParameters: [{name: T, constraint: unsigned}]
+  parameters: [{name: table, type: T}, {name: indices, type: T}, {name: group, type: TYPES.i32}]
+  returns: [{name: result, type: T}]
+  legality:
+    - {id: wide-pattern, text: "T has at least 64 bits: TYPES.u64 until the IR has wider integers", fact: none}
+    - {id: group, text: "group is 8, 16, 32 or 64 and divides the number of bytes of T; otherwise the operation traps with an invalid operation", fact: range}
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "bytes count from the least significant; for result byte i let s be byte i of indices and base = group * floor(i / group): result byte i is 0 when bit 7 of s is set, else byte base + (s mod group) of table. The bits of s between the selector and bit 7 are ignored. group 16 on 128 bits is PSHUFB xmm, on 256 bits VPSHUFB ymm"
+    source: "Intel 64 and IA-32 Architectures Software Developer's Manual, vol. 2, PSHUFB; vectors from System.Runtime.Intrinsics.X86.Ssse3.Shuffle on .NET 10 with the 8-byte table in both halves"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u64}, inputs: ["0x8877665544332211", "0x0001020304058007", 8], outputs: ["0x1122334455660088"]}
+    - {types: {T: TYPES.u64}, inputs: ["0x8877665544332211", "0x1313131313131313", 8], outputs: ["0x4444444444444444"]}
+    - {types: {T: TYPES.u64}, inputs: ["0x0706050403020100", "0x0001020304050607", 8], outputs: ["0x0001020304050607"]}
+    - {types: {T: TYPES.u64}, inputs: ["0x0706050403020100", "0x8080808080808080", 8], outputs: ["0x0000000000000000"]}
+    - {types: {T: TYPES.u64}, inputs: ["0x0706050403020100", "0xFF7F100F08070100", 8], outputs: ["0x0007000700070100"]}

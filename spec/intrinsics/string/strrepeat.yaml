@@ -23,6 +23,7 @@ spec:
     algorithm: "value, a string or a code unit, count times in a row"
     source: "ECMA-262 2022 §22.1.3.16 (repeat); the .NET API reference of System.String(Char, Int32)"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {T: TYPES.str}, inputs: [[97, 98], 3], outputs: [[97, 98, 97, 98, 97, 98]]}
     - {types: {T: TYPES.str}, inputs: [[97, 98], 0], outputs: [[]]}

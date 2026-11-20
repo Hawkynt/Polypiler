@@ -22,6 +22,7 @@ spec:
     algorithm: "x without its fraction, modulo 2^32; a NaN and the infinities give 0"
     source: "ECMA-262, 15th ed. (2024), section 7.1.7 (ToUint32)"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {}, inputs: ["0xBFF0000000000000"], outputs: ["0xFFFFFFFF"]}
     - {types: {}, inputs: ["0x41F0000000500000"], outputs: ["0x00000005"]}

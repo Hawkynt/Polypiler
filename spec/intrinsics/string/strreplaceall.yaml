@@ -23,6 +23,7 @@ spec:
     algorithm: "every occurrence of needle replaced by replacement, left to right, each search going on behind the last replacement; needle and replacement are both strings or both code units"
     source: "the .NET API reference of System.String.Replace(String, String)"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {N: TYPES.str}, inputs: [[97, 98, 99, 98], [98], [88, 89]], outputs: [[97, 88, 89, 99, 88, 89]]}
     - {types: {N: TYPES.str}, inputs: [[97, 97, 97], [97, 97], [98]], outputs: [[98, 97]]}

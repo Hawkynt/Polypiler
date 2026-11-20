@@ -22,6 +22,7 @@ spec:
     algorithm: "the elements of parts in order with separator between each two"
     source: "the .NET API reference of System.String.Join(String, String[])"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {}, inputs: [[44, 32], [[97], [], [99]]], outputs: [[97, 44, 32, 44, 32, 99]]}
     - {types: {}, inputs: [[45], []], outputs: [[]]}

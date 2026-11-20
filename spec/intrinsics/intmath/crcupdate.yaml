@@ -1,0 +1,46 @@
+id: INTRINSICS.CrcUpdate
+title: Update of a CRC register over a span of bytes
+version: 1
+status: draft
+owner: Hawkynt
+issue: INT-CRC
+tests: []
+introducedIn: P3
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: CrcUpdate
+  spelling: Crc.Update
+  group: IntMath
+  typeParameters: [{name: T, constraint: unsigned}]
+  parameters:
+    - {name: crc, type: T}
+    - {name: poly, type: T}
+    - {name: reflected, type: TYPES.bool}
+    - {name: data, type: "TYPES.u8[]"}
+    - {name: index, type: TYPES.i32}
+    - {name: count, type: TYPES.i32}
+  returns: [{name: register, type: T}]
+  legality:
+    - {id: in-bounds, text: "index and count are at least 0 and index + count is at most the length of data; otherwise the operation traps with an index out of range before any byte is read", fact: range}
+    - {id: polynomial, text: "poly is the generator polynomial in normal form without its implicit top bit, also for a reflected CRC (CRC-32 is 0x04C11DB7, not 0xEDB88320), and not 0; a polynomial of 0 traps with an invalid operation. A recognizer writes it and reflected as constants", fact: none}
+  effects: [EFFECTS.unknown-call]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "c = crc; for each byte d of data[index .. index + count) in ascending order - reflected: c ^= d, then eight times c = (c & 1) ? (c >> 1) ^ R : c >> 1 with R the bit reversal of poly in the width of T; normal: c ^= d << (width - 8), then eight times c = (c & 2^(width-1)) ? (c << 1) ^ poly : c << 1, modulo 2^width. The result is c; count 0 gives crc. Initial value, final XOR and output reflection are not part of it. Composition: an update over two adjacent spans equals the update over their union"
+    source: "R. N. Williams, A Painless Guide to CRC Error Detection Algorithms, 1993 (the Rocksoft parameter model); check values of the message 123456789 from the CRC RevEng catalogue, the final XOR undone"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u32}, inputs: ["0xFFFFFFFF", "0x04C11DB7", 1, ["0x31", "0x32", "0x33", "0x34", "0x35", "0x36", "0x37", "0x38", "0x39"], 0, 9], outputs: ["0x340BC6D9"]}
+    - {types: {T: TYPES.u32}, inputs: ["0xFFFFFFFF", "0x04C11DB7", 0, ["0x31", "0x32", "0x33", "0x34", "0x35", "0x36", "0x37", "0x38", "0x39"], 0, 9], outputs: ["0x0376E6E7"]}
+    - {types: {T: TYPES.u16}, inputs: ["0xFFFF", "0x1021", 0, ["0x31", "0x32", "0x33", "0x34", "0x35", "0x36", "0x37", "0x38", "0x39"], 0, 9], outputs: ["0x29B1"]}
+    - {types: {T: TYPES.u16}, inputs: ["0x0000", "0x8005", 1, ["0x31", "0x32", "0x33", "0x34", "0x35", "0x36", "0x37", "0x38", "0x39"], 0, 9], outputs: ["0xBB3D"]}
+    - {types: {T: TYPES.u8}, inputs: ["0x00", "0x07", 0, ["0x31", "0x32", "0x33", "0x34", "0x35", "0x36", "0x37", "0x38", "0x39"], 0, 9], outputs: ["0xF4"]}
+    - {types: {T: TYPES.u8}, inputs: ["0x00", "0x31", 1, ["0x31", "0x32", "0x33", "0x34", "0x35", "0x36", "0x37", "0x38", "0x39"], 0, 9], outputs: ["0xA1"]}
+    - {types: {T: TYPES.u64}, inputs: ["0xFFFFFFFFFFFFFFFF", "0x42F0E1EBA9EA3693", 1, ["0x31", "0x32", "0x33", "0x34", "0x35", "0x36", "0x37", "0x38", "0x39"], 0, 9], outputs: ["0x66A2364420E6C605"]}
+    - {types: {T: TYPES.u64}, inputs: ["0x0000000000000000", "0x42F0E1EBA9EA3693", 0, ["0x31", "0x32", "0x33", "0x34", "0x35", "0x36", "0x37", "0x38", "0x39"], 0, 9], outputs: ["0x6C40DF5F0B497347"]}
+    - {types: {T: TYPES.u32}, inputs: ["0x00000000", "0x04C11DB7", 1, ["0x01"], 0, 1], outputs: ["0x77073096"]}
+    - {types: {T: TYPES.u16}, inputs: ["0x0000", "0x1021", 0, ["0x01"], 0, 1], outputs: ["0x1021"]}
+    - {types: {T: TYPES.u32}, inputs: ["0x12345678", "0x04C11DB7", 1, ["0x01"], 0, 0], outputs: ["0x12345678"]}
+    - {types: {T: TYPES.u32}, inputs: ["0xFFFFFFFF", "0x04C11DB7", 1, ["0x00", "0x31", "0x32", "0x33", "0x34", "0x35", "0x36", "0x37", "0x38", "0x39", "0x00"], 1, 9], outputs: ["0x340BC6D9"]}

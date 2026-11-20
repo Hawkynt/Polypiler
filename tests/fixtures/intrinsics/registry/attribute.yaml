@@ -1,0 +1,17 @@
+# RotateLeft with its count as a compile-time immediate in [0, 7]: an attribute operand outside the
+# range is PLY0255.
+id: INTRINSICS.RotateLeft
+title: Rotate by an immediate
+spec:
+  name: RotateLeft
+  group: Shuffle
+  typeParameters: [{name: T, constraint: unsigned}]
+  parameters: [{name: value, type: T}]
+  attributes: [{name: count, type: TYPES.i32, low: 0, high: 7}]
+  returns: [{name: result, type: T}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference: {algorithm: "value rotated left by count", source: "registry self-test"}
+  mustSurviveUntil: IR.stage.lifted
+  vectors: []

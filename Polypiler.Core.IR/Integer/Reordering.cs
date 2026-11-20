@@ -7,7 +7,8 @@ public static partial class IntegerOperations {
   /// <summary>The reorderings of the bits of a value of every integer type.</summary>
   private static IEnumerable<IntegerOperation> Reordering => [
     Same(IrIntrinsicOp.ByteSwap, _integers, type => [type], (_, types, arguments) => ByteSwap(types[0], Long(arguments, 0))),
-    Same(IrIntrinsicOp.BitReverse, _integers, type => [type], (_, types, arguments) => BitReverse(types[0], Long(arguments, 0)))
+    Same(IrIntrinsicOp.BitReverse, _integers, type => [type], (_, types, arguments) => BitReverse(types[0], Long(arguments, 0))),
+    Same(IrIntrinsicOp.ReverseBitsInBytes, _integers, type => [type], (_, types, arguments) => ReverseBitsInBytes(types[0], Long(arguments, 0)))
   ];
 
   /// <summary>The bytes of a value in the opposite order; a value of 8 bits is itself.</summary>
@@ -40,6 +41,23 @@ public static partial class IntegerOperations {
     bits = ((bits & 0x0000FFFF0000FFFFUL) << 16) | ((bits >> 16) & 0x0000FFFF0000FFFFUL);
     bits = (bits << 32) | (bits >> 32);
     return Value(type, bits >> (64 - Width(type)));
+  }
+
+  /// <summary>
+  /// The bits of each byte of a value in the opposite order, the bytes in their place: bit <c>i</c>
+  /// moves to <c>8·(i / 8) + 7 - i % 8</c>, one bit after the other, so that it holds for every width
+  /// that is a whole number of bytes.
+  /// </summary>
+  /// <param name="type">An integer type.</param>
+  /// <param name="value">The value.</param>
+  /// <returns>The value with the bits of every byte reversed.</returns>
+  public static long ReverseBitsInBytes(IrType type, long value) {
+    var pattern = Pattern(type, value);
+    var reversed = 0UL;
+    for (var bit = 0; bit < Width(type); ++bit)
+      reversed |= ((pattern >> bit) & 1) << (8 * (bit / 8) + 7 - (bit % 8));
+
+    return Value(type, reversed);
   }
 
 }

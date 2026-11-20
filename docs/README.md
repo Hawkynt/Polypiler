@@ -22,6 +22,7 @@ Original chapter numbers and section links are retained. The pages here are a re
 
 - [Integer and bit operations](reference/integer-operations.md) — every operation of the IR on every width, its edge cases and its form in each target profile.
 - [Floating-point operations](reference/floating-point-operations.md) — every floating-point operation of the IR with its contract, special values and portable implementation.
+- [Intrinsic contracts and the registry](reference/intrinsics.md) — the contract of every intrinsic under `spec/intrinsics/`, bound to its evaluator and fallback: how to add one, the optional properties, several results and the diagnostics PLY0250 to PLY0256.
 - [Known runtime defects](reference/known-runtime-defects.md) — defects of a target runtime that change what correct generated code computes, their minimal reproductions and the forms the backends write around them.
 - [Exit codes](cli/exit-codes.md) — the exit code of every failure category of `polypiler`, generated from the code; `polypiler help exit-codes` prints the same table.
 - [Value records](reference/records.md) — structs, record structs and fixed-shape object literals: their value semantics, what each frontend imports and how each profile writes them.

@@ -20,6 +20,9 @@ public sealed class RustCapabilities {
   /// <summary><c>reverse_bits</c> of the integer types (Rust 1.37).</summary>
   public const string ReverseBits = "reverse_bits";
 
+  /// <summary><c>leading_ones</c> and <c>trailing_ones</c> of the integer types (Rust 1.46).</summary>
+  public const string CountOnes = "leading_ones";
+
   /// <summary><c>to_bits</c> and <c>from_bits</c> of the floating-point types (Rust 1.20).</summary>
   public const string FloatBits = "to_bits";
 
@@ -59,7 +62,8 @@ public sealed class RustCapabilities {
     [ConstMutex] = new(1, 63),
     [LabeledBlock] = new(1, 65),
     [RoundTiesEven] = new(1, 77),
-    [LazyLock] = new(1, 80)
+    [LazyLock] = new(1, 80),
+    [CountOnes] = new(1, 46)
   });
 
   private readonly IReadOnlyDictionary<string, Version?> _rows;

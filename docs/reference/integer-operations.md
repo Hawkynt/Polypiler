@@ -13,6 +13,12 @@ Related: [repository README](../../README.md) · [IR and analysis](../architectu
 - **Bit pattern.** A signed value is counted, rotated, swapped and masked as its two's complement.
 - **Counts and positions** are `i32`. A rotate takes its count modulo the width, a negative one
   included; every other count, position, start or length outside its range traps.
+- **Positions of single bits** have two contracts. The strict one is the operation itself: a
+  position outside 0 to width-1 traps, and a constant one is refused by the verifier (`PLY0100`), as
+  is a constant field start or length outside 0 to the width, a constant field that reaches past it and
+  a constant truth table outside 0 to 255. The masked one is the position `And(n, width - 1)`, an index
+  of any integer type converted to `i32` first: it is inside every width, never traps, and the C#
+  backend writes it as the shift and the mask itself.
 - **Traps** are the four the IR has: *invalid operation* for a field, position, mask width or clamp
   bound outside its range; *index out of range* for an endian access, before anything is written;
   *divide by zero* and *integer overflow* where the division operator of the IR has them. No
@@ -27,10 +33,14 @@ Related: [repository README](../../README.md) · [IR and analysis](../architectu
 | | `LeadingZeroCount`, `TrailingZeroCount` | `T → i32` | all | the width for 0 |
 | | `Log2` | `T → i32` | all | position of the highest set bit of the pattern; 0 for 0 |
 | | `Parity` | `T → i32` | all | 1 for an odd number of set bits, else 0 |
+| | `LeadingOneCount`, `TrailingOneCount` | `T → i32` | all | the zero counts of the complement: the width for all ones, 0 for 0 |
+| | — | | | every count lies in 0 to the width; the contracts state it as the range fact `[0, 64]` |
 | Reordering | `ByteSwap` | `T → T` | all | an 8-bit value is itself |
 | | `BitReverse` | `T → T` | all | the lowest bit becomes the highest |
+| | `ReverseBitsInBytes` | `T → T` | all | the bits of each byte reversed, the bytes in place: bit `i` moves to `8·(i / 8) + 7 - i % 8`; `BitReverse` is `ByteSwap` of it |
 | Powers of two | `IsPow2` | `T → bool` | all | false for 0 and for every negative value |
 | | `RoundUpPow2` | `T → T` | all | smallest power of two not below the pattern, modulo 2^width: 0 for 0, 0 where it is 2^width, the smallest value of a signed type for 2^(width-1) |
+| Roots | `ISqrt` | `T → T` | unsigned | the largest `r` with `r * r ≤ x`, at most 2^(width/2) - 1; a helper in every target (digit by digit in base 4) |
 | Wide multiply | `BigMul` | `(i32, i32) → i64`, `(u32, u32) → u64` | — | exact |
 | | `MulHigh` | `(T, T) → T` | all | upper half of the product in twice the width, signed or unsigned as `T` |
 | Division | `DivFloor`, `ModFloor` | `(T, T) → T` | all | quotient rounded down; remainder with the sign of the divisor |
@@ -46,9 +56,16 @@ Related: [repository README](../../README.md) · [IR and analysis](../architectu
 | | `CarryOut`, `BorrowOut` | `(T, T, bool) → bool` | unsigned | whether that sum reaches 2^width, that difference is negative |
 | Overflow test | `AddOverflows`, `SubOverflows`, `MulOverflows` | `(T, T) → bool` | all | whether the exact result is outside `T`; never traps |
 | Bit fields | `ExtractBits` | `(T, start, length) → T` | all | the field at the bottom, zeros above; length 0 gives 0; a field outside the width traps |
+| | `ExtractBitsSigned` | `(T, start, length) → T` | all | the field sign-extended from its top bit, bit `length - 1`; length 0 gives 0 |
 | | `InsertBits` | `(T, field, start, length) → T` | all | the field replaced by the lowest bits of `field` |
 | | `TestBit` | `(T, position) → bool` | all | a position outside 0 to width-1 traps |
 | | `SetBit`, `ClearBit`, `ToggleBit` | `(T, position) → T` | all | as `TestBit` |
+| Boolean | `Nand`, `Nor`, `Xnor` | `(T, T) → T` | all | `~(a & b)`, `~(a \| b)`, `~(a ^ b)` |
+| | `AndNot`, `OrNot` | `(T, T) → T` | all | `a & ~b`, `a \| ~b`: the second operand is complemented, not the first as in x86's `ANDN` |
+| | `Implies` | `(T, T) → T` | all | `~a \| b` |
+| | `BitSelect` | `(mask, T, T) → T` | all | `(mask & a) \| (~mask & b)` |
+| | `Majority` | `(T, T, T) → T` | all | each bit set in at least two operands |
+| | `TernaryLogic` | `(T, T, T, table) → T` | all | bit `i` is bit `a_i·4 + b_i·2 + c_i` of the `i32` table, as `VPTERNLOG` reads it; a table outside 0 to 255 traps |
 | Masks | `LowMask` | `count → T` | all | the type of the node fixes the width; `LowMask(width)` is all ones; outside 0 to the width traps |
 | | `IsolateLowestSet` | `T → T` | all | `x & -x` |
 | | `ClearLowestSet` | `T → T` | all | `x & (x - 1)` |
@@ -56,6 +73,10 @@ Related: [repository README](../../README.md) · [IR and analysis](../architectu
 | | `SignExtend`, `ZeroExtend` | `(T, bits) → T` | all | the lowest `bits` bits extended by their top bit or by zeros; `bits` outside 1 to the width traps |
 | Endian access | `LoadLittle`, `LoadBig` | `(u8[], index) → T` | bytes | a byte outside the array traps; a number is the `f32` or `f64` with the bits read, never converted through another format |
 | | `StoreLittle`, `StoreBig` | `(u8[], index, T) → void` | bytes | traps before anything is written; a number is written as its encoding |
+| Bit permutation | `ParallelBitExtract` | `(T, mask) → T` | all | the bits at the ones of the mask, packed to the bottom in their order (x86 `PEXT`); signedness ignored |
+| | `ParallelBitDeposit` | `(T, mask) → T` | all | the lowest bits spread to the ones of the mask, zeros elsewhere (x86 `PDEP`) |
+| | `ByteShuffle` | `(T table, T indices, group) → T` | `u64` | `PSHUFB`: result byte `i` is 0 where bit 7 of index byte `i` is set, else table byte `base + (index mod group)` of the group of `group` bytes holding `i`; bytes count from the least significant; a group outside 8, 16, 32, 64 or not dividing the bytes traps |
+| CRC | `CrcUpdate` (`Crc.Update`) | `(T crc, T poly, bool reflected, u8[], index, count) → T` | unsigned | the register after `count` bytes from the index, one bit at a time; `poly` in normal form without its top bit, also when reflected; no initial value or final XOR; a span outside the array traps before any byte is read, a polynomial of 0 traps as an invalid operation |
 
 Truncating division and its remainder are the `Divide` and `Remainder` operators of the IR.
 
@@ -84,6 +105,7 @@ member of these types the table does not list (`BitOperations.Crc32C`), is refus
 | `BitConverter.ToInt16` … `ToUInt64` | `LoadLittle` | little-endian, as on every supported host |
 | `BinaryPrimitives.Read`/`Write` `Single`/`Double` `LittleEndian`/`BigEndian` | `LoadLittle`, `LoadBig`, `StoreLittle`, `StoreBig` of `f32`, `f64` | as the integer ones |
 | `BitConverter.ToSingle(byte[], int)`, `ToDouble(byte[], int)` | `LoadLittle` of `f32`, `f64` | the overloads on a span are refused |
+| `Bmi2.ParallelBitExtract`/`ParallelBitDeposit`, the same of `Bmi2.X64` | `ParallelBitExtract`, `ParallelBitDeposit` | computed on every processor, where .NET throws `PlatformNotSupportedException` without BMI2 |
 
 `T` is each of `sbyte`, `byte`, `short`, `ushort`, `int`, `uint`, `long`, `ulong`; `T.Abs` exists for the
 signed ones. A file that uses `AsSpan` needs `using System;`, as the frontend compiles it without global
@@ -134,6 +156,8 @@ it. A form that C# writes with its own operators exists in every profile.
 | `RotateLeft`/`Right` `u32`, `u64` (and `i32`, `i64` on the pattern) | `BitOperations.RotateLeft` | netcoreapp3.1 | helper |
 | `RotateLeft`/`Right` of 8 and 16 bits | `byte.RotateLeft`, `short.RotateLeft`, … | net8.0 | helper |
 | Counts of every width, `Parity` | `BitOperations.PopCount`/`LeadingZeroCount`/`TrailingZeroCount`/`Log2` on the pattern | netcoreapp3.1 | helper |
+| `LeadingOneCount`, `TrailingOneCount` | `BitOperations.LeadingZeroCount`/`TrailingZeroCount` of the complement, a narrow pattern shifted to the top first | netcoreapp3.1 | helper |
+| `Nand`, `Nor`, `Xnor`, `AndNot`, `OrNot`, `Implies` | C#'s operators, the result cast to the type | net2.0 | — |
 | `ByteSwap` | `BinaryPrimitives.ReverseEndianness` | netstandard2.1 | helper |
 | `IsPow2`, `RoundUpPow2` | `BitOperations.IsPow2`, `RoundUpToPowerOf2` | net8.0 | helper |
 | `BigMul` `i32` / `u32` | `Math.BigMul` | net2.0 / net10.0 | — / helper |
@@ -146,12 +170,16 @@ it. A form that C# writes with its own operators exists in every profile.
 | `LoadLittle`, `LoadBig` | `BinaryPrimitives.Read…LittleEndian`/`BigEndian` on a `ReadOnlySpan<byte>` | netstandard2.1 | helper |
 | `LoadLittle`, `LoadBig` of `f32`, `f64` | `BinaryPrimitives.ReadSingle…`/`ReadDouble…` on a `ReadOnlySpan<byte>` | net8.0 | the integer load of the width and its bit cast: `BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32…)` from netstandard2.1, the `Int32BitsToSingle` helper over the load helper before; `Int64BitsToDouble` likewise |
 | `StoreLittle`, `StoreBig` of `f32`, `f64` | — | — | the store helper of the integer of the width, of `BitConverter.SingleToInt32Bits` (a helper before netstandard2.1) or `DoubleToInt64Bits` |
-| `BitReverse`, the floor and Euclidean divisions, `Clamp`, signed `AbsWrap`, saturation, the 64-bit carries, the remaining overflow tests, bit fields, masks, stores | — | — | helper in every profile |
+| `BitReverse`, `ReverseBitsInBytes`, `BitSelect`, `Majority`, `TernaryLogic`, `ExtractBitsSigned`, the floor and Euclidean divisions, `Clamp`, signed `AbsWrap`, saturation, the 64-bit carries, the remaining overflow tests, bit fields, masks, stores, `ParallelBitExtract`, `ParallelBitDeposit`, `ByteShuffle`, `CrcUpdate` | — | — | helper in every profile |
 
 `Math.Clamp` is not used: it throws `ArgumentException` for crossed bounds, where the IR traps with
 an invalid operation (`ArithmeticException` in generated C#). A store is a helper in every profile:
 the span of `BinaryPrimitives.Write…` would check the range before the value is evaluated, where the
-IR evaluates every argument first.
+IR evaluates every argument first. `Bmi2.ParallelBitExtract` and `ParallelBitDeposit` are not used
+either: they exist only on x86 with BMI2 and throw `PlatformNotSupportedException` elsewhere. Their
+helpers are the parallel-suffix method of *Hacker's Delight* §7-4 and §7-5 written out step by step,
+with no loop, branch or table that depends on the value or the mask; the CRC helper works bit by bit,
+without a table, so it serves every polynomial.
 
 Where the arguments cannot make an operation trap, the operators of the language say it as cheaply as
 the idiom a recognition rule found (`CSharpCapability.Total`): `TestBit`, `SetBit`, `ClearBit` and
@@ -218,6 +246,8 @@ the library, copied into the module (see [the Rust backend](../architecture/RUST
 | `RotateLeft`, `RotateRight` | `a.rotate_left(n as u32)` - Rust takes the count modulo the width, which a negative count as `u32` keeps | all |
 | `PopCount`, `LeadingZeroCount`, `TrailingZeroCount` | `count_ones`, `leading_zeros`, `trailing_zeros`, cast to `i32` | all |
 | `ByteSwap`, `BitReverse` | `swap_bytes`, `reverse_bits` | all (`reverse_bits` from Rust 1.37) |
+| `ReverseBitsInBytes` | `a.swap_bytes().reverse_bits()` | from Rust 1.37 |
+| `LeadingOneCount`, `TrailingOneCount` | `leading_ones`, `trailing_ones`, cast to `i32` | from Rust 1.46 |
 | `IsPow2` of an unsigned type | `is_power_of_two` | all |
 | `Min`, `Max` | `Ord::min`, `Ord::max` | all |
 | `AddSaturate`, `SubSaturate`, `MulSaturate` | `saturating_add`, `saturating_sub`, `saturating_mul` | all |
@@ -237,6 +267,11 @@ the library, copied into the module (see [the Rust backend](../architecture/RUST
 - Every member of both frontend tables has uses; each is imported into the constructs its entry names, and
   the interpreter computes on the edges of the operands what .NET computes for the C# source and what node
   computes for the JavaScript source.
+- The one counts, the Boolean functions, the signed field and the reversal of the bits in each byte
+  (#95, #96, #97, #104) are in the same tables and runs, and built by `rustc` at Rust 1.31 (helpers)
+  and 1.85 (methods); every 8- and 16-bit value of the one counts and the reversal, every 8-bit pair
+  of the two-input functions and all 256 truth tables on the canonical operands are compared
+  exhaustively.
 - The fixtures of `tests/fixtures/prototype/bits` - SipHash-2-4, xxHash32, CRC-16/ARC and one file per
   family - have their published vectors in every profile of both backends.
 - The eight float accesses (load and store, both orders, `f32` and `f64`) against .NET's

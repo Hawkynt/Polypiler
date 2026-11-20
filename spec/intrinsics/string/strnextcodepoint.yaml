@@ -23,6 +23,7 @@ spec:
     algorithm: "2 when a high surrogate at index is followed by a low one, 1 otherwise"
     source: "ECMA-262 2022 §11.1.4 (CodePointAt); the .NET API reference of Char.IsSurrogatePair(String, Int32)"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {}, inputs: [[97, 55357, 56832], 1], outputs: [2]}
     - {types: {}, inputs: [[97, 55357, 56832], 2], outputs: [1]}

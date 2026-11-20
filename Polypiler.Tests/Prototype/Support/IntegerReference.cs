@@ -49,6 +49,10 @@ internal static class IntegerReference {
         return Enumerable.Reverse(A()).TakeWhile(bit => !bit).Count();
       case IrIntrinsicOp.TrailingZeroCount:
         return A().TakeWhile(bit => !bit).Count();
+      case IrIntrinsicOp.LeadingOneCount:
+        return Enumerable.Reverse(A()).TakeWhile(bit => bit).Count();
+      case IrIntrinsicOp.TrailingOneCount:
+        return A().TakeWhile(bit => bit).Count();
       case IrIntrinsicOp.Log2:
         return Math.Max(0, Highest(A()));
       case IrIntrinsicOp.Parity:
@@ -57,8 +61,20 @@ internal static class IntegerReference {
         return Host(type, ByteSwap(A()));
       case IrIntrinsicOp.BitReverse:
         return Host(type, Enumerable.Reverse(A()).ToArray());
+      case IrIntrinsicOp.ReverseBitsInBytes:
+        var unreversed = A();
+        return Host(type, Enumerable.Range(0, width).Select(index => unreversed[8 * (index / 8) + 7 - index % 8]).ToArray());
       case IrIntrinsicOp.IsPow2:
         return !Negative(A(), type.IsSigned) && A().Count(bit => bit) == 1;
+      case IrIntrinsicOp.ISqrt:
+        // The root bit by bit from the top: a bit stays where the square of the root so far is not above the value.
+        var square = Extend(A(), 2 * width, false);
+        var root = new bool[2 * width];
+        for (var bit = width / 2 - 1; bit >= 0; --bit) {
+          root[bit] = true;
+          root[bit] = Compare(Multiply(root, root), square, false) <= 0;
+        }
+        return Host(type, root[..width]);
       case IrIntrinsicOp.RoundUpPow2:
         return Host(type, RoundUp(A()));
       case IrIntrinsicOp.BigMul:
@@ -104,6 +120,11 @@ internal static class IntegerReference {
       case IrIntrinsicOp.ExtractBits:
         Require(Int(1) >= 0 && Int(2) >= 0 && (long)Int(1) + Int(2) <= width);
         return Host(type, Enumerable.Range(0, width).Select(index => index < Int(2) && A()[Int(1) + index]).ToArray());
+      case IrIntrinsicOp.ExtractBitsSigned:
+        Require(Int(1) >= 0 && Int(2) >= 0 && (long)Int(1) + Int(2) <= width);
+        var signed = A();
+        // Above the field every bit is its top bit, the sign; a field of no bits is 0.
+        return Host(type, Enumerable.Range(0, width).Select(index => Int(2) > 0 && signed[Int(1) + Math.Min(index, Int(2) - 1)]).ToArray());
       case IrIntrinsicOp.InsertBits:
         Require(Int(2) >= 0 && Int(3) >= 0 && (long)Int(2) + Int(3) <= width);
         var target = A();
@@ -131,6 +152,22 @@ internal static class IntegerReference {
         Require(Int(1) >= 1 && Int(1) <= width);
         var source = A();
         return Host(type, Enumerable.Range(0, width).Select(index => index < Int(1) ? source[index] : op == IrIntrinsicOp.SignExtend && source[Int(1) - 1]).ToArray());
+      case IrIntrinsicOp.Nand or IrIntrinsicOp.Nor or IrIntrinsicOp.Xnor or IrIntrinsicOp.AndNot or IrIntrinsicOp.OrNot or IrIntrinsicOp.Implies:
+        var (left, right) = (A(), B());
+        return Host(type, Enumerable.Range(0, width).Select(index => (op, left[index], right[index]) switch {
+          (IrIntrinsicOp.Nand, var p, var q) => !(p && q),
+          (IrIntrinsicOp.Nor, var p, var q) => !(p || q),
+          (IrIntrinsicOp.Xnor, var p, var q) => p == q,
+          (IrIntrinsicOp.AndNot, var p, var q) => p && !q,
+          (IrIntrinsicOp.OrNot, var p, var q) => p || !q,
+          (_, var p, var q) => !p || q
+        }).ToArray());
+      case IrIntrinsicOp.BitSelect or IrIntrinsicOp.Majority or IrIntrinsicOp.TernaryLogic:
+        var (first, second, third) = (A(), B(), BitsOf(arguments[2], width));
+        // The two named ones are their truth tables: a ? b : c is 0xCA, at least two of three 0xE8.
+        var table = op switch { IrIntrinsicOp.BitSelect => 0xCA, IrIntrinsicOp.Majority => 0xE8, _ => Int(3) };
+        Require(table is >= 0 and <= 255);
+        return Host(type, Enumerable.Range(0, width).Select(index => ((table >> ((first[index] ? 4 : 0) + (second[index] ? 2 : 0) + (third[index] ? 1 : 0))) & 1) == 1).ToArray());
       case IrIntrinsicOp.HighWord:
         return Host(result, A()[32..]);
       case IrIntrinsicOp.JoinWords:
@@ -144,6 +181,40 @@ internal static class IntegerReference {
             loaded[8 * k + bit] = ((bytes[Int(1) + (op == IrIntrinsicOp.LoadLittle ? k : size - 1 - k)] >> bit) & 1) == 1;
 
         return Host(result, loaded);
+      case IrIntrinsicOp.ParallelBitExtract or IrIntrinsicOp.ParallelBitDeposit:
+        // The ones of the ones of the mask, lowest first: the j-th of them is paired with bit j.
+        var spread = A();
+        var ones = Enumerable.Range(0, width).Where(index => B()[index]).ToList();
+        var permuted = new bool[width];
+        for (var j = 0; j < ones.Count; ++j)
+          if (op == IrIntrinsicOp.ParallelBitExtract)
+            permuted[j] = spread[ones[j]];
+          else
+            permuted[ones[j]] = spread[j];
+
+        return Host(type, permuted);
+      case IrIntrinsicOp.ByteShuffle:
+        var groupBytes = Int(2);
+        Require(groupBytes is 8 or 16 or 32 or 64 && width / 8 % groupBytes == 0);
+        var tableBits = A();
+        var selectorBits = B();
+        var shuffled = new bool[width];
+        for (var at = 0; at < width / 8; ++at) {
+          if (selectorBits[8 * at + 7])
+            continue;
+
+          var selector = 0;
+          for (var bit = 6; bit >= 0; --bit)
+            selector = selector * 2 + (selectorBits[8 * at + bit] ? 1 : 0);
+
+          var chosen = at / groupBytes * groupBytes + selector % groupBytes;
+          for (var bit = 0; bit < 8; ++bit)
+            shuffled[8 * at + bit] = tableBits[8 * chosen + bit];
+        }
+
+        return Host(type, shuffled);
+      case IrIntrinsicOp.CrcUpdate:
+        return Host(type, Crc(A(), B(), Flag(2), (byte[])arguments[3], Int(4), Int(5)));
       default:
         var array = (byte[])arguments[0];
         var stored = BitsOf(arguments[2], types[2].Bits);
@@ -158,6 +229,47 @@ internal static class IntegerReference {
 
         return null;
     }
+  }
+
+  /// <summary>
+  /// A CRC register fed one data bit at a time, as a shift register with feedback: a normal CRC takes
+  /// each byte highest bit first at the top, a reflected one lowest bit first at the bottom, and the
+  /// polynomial is XORed in, reversed for a reflected CRC, whenever the bit leaving the register differs
+  /// from the data bit. That is the same as XORing a whole byte in and shifting eight times, by another way.
+  /// </summary>
+  private static bool[] Crc(bool[] register, bool[] poly, bool reflected, byte[] data, int index, int count) {
+    if (index < 0 || count < 0 || (long)index + count > data.Length)
+      throw new Trapped(IrTrap.IndexOutOfRange);
+
+    Require(poly.Any(bit => bit));
+    var width = register.Length;
+    var c = (bool[])register.Clone();
+    for (var at = index; at < index + count; ++at)
+      for (var step = 0; step < 8; ++step) {
+        var input = ((data[at] >> (reflected ? step : 7 - step)) & 1) == 1;
+        bool feedback;
+        if (reflected) {
+          feedback = c[0] ^ input;
+          for (var bit = 0; bit < width - 1; ++bit)
+            c[bit] = c[bit + 1];
+
+          c[width - 1] = false;
+          if (feedback)
+            for (var bit = 0; bit < width; ++bit)
+              c[bit] ^= poly[width - 1 - bit];
+        } else {
+          feedback = c[width - 1] ^ input;
+          for (var bit = width - 1; bit > 0; --bit)
+            c[bit] = c[bit - 1];
+
+          c[0] = false;
+          if (feedback)
+            for (var bit = 0; bit < width; ++bit)
+              c[bit] ^= poly[bit];
+        }
+      }
+
+    return c;
   }
 
   // ---------------------------------------------------------------- values as bits
