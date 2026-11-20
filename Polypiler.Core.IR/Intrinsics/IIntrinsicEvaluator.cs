@@ -74,8 +74,8 @@ public sealed class InterpretedEvaluator(IrIntrinsicOp op) : IIntrinsicEvaluator
   }
 
   /// <summary>
-  /// The function that applies an operation to the values of a call: its scalar operands constants, the
-  /// others parameters, whose positions among the operands <paramref name="passed"/> lists.
+  /// The function that applies an operation to the values of a call: its scalar and string operands
+  /// constants - an operation such as RegexTest takes nothing else as its pattern - the others parameters, whose positions among the operands <paramref name="passed"/> lists.
   /// </summary>
   /// <param name="op">The operation.</param>
   /// <param name="call">The call.</param>
@@ -105,13 +105,14 @@ public sealed class InterpretedEvaluator(IrIntrinsicOp op) : IIntrinsicEvaluator
       new IrBlock([call.Type == IrType.Void ? new IrExprStmt(node) : new IrReturn(node)]));
   }
 
-  /// <summary>A scalar value as a constant of its type, or <see langword="null"/> for a value of another kind.</summary>
-  private static IrConst? Constant(IrType type, object? value) => value switch {
-    bool truth when type == IrType.Bool => new(type, truth ? 1 : 0),
-    float single when type == IrType.F32 => new(type, BitConverter.SingleToInt32Bits(single)),
-    double number when type == IrType.F64 => new(type, BitConverter.DoubleToInt64Bits(number)),
-    ulong wide when type.IsInteger => new(type, (long)wide),
-    sbyte or byte or short or ushort or int or uint or long when type.IsInteger => new(type, System.Convert.ToInt64(value, System.Globalization.CultureInfo.InvariantCulture)),
+  /// <summary>A scalar value or a string as a constant of its type, or <see langword="null"/> for a value of another kind.</summary>
+  private static IrExpr? Constant(IrType type, object? value) => value switch {
+    string text when type == IrType.String => new IrStrConst(text),
+    bool truth when type == IrType.Bool => new IrConst(type, truth ? 1 : 0),
+    float single when type == IrType.F32 => new IrConst(type, BitConverter.SingleToInt32Bits(single)),
+    double number when type == IrType.F64 => new IrConst(type, BitConverter.DoubleToInt64Bits(number)),
+    ulong wide when type.IsInteger => new IrConst(type, (long)wide),
+    sbyte or byte or short or ushort or int or uint or long when type.IsInteger => new IrConst(type, System.Convert.ToInt64(value, System.Globalization.CultureInfo.InvariantCulture)),
     _ => null
   };
 

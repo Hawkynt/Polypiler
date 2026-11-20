@@ -23,6 +23,7 @@ spec:
     algorithm: "RegExp.prototype.test of a regular expression without the flags g and y: whether the pattern matches at any position of the subject, by UTF-16 code unit"
     source: "ECMA-262 2022 §22.2 (RegExp objects), §22.2.5.13 (RegExp.prototype.test), §22.2.2.7.3 (Canonicalize without u)"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {}, inputs: [[48, 97, 70, 57], [94, 91, 48, 45, 57, 65, 45, 70, 97, 45, 102, 93, 42, 36], []], outputs: [1]}
     - {types: {}, inputs: [[], [94, 91, 48, 45, 57, 65, 45, 70, 97, 45, 102, 93, 42, 36], []], outputs: [1]}
