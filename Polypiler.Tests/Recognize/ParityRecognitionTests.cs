@@ -33,8 +33,14 @@ public sealed class ParityRecognitionTests {
   private static IEnumerable<TestCaseData> EightBitForms => Forms().Where(data => data.Arguments[0] is 8);
 
   private static IrType Type(int width, bool signed) => (width, signed) switch {
-    (8, true) => IrType.I8, (8, false) => IrType.U8, (16, true) => IrType.I16, (16, false) => IrType.U16,
-    (32, true) => IrType.I32, (32, false) => IrType.U32, (64, true) => IrType.I64, _ => IrType.U64
+    (8, true) => IrType.I8,
+    (8, false) => IrType.U8,
+    (16, true) => IrType.I16,
+    (16, false) => IrType.U16,
+    (32, true) => IrType.I32,
+    (32, false) => IrType.U32,
+    (64, true) => IrType.I64,
+    _ => IrType.U64
   };
 
   private sealed class InconclusiveProver : IRecognitionProver {

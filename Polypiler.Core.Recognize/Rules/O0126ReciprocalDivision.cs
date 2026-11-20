@@ -197,7 +197,7 @@ public sealed class O0126ReciprocalDivision : ExpressionRule {
 
     if (expression is not IrConvert { Contract: IrConversion.Wrap, Operand: IrBinary { Op: IrBinaryOp.ShiftRight or IrBinaryOp.ShiftRightLogical } shift } truncation
       || truncation.Type.Bits >= shift.Type.Bits || truncation.Type.IsSigned != signed || !Images.IsConstant(shift.Right, out var j)
-      || Resolve(shift.Left, context) is not IrBinary { Op: IrBinaryOp.Multiply } product || Factors(product) is not ({ } operand, var factor)
+      || Resolve(shift.Left, context) is not IrBinary { Op: IrBinaryOp.Multiply } product || Factors(product) is not ( { } operand, var factor)
       || Logical(shift) == signed || Images.Unwiden(operand).Type.IsSigned != signed || Images.Unwiden(operand).Type.Bits > truncation.Type.Bits)
       return null;
 
@@ -231,7 +231,7 @@ public sealed class O0126ReciprocalDivision : ExpressionRule {
       return high with { Shift = high.Shift + (int)s };
 
     // A narrow operand multiplied in a wider signed type, where the full product of either sign fits.
-    if (inner is IrBinary { Op: IrBinaryOp.Multiply } multiply && Factors(multiply) is ({ } value, var multiplier)
+    if (inner is IrBinary { Op: IrBinaryOp.Multiply } multiply && Factors(multiply) is ( { } value, var multiplier)
       && Images.Unwiden(value) is { Type.IsSigned: true } narrow && narrow.Type.Bits < multiply.Type.Bits)
       return new(value, multiplier, (int)s, true, "widened-multiply", multiplier << (narrow.Type.Bits - 1) >= BigInteger.One << (multiply.Type.Bits - 1));
 

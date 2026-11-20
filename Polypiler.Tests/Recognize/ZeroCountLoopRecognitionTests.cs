@@ -81,8 +81,14 @@ public sealed class ZeroCountLoopRecognitionTests {
   private static IrModule Module(int width, bool signed, string form) => PrototypeFixture.Import("ZeroCount.cs", PrototypeFixture.Wrap(Source(width, signed, form)));
 
   private static object Argument(int width, bool signed, ulong bits) => (width, signed) switch {
-    (8, true) => unchecked((sbyte)bits), (8, false) => unchecked((byte)bits), (16, true) => unchecked((short)bits), (16, false) => unchecked((ushort)bits),
-    (32, true) => unchecked((int)bits), (32, false) => unchecked((uint)bits), (64, true) => unchecked((long)bits), _ => bits
+    (8, true) => unchecked((sbyte)bits),
+    (8, false) => unchecked((byte)bits),
+    (16, true) => unchecked((short)bits),
+    (16, false) => unchecked((ushort)bits),
+    (32, true) => unchecked((int)bits),
+    (32, false) => unchecked((uint)bits),
+    (64, true) => unchecked((long)bits),
+    _ => bits
   };
 
   private static ulong Mask(int width) => width == 64 ? ulong.MaxValue : (1UL << width) - 1;

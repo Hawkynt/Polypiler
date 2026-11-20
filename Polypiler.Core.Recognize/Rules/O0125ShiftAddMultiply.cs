@@ -32,8 +32,10 @@ public sealed class O0125ShiftAddMultiply : ExpressionRule {
 
   /// <inheritdoc/>
   protected override IrExpr? Recognize(IrExpr expression, RuleContext context) {
-    if (expression is not IrBinary { Op: IrBinaryOp.Add or IrBinaryOp.Subtract or IrBinaryOp.AddChecked or IrBinaryOp.SubtractChecked
-      or IrBinaryOp.ShiftLeft or IrBinaryOp.Multiply or IrBinaryOp.MultiplyChecked or IrBinaryOp.Or or IrBinaryOp.Xor } and not IrUnary { Op: IrUnaryOp.Negate or IrUnaryOp.NegateChecked }
+    if (expression is not IrBinary {
+      Op: IrBinaryOp.Add or IrBinaryOp.Subtract or IrBinaryOp.AddChecked or IrBinaryOp.SubtractChecked
+      or IrBinaryOp.ShiftLeft or IrBinaryOp.Multiply or IrBinaryOp.MultiplyChecked or IrBinaryOp.Or or IrBinaryOp.Xor
+    } and not IrUnary { Op: IrUnaryOp.Negate or IrUnaryOp.NegateChecked }
       || !expression.Type.IsInteger)
       return null;
 
