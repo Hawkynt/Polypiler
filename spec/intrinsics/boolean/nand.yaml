@@ -1,0 +1,29 @@
+id: INTRINSICS.Nand
+title: Bitwise not-and
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#97"
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: Nand
+  group: Boolean
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: a, type: T}, {name: b, type: T}]
+  returns: [{name: result, type: T}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "~(a & b) on the bit patterns of a and b"
+    source: "Boolean algebra; H. S. Warren, Hacker's Delight, 2nd ed., section 2-20"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u8}, inputs: ["0xF0", "0xCC"], outputs: ["0x3F"]}
+    - {types: {T: TYPES.u64}, inputs: ["0x0123456789ABCDEF", "0xFEDCBA9876543210"], outputs: ["0xFFFFFFFFFFFFFFFF"]}
+    - {types: {T: TYPES.i8}, inputs: [-1, -1], outputs: [0]}
+  algebra: [commutative]

@@ -27,3 +27,4 @@ spec:
     - {types: {T: TYPES.u32}, inputs: ["0x80000000"], outputs: [31]}
     - {types: {T: TYPES.i16}, inputs: [-32768], outputs: [15]}
     - {types: {T: TYPES.u8}, inputs: ["0x28"], outputs: [3]}
+  facts: {resultRange: [0, 64]}

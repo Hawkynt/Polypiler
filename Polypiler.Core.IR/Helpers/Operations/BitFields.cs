@@ -25,6 +25,25 @@ public static partial class HelperOperations {
     return length == 32 ? pattern : (pattern >> start) & ((1u << length) - 1u);
   }
 
+  /// <summary>
+  /// The field of <paramref name="length"/> bits from bit <paramref name="start"/> on of the lowest
+  /// <paramref name="bits"/> bits, sign-extended from its top bit: the bit of the sign flipped and
+  /// subtracted (Warren, <i>Hacker's Delight</i>, 2nd ed., §2-6).
+  /// </summary>
+  /// <param name="value">The pattern, perhaps with bits above the width.</param>
+  /// <param name="start">The lowest bit of the field.</param>
+  /// <param name="length">The number of bits of the field.</param>
+  /// <param name="bits">The width, 8, 16 or 32.</param>
+  /// <exception cref="ArithmeticException">The field does not lie within the width.</exception>
+  public static uint ExtractBitsSigned32(uint value, int start, int length, int bits) {
+    var field = ExtractBits32(value, start, length, bits);
+    if (length == 0)
+      return 0u;
+
+    var sign = 1u << (length - 1);
+    return (field ^ sign) - sign;
+  }
+
   /// <summary>A pattern with a field of <paramref name="length"/> bits from bit <paramref name="start"/> on replaced by the low bits of another.</summary>
   /// <param name="value">The pattern.</param>
   /// <param name="field">The new field, in its low bits.</param>
@@ -92,6 +111,20 @@ public static partial class HelperOperations {
       return 0UL;
 
     return length == 64 ? value : (value >> start) & ((1UL << length) - 1UL);
+  }
+
+  /// <summary>The field of <paramref name="length"/> bits from bit <paramref name="start"/> on of a <c>ulong</c>, sign-extended from its top bit.</summary>
+  /// <param name="value">The pattern.</param>
+  /// <param name="start">The lowest bit of the field.</param>
+  /// <param name="length">The number of bits of the field.</param>
+  /// <exception cref="ArithmeticException">The field does not lie within 64 bits.</exception>
+  public static ulong ExtractBitsSigned64(ulong value, int start, int length) {
+    var field = ExtractBits64(value, start, length);
+    if (length == 0)
+      return 0UL;
+
+    var sign = 1UL << (length - 1);
+    return (field ^ sign) - sign;
   }
 
   /// <summary>A <c>ulong</c> with a field replaced by the low bits of another.</summary>

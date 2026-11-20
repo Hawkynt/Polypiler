@@ -1,0 +1,33 @@
+id: INTRINSICS.ExtractBitsSigned
+title: Extract a signed bit field
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#96"
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: ExtractBitsSigned
+  group: Bitfield
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: value, type: T}, {name: start, type: TYPES.i32}, {name: length, type: TYPES.i32}]
+  returns: [{name: field, type: T}]
+  legality:
+    - {id: field-in-width, text: "start and length are at least 0 and start + length is at most the width of T; a constant field outside is refused by the verifier, any other traps with an invalid operation", fact: range}
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the field of ExtractBits, sign-extended from its bit length - 1: (f ^ s) - s with f the field and s = 1 << (length - 1); 0 for a length of 0"
+    source: "H. S. Warren, Hacker's Delight, 2nd ed., section 2-6"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.i32}, inputs: ["0x000000F0", 4, 4], outputs: [-1]}
+    - {types: {T: TYPES.u32}, inputs: ["0x12345678", 8, 12], outputs: ["0x00000456"]}
+    - {types: {T: TYPES.u8}, inputs: ["0x80", 7, 1], outputs: ["0xFF"]}
+    - {types: {T: TYPES.i16}, inputs: ["0x0F00", 8, 4], outputs: [-1]}
+    - {types: {T: TYPES.i64}, inputs: ["0x0000000080000000", 16, 16], outputs: [-32768]}
+    - {types: {T: TYPES.i8}, inputs: ["0x7F", 0, 0], outputs: [0]}
+  lowersTo: [INTRINSICS.ExtractBits]

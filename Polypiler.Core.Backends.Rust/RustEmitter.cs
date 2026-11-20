@@ -239,7 +239,8 @@ public static partial class RustEmitter {
           or IrIntrinsicOp.TrailingZeroCount or IrIntrinsicOp.ByteSwap or IrIntrinsicOp.Min or IrIntrinsicOp.Max
           or IrIntrinsicOp.AddSaturate or IrIntrinsicOp.SubSaturate or IrIntrinsicOp.MulSaturate
           or IrIntrinsicOp.AddOverflows or IrIntrinsicOp.SubOverflows or IrIntrinsicOp.MulOverflows => true,
-        IrIntrinsicOp.BitReverse => table.Has(RustCapabilities.ReverseBits, profile),
+        IrIntrinsicOp.BitReverse or IrIntrinsicOp.ReverseBitsInBytes => table.Has(RustCapabilities.ReverseBits, profile),
+        IrIntrinsicOp.LeadingOneCount or IrIntrinsicOp.TrailingOneCount => table.Has(RustCapabilities.CountOnes, profile),
         IrIntrinsicOp.IsPow2 => !operand.IsSigned,
         IrIntrinsicOp.Abs or IrIntrinsicOp.AbsWrap => operand.IsSigned && table.Has(RustCapabilities.CheckedAbs, profile),
         IrIntrinsicOp.BitsFloat => table.Has(RustCapabilities.FloatBits, profile),

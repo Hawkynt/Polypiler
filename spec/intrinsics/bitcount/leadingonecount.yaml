@@ -1,0 +1,34 @@
+id: INTRINSICS.LeadingOneCount
+title: Leading one count
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#95"
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  name: LeadingOneCount
+  group: BitCount
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: value, type: T}]
+  returns: [{name: count, type: TYPES.i32}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  reference:
+    algorithm: "the number of 1 bits above the highest 0 bit of the bit pattern of value, which is LeadingZeroCount of its complement; the width of T when every bit is 1"
+    source: "H. S. Warren, Hacker's Delight, 2nd ed., section 5-3"
+  mustSurviveUntil: IR.stage.legalized-target
+  vectors:
+    - {types: {T: TYPES.u32}, inputs: ["0x00000000"], outputs: [0]}
+    - {types: {T: TYPES.u32}, inputs: ["0xFFFFFFFF"], outputs: [32]}
+    - {types: {T: TYPES.u32}, inputs: ["0xF0000000"], outputs: [4]}
+    - {types: {T: TYPES.u8}, inputs: ["0xF0"], outputs: [4]}
+    - {types: {T: TYPES.i8}, inputs: [-1], outputs: [8]}
+    - {types: {T: TYPES.u64}, inputs: ["0xFFFF000000000000"], outputs: [16]}
+    - {types: {T: TYPES.i16}, inputs: ["0x7FFF"], outputs: [0]}
+  facts: {resultRange: [0, 64]}
+  lowersTo: [INTRINSICS.LeadingZeroCount]

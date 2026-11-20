@@ -104,7 +104,9 @@ internal static class HelperHarness {
     if (type == IrType.I32 && index > 0 && op is not (IrIntrinsicOp.Clamp or IrIntrinsicOp.MulHigh or IrIntrinsicOp.DivFloor or IrIntrinsicOp.ModFloor
         or IrIntrinsicOp.DivEuclid or IrIntrinsicOp.ModEuclid or IrIntrinsicOp.AddSaturate or IrIntrinsicOp.SubSaturate or IrIntrinsicOp.MulSaturate
         or IrIntrinsicOp.AddOverflows or IrIntrinsicOp.SubOverflows or IrIntrinsicOp.MulOverflows or IrIntrinsicOp.InsertBits or IrIntrinsicOp.Min or IrIntrinsicOp.Max
-        or IrIntrinsicOp.AddCarry or IrIntrinsicOp.SubBorrow or IrIntrinsicOp.CarryOut or IrIntrinsicOp.BorrowOut or IrIntrinsicOp.BigMul))
+        or IrIntrinsicOp.AddCarry or IrIntrinsicOp.SubBorrow or IrIntrinsicOp.CarryOut or IrIntrinsicOp.BorrowOut or IrIntrinsicOp.BigMul
+        or IrIntrinsicOp.Nand or IrIntrinsicOp.Nor or IrIntrinsicOp.Xnor or IrIntrinsicOp.AndNot or IrIntrinsicOp.OrNot or IrIntrinsicOp.Implies
+        or IrIntrinsicOp.BitSelect or IrIntrinsicOp.Majority) && !(op == IrIntrinsicOp.TernaryLogic && index < 3))
       return [.. Enumerable.Range(-2, 70).Select(value => (object)value)];
 
     if (type == IrType.I32 && op is IrIntrinsicOp.LowMask)
