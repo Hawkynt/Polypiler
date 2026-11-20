@@ -809,9 +809,9 @@ public static class RustPrinter {
   private static bool Overflows(RsExpression last, int count, bool function = false) => last switch {
     RsIf or RsMatch or RsWhile or RsLoop or RsFor or RsLabeledBlock or RsBlockExpression or RsClosure => true,
     RsCall or RsMacro or RsArray or RsStructLiteral => count == 1,
-    // rustfmt overflows a chain whose root is a call on one line, f(g(x)\n.h()); a chain from a variable,
-    // an array or a macro, or from a root over several lines, stands on lines of its own.
-    RsMethodCall or RsField => function && count == 1 && Chain(last).Receiver is RsCall root && Flat(root) is not null,
+    // rustfmt overflows a chain whose root is a call or an expression in parentheses, f(g(x)\n.h()); a
+    // chain from a variable, an array or a macro stands on lines of its own.
+    RsMethodCall or RsField => function && count == 1 && Chain(last).Receiver is RsCall or RsParenthesized,
     RsTry attempt => Overflows(attempt.Operand, count, function),
     RsUnary unary => Overflows(unary.Operand, count, function),
     RsReference reference => Overflows(reference.Operand, count, function),
