@@ -157,7 +157,7 @@ public sealed class OptimizerTests {
   [Test]
   public void RuleTable_ListsTheRulesInTheirOrder() {
     Assert.That(RuleTable.Default.Ids, Is.EqualTo(new[] {
-      "O0100", "O0101", "O0102", "O0103", "O0105", "O0106", "O0108", "O0109", "O0110", "O0120", "O0121", "O0122", "O0123", "O0125", "O0127", "O0140", "O0141"
+      "O0100", "O0101", "O0102", "O0103", "O0105", "O0106", "O0108", "O0109", "O0110", "O0120", "O0121", "O0122", "O0123", "O0125", "O0126", "O0127", "O0140", "O0141"
     }));
     Assert.That(RuleTable.Default.Find("O0106"), Is.InstanceOf<O0106ByteSwap>());
     Assert.That(RuleTable.Default.Find("O0104"), Is.Null);

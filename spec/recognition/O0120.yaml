@@ -1,59 +1,80 @@
 id: RECOGNITION.O0120
-title: Recognize minimum and maximum from compare-select and branchless masks
-version: 1
-status: draft
+title: Recognize minimum and maximum from compare-select, branchless masks and subtract-sign
+version: 2
+status: normative
 owner: Hawkynt
 issue: "#571"
 tests:
+  - Polypiler.Tests/Recognize/MinMaxRecognitionTests.cs
+  - Polypiler.Tests/Verification/Proofs/SmtRecognitionProverTests.cs
+  - tests/features/recognize/rec-minmax.feature
+  - Polypiler.Tests.Acceptance/Optimize/ArithmeticRecognitionSteps.cs
   - Polypiler.Tests/Recognize/RecognitionFixtureTests.cs
   - tests/fixtures/prototype/recognize/RecognizeMinMax.cs
   - tests/fixtures/prototype/recognize/minmax.js
 introducedIn: P2
-compatibility: none
-reviewedRevision: 0
+compatibility: additive
+reviewedRevision: 2
 normative: >-
-  A compare-select of two integers, or the branchless mask selection, MUST become Min or Max only when
-  it selects the compared operands, and never for floating-point operands. The prototype rule
-  O0120MinMax in Polypiler.Core.Recognize matches the structured IR of Polypiler.Core.IR, not the
-  typed SSA IR: pattern.before and replacement.after are written in that structured form, and matching
-  typed SSA graphs belongs to REC-ENGINE (#276). RecognitionFixtureTests is the evidence the prototype
-  has: it checks that the rule fires exactly on the marked functions of its fixtures, that --disable-
-  opt O0120 keeps it from firing, and that the IR interpreter computes the same before and after the
-  rule - result, kind of trap and the arrays a trap leaves behind - for every value of each 8- and
-  16-bit parameter and for the edges and 10 000 random tuples of the wider ones. The proof obligations
-  below are planned and not discharged yet: exhaustive checks with VER-EXHAUSTIVE (#70), bit-vector
-  proofs with VER-SMT (#71). The prototype knows only the levels default, where the rule is on, and
-  none; the optLevels name the levels of the target state. The document stays a draft until its
-  obligations are discharged.
+  O0120 MUST recognize the signed and unsigned minimum and maximum of integers
+  of widths 8, 16, 32 and 64 in the structured tree IR of ADR 0009, from
+  compare-select in every mirrored spelling, from the branchless mask selection
+  b ^ ((a ^ b) & mask) with every operand order and the masks -(c ? 1 : 0),
+  0 - (c ? 1 : 0) and c ? -1 : 0, and from the subtract-sign forms
+  b + (d & (d >> w-1)) and a - (d & (d >> w-1)) with d = a - b. The selected
+  values MUST be the compared values; value-preserving conversions MAY be
+  looked through on both. The comparison's signedness decides the operation.
+  The host-supplied IRecognitionProver MUST prove the actual candidate
+  equivalent to its replacement; for the subtract-sign form this proof is the
+  non-overflow fact, and a refuted proof MUST be reported as "subtraction may
+  overflow". The CLI supplies SmtRecognitionProver, whose independent
+  definition of Min and Max selects by a comparison in the operands'
+  signedness. Masks of other comparisons, logical or short sign shifts,
+  checked subtraction and operands that may trap or act MUST be refused with
+  their reasons; floating-point operands MUST be left alone. The solver budget
+  is five seconds. Missing, unknown, unsupported, unavailable, refuted and
+  timed-out proofs MUST leave the candidate unchanged. Successful proof notes
+  MUST be emitted only after the replacement is committed. --opt none and
+  --disable-opt O0120 disable matching, proof requests and reports.
 spec:
   optimization: O0120
-  level: typed-ssa
+  level: typed-tree
   pattern:
-    before: "%r = Select.i32 Lt.i32(%a, %b), %a, %b"
+    before: "%r = Xor.i32 %y, And.i32(Xor.i32(%x, %y), Neg.i32 Select.i32(SLt(%x, %y), 1, 0))"
     bindings:
-      - {name: a, role: "first operand"}
-      - {name: b, role: "second operand"}
+      - {name: x, role: "first operand"}
+      - {name: y, role: "second operand"}
   replacement:
-    after: "%r = Min.i32 %a, %b"
+    after: "%r = Min.i32 %x, %y"
     introduces: [INTRINSICS.Min, INTRINSICS.Max]
   preconditions:
     - {id: integer, text: "the operands are integers; NaN and the signed zeros make the forms differ for floating point", fact: type}
     - {id: compared-operands, text: "the branches, or the operands of the mask selection, are the two compared values", fact: none}
-    - {id: signedness, text: "the comparison is in the signedness of its operands; operands widened without loss compare as the original values", fact: type}
+    - {id: signedness, text: "the comparison's signedness decides the operation; value-preserving widenings compare as the original values", fact: type}
+    - {id: no-overflow, text: "in the subtract-sign form a - b does not overflow, established by the proof of the actual candidate", fact: range}
+    - {id: sign-shift, text: "the subtract-sign mask is an arithmetic shift of d by exactly w-1", fact: known-bits}
+    - {id: wrapping, text: "the subtractions wrap; checked arithmetic is refused", fact: effect}
     - {id: trap-free, text: "each operand has no effect and cannot trap: the replacement evaluates it once", fact: effect}
   proofObligations:
-    - {id: min-max-8, class: exhaustive-8bit, widths: [8]}
-    - {id: min-max-16, class: exhaustive-16bit, widths: [16]}
-    - {id: min-max-wide, class: smt-bitvector, widths: [32, 64], budgetSeconds: 10}
+    - {id: min-max-exhaustive, class: exhaustive-8bit, widths: [8]}
+    - {id: min-max-actual-candidate, class: smt-bitvector, widths: [8, 16, 32, 64], budgetSeconds: 5}
   counterexamples:
+    - description: "subtract-sign with overflow"
+      input: "x = 0x7FFFFFFF, y = 0xFFFFFFFF, i32, d = x - y, y + (d & (d >> 31))"
+      naive: "SMin(x, y) = 0xFFFFFFFF"
+      correct: "original = 0x7FFFFFFF"
+    - description: "the comparison's signedness"
+      input: "x = 5, y = 0xFFFFFFFD, i32, y ^ ((x ^ y) & -((u32)x < (u32)y))"
+      naive: "SMin(x, y) = 0xFFFFFFFD"
+      correct: "original = 5"
+    - description: "a logical sign shift"
+      input: "x = 0, y = 2, from u16, d = x - y, y + (d & ((u32)d >> 31))"
+      naive: "SMin(x, y) = 0"
+      correct: "original = 2"
     - description: "floating-point operands"
       input: "a = NaN, b = 1.0, f64, a < b ? a : b"
       naive: "1.0"
       correct: "NaN"
-    - description: "a comparison for equality"
-      input: "a = 1, b = 2, i32, a == b ? a : b"
-      naive: "2"
-      correct: "1"
   switch: "--disable-opt O0120"
-  optLevels: [balanced, speed, size, memory]
+  optLevels: [default]
   document: docs/optimizations/O0120-min-max-recognition.md

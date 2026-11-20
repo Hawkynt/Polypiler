@@ -43,6 +43,9 @@ public sealed class RuleContext {
   private readonly List<RuleFrame> _frames = [];
   private string? _proofNote;
 
+  /// <summary>The detail of a refuted proof: a counterexample exists.</summary>
+  public const string NotEquivalent = "not equivalent";
+
   /// <summary>Collects the facts of a function.</summary>
   /// <param name="function">The function.</param>
   /// <param name="target">What the target says about the costs a rule asks for.</param>
@@ -117,14 +120,32 @@ public sealed class RuleContext {
   /// <param name="before">The candidate.</param>
   /// <param name="after">The replacement.</param>
   /// <param name="description">The recovered operation and source form for the report.</param>
+  /// <param name="refutation">
+  /// What a refuted proof means for this candidate, reported instead of <c>not equivalent</c>; a rule whose
+  /// structure is fixed and whose only open condition is a range states that condition here.
+  /// </param>
   /// <returns>The replacement only when proved.</returns>
-  public IrExpr? Confirm(string id, IrExpr before, IrExpr after, string description) {
+  public IrExpr? Confirm(string id, IrExpr before, IrExpr after, string description, string? refutation = null) {
     var proof = this.Prover?.Prove(id, before, after, this) ?? new RecognitionProof(false, "proof unavailable");
     if (proof.Proved)
       this._proofNote = $"{id} applied: {description} [proof: {proof.Detail}]";
     else
-      this.Note?.Invoke($"{id} not applied: {proof.Detail}");
+      this.Note?.Invoke($"{id} not applied: {(refutation is not null && proof.Detail == NotEquivalent ? refutation : proof.Detail)}");
     return proof.Proved ? after : null;
+  }
+
+  /// <summary>
+  /// Accepts a replacement on a checked certificate instead of a solver run, for a rule whose precondition is
+  /// itself the proof; like a proved replacement, it is reported only by <see cref="ReportApplication"/>.
+  /// </summary>
+  /// <param name="id">The rule.</param>
+  /// <param name="after">The replacement.</param>
+  /// <param name="description">The recovered operation and the certificate's numbers.</param>
+  /// <param name="proofClass">The proof class the certificate belongs to.</param>
+  /// <returns>The replacement.</returns>
+  public IrExpr Certify(string id, IrExpr after, string description, string proofClass) {
+    this._proofNote = $"{id} applied: {description} [proof: {proofClass}]";
+    return after;
   }
 
   /// <summary>The blocks around the statements a rule is asked about, the outermost first; empty for the body of the function.</summary>
