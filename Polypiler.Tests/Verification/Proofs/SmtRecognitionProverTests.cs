@@ -124,4 +124,37 @@ public sealed class SmtRecognitionProverTests {
     var choice = new IrConditional(flag, _value, _value);
     Assert.That(new SmtRecognitionProver().Prove("O0121", choice, _value, _context).Proved, Is.True);
   }
+
+  private static readonly IrExpr _position = new IrLocalRef(new IrLocal("n", IrType.I32));
+
+  private static IrExpr Masked(int width) => new IrBinary(IrBinaryOp.And, _position, new IrConst(IrType.I32, width - 1));
+
+  [TestCase(IrIntrinsicOp.SetBit, IrBinaryOp.Or)]
+  [TestCase(IrIntrinsicOp.ToggleBit, IrBinaryOp.Xor)]
+  public void SetAndToggle_AreTheirSingleBitDefinitions(IrIntrinsicOp op, IrBinaryOp combine) {
+    var single = new IrBinary(IrBinaryOp.ShiftLeft, new IrConst(IrType.I32, 1), _position);
+    var before = new IrBinary(combine, _value, single);
+    var after = new IrIntrinsic(op, IrType.I32, [_value, Masked(32)]);
+    Assert.That(new SmtRecognitionProver().Prove("O0108", before, after, _context).Proved, Is.True);
+    var wrong = new IrBinary(combine, _value, new IrBinary(IrBinaryOp.ShiftLeft, new IrConst(IrType.I32, 2), _position));
+    Assert.That(new SmtRecognitionProver().Prove("O0108", wrong, after, _context), Is.EqualTo(new RecognitionProof(false, "not equivalent")));
+  }
+
+  [Test]
+  public void ClearAndTest_AreTheirSingleBitDefinitions() {
+    var single = new IrBinary(IrBinaryOp.ShiftLeft, new IrConst(IrType.I32, 1), _position);
+    var cleared = new IrBinary(IrBinaryOp.And, _value, new IrUnary(IrUnaryOp.BitNot, single));
+    Assert.That(new SmtRecognitionProver().Prove("O0108", cleared, new IrIntrinsic(IrIntrinsicOp.ClearBit, IrType.I32, [_value, Masked(32)]), _context).Proved, Is.True);
+    var tested = new IrBinary(IrBinaryOp.NotEqual, new IrBinary(IrBinaryOp.And, _value, single), new IrConst(IrType.I32, 0));
+    var test = new IrIntrinsic(IrIntrinsicOp.TestBit, IrType.Bool, [_value, Masked(32)]);
+    var prover = new SmtRecognitionProver();
+    Assert.That(prover.Prove("O0108", tested, test, _context).Proved, Is.True);
+    Assert.That(prover.Prove("O0108", tested, new IrUnary(IrUnaryOp.LogicalNot, test), _context), Is.EqualTo(new RecognitionProof(false, "not equivalent")));
+  }
+
+  [Test]
+  public void AnOperationThatMayTrapOnItsPosition_IsNotEncoded() {
+    var unmasked = new IrIntrinsic(IrIntrinsicOp.TestBit, IrType.Bool, [_value, _position]);
+    Assert.That(new SmtRecognitionProver().Prove("O0108", unmasked, unmasked, _context), Is.EqualTo(new RecognitionProof(false, "unsupported proof expression")));
+  }
 }
