@@ -124,4 +124,44 @@ public sealed class SmtRecognitionProverTests {
     var choice = new IrConditional(flag, _value, _value);
     Assert.That(new SmtRecognitionProver().Prove("O0121", choice, _value, _context).Proved, Is.True);
   }
+
+  [TestCase(8)]
+  [TestCase(16)]
+  [TestCase(32)]
+  [TestCase(64)]
+  public void UnsignedSign_IsWhetherTheValueIsNonZero(int width) {
+    var type = width switch { 8 => IrType.U8, 16 => IrType.U16, 32 => IrType.U32, _ => IrType.U64 };
+    var x = new IrLocal("x", type);
+    var value = new IrLocalRef(x);
+    var context = new RuleContext(new IrFunction("U", true, IrType.I32, [x], [], new([new IrReturn(new IrConst(IrType.I32, 0))])), RuleTarget.Neutral);
+    var nonZero = new IrConditional(new IrBinary(IrBinaryOp.NotEqual, value, new IrConst(type, 0)), new IrConst(IrType.I32, 1), new IrConst(IrType.I32, 0));
+    var sign = new IrIntrinsic(IrIntrinsicOp.Sign, IrType.I32, [value]);
+    Assert.That(new SmtRecognitionProver().Prove("O0122", nonZero, sign, context), Is.EqualTo(new RecognitionProof(true, "smt-bitvector")));
+  }
+
+  [Test]
+  public void SignedSign_SeparatesTheThreeClasses() {
+    IrExpr Flag(IrBinaryOp op) => new IrConditional(new IrBinary(op, _value, new IrConst(IrType.I32, 0)), new IrConst(IrType.I32, 1), new IrConst(IrType.I32, 0));
+    var sign = new IrIntrinsic(IrIntrinsicOp.Sign, IrType.I32, [_value]);
+    var prover = new SmtRecognitionProver();
+    Assert.That(prover.Prove("O0122", new IrBinary(IrBinaryOp.Subtract, Flag(IrBinaryOp.Greater), Flag(IrBinaryOp.Less)), sign, _context).Proved, Is.True);
+    Assert.That(prover.Prove("O0122", new IrBinary(IrBinaryOp.Subtract, Flag(IrBinaryOp.Less), Flag(IrBinaryOp.Greater)), sign, _context),
+      Is.EqualTo(new RecognitionProof(false, "not equivalent")));
+    Assert.That(prover.Prove("O0122", Flag(IrBinaryOp.NotEqual), sign, _context), Is.EqualTo(new RecognitionProof(false, "not equivalent")));
+  }
+
+  [Test]
+  public void EqualityWithZero_IsTheComplementOfInequality() {
+    var zero = new IrConst(IrType.I32, 0);
+    var equal = new IrConditional(new IrBinary(IrBinaryOp.Equal, _value, zero), new IrConst(IrType.I32, 0), new IrConst(IrType.I32, 1));
+    var unequal = new IrConditional(new IrBinary(IrBinaryOp.NotEqual, _value, zero), new IrConst(IrType.I32, 1), new IrConst(IrType.I32, 0));
+    Assert.That(new SmtRecognitionProver().Prove("O0122", equal, unequal, _context).Proved, Is.True);
+  }
+
+  [Test]
+  public void TheSignOfAFloat_MayTrapAndIsNotProved() {
+    var d = new IrLocalRef(new IrLocal("d", IrType.F64));
+    var sign = new IrIntrinsic(IrIntrinsicOp.Sign, IrType.I32, [d]);
+    Assert.That(new SmtRecognitionProver().Prove("O0122", sign, sign, _context), Is.EqualTo(new RecognitionProof(false, "unsupported proof expression")));
+  }
 }
