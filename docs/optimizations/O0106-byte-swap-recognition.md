@@ -1,7 +1,7 @@
 # O0106 — Recognize byte swap from shift-and-mask expressions and byte loops
 
-<!-- status: implemented (prototype) -->
-> **Status: implemented (prototype).** The rule `O0106ByteSwap` in `Polypiler.Core.Recognize` runs in the pass pipeline of `translate` ([#1307](https://github.com/Hawkynt/Polypiler/issues/1307)); the full target state stays tracked in [#559](https://github.com/Hawkynt/Polypiler/issues/559). Switched off with `--disable-opt O0106`.
+<!-- status: implemented -->
+> **Status: implemented with SMT proofs.** `O0106` runs in `translate` on the structured tree IR of ADR 0009. Disable it with `--disable-opt O0106`.
 
 ## What it does
 
@@ -38,16 +38,49 @@ public static uint F(uint x) => unchecked(global::System.Buffers.Binary.BinaryPr
 The weighted bits (`WeightEvaluator`) of the expression must be exactly the bits of one value of 16,
 32 or 64 bits, bit `8k + j` on bit `8(n - 1 - k) + j`: the shift-and-mask forms in any order and with
 the masks before or after the shifts, a swap built from rotates, an `int` swapped through `uint`, and
-the two-step swap of halves and of bytes as a run of assignments (`Windows`).
+the two-step swap of halves and of bytes, including a single assignment followed
+by an explicit rotate. Disjoint terms may be combined with OR, XOR or ADD.
+
+A pure counted loop of `width / 8` iterations that shifts one byte from the
+source into an accumulator is unrolled and proved. Its final source and counter
+values remain available to later code.
 
 ## How it is proven
 
-The rule decides on the exact meaning of the IR, not on a likely one. Its fixtures `tests/fixtures/prototype/recognize/RecognizeByteSwap.cs` and `byteswap.js` hold every listed pattern and the near misses below, each function marked with the applications it expects; `RecognitionFixtureTests` checks that the rule fires exactly there, that switching it off with `--disable-opt` keeps it from firing while the other rules still do, and that the IR interpreter computes the same on the IR before and after - result, kind of trap and the arrays a trap leaves behind - for every value of every 8- and 16-bit parameter, and for every combination of the edges plus 10 000 random tuples (seed 2026) of the wider ones. The optimized C# fixture is also compared with the C# compiler's build of the original, and every optimized fixture is written by every profile of both backends. What the full target state adds - SSA graph matching, SMT bit-vector proof obligations, range and known-bits facts (issue [#276](https://github.com/Hawkynt/Polypiler/issues/276)) - is not part of the prototype.
+Exact weighted-bit provenance first checks the permutation. The host-supplied
+`IRecognitionProver` then checks the actual candidate against the intrinsic;
+`translate` supplies `SmtRecognitionProver` and the pinned Z3 binding. Stable
+local definitions are expanded, integer conversions keep their extension or
+truncation, and shifts keep signedness and the tree IR's masked-count contract.
+The intrinsic is independently expanded by bit positions, without using the
+recognizer's weighted-bit implementation. Counted loops are unrolled before
+proof, and every live exit local and counter is preserved.
+
+Only `unsat` authorizes replacement. The budget is five seconds per obligation;
+unknown, timeout, unsupported expressions and a missing solver leave the
+candidate unchanged. Only proved obligations enter the bounded host-local
+cache. `--explain-opt` reports `smt-bitvector` or the refusal. Library callers
+must supply `OptimizerOptions.Prover`; no prover means no application of this
+rule. `SmtRecognitionProver.CreateObligation` exports the runtime obligation for
+independent verification.
+
+`PermutationRecognitionTests` checks OR, XOR and ADD assemblies, byte loops
+at 32 and 64 bits, trip-count boundaries, effectful bodies and proof refusals.
+Each wide byte loop is compared with the original interpreter and an independent
+byte oracle on 10,000 random inputs plus four boundaries (seed 106).
+`rec-byteswap.feature` imports executable fixtures from
+`tests/fixtures/recognize/o0106/`, including the rotation-ending cascade and
+unmasked sign-fill and word-swap counterexamples. The earlier prototype fixtures
+continue to check equivalence and emission through every C# and JavaScript
+profile. Byte swaps are proved at their actual widths; no 8-bit proof is claimed
+for a byte permutation.
 
 ## When it must not fire
 
 - A byte in the wrong place or a byte missing.
-- Arithmetic right shifts, which drag in copies of the sign.
+- Arithmetic right shifts whose sign copies survive the masks. A mask that removes them is legal.
+- A counted loop with the wrong number of byte transfers or an observable body effect.
+- A failed, unknown, timed out or unavailable proof.
 
 ## Switching it off
 

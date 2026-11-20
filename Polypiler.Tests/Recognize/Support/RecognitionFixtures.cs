@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using Polypiler.Core.IR;
 using Polypiler.Core.Optimize;
 using Polypiler.Core.Recognize;
+using Polypiler.Core.Verification.Proofs;
 
 namespace Polypiler.Prototype.Testing;
 
@@ -49,7 +50,7 @@ internal static partial class RecognitionFixtures {
     : PrototypeFixture.Import(file, SourceOf(file));
 
   /// <summary>The options every fixture test optimizes with: verification after each application, and a target that prefers the remainder from the quotient.</summary>
-  public static OptimizerOptions Options { get; } = new() { Verify = true, Target = new RuleTarget(true) };
+  public static OptimizerOptions Options { get; } = new() { Verify = true, Target = new RuleTarget(true), Prover = new SmtRecognitionProver() };
 
   /// <summary>The rule applications expected in each function of a fixture file, sorted.</summary>
   public static IReadOnlyDictionary<string, string[]> Expectations(string file) {

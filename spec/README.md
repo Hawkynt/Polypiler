@@ -247,7 +247,7 @@ network built from a grammar must prove before it is recorded is
 `spec/recognition/O<4 digits>.yaml`, ID `RECOGNITION.O<4 digits>`: one recognition rule of the block
 `O0100`–`O0169`, or of the bit-permutation recovery block `O0200`–`O0229` (PRD §4.1, §4.5).
 [`schemas/recognition.schema.json`](schemas/recognition.schema.json) states the body: the `level` it
-matches at (`source-ast`, `typed-ssa`), the `pattern` (`before`, `bindings`), the `replacement`
+matches at (`source-ast`, `typed-tree`; `typed-ssa` remains for older work orders), the `pattern` (`before`, `bindings`), the `replacement`
 (`after`, and the `INTRINSICS.` or `IR.` documents it `introduces`), at least one each of
 `preconditions` `{id, text, fact}`, `proofObligations` `{id, class, widths, budgetSeconds?}` and
 `counterexamples` `{description, input, naive, correct}` — `naive` what the near-miss source computes,

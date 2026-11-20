@@ -109,11 +109,10 @@ public sealed class DocumentationSteps {
   }
 
   /// <summary>The README and the architecture guides: the eight of the design and one per frontend or backend of a language added since.</summary>
-  [Given("^README.md and all (\\w+) architecture guides$")]
-  public void ReadmeAndGuides(string count) {
+  [Given("^README.md and all (\\d+) architecture guides$")]
+  public void ReadmeAndGuides(int count) {
     this._documents = [.. ArchitecturePaths()];
-    var expected = System.Array.IndexOf(["eight", "nine", "ten", "eleven", "twelve", "thirteen"], count) + 8;
-    Assert.That(this._documents.Count(path => Path.GetDirectoryName(path)!.EndsWith("architecture", StringComparison.Ordinal)), Is.EqualTo(expected));
+    Assert.That(this._documents.Count(path => Path.GetDirectoryName(path)!.EndsWith("architecture", StringComparison.Ordinal)), Is.EqualTo(count));
     Assert.That(this._documents, Does.Contain(Path.Combine(Root, "README.md")));
   }
 

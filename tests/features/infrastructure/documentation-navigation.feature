@@ -13,7 +13,7 @@ Feature: Navigate the compiler design and requirements
     And index, previous, next and architecture links resolve
 
   Scenario: Read rendered architecture diagrams
-    Given README.md and all thirteen architecture guides
+    Given README.md and all 17 architecture guides
     When their Mermaid blocks are rendered
     Then each document has a valid diagram matching its described design
     And the proof, capability and oracle boundaries remain explicit
