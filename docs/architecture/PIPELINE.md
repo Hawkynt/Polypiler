@@ -66,6 +66,11 @@ refusals. Library hosts enable these proof-dependent rules with
 dependency on the verification module. `CreateObligation` exports the same
 obligation for independent exhaustive checks and evidence.
 
+O0102 SWAR population count is recognition by proof: a structural gate (a final
+fold at the root and the `0x55…`, `0x33…`, `0x0F…` mask families) selects the
+candidate, and the proof against an independent bit-by-bit `PopCount` decides.
+A refuted proof is reported as `not equivalent to PopCount`.
+
 Each solver query releases its native wrappers before closing the context. The
 pinned Z3 binding's array parser retains temporary AST wrappers until collection,
 so the integration loads assertions directly into the solver. The resource

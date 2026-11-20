@@ -124,4 +124,30 @@ public sealed class SmtRecognitionProverTests {
     var choice = new IrConditional(flag, _value, _value);
     Assert.That(new SmtRecognitionProver().Prove("O0121", choice, _value, _context).Proved, Is.True);
   }
+
+  [TestCase(8)]
+  [TestCase(16)]
+  [TestCase(32)]
+  [TestCase(64)]
+  public void PopCount_IsTheSumOfEveryBit(int width) {
+    var type = width switch { 8 => IrType.U8, 16 => IrType.U16, 32 => IrType.U32, _ => IrType.U64 };
+    var x = new IrLocal("x", type);
+    var value = new IrLocalRef(x);
+    var context = new RuleContext(new IrFunction("P", true, IrType.I32, [x], [], new([new IrReturn(new IrConst(IrType.I32, 0))])), RuleTarget.Neutral);
+    var count = new IrIntrinsic(IrIntrinsicOp.PopCount, IrType.I32, [value]);
+    var prover = new SmtRecognitionProver();
+    Assert.That(prover.Prove("O0102", count, count, context).Proved, Is.True);
+    // The lowest bit alone is a count only of the values below two.
+    var lowest = new IrConvert(IrType.I32, new IrBinary(IrBinaryOp.And, value, new IrConst(type, 1)));
+    Assert.That(prover.Prove("O0102", lowest, count, context), Is.EqualTo(new RecognitionProof(false, RuleContext.NotEquivalent)));
+  }
+
+  [Test]
+  public void PopCountOfAllOnes_IsTheWidth() {
+    var x = new IrLocal("x", IrType.U32);
+    var context = new RuleContext(new IrFunction("P", true, IrType.I32, [x], [], new([new IrReturn(new IrConst(IrType.I32, 0))])), RuleTarget.Neutral);
+    var ones = new IrBinary(IrBinaryOp.Or, new IrLocalRef(x), new IrConst(IrType.U32, uint.MaxValue));
+    var count = new IrIntrinsic(IrIntrinsicOp.PopCount, IrType.I32, [ones]);
+    Assert.That(new SmtRecognitionProver().Prove("O0102", count, new IrConst(IrType.I32, 32), context).Proved, Is.True);
+  }
 }
