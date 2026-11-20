@@ -40,7 +40,8 @@ public sealed class SmtRecognitionProver : IRecognitionProver {
 
     ProofResult result;
     try {
-      result = new SmtBitvectorProver([before.Type.Bits], this._solver).Prove(obligation, this.Budget);
+      // Every obligation names its own types; the width only matters to width-generic ones, so a truth value takes 1.
+      result = new SmtBitvectorProver([Math.Max(1, before.Type.Bits)], this._solver).Prove(obligation, this.Budget);
     } catch (ProverUnavailableException) {
       return new(false, "proof unavailable");
     }
@@ -83,11 +84,11 @@ public sealed class SmtRecognitionProver : IRecognitionProver {
     private readonly Dictionary<IrExpr, string> _values = new(ReferenceEqualityComparer.Instance);
 
     public string? Encode(IrExpr expression) {
-      if (!expression.Type.IsInteger || expression.Type.Bits > 64 || !IrShape.IsTrapFree(expression))
+      if (!(expression.Type.IsInteger || expression.Type == IrType.Bool) || expression.Type.Bits > 64 || !IrShape.IsTrapFree(expression))
         return null;
 
       var result = this.Value(expression);
-      this._lines.Add($"%r = Or.{Type(expression)} {result}, 0");
+      this._lines.Add($"%r = Or.{Type(expression)} {result}, {(expression.Type == IrType.Bool ? "false" : "0")}");
       return string.Join("\n", this._lines);
     }
 
@@ -109,10 +110,13 @@ public sealed class SmtRecognitionProver : IRecognitionProver {
         IrLocalRef reference when context.Definition(reference.Local) is { } definition => this.Value(definition),
         IrConvert { Contract: IrConversion.Wrap, Operand.Type.IsInteger: true } convert => this.Convert(convert),
         IrUnary { Op: IrUnaryOp.Negate or IrUnaryOp.BitNot } unary => this.Emit(unary.Op == IrUnaryOp.Negate ? "Neg" : "Not", unary, this.Value(unary.Operand)),
+        IrUnary { Op: IrUnaryOp.LogicalNot, Operand.Type.Kind: IrTypeKind.Bool } not => this.Emit("Not", not, this.Value(not.Operand)),
         IrBinary binary when Operator(binary) is { } op => this.Binary(binary, op),
         IrBinary { Left.Type.IsInteger: true } comparison when Predicate(comparison) is { } predicate => this.Compare(comparison.Left, comparison.Right, predicate),
         IrConditional choice => this.Emit("Select", choice, this.Value(choice.Condition), this.Value(choice.WhenTrue), this.Value(choice.WhenFalse)),
         IrIntrinsic { Op: IrIntrinsicOp.AbsWrap } absolute => this.Absolute(absolute),
+        IrIntrinsic { Op: IrIntrinsicOp.TestBit or IrIntrinsicOp.SetBit or IrIntrinsicOp.ClearBit or IrIntrinsicOp.ToggleBit, Arguments: [var value, var position] } bit
+          => this.Bit(bit, value, position),
         IrIntrinsic { Op: IrIntrinsicOp.Min or IrIntrinsicOp.Max, Arguments: [var first, var second] } extreme => this.Extreme(extreme, first, second),
         IrIntrinsic { Op: IrIntrinsicOp.Sign } sign => this.Sign(sign),
         IrIntrinsic { Op: IrIntrinsicOp.BitReverse or IrIntrinsicOp.ByteSwap } intrinsic => this.Reverse(intrinsic),
@@ -187,6 +191,27 @@ public sealed class SmtRecognitionProver : IRecognitionProver {
       var negative = this.Emit("SLt", input, value, "0");
       var negated = this.Emit("Neg", input, value);
       return this.Emit("Select", absolute, negative, negated, value);
+    }
+
+    /// <summary>
+    /// A single-bit operation by its definition on the single bit <c>1 &lt;&lt; p</c>, independent of the
+    /// matched idioms. The position is within the width, which the trap check before encoding requires.
+    /// </summary>
+    private string Bit(IrIntrinsic bit, IrExpr value, IrExpr position) {
+      var bits = this.Value(value);
+      var where = this.Value(position);
+      if (bit.Op == IrIntrinsicOp.TestBit) {
+        var shifted = this.Emit("LShr", value, bits, where);
+        var low = this.Emit("And", value, shifted, "1");
+        return this.Emit("Ne", value, low, "0");
+      }
+
+      var single = this.Emit("Shl", value, "1", where);
+      return bit.Op switch {
+        IrIntrinsicOp.SetBit => this.Emit("Or", bit, bits, single),
+        IrIntrinsicOp.ClearBit => this.Emit("And", bit, bits, this.Emit("Not", bit, single)),
+        _ => this.Emit("Xor", bit, bits, single)
+      };
     }
 
     /// <summary>The smaller or larger operand by a comparison in the operands' signedness, independent of the matched forms.</summary>

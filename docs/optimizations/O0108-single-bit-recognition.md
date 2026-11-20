@@ -1,69 +1,133 @@
 # O0108 — Recognize single-bit test, set, clear and flip with a variable index
 
-<!-- status: implemented (prototype) -->
-> **Status: implemented (prototype).** The rule `O0108SingleBit` in `Polypiler.Core.Recognize` runs in the pass pipeline of `translate` ([#1307](https://github.com/Hawkynt/Polypiler/issues/1307)); the full target state stays tracked in [#558](https://github.com/Hawkynt/Polypiler/issues/558). Switched off with `--disable-opt O0108`.
+<!-- status: implemented -->
+> **Status: implemented and proof-gated.** `O0108SingleBit` recognizes single-bit test, set, clear and flip with a variable or constant position at 8, 16, 32 and 64 bits in the current structured IR. Every replacement requires an SMT proof. Disable it with `--disable-opt O0108`.
 
 ## What it does
 
-Single-bit operations with a position are written with a shifted one. The rule replaces them by
-`TestBit`, `SetBit`, `ClearBit` and `ToggleBit` of the IR. Where the position cannot be outside the
-width - a constant inside it, or a count masked to it, which is what the rule writes - the C# backend
-writes the operation with the shift and the mask themselves; elsewhere it calls the helper that traps.
+Single-bit operations with a position are written with a shifted one. The rule
+replaces them by `TestBit`, `SetBit`, `ClearBit` and `ToggleBit` of the IR. The
+position it writes is always within the width — a constant inside it, or the
+count masked to it — so the operation is total, and the backends write it with
+the shift and the mask themselves or with the target's own bit instruction.
 
-## Example
+The identities are elementary (sourcing rung 3); no upstream implementation is
+copied. The [fixture provenance](../../tests/fixtures/recognize/o0108/README.md)
+pins the JavaScript `GetBit`/`SetBit` helpers and the PowerBASIC `BIT` spelling.
 
-`polypiler translate Snippet.cs --from csharp --to csharp --profile net10.0` on
+## Before and after
 
-```csharp
-public static bool F(uint x, int i) => ((x >> i) & 1) != 0;
-```
-
-### Before
-
-With `--opt none`:
+Save this as `Bits.cs`:
 
 ```csharp
-public static bool F(uint x, int i) => ((x >> i) & 1u) != 0u;
+public static class Bits {
+  public static bool Test(uint x, int i) => ((x >> i) & 1) != 0;
+
+  public static uint Set(uint x, int i) => x | (1u << i);
+}
 ```
 
-### After
-
-By default; `--explain-opt` prints `O0108 single-bit test, set, clear or toggle: 'F' statement 1`:
-
-```csharp
-public static bool F(uint x, int i) => unchecked((((x >> (i & 31)) & 1u) != 0));
+```sh
+polypiler translate Bits.cs --from csharp --to csharp --profile net10.0 --output out --explain-opt
 ```
 
-## When it applies
+In IR notation, before recognition:
 
-- `((x >> i) & 1) != 0`, `== 0` and `== 1`, with an arithmetic or a logical shift - bit 0 of
-  `x >> i` is bit `i` of `x` either way;
-- `(x & (1 << i)) != 0` and `== 0`;
-- `x | (1 << i)`, `x & ~(1 << i)`, `x ^ (1 << i)`, the shifted one on either side.
+```
+%t = Ne.u32 And.u32(LShr.u32(%x, %i), 1), 0
+%s = Or.u32 %x, Shl.u32(1, %i)
+```
 
-`x` is a 32- or 64-bit value (a narrower one widened before the shift counts as its widening), the one
-has its width, and conversions between the signed and unsigned type of one width are looked through. A
-shift of the IR takes its count modulo the width while these operations trap outside it, so the
-position becomes `i & (w - 1)`, unless it is a constant or already masked so. Value and position have no
-effect and cannot trap.
+After:
 
-## How it is proven
+```
+%t = TestBit.u32 %x, And.i32(%i, 31)
+%s = SetBit.u32 %x, And.i32(%i, 31)
+```
 
-The rule decides on the exact meaning of the IR, not on a likely one. Its fixtures `tests/fixtures/prototype/recognize/RecognizeSingleBit.cs` and `singlebit.js` hold every listed pattern and the near misses below, each function marked with the applications it expects; `RecognitionFixtureTests` checks that the rule fires exactly there, that switching it off with `--disable-opt` keeps it from firing while the other rules still do, and that the IR interpreter computes the same on the IR before and after - result, kind of trap and the arrays a trap leaves behind - for every value of every 8- and 16-bit parameter, and for every combination of the edges plus 10 000 random tuples (seed 2026) of the wider ones. The optimized C# fixture is also compared with the C# compiler's build of the original, and every optimized fixture is written by every profile of both backends. What the full target state adds - SSA graph matching, SMT bit-vector proof obligations, range and known-bits facts (issue [#276](https://github.com/Hawkynt/Polypiler/issues/276)) - is not part of the prototype.
+The proof reports are `O0108 applied: TestBit.u32 from shift-and-mask [proof: smt-bitvector]`
+and `O0108 applied: SetBit.u32 from or-mask [proof: smt-bitvector]`. The C#
+backend writes `((x >> (i & 31)) & 1u) != 0` and `x | (1u << (i & 31))`.
+
+## Matched forms and widths
+
+- **shift-and-mask:** `((x >> i) & 1) != 0`, also `== 0` (the negated test) and
+  `== 1`, with the operands of `&` in either order, through a logical or an
+  arithmetic shift: for a position within the width, bit 0 of the result is bit
+  `i` of `x` either way.
+- **mask-and-compare:** `(x & (1 << i)) != 0` and `== 0`, either order.
+- **or-mask**, **and-not-mask**, **xor-mask:** `x | (1 << i)`, `x & ~(1 << i)`
+  and `x ^ (1 << i)`, either order.
+
+A shift of the tree IR takes its count modulo the width — as C#, Java and
+JavaScript shift; `1u << 33` is `1u << 1` — while the intrinsics trap on a
+position outside it. The rule therefore writes the position as `i & (w - 1)`,
+unless it is a constant (reduced modulo the width) or already masked so. That
+keeps the modulo behaviour and makes the operation total: `IrShape` treats a
+single-bit operation as trap-free exactly when its position is a constant within
+the width or an integer masked with such a constant.
+
+The tree IR has only this one shift contract. The work order's `[strict]` shift,
+which needs the range fact `0 ≤ n ≤ w-1` and its refusal
+`index range unproven`, has no counterpart here.
+
+Values of 8 and 16 bits are shifted after the frontend widens them to 32 bits,
+and are matched there: `(byte)(x | (1 << n))` becomes `SetBit.i32` of the widened
+value, converted back. This is exact for every position, including those beyond
+the narrow width, where the original sets a bit the conversion then drops. The
+constant one has the width of the operation; conversions between the signed and
+unsigned type of one width change no bit and are looked through.
+
+## Proof and library-host contract
+
+`translate` supplies `SmtRecognitionProver`; a library host enables the rule with
+`OptimizerOptions.Prover = new SmtRecognitionProver()`. The adapter encodes the
+actual candidate and its truth-valued result (`==`, `!=`, logical not). Its
+independent definitions build the single bit `1 << p` and test, or, and-not or
+xor it with the value; they do not reuse the recognizer's matching. An operation
+whose position may lie outside the width is not encoded at all.
+
+Each obligation has a five-second solver budget. Missing, unsupported, refuted,
+unknown, unavailable or timed-out proofs leave the candidate unchanged, and
+successful proof notes are published only after the optimizer commits the
+replacement.
 
 ## When it must not fire
 
-- More than one bit: `(x >> i) & 3`, `x | (3 << i)`.
-- `(x & (1 << i)) == 1`, which is true only for bit 0.
-- A one of another width: `x | (long)(uint)(1 << i)` on a `long`.
-- A value that may trap: `a[0] | (1 << i)`.
+- A mask shifted at 32 bits and widened: `x | (ulong)(1 << n)` on a `ulong` sets
+  the whole upper half for `n = 31` and bit 8 for `n = 40`:
+  `O0108 not applied: mask computed at another width`.
+- A shifted constant other than one, `x | (2u << n)`:
+  `O0108 not applied: shifted constant is not 1`.
+- A tested field wider than one bit, `((x >> n) & 3) != 0`:
+  `O0108 not applied: field wider than one bit`.
+- A value or position that may trap or act:
+  `O0108 not applied: operand may trap or have effects`.
+- A constant mask, `x | 0x10`, which is already canonical, and
+  `(x & (1 << i)) == 1`, which holds only for `i = 0`: silent.
 
-## Switching it off
+## Verification and interaction
 
-`--disable-opt O0108`; on at `--opt default`, off at `--opt none`.
+[SingleBitRecognitionTests](../../Polypiler.Tests/Recognize/SingleBitRecognitionTests.cs)
+checks 16 spellings, signed and unsigned, at all four widths, on six values and
+fifteen positions each, including 32, 33, 64, 65, −1 and the extremes of `int`,
+against a definition computed with the BCL's shift operators. Every 8-bit
+spelling is checked for all 256 values at every position from −2 to 70. At 16,
+32 and 64 bits, every spelling compares 10,000 seeded value and position pairs
+(seed 108): 960,000 comparisons.
+[BitPositionTrapTests](../../Polypiler.Tests/Recognize/BitPositionTrapTests.cs)
+checks which positions make the operations total.
 
-## Interactions with other passes
+[Proof-adapter tests](../../Polypiler.Tests/Verification/Proofs/SmtRecognitionProverTests.cs)
+check the four definitions, a refuted shifted two and the refusal of an
+unmasked position. The [acceptance feature](../../tests/features/recognize/rec-bittest.feature)
+imports executable source, verifies proof reports, positions beyond the width,
+the counterexamples, disabling and timeout. The
+[prototype fixture tests](../../Polypiler.Tests/Recognize/RecognitionFixtureTests.cs)
+retain their C#/JavaScript differential checks and emission through every
+profile of both backends.
 
-Runs in the pass pipeline of `translate` (`Polypiler.Core.Optimize`), between the frontend and the
-backend, with the other rules in the order of their numbers, until a pass changes nothing or eight
-passes have run. O0101 runs on a counting loop before this rule could turn its bit test into `TestBit`.
+The optimizer visits expressions before their operands, taking the largest
+matched idiom first. Target cost selection remains a backend concern.
+`--opt none` and `--disable-opt O0108` disable matching, proof requests and
+reports.

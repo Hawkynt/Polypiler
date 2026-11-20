@@ -167,9 +167,24 @@ public static class IrShape {
     IrConvert conversion => conversion.Contract == IrConversion.Wrap && !conversion.Operand.Type.IsFloat,
     IrConditional => true,
     IrIntrinsic { Op: IrIntrinsicOp.ToInt32 or IrIntrinsicOp.ToUint32 } => true,
+    IrIntrinsic { Op: IrIntrinsicOp.TestBit or IrIntrinsicOp.SetBit or IrIntrinsicOp.ClearBit or IrIntrinsicOp.ToggleBit, Arguments: [{ Type.IsInteger: true } value, var position] }
+      => IsPosition(position, value.Type.Bits),
     IrIntrinsic intrinsic => intrinsic.Arguments.Count > 0 && intrinsic.Arguments[0].Type.IsInteger && _total.Contains(intrinsic.Op),
     _ => false
   };
+
+  /// <summary>
+  /// Whether a bit position is always within a width: a constant from 0 to <c>width - 1</c>, or an
+  /// integer masked with such a constant, whose result cannot exceed the mask. The single-bit operations
+  /// trap only on a position outside the width, so with such a position they are total.
+  /// </summary>
+  private static bool IsPosition(IrExpr position, int width) {
+    static bool Within(IrExpr expression, int width) => expression is IrConst { Type.IsInteger: true } constant
+      && IrOperators.Number(constant.Type, constant.Value) is var number && number >= 0 && number < width;
+
+    return Within(position, width)
+      || position is IrBinary { Op: IrBinaryOp.And, Type.IsInteger: true } and && (Within(and.Left, width) || Within(and.Right, width));
+  }
 
   /// <summary>The operations on integers that have a result for every operand.</summary>
   private static readonly HashSet<IrIntrinsicOp> _total = [

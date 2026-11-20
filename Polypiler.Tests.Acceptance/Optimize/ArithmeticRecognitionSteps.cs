@@ -12,7 +12,7 @@ using Reqnroll;
 namespace Polypiler.Tests.Acceptance.Optimize;
 
 /// <summary>Arithmetic recognition contracts on executable source imported into the current tree IR.</summary>
-[Binding, Scope(Feature = "Proved wrapping absolute value recognition"), Scope(Feature = "Proved minimum and maximum recognition"), Scope(Feature = "Proved signum recognition")]
+[Binding, Scope(Feature = "Proved wrapping absolute value recognition"), Scope(Feature = "Proved single-bit recognition"), Scope(Feature = "Proved minimum and maximum recognition"), Scope(Feature = "Proved signum recognition")]
 public sealed class ArithmeticRecognitionSteps {
 
   private IrModule _before = null!;
@@ -87,6 +87,26 @@ public sealed class ArithmeticRecognitionSteps {
     var mask = width == 64 ? ulong.MaxValue : (1UL << width) - 1;
     var actual = unchecked((ulong)Convert.ToInt64(after, CultureInfo.InvariantCulture)) & mask;
     Assert.That(actual, Is.EqualTo(ulong.Parse(output, NumberStyles.HexNumber, CultureInfo.InvariantCulture)));
+  }
+
+  /// <summary>Both versions give the stated truth value or bits for a value and a bit position.</summary>
+  [Then("^both arithmetic versions give (true|false|[0-9A-Fa-f]+) for ([0-9A-Fa-f]+) at bit ([0-9]+)$")]
+  public void Bit(string expected, string value, int position) {
+    var function = this._before.Functions.Single();
+    var bits = ulong.Parse(value, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+    object argument = function.Parameters[0].Type.Kind switch {
+      IrTypeKind.U8 => unchecked((byte)bits),
+      IrTypeKind.I32 => unchecked((int)bits),
+      IrTypeKind.U32 => unchecked((uint)bits),
+      _ => bits
+    };
+    var before = IrInterpreter.Call(this._before, function.Name, [argument, position]);
+    var after = IrInterpreter.Call(this._after.Module, function.Name, [argument, position]);
+    Assert.That(after, Is.EqualTo(before));
+    if (after is bool truth)
+      Assert.That(truth, Is.EqualTo(expected == "true"));
+    else
+      Assert.That(Convert.ToUInt64(after, CultureInfo.InvariantCulture), Is.EqualTo(ulong.Parse(expected, NumberStyles.HexNumber, CultureInfo.InvariantCulture)));
   }
 
   /// <summary>Both versions produce the specified bits for two operands of any integer kind.</summary>
