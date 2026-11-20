@@ -7,7 +7,7 @@ the page then describes what the code does rather than what is planned. The fami
 "Loop transformations" on are borrowed from PB-Compiler; the [catalog](pb-compiler-catalog.md)
 maps every one of its optimization documents to the page here that covers it.
 
-**31 of 294 implemented** - in the pass pipeline of `translate` (#1307), among the passes over the legalized module that optimise the helpers (#1353), specialise functions for the lambdas passed to them (#1360) and evaluate, merge and remove calls by the effect summaries of their functions (#1361), in legalization (#1358) and among the target passes of the backends (#1336). Each page records its implemented scope and verification. O0105 and O0106 now require SMT proofs of the actual tree-IR candidate; the total remains 31 because both already had prototype implementations.
+**32 of 294 implemented** - in the pass pipeline of `translate` (#1307), among the passes over the legalized module that optimise the helpers (#1353), specialise functions for the lambdas passed to them (#1360) and evaluate, merge and remove calls by the effect summaries of their functions (#1361), in legalization (#1358) and among the target passes of the backends (#1336). Each page records its implemented scope and verification. O0102, O0103, O0105, O0106, O0108, O0110, O0120, O0121, O0122 and O0125 require SMT proofs of the actual tree-IR candidate; they count once because all ten already had prototype implementations. O0126 (reciprocal division) is new and is accepted on an exact certificate rather than a solver run.
 
 ## General passes
 
@@ -84,7 +84,7 @@ maps every one of its optimization documents to the page here that covers it.
 - [x] [O0123](O0123-clamp-recognition.md) — Recognize clamp from nested minimum/maximum and compare-select chains (P2)
 - [ ] [O0124](O0124-xor-swap-recognition.md) — Recognize an exchange of two memory cells from the three-xor sequence (P3)
 - [x] [O0125](O0125-shift-add-multiply-recognition.md) — Recognize multiplication by a constant from shift-add and shift-subtract chains (P3)
-- [ ] [O0126](O0126-reciprocal-division-recognition.md) — Recognize division and remainder by a constant from multiply-high sequences (P3)
+- [x] [O0126](O0126-reciprocal-division-recognition.md) — Recognize division and remainder by a constant from multiply-high sequences (P3)
 - [x] [O0127](O0127-divmod-fusion.md) — Fuse a division and a remainder of the same operands into DivMod (P2)
 - [ ] [O0128](O0128-saturating-arithmetic-recognition.md) — Recognize saturating addition and subtraction from overflow-test and widen-clamp idioms (P3)
 - [ ] [O0129](O0129-average-recognition.md) — Recognize overflow-free average from and-xor-shift and widen-add-shift idioms (P3)

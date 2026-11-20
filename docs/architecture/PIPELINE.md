@@ -53,16 +53,55 @@ Stage 8 is built for the C# and the JavaScript backend of the prototype: each bu
 ## Semantic recognition is not mandatory rewriting
 
 O0105 bit reversal and O0106 byte swap use exact weighted-bit provenance as a
-structural check, then ask the host's `IRecognitionProver` to prove the actual
-tree expression and replacement equivalent. `translate` supplies
-`SmtRecognitionProver`, which encodes stable definitions, conversions, signed
-shifts, rotations and the unrolled values of pure counted loops for Z3. Only a
+structural check; O0108 checks single-bit test, set, clear and toggle with a
+shifted one; O0110 parity evaluates folds and nibble lookups as exclusive ors
+of atom bits; O0120 minimum and maximum checks compare-select, mask-select and
+subtract-sign forms; O0121 wrapping magnitude checks sign masks and signed
+compare-select forms, including promoted narrow arithmetic; O0122 signum
+evaluates comparison differences and selections for the three sign classes and
+checks the shift-or form. These rules ask the host's `IRecognitionProver` to
+prove the actual tree expression and replacement equivalent. `translate`
+supplies `SmtRecognitionProver`, which encodes stable definitions, conversions,
+signed shifts, rotations, comparisons (including equality), selections,
+truth-valued results, `Min`/`Max`, the single-bit operations and the unrolled
+values of pure counted loops for Z3. A single-bit operation is encoded only
+when its position is provably within the width (a constant inside it or a count
+masked to it), which is also when `IrShape` counts it as trap-free. Only a
 proved verdict permits replacement; timeout, unknown and unavailable proofs
-leave the candidate unchanged. `--explain-opt` includes proof classes and
-refusals. Library hosts enable these two rules with
+leave the candidate unchanged. A rule whose only open condition is a range —
+O0120's subtract-sign form, where `a - b` must not overflow — has the proof
+establish it from the actual conversions and reports a refutation as that
+condition (`subtraction may overflow`). `--explain-opt` includes proof classes and
+refusals. Library hosts enable these proof-dependent rules with
 `OptimizerOptions.Prover = new SmtRecognitionProver()`; recognition itself has no
 dependency on the verification module. `CreateObligation` exports the same
 obligation for independent exhaustive checks and evidence.
+
+O0126 reciprocal division asks no solver: a 32-bit division by a constant does
+not finish within the budget and a 64-bit high product would need 128 bits.
+It derives the divisor from the multiplier and the shift and checks an exact
+certificate in `BigInteger` arithmetic, which is the proof (`validated-rule`);
+its tests validate the rule exhaustively and with Z3 at 16 bits. It reports
+through `RuleContext.Certify`, which, like a proof, publishes the application
+only after the optimizer commits it.
+
+O0103 proves loops that end early the same way: it unrolls the bit-scanning
+loop symbolically into the chain of its passes' exit values (`c0 ? (c1 ? … : v1)
+: v0`) and asks the prover to equate the final counter and shifted variable with
+`TrailingZeroCount` or `LeadingZeroCount`, whose definitions test every bit
+position. A loop that does not end for zero is proved only under the non-zero
+fact a dominating `if (x == 0) return` or an enclosing `if (x != 0)` supplies.
+
+O0102 SWAR population count is recognition by proof: a structural gate (a final
+fold at the root and the `0x55…`, `0x33…`, `0x0F…` mask families) selects the
+candidate, and the proof against an independent bit-by-bit `PopCount` decides.
+A refuted proof is reported as `not equivalent to PopCount`.
+
+O0125 reads a wrapping shift-add or shift-subtract chain as a linear form `c · x`
+modulo `2^w` and proves it against `Mul(x, c)`. The adapter encodes a
+multiplication by a constant as the sum of the other operand shifted to the
+constant's set bits (or the negation of that sum for `-c`), derived from the
+constant alone: a bit-blasted 64-bit multiplier would take the solver seconds.
 
 Each solver query releases its native wrappers before closing the context. The
 pinned Z3 binding's array parser retains temporary AST wrappers until collection,

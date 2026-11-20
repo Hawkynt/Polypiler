@@ -1,0 +1,29 @@
+id: IR.udiv
+title: Unsigned divide
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#565"
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: >-
+  UDiv divides two unsigned integers, rounding toward zero. It MUST trap with divide-by-zero when the
+  divisor is 0. The prototype's structured IR (Polypiler.Core.IR) implements it as IrBinaryOp.Divide
+  on an unsigned type. The examples are of T = TYPES.u32.
+spec:
+  kind: operation
+  mnemonic: UDiv
+  category: arithmetic
+  typeParameters: [{name: T, constraint: integer}]
+  operands: [{name: left, type: T}, {name: right, type: T}]
+  result: {type: T}
+  flags: []
+  effects: [pure]
+  traps: [{when: "the divisor is 0", kind: divide-by-zero}]
+  stages: {from: IR.stage.source-semantic, to: IR.stage.legalized-target}
+  examples:
+    - {operands: ["0xFFFFFFFF", 10], result: 429496729}
+    - {operands: [9, 10], result: 0}
+    - {operands: [1, 0], trap: divide-by-zero}
