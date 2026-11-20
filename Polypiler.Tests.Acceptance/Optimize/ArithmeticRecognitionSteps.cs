@@ -12,7 +12,7 @@ using Reqnroll;
 namespace Polypiler.Tests.Acceptance.Optimize;
 
 /// <summary>Arithmetic recognition contracts on executable source imported into the current tree IR.</summary>
-[Binding, Scope(Feature = "Proved wrapping absolute value recognition"), Scope(Feature = "Proved parity recognition"), Scope(Feature = "Proved shift-add multiplication recognition"), Scope(Feature = "Proved single-bit recognition"), Scope(Feature = "Proved minimum and maximum recognition"), Scope(Feature = "Proved signum recognition")]
+[Binding, Scope(Feature = "Proved wrapping absolute value recognition"), Scope(Feature = "Proved SWAR population count recognition"), Scope(Feature = "Proved parity recognition"), Scope(Feature = "Proved shift-add multiplication recognition"), Scope(Feature = "Proved single-bit recognition"), Scope(Feature = "Proved minimum and maximum recognition"), Scope(Feature = "Proved signum recognition")]
 public sealed class ArithmeticRecognitionSteps {
 
   private IrModule _before = null!;
@@ -91,6 +91,22 @@ public sealed class ArithmeticRecognitionSteps {
     var mask = width == 64 ? ulong.MaxValue : (1UL << width) - 1;
     var actual = unchecked((ulong)Convert.ToInt64(after, CultureInfo.InvariantCulture)) & mask;
     Assert.That(actual, Is.EqualTo(ulong.Parse(output, NumberStyles.HexNumber, CultureInfo.InvariantCulture)));
+  }
+
+  /// <summary>Both versions give the stated count for one unsigned value.</summary>
+  [Then("^both popcount versions count ([0-9A-Fa-f]+) as ([0-9]+)$")]
+  public void Count(string value, int count) {
+    var function = this._before.Functions.Single();
+    var bits = ulong.Parse(value, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+    object argument = function.Parameters[0].Type.Kind switch {
+      IrTypeKind.U16 => (object)unchecked((ushort)bits),
+      IrTypeKind.U32 => (object)unchecked((uint)bits),
+      _ => (object)bits
+    };
+    var before = IrInterpreter.Call(this._before, function.Name, [argument]);
+    var after = IrInterpreter.Call(this._after.Module, function.Name, [argument]);
+    Assert.That(after, Is.EqualTo(before));
+    Assert.That(Convert.ToUInt64(after, CultureInfo.InvariantCulture), Is.EqualTo((ulong)count));
   }
 
   /// <summary>The committed rewrite is one multiplication by the stated coefficient, with its proof evidence.</summary>

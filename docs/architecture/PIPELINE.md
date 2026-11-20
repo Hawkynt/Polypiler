@@ -77,6 +77,11 @@ refusals. Library hosts enable these proof-dependent rules with
 dependency on the verification module. `CreateObligation` exports the same
 obligation for independent exhaustive checks and evidence.
 
+O0102 SWAR population count is recognition by proof: a structural gate (a final
+fold at the root and the `0x55…`, `0x33…`, `0x0F…` mask families) selects the
+candidate, and the proof against an independent bit-by-bit `PopCount` decides.
+A refuted proof is reported as `not equivalent to PopCount`.
+
 O0125 reads a wrapping shift-add or shift-subtract chain as a linear form `c · x`
 modulo `2^w` and proves it against `Mul(x, c)`. The adapter encodes a
 multiplication by a constant as the sum of the other operand shifted to the
