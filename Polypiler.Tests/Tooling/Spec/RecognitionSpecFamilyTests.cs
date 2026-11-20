@@ -121,7 +121,7 @@ public sealed class RecognitionSpecFamilyTests {
     Assert.That(seed.Select(document => (string)document.Body!["optimization"]!), Is.EquivalentTo(RuleTable.Default.Ids));
     foreach (var document in seed) {
       var page = File.ReadAllText(Path.Combine(_repository, (string)document.Body!["document"]!));
-      var proved = (string)document.Body!["optimization"]! is "O0105" or "O0106" or "O0121" or "O0122";
+      var proved = (string)document.Body!["optimization"]! is "O0105" or "O0106" or "O0120" or "O0121" or "O0122";
       Assert.That(page, Does.Contain(proved ? "<!-- status: implemented -->" : "<!-- status: implemented (prototype) -->"), document.Path);
       Assert.That(document.Meta!.Status, Is.EqualTo(proved ? "normative" : "draft"), document.Path);
       if (proved) {

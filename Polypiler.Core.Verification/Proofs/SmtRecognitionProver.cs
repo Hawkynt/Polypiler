@@ -49,7 +49,7 @@ public sealed class SmtRecognitionProver : IRecognitionProver {
       ProofResult.Proved => new RecognitionProof(true, SmtBitvectorProver.ProofClass),
       ProofResult.Inconclusive { Reason: SmtBitvectorProver.TimeoutReason } => new(false, "proof timeout"),
       ProofResult.Inconclusive => new(false, "proof unknown"),
-      ProofResult.Refuted => new(false, "not equivalent"),
+      ProofResult.Refuted => new(false, RuleContext.NotEquivalent),
       ProofResult.Unsupported unsupported => new(false, $"unsupported proof expression: {unsupported.Operation} ({unsupported.Detail})"),
       _ => new(false, "unsupported proof expression")
     };
@@ -113,6 +113,7 @@ public sealed class SmtRecognitionProver : IRecognitionProver {
         IrBinary { Left.Type.IsInteger: true } comparison when Predicate(comparison) is { } predicate => this.Compare(comparison.Left, comparison.Right, predicate),
         IrConditional choice => this.Emit("Select", choice, this.Value(choice.Condition), this.Value(choice.WhenTrue), this.Value(choice.WhenFalse)),
         IrIntrinsic { Op: IrIntrinsicOp.AbsWrap } absolute => this.Absolute(absolute),
+        IrIntrinsic { Op: IrIntrinsicOp.Min or IrIntrinsicOp.Max, Arguments: [var first, var second] } extreme => this.Extreme(extreme, first, second),
         IrIntrinsic { Op: IrIntrinsicOp.Sign } sign => this.Sign(sign),
         IrIntrinsic { Op: IrIntrinsicOp.BitReverse or IrIntrinsicOp.ByteSwap } intrinsic => this.Reverse(intrinsic),
         IrIntrinsic { Op: IrIntrinsicOp.RotateLeft or IrIntrinsicOp.RotateRight } rotate
@@ -186,6 +187,15 @@ public sealed class SmtRecognitionProver : IRecognitionProver {
       var negative = this.Emit("SLt", input, value, "0");
       var negated = this.Emit("Neg", input, value);
       return this.Emit("Select", absolute, negative, negated, value);
+    }
+
+    /// <summary>The smaller or larger operand by a comparison in the operands' signedness, independent of the matched forms.</summary>
+    private string Extreme(IrIntrinsic extreme, IrExpr first, IrExpr second) {
+      var a = this.Value(first);
+      var b = this.Value(second);
+      var predicate = (first.Type.IsSigned ? "S" : "U") + (extreme.Op == IrIntrinsicOp.Min ? "Lt" : "Gt");
+      var ordered = this.Emit(predicate, first, a, b);
+      return this.Emit("Select", extreme, ordered, a, b);
     }
 
     /// <summary>

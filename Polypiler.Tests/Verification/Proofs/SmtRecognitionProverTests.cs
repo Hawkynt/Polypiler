@@ -125,6 +125,37 @@ public sealed class SmtRecognitionProverTests {
     Assert.That(new SmtRecognitionProver().Prove("O0121", choice, _value, _context).Proved, Is.True);
   }
 
+  [TestCase(IrIntrinsicOp.Min, IrBinaryOp.Less, true)]
+  [TestCase(IrIntrinsicOp.Max, IrBinaryOp.Greater, true)]
+  [TestCase(IrIntrinsicOp.Min, IrBinaryOp.Greater, false)]
+  public void MinAndMax_AreTheSelectionsOfTheirComparison(IrIntrinsicOp op, IrBinaryOp comparison, bool equivalent) {
+    var y = new IrLocalRef(new IrLocal("y", IrType.I32));
+    var choice = new IrConditional(new IrBinary(comparison, _value, y), _value, y);
+    var extreme = new IrIntrinsic(op, IrType.I32, [_value, y]);
+    Assert.That(new SmtRecognitionProver().Prove("O0120", choice, extreme, _context).Proved, Is.EqualTo(equivalent));
+  }
+
+  [Test]
+  public void UnsignedMinimum_IsNotTheSignedMinimumOfTheSameBits() {
+    var a = new IrConvert(IrType.U32, _value);
+    var b = new IrConvert(IrType.U32, new IrLocalRef(new IrLocal("y", IrType.I32)));
+    var signed = new IrConvert(IrType.U32, new IrIntrinsic(IrIntrinsicOp.Min, IrType.I32, [new IrConvert(IrType.I32, a), new IrConvert(IrType.I32, b)]));
+    var unsigned = new IrIntrinsic(IrIntrinsicOp.Min, IrType.U32, [a, b]);
+    Assert.That(new SmtRecognitionProver().Prove("O0120", signed, unsigned, _context), Is.EqualTo(new RecognitionProof(false, RuleContext.NotEquivalent)));
+  }
+
+  [Test]
+  public void ARefutation_IsReportedAsTheRulesOpenCondition() {
+    var notes = new List<string>();
+    var context = new RuleContext(_context.Function, RuleTarget.Neutral) { Prover = new SmtRecognitionProver(), Note = notes.Add };
+    var negated = new IrUnary(IrUnaryOp.Negate, _value);
+    Assert.That(context.Confirm("O0120", _value, negated, "test", "subtraction may overflow"), Is.Null);
+    Assert.That(context.Confirm("O0120", _value, _value, "test", "subtraction may overflow"), Is.SameAs(_value));
+    var timed = new RuleContext(_context.Function, RuleTarget.Neutral) { Prover = new SmtRecognitionProver() { Budget = new(SolverTimeout: TimeSpan.Zero) }, Note = notes.Add };
+    Assert.That(timed.Confirm("O0120", _value, _value, "test", "subtraction may overflow"), Is.Null);
+    Assert.That(notes, Is.EqualTo(new[] { "O0120 not applied: subtraction may overflow", "O0120 not applied: proof timeout" }));
+  }
+
   [TestCase(8)]
   [TestCase(16)]
   [TestCase(32)]
