@@ -12,7 +12,7 @@ using Reqnroll;
 namespace Polypiler.Tests.Acceptance.Optimize;
 
 /// <summary>Arithmetic recognition contracts on executable source imported into the current tree IR.</summary>
-[Binding, Scope(Feature = "Proved wrapping absolute value recognition")]
+[Binding, Scope(Feature = "Proved wrapping absolute value recognition"), Scope(Feature = "Proved minimum and maximum recognition")]
 public sealed class ArithmeticRecognitionSteps {
 
   private IrModule _before = null!;
@@ -87,5 +87,33 @@ public sealed class ArithmeticRecognitionSteps {
     var mask = width == 64 ? ulong.MaxValue : (1UL << width) - 1;
     var actual = unchecked((ulong)Convert.ToInt64(after, CultureInfo.InvariantCulture)) & mask;
     Assert.That(actual, Is.EqualTo(ulong.Parse(output, NumberStyles.HexNumber, CultureInfo.InvariantCulture)));
+  }
+
+  /// <summary>Both versions produce the specified bits for two operands of any integer kind.</summary>
+  [Then("^both arithmetic versions map ([0-9A-Fa-f]+) and ([0-9A-Fa-f]+) to ([0-9A-Fa-f]+)$")]
+  public void Pair(string first, string second, string output) {
+    var function = this._before.Functions.Single();
+    object[] arguments = [Argument(function.Parameters[0].Type, first), Argument(function.Parameters[1].Type, second)];
+    var before = IrInterpreter.Call(this._before, function.Name, arguments);
+    var after = IrInterpreter.Call(this._after.Module, function.Name, arguments);
+    Assert.That(after, Is.EqualTo(before));
+    var width = function.ReturnType.Bits;
+    var mask = width == 64 ? ulong.MaxValue : (1UL << width) - 1;
+    var actual = (after is ulong unsigned ? unsigned : unchecked((ulong)Convert.ToInt64(after, CultureInfo.InvariantCulture))) & mask;
+    Assert.That(actual, Is.EqualTo(ulong.Parse(output, NumberStyles.HexNumber, CultureInfo.InvariantCulture)));
+  }
+
+  private static object Argument(IrType type, string text) {
+    var bits = ulong.Parse(text, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+    return type.Kind switch {
+      IrTypeKind.I8 => unchecked((sbyte)bits),
+      IrTypeKind.U8 => unchecked((byte)bits),
+      IrTypeKind.I16 => unchecked((short)bits),
+      IrTypeKind.U16 => unchecked((ushort)bits),
+      IrTypeKind.I32 => unchecked((int)bits),
+      IrTypeKind.U32 => unchecked((uint)bits),
+      IrTypeKind.I64 => unchecked((long)bits),
+      _ => bits
+    };
   }
 }
