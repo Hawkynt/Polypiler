@@ -89,7 +89,7 @@ public static class DifferentialComparer {
     return new(outcomes.Length, outcomes.Count(outcome => outcome.Passed), outcomes) { Policy = policy };
   }
 
-  private static VectorOutcome CompareOne(string name, byte[] reference, byte[] actual, ExactnessPolicy policy) {
+  internal static VectorOutcome CompareOne(string name, byte[] reference, byte[] actual, ExactnessPolicy policy) {
     var common = reference.AsSpan().CommonPrefixLength(actual);
     int? offset = common == reference.Length && common == actual.Length ? null : common;
     var outcome = new VectorOutcome(name, offset is null, offset, Hex.Format(reference), Hex.Format(actual), null);
