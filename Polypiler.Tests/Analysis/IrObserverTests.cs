@@ -65,7 +65,7 @@ public sealed class IrObserverTests {
   /// <summary>An observed call takes a module without globals, an observer and a budget of steps.</summary>
   [Test]
   public void ObservedCalls_CheckTheirArguments() {
-    var function = Function([X], new IrWhile(new IrConst(IrType.Bool, 1), Block()), new IrReturn(R(X)));
+    var function = Function([X], new IrWhile(new IrConst(IrType.Bool, 1), Block(new IrAssign(X, R(X)))), new IrReturn(R(X)));
     var recorder = new Recorder(_ => null);
     Assert.That(() => IrInterpreter.Call(Module(function), "f", [1u], recorder, 50), Throws.TypeOf<IrBudgetException>());
     Assert.That(() => IrInterpreter.Call(null!, "f", [], recorder), Throws.ArgumentNullException);
