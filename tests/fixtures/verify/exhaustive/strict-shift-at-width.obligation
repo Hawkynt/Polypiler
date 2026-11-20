@@ -1,0 +1,6 @@
+# Test design 12: n = 7 is compared, n = 8 makes the before side invalid and is excluded.
+rule: strict-shift-at-width
+inputs: x: u<w>, n: u<w>
+precondition: %p1 = UGe.u<w> %n, 7; %p2 = ULe.u<w> %n, 8; %p = And.bool %p1, %p2
+before: %r = Shl.u<w>[strict] %x, %n
+after: %r = Mul.u<w> %x, 128

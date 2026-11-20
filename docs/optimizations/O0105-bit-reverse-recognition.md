@@ -1,7 +1,7 @@
 # O0105 — Recognize bit reversal from swap cascades and shift loops
 
-<!-- status: implemented (prototype) -->
-> **Status: implemented (prototype).** The rule `O0105BitReverse` in `Polypiler.Core.Recognize` runs in the pass pipeline of `translate` ([#1307](https://github.com/Hawkynt/Polypiler/issues/1307)); the full target state stays tracked in [#557](https://github.com/Hawkynt/Polypiler/issues/557). Switched off with `--disable-opt O0105`.
+<!-- status: implemented -->
+> **Status: implemented with SMT proofs.** `O0105` runs in `translate` on the structured tree IR of ADR 0009. Disable it with `--disable-opt O0105`.
 
 ## What it does
 
@@ -68,11 +68,39 @@ public static uint F(uint x) {
 
 ## How it is proven
 
-The rule decides on the exact meaning of the IR, not on a likely one. Its fixtures `tests/fixtures/prototype/recognize/RecognizeBitReverse.cs` and `bitreverse.js` hold every listed pattern and the near misses below, each function marked with the applications it expects; `RecognitionFixtureTests` checks that the rule fires exactly there, that switching it off with `--disable-opt` keeps it from firing while the other rules still do, and that the IR interpreter computes the same on the IR before and after - result, kind of trap and the arrays a trap leaves behind - for every value of every 8- and 16-bit parameter, and for every combination of the edges plus 10 000 random tuples (seed 2026) of the wider ones. The optimized C# fixture is also compared with the C# compiler's build of the original, and every optimized fixture is written by every profile of both backends. What the full target state adds - SSA graph matching, SMT bit-vector proof obligations, range and known-bits facts (issue [#276](https://github.com/Hawkynt/Polypiler/issues/276)) - is not part of the prototype.
+Exact weighted-bit provenance first checks the permutation. The host-supplied
+`IRecognitionProver` then checks the actual candidate against the intrinsic;
+`translate` supplies `SmtRecognitionProver` and the pinned Z3 binding. Stable
+local definitions are expanded, integer conversions keep their extension or
+truncation, and shifts keep signedness and the tree IR's masked-count contract.
+The intrinsic is independently expanded by bit positions, without using the
+recognizer's weighted-bit implementation. Counted loops are unrolled before
+proof, and every live exit local and counter is preserved.
+
+Only `unsat` authorizes replacement. The budget is five seconds per obligation;
+unknown, timeout, unsupported expressions and a missing solver leave the
+candidate unchanged. Only proved obligations enter the bounded host-local
+cache. `--explain-opt` reports `smt-bitvector` or the refusal. Library callers
+must supply `OptimizerOptions.Prover`; no prover means no application of this
+rule. `SmtRecognitionProver.CreateObligation` exports the runtime obligation for
+independent verification.
+
+`PermutationRecognitionTests` covers all 870 cascade step orders across
+8, 16, 32 and 64 bits, the 40/41-instruction cascade boundary, proof failure and
+disable paths, and 10,000 random inputs plus boundaries at each wide width
+(seeds 105 for bit reversal and 106 for byte swap). The 8-bit bit-reversal
+obligation is also checked exhaustively over all 256 inputs. Executable source
+fixtures under `tests/fixtures/recognize/` are imported into tree IR by
+`rec-bitreverse.feature` and `rec-byteswap.feature`; the prototype fixtures
+continue to check equivalence and emission through every C# and JavaScript
+profile. All input orders are proved at their actual widths; there is no
+8-bit proof claimed for a byte permutation.
 
 ## When it must not fire
 
 - A cascade with a missing step, which swaps but does not reverse.
+- A swap cascade with more than `8 * log2(width)` distinct instructions, counting stable definitions and shared nodes once. Explicit bit-by-bit assemblies remain supported by exact provenance.
+- A failed, unknown, timed out or unavailable proof.
 - A loop of fewer passes than the width, or one that keeps bits of its old result (`r` a parameter
   shifted only 16 times).
 
@@ -84,4 +112,4 @@ The rule decides on the exact meaning of the IR, not on a likely one. Its fixtur
 
 Runs in the pass pipeline of `translate` (`Polypiler.Core.Optimize`), between the frontend and the
 backend, with the other rules in the order of their numbers, until a pass changes nothing or eight
-passes have run. Understands rotates and byte swaps that O0100 and O0106 produced inside a cascade.
+passes have run. Understands explicit rotates and byte swaps inside a cascade, including those produced by O0100 and O0106.

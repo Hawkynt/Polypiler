@@ -7,8 +7,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Polypiler.Core\Polypiler.Core.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.IR\Polypiler.Core.IR.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Recognize\Polypiler.Core.Recognize.csproj" />
     <PackageReference Include="YamlDotNet" Version="18.1.0" />
     <PackageReference Include="JsonSchema.Net" Version="8.0.5" />
+    <PackageReference Include="Microsoft.Z3" Version="4.11.2" />
   </ItemGroup>
 
   <!-- The runner's default limits are a repository file; the assembly carries the copy it was built with. -->
@@ -31,9 +34,19 @@
     <EmbeddedResource Include="..\spec\schemas\evidence.schema.json" LogicalName="Polypiler.Core.Verification.Evidence.evidence.schema.json" Link="Evidence\evidence.schema.json" />
   </ItemGroup>
 
+  <!-- The toolchain lock travels with the solver binding, which checks its own version against it. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\tooling\toolchains.lock" LogicalName="Polypiler.Core.Verification.Proofs.toolchains.lock" Link="Proofs\toolchains.lock" />
+  </ItemGroup>
+
   <!-- The schema of the gate records travels with the store that reads them. -->
   <ItemGroup>
     <EmbeddedResource Include="..\spec\schemas\gate-record.schema.json" LogicalName="Polypiler.Core.Verification.Gates.gate-record.schema.json" Link="Gates\gate-record.schema.json" />
+  </ItemGroup>
+
+  <!-- The schema of the capability report travels with the reader of docs/capabilities.json. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\spec\schemas\capabilities.schema.json" LogicalName="Polypiler.Core.Verification.Capabilities.capabilities.schema.json" Link="Capabilities\capabilities.schema.json" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,5 @@
+# Test design 16: a load is outside the model.
+rule: memory-load
+inputs: p: u<w>
+before: %r = Load.u<w> %p
+after: %r = Load.u<w> %p

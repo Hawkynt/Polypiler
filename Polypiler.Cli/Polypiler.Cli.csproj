@@ -51,6 +51,20 @@
     <ProjectReference Include="..\Polypiler.Tooling\Polypiler.Tooling.csproj" ReferenceOutputAssembly="false" Private="false" GlobalPropertiesToRemove="RuntimeIdentifier;SelfContained;PublishSingleFile;PublishTrimmed;PublishReadyToRun" />
   </ItemGroup>
 
+  <!-- The capability report of the commit travels with the executable; polypiler-tooling report
+       capabilities writes it from the gate records, and the build does not go on without it. -->
+  <PropertyGroup>
+    <CapabilityReportFile>$(MSBuildThisFileDirectory)..\docs\capabilities.json</CapabilityReportFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="$(CapabilityReportFile)" LogicalName="Polypiler.Cli.capabilities.json" Link="capabilities.json" />
+  </ItemGroup>
+
+  <Target Name="RequireCapabilityReport" BeforeTargets="BeforeBuild;AssignTargetPaths">
+    <Error Condition="!Exists('$(CapabilityReportFile)')" Text="docs/capabilities.json is missing; write it with 'polypiler-tooling report capabilities'." />
+  </Target>
+
   <Target Name="ResolveFloatImplementationsTool" DependsOnTargets="ResolveProjectReferences">
     <PropertyGroup>
       <FloatImplementationsFile>$(ProjectDir)$(IntermediateOutputPath)float-implementations.irm</FloatImplementationsFile>

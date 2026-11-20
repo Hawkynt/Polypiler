@@ -1,0 +1,5 @@
+# Test design 3: the signed variant, compared by bit pattern.
+rule: mul2-is-shl1-i8
+inputs: x: i<w>
+before: %r = Mul.i<w> %x, 2
+after: %r = Shl.i<w>[strict] %x, 1

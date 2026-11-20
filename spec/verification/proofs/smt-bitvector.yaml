@@ -1,0 +1,17 @@
+id: VERIFICATION.proof.smt-bitvector
+title: SMT bitvector equivalence on Z3
+version: 1
+status: draft
+owner: Hawkynt
+issue: VER-SMT
+tests: [Polypiler.Tests/Verification/Proofs/SmtBitvectorProverTests.cs]
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: proof
+  prover: smt
+  widths: [16, 32, 64]
+  solverTimeoutSeconds: 5
+  solver: microsoft-z3

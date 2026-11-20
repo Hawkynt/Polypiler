@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "fixture": "cli.verify.adler32-wrong",
+  "provenance": {
+    "kind": "published",
+    "source": "tests/fixtures/cli/verify/adler32.vectors.json",
+    "detail": "the abc vector of that file with its checksum raised by one to 024D0128 on purpose, so that a correct implementation fails it",
+    "generatedBy": "hand"
+  },
+  "exactness": { "mode": "exact" },
+  "export": "adler32",
+  "signature": { "parameters": [ { "name": "bytes", "type": "bytes", "mode": "in" } ], "result": "u32" },
+  "vectors": [
+    { "name": "abc", "input": { "hex": "03000000616263" }, "expected": { "hex": "28014d02" } }
+  ]
+}

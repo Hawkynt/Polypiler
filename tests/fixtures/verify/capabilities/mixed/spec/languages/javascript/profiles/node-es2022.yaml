@@ -1,0 +1,16 @@
+id: LANGUAGES.javascript.node-es2022
+title: "javascript profile node-es2022"
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#49"
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: profile
+  language: LANGUAGES.javascript
+  constructs:
+    - {construct: "integer arithmetic", family: scalars, state: supported}
