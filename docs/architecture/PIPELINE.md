@@ -53,13 +53,15 @@ Stage 8 is built for the C# and the JavaScript backend of the prototype: each bu
 ## Semantic recognition is not mandatory rewriting
 
 O0105 bit reversal and O0106 byte swap use exact weighted-bit provenance as a
-structural check, then ask the host's `IRecognitionProver` to prove the actual
-tree expression and replacement equivalent. `translate` supplies
-`SmtRecognitionProver`, which encodes stable definitions, conversions, signed
-shifts, rotations and the unrolled values of pure counted loops for Z3. Only a
+structural check; O0121 wrapping magnitude checks sign masks and signed
+compare-select forms, including promoted narrow arithmetic. These rules ask
+the host's `IRecognitionProver` to prove the actual tree expression and
+replacement equivalent. `translate` supplies `SmtRecognitionProver`, which
+encodes stable definitions, conversions, signed shifts, rotations, comparisons,
+selections and the unrolled values of pure counted loops for Z3. Only a
 proved verdict permits replacement; timeout, unknown and unavailable proofs
 leave the candidate unchanged. `--explain-opt` includes proof classes and
-refusals. Library hosts enable these two rules with
+refusals. Library hosts enable these proof-dependent rules with
 `OptimizerOptions.Prover = new SmtRecognitionProver()`; recognition itself has no
 dependency on the verification module. `CreateObligation` exports the same
 obligation for independent exhaustive checks and evidence.
