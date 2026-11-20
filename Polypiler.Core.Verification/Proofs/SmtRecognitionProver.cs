@@ -113,6 +113,7 @@ public sealed class SmtRecognitionProver : IRecognitionProver {
         IrBinary { Left.Type.IsInteger: true } comparison when Predicate(comparison) is { } predicate => this.Compare(comparison.Left, comparison.Right, predicate),
         IrConditional choice => this.Emit("Select", choice, this.Value(choice.Condition), this.Value(choice.WhenTrue), this.Value(choice.WhenFalse)),
         IrIntrinsic { Op: IrIntrinsicOp.AbsWrap } absolute => this.Absolute(absolute),
+        IrIntrinsic { Op: IrIntrinsicOp.Sign } sign => this.Sign(sign),
         IrIntrinsic { Op: IrIntrinsicOp.BitReverse or IrIntrinsicOp.ByteSwap } intrinsic => this.Reverse(intrinsic),
         IrIntrinsic { Op: IrIntrinsicOp.RotateLeft or IrIntrinsicOp.RotateRight } rotate
           => this.Emit(rotate.Op.ToString(), rotate, this.Value(rotate.Arguments[0]), this.Value(rotate.Arguments[1])),
@@ -166,6 +167,8 @@ public sealed class SmtRecognitionProver : IRecognitionProver {
         IrBinaryOp.LessOrEqual => sign + "Le",
         IrBinaryOp.Greater => sign + "Gt",
         IrBinaryOp.GreaterOrEqual => sign + "Ge",
+        IrBinaryOp.Equal => "Eq",
+        IrBinaryOp.NotEqual => "Ne",
         _ => null
       };
     }
@@ -183,6 +186,23 @@ public sealed class SmtRecognitionProver : IRecognitionProver {
       var negative = this.Emit("SLt", input, value, "0");
       var negated = this.Emit("Neg", input, value);
       return this.Emit("Select", absolute, negative, negated, value);
+    }
+
+    /// <summary>
+    /// The three-way sign by comparisons with zero, independent of the matched idioms; an unsigned value has no negative class.
+    /// The sign of a float may trap on NaN, so <see cref="Encode"/> refuses it before it gets here.
+    /// </summary>
+    private string Sign(IrIntrinsic sign) {
+      var input = sign.Arguments[0];
+      var value = this.Value(input);
+      var positive = this.Emit(input.Type.IsSigned ? "SGt" : "UGt", input, value, "0");
+      var rest = "0";
+      if (input.Type.IsSigned) {
+        var negative = this.Emit("SLt", input, value, "0");
+        rest = this.Emit("Select", sign, negative, "-1", "0");
+      }
+
+      return this.Emit("Select", sign, positive, "1", rest);
     }
 
     private string Binary(IrBinary binary, string op) {
