@@ -66,6 +66,12 @@ refusals. Library hosts enable these proof-dependent rules with
 dependency on the verification module. `CreateObligation` exports the same
 obligation for independent exhaustive checks and evidence.
 
+O0125 reads a wrapping shift-add or shift-subtract chain as a linear form `c · x`
+modulo `2^w` and proves it against `Mul(x, c)`. The adapter encodes a
+multiplication by a constant as the sum of the other operand shifted to the
+constant's set bits (or the negation of that sum for `-c`), derived from the
+constant alone: a bit-blasted 64-bit multiplier would take the solver seconds.
+
 Each solver query releases its native wrappers before closing the context. The
 pinned Z3 binding's array parser retains temporary AST wrappers until collection,
 so the integration loads assertions directly into the solver. The resource
