@@ -23,6 +23,7 @@ spec:
     algorithm: "the string of the code units units[start] to units[start + length - 1]; without start and length, of every element"
     source: "the .NET API reference of System.String(Char[], Int32, Int32)"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {}, inputs: [[97, 98, 99], 1, 2], outputs: [[98, 99]]}
     - {types: {}, inputs: [[97, 98, 99], 3, 0], outputs: [[]]}

@@ -25,6 +25,10 @@ public sealed class ExactOperationTests {
     [IrIntrinsicOp.FusedMultiplyAdd] = (a => Math.FusedMultiplyAdd(a[0], a[1], a[2]), a => MathF.FusedMultiplyAdd(a[0], a[1], a[2])),
     [IrIntrinsicOp.IeeeRemainder] = (a => Math.IEEERemainder(a[0], a[1]), a => MathF.IEEERemainder(a[0], a[1])),
     [IrIntrinsicOp.Reciprocal] = (a => 1 / a[0], a => 1 / a[0]),
+    // The products once rounded through the fused multiply-add with a -0 addend, which leaves the sign of a zero product as it is.
+    [IrIntrinsicOp.Square] = (a => Math.FusedMultiplyAdd(a[0], a[0], -0.0), a => MathF.FusedMultiplyAdd(a[0], a[0], -0.0f)),
+    [IrIntrinsicOp.Cube] = (a => Math.FusedMultiplyAdd(Math.FusedMultiplyAdd(a[0], a[0], -0.0), a[0], -0.0),
+      a => MathF.FusedMultiplyAdd(MathF.FusedMultiplyAdd(a[0], a[0], -0.0f), a[0], -0.0f)),
     [IrIntrinsicOp.CopySign] = (a => Math.CopySign(a[0], a[1]), a => MathF.CopySign(a[0], a[1])),
     [IrIntrinsicOp.MinMagnitude] = (a => Math.MinMagnitude(a[0], a[1]), a => MathF.MinMagnitude(a[0], a[1])),
     [IrIntrinsicOp.MaxMagnitude] = (a => Math.MaxMagnitude(a[0], a[1]), a => MathF.MaxMagnitude(a[0], a[1])),

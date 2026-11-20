@@ -22,6 +22,7 @@ spec:
     algorithm: "the square root of x, correctly rounded; -0 for -0, a NaN below -0"
     source: "IEEE Std 754-2019, section 5.4.1 (squareRoot)"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {F: TYPES.f64}, inputs: ["0x4010000000000000"], outputs: ["0x4000000000000000"]}
     - {types: {F: TYPES.f64}, inputs: ["0x4000000000000000"], outputs: ["0x3FF6A09E667F3BCD"]}

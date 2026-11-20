@@ -45,6 +45,8 @@ to `tests/fixtures/golden.lock.json`, and a regeneration is recorded with `integ
 | `FusedMultiplyAdd(x, y, z)` | `x * y + z`, rounded once | a product that underflows keeps its sign with a zero addend | musl `fma.c` / FreeBSD `s_fmaf.c` |
 | `IeeeRemainder(x, y)` | `x - n * y`, `n` nearest to `x / y`, ties to even (§5.3.1) | a zero result has the sign of `x`; `y = 0`, `x = ±∞`: NaN | musl `remquo.c`, `remquof.c` |
 | `Reciprocal(x)` | `1 / x`, rounded once | `1 / ±0 = ±∞` | division |
+| `Square(x)` | `x * x`, rounded once | `Square(-0) = +0`, `Square(±∞) = +∞` | multiplication |
+| `Cube(x)` | `(x * x) * x`, rounded twice in that order | `Cube(-0) = -0` | multiplication |
 
 ## Rounding
 

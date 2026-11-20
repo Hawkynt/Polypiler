@@ -19,7 +19,11 @@ internal static partial class CSharpIntegerRows {
       Count(IrIntrinsicOp.TrailingZeroCount, kind, "TrailingZeroCount", Width(kind) < 32 ? $"{Word(kind)} | 0x{1 << Width(kind):X}u" : Word(kind), ""),
       Count(IrIntrinsicOp.Log2, kind, "Log2", Word(kind), "")
     ]),
-    .. _all.Select(kind => Count(IrIntrinsicOp.Parity, kind, "PopCount", Word(kind), " & 1"))
+    .. _all.Select(kind => Count(IrIntrinsicOp.Parity, kind, "PopCount", Word(kind), " & 1")),
+    // The ones are the zeros of the complement: of a narrower type shifted to the top first, so that
+    // the bits above it, which the complement sets, are shifted out; at the bottom they stop the count.
+    .. _all.Select(kind => Count(IrIntrinsicOp.LeadingOneCount, kind, "LeadingZeroCount", Width(kind) < 32 ? $"~({Word(kind)} << {Digits(32 - Width(kind))})" : $"~{Word(kind)}", "")),
+    .. _all.Select(kind => Count(IrIntrinsicOp.TrailingOneCount, kind, "TrailingZeroCount", $"~{Word(kind)}", ""))
   ];
 
   private static CSharpCapability Count(IrIntrinsicOp op, IrTypeKind kind, string method, string argument, string correction)

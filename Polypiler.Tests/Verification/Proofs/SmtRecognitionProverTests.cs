@@ -124,4 +124,197 @@ public sealed class SmtRecognitionProverTests {
     var choice = new IrConditional(flag, _value, _value);
     Assert.That(new SmtRecognitionProver().Prove("O0121", choice, _value, _context).Proved, Is.True);
   }
+
+  [TestCase(IrIntrinsicOp.TrailingZeroCount)]
+  [TestCase(IrIntrinsicOp.LeadingZeroCount)]
+  public void ZeroCounts_AreTheWidthForZeroAndDifferFromEachOther(IrIntrinsicOp op) {
+    var x = new IrLocal("x", IrType.U32);
+    var value = new IrLocalRef(x);
+    var context = new RuleContext(new IrFunction("Z", true, IrType.I32, [x], [], new([new IrReturn(new IrConst(IrType.I32, 0))])), RuleTarget.Neutral);
+    var count = new IrIntrinsic(op, IrType.I32, [value]);
+    var other = new IrIntrinsic(op == IrIntrinsicOp.TrailingZeroCount ? IrIntrinsicOp.LeadingZeroCount : IrIntrinsicOp.TrailingZeroCount, IrType.I32, [value]);
+    var prover = new SmtRecognitionProver();
+    // For x = 0 both are 32; a zero test selecting 32 or the count leaves the count unchanged.
+    var guarded = new IrConditional(new IrBinary(IrBinaryOp.Equal, value, new IrConst(IrType.U32, 0)), new IrConst(IrType.I32, 32), count);
+    Assert.That(prover.Prove("O0103", guarded, count, context).Proved, Is.True);
+    Assert.That(prover.Prove("O0103", count, other, context), Is.EqualTo(new RecognitionProof(false, "not equivalent")));
+  }
+
+  [Test]
+  public void TheTrailingZeroCountOfOne_IsZero() {
+    var one = new IrIntrinsic(IrIntrinsicOp.TrailingZeroCount, IrType.I32, [new IrConst(IrType.U64, 1)]);
+    var top = new IrIntrinsic(IrIntrinsicOp.LeadingZeroCount, IrType.I32, [new IrConst(IrType.U64, 1)]);
+    Assert.That(new SmtRecognitionProver().Prove("O0103", one, new IrConst(IrType.I32, 0), _context).Proved, Is.True);
+    Assert.That(new SmtRecognitionProver().Prove("O0103", top, new IrConst(IrType.I32, 63), _context).Proved, Is.True);
+  }
+
+  [TestCase(8)]
+  [TestCase(16)]
+  [TestCase(32)]
+  [TestCase(64)]
+  public void PopCount_IsTheSumOfEveryBit(int width) {
+    var type = width switch { 8 => IrType.U8, 16 => IrType.U16, 32 => IrType.U32, _ => IrType.U64 };
+    var x = new IrLocal("x", type);
+    var value = new IrLocalRef(x);
+    var context = new RuleContext(new IrFunction("P", true, IrType.I32, [x], [], new([new IrReturn(new IrConst(IrType.I32, 0))])), RuleTarget.Neutral);
+    var count = new IrIntrinsic(IrIntrinsicOp.PopCount, IrType.I32, [value]);
+    var prover = new SmtRecognitionProver();
+    Assert.That(prover.Prove("O0102", count, count, context).Proved, Is.True);
+    // The lowest bit alone is a count only of the values below two.
+    var lowest = new IrConvert(IrType.I32, new IrBinary(IrBinaryOp.And, value, new IrConst(type, 1)));
+    Assert.That(prover.Prove("O0102", lowest, count, context), Is.EqualTo(new RecognitionProof(false, RuleContext.NotEquivalent)));
+  }
+
+  [Test]
+  public void PopCountOfAllOnes_IsTheWidth() {
+    var x = new IrLocal("x", IrType.U32);
+    var context = new RuleContext(new IrFunction("P", true, IrType.I32, [x], [], new([new IrReturn(new IrConst(IrType.I32, 0))])), RuleTarget.Neutral);
+    var ones = new IrBinary(IrBinaryOp.Or, new IrLocalRef(x), new IrConst(IrType.U32, uint.MaxValue));
+    var count = new IrIntrinsic(IrIntrinsicOp.PopCount, IrType.I32, [ones]);
+    Assert.That(new SmtRecognitionProver().Prove("O0102", count, new IrConst(IrType.I32, 32), context).Proved, Is.True);
+  }
+
+  [TestCase(8)]
+  [TestCase(16)]
+  [TestCase(32)]
+  public void ParityAndPopCount_AreDefinedBitByBit(int width) {
+    var type = width switch { 8 => IrType.U8, 16 => IrType.U16, 32 => IrType.U32, _ => IrType.U64 };
+    var x = new IrLocal("x", type);
+    var value = new IrLocalRef(x);
+    var context = new RuleContext(new IrFunction("P", true, IrType.I32, [x], [], new([new IrReturn(new IrConst(IrType.I32, 0))])), RuleTarget.Neutral);
+    var parity = new IrIntrinsic(IrIntrinsicOp.Parity, IrType.I32, [value]);
+    var masked = new IrBinary(IrBinaryOp.And, new IrIntrinsic(IrIntrinsicOp.PopCount, IrType.I32, [value]), new IrConst(IrType.I32, 1));
+    var prover = new SmtRecognitionProver();
+    Assert.That(prover.Prove("O0110", masked, parity, context), Is.EqualTo(new RecognitionProof(true, "smt-bitvector")));
+    var complement = new IrBinary(IrBinaryOp.Xor, parity, new IrConst(IrType.I32, 1));
+    Assert.That(prover.Prove("O0110", complement, parity, context), Is.EqualTo(new RecognitionProof(false, "not equivalent")));
+  }
+
+  [TestCase(10, true, true)]
+  [TestCase(10, false, true)]
+  [TestCase(-3, true, true)]
+  [TestCase(0, true, true)]
+  [TestCase(11, true, false)]
+  public void AProductByAConstant_IsItsSumOfShiftedCopies(long factor, bool constantOnTheRight, bool equivalent) {
+    IrExpr Shl(int count) => new IrBinary(IrBinaryOp.ShiftLeft, _value, new IrConst(IrType.I32, count));
+    IrExpr chain = factor switch {
+      -3 => new IrBinary(IrBinaryOp.Subtract, _value, Shl(2)),
+      0 => new IrBinary(IrBinaryOp.Subtract, _value, _value),
+      _ => new IrBinary(IrBinaryOp.Add, Shl(3), Shl(1))
+    };
+    var constant = new IrConst(IrType.I32, factor);
+    var product = constantOnTheRight ? new IrBinary(IrBinaryOp.Multiply, _value, constant) : new IrBinary(IrBinaryOp.Multiply, constant, _value);
+    Assert.That(new SmtRecognitionProver().Prove("O0125", chain, product, _context).Proved, Is.EqualTo(equivalent));
+  }
+
+  [Test]
+  public void AProductOfTwoValues_StaysAMultiplication() {
+    var y = new IrLocalRef(new IrLocal("y", IrType.I32));
+    var product = new IrBinary(IrBinaryOp.Multiply, _value, y);
+    Assert.That(new SmtRecognitionProver().Prove("O0125", product, new IrBinary(IrBinaryOp.Multiply, y, _value), _context).Proved, Is.True);
+  }
+
+  private static readonly IrExpr _position = new IrLocalRef(new IrLocal("n", IrType.I32));
+
+  private static IrExpr Masked(int width) => new IrBinary(IrBinaryOp.And, _position, new IrConst(IrType.I32, width - 1));
+
+  [TestCase(IrIntrinsicOp.SetBit, IrBinaryOp.Or)]
+  [TestCase(IrIntrinsicOp.ToggleBit, IrBinaryOp.Xor)]
+  public void SetAndToggle_AreTheirSingleBitDefinitions(IrIntrinsicOp op, IrBinaryOp combine) {
+    var single = new IrBinary(IrBinaryOp.ShiftLeft, new IrConst(IrType.I32, 1), _position);
+    var before = new IrBinary(combine, _value, single);
+    var after = new IrIntrinsic(op, IrType.I32, [_value, Masked(32)]);
+    Assert.That(new SmtRecognitionProver().Prove("O0108", before, after, _context).Proved, Is.True);
+    var wrong = new IrBinary(combine, _value, new IrBinary(IrBinaryOp.ShiftLeft, new IrConst(IrType.I32, 2), _position));
+    Assert.That(new SmtRecognitionProver().Prove("O0108", wrong, after, _context), Is.EqualTo(new RecognitionProof(false, "not equivalent")));
+  }
+
+  [Test]
+  public void ClearAndTest_AreTheirSingleBitDefinitions() {
+    var single = new IrBinary(IrBinaryOp.ShiftLeft, new IrConst(IrType.I32, 1), _position);
+    var cleared = new IrBinary(IrBinaryOp.And, _value, new IrUnary(IrUnaryOp.BitNot, single));
+    Assert.That(new SmtRecognitionProver().Prove("O0108", cleared, new IrIntrinsic(IrIntrinsicOp.ClearBit, IrType.I32, [_value, Masked(32)]), _context).Proved, Is.True);
+    var tested = new IrBinary(IrBinaryOp.NotEqual, new IrBinary(IrBinaryOp.And, _value, single), new IrConst(IrType.I32, 0));
+    var test = new IrIntrinsic(IrIntrinsicOp.TestBit, IrType.Bool, [_value, Masked(32)]);
+    var prover = new SmtRecognitionProver();
+    Assert.That(prover.Prove("O0108", tested, test, _context).Proved, Is.True);
+    Assert.That(prover.Prove("O0108", tested, new IrUnary(IrUnaryOp.LogicalNot, test), _context), Is.EqualTo(new RecognitionProof(false, "not equivalent")));
+  }
+
+  [Test]
+  public void AnOperationThatMayTrapOnItsPosition_IsNotEncoded() {
+    var unmasked = new IrIntrinsic(IrIntrinsicOp.TestBit, IrType.Bool, [_value, _position]);
+    Assert.That(new SmtRecognitionProver().Prove("O0108", unmasked, unmasked, _context), Is.EqualTo(new RecognitionProof(false, "unsupported proof expression")));
+  }
+
+  [TestCase(IrIntrinsicOp.Min, IrBinaryOp.Less, true)]
+  [TestCase(IrIntrinsicOp.Max, IrBinaryOp.Greater, true)]
+  [TestCase(IrIntrinsicOp.Min, IrBinaryOp.Greater, false)]
+  public void MinAndMax_AreTheSelectionsOfTheirComparison(IrIntrinsicOp op, IrBinaryOp comparison, bool equivalent) {
+    var y = new IrLocalRef(new IrLocal("y", IrType.I32));
+    var choice = new IrConditional(new IrBinary(comparison, _value, y), _value, y);
+    var extreme = new IrIntrinsic(op, IrType.I32, [_value, y]);
+    Assert.That(new SmtRecognitionProver().Prove("O0120", choice, extreme, _context).Proved, Is.EqualTo(equivalent));
+  }
+
+  [Test]
+  public void UnsignedMinimum_IsNotTheSignedMinimumOfTheSameBits() {
+    var a = new IrConvert(IrType.U32, _value);
+    var b = new IrConvert(IrType.U32, new IrLocalRef(new IrLocal("y", IrType.I32)));
+    var signed = new IrConvert(IrType.U32, new IrIntrinsic(IrIntrinsicOp.Min, IrType.I32, [new IrConvert(IrType.I32, a), new IrConvert(IrType.I32, b)]));
+    var unsigned = new IrIntrinsic(IrIntrinsicOp.Min, IrType.U32, [a, b]);
+    Assert.That(new SmtRecognitionProver().Prove("O0120", signed, unsigned, _context), Is.EqualTo(new RecognitionProof(false, RuleContext.NotEquivalent)));
+  }
+
+  [Test]
+  public void ARefutation_IsReportedAsTheRulesOpenCondition() {
+    var notes = new List<string>();
+    var context = new RuleContext(_context.Function, RuleTarget.Neutral) { Prover = new SmtRecognitionProver(), Note = notes.Add };
+    var negated = new IrUnary(IrUnaryOp.Negate, _value);
+    Assert.That(context.Confirm("O0120", _value, negated, "test", "subtraction may overflow"), Is.Null);
+    Assert.That(context.Confirm("O0120", _value, _value, "test", "subtraction may overflow"), Is.SameAs(_value));
+    var timed = new RuleContext(_context.Function, RuleTarget.Neutral) { Prover = new SmtRecognitionProver() { Budget = new(SolverTimeout: TimeSpan.Zero) }, Note = notes.Add };
+    Assert.That(timed.Confirm("O0120", _value, _value, "test", "subtraction may overflow"), Is.Null);
+    Assert.That(notes, Is.EqualTo(new[] { "O0120 not applied: subtraction may overflow", "O0120 not applied: proof timeout" }));
+  }
+
+  [TestCase(8)]
+  [TestCase(16)]
+  [TestCase(32)]
+  [TestCase(64)]
+  public void UnsignedSign_IsWhetherTheValueIsNonZero(int width) {
+    var type = width switch { 8 => IrType.U8, 16 => IrType.U16, 32 => IrType.U32, _ => IrType.U64 };
+    var x = new IrLocal("x", type);
+    var value = new IrLocalRef(x);
+    var context = new RuleContext(new IrFunction("U", true, IrType.I32, [x], [], new([new IrReturn(new IrConst(IrType.I32, 0))])), RuleTarget.Neutral);
+    var nonZero = new IrConditional(new IrBinary(IrBinaryOp.NotEqual, value, new IrConst(type, 0)), new IrConst(IrType.I32, 1), new IrConst(IrType.I32, 0));
+    var sign = new IrIntrinsic(IrIntrinsicOp.Sign, IrType.I32, [value]);
+    Assert.That(new SmtRecognitionProver().Prove("O0122", nonZero, sign, context), Is.EqualTo(new RecognitionProof(true, "smt-bitvector")));
+  }
+
+  [Test]
+  public void SignedSign_SeparatesTheThreeClasses() {
+    IrExpr Flag(IrBinaryOp op) => new IrConditional(new IrBinary(op, _value, new IrConst(IrType.I32, 0)), new IrConst(IrType.I32, 1), new IrConst(IrType.I32, 0));
+    var sign = new IrIntrinsic(IrIntrinsicOp.Sign, IrType.I32, [_value]);
+    var prover = new SmtRecognitionProver();
+    Assert.That(prover.Prove("O0122", new IrBinary(IrBinaryOp.Subtract, Flag(IrBinaryOp.Greater), Flag(IrBinaryOp.Less)), sign, _context).Proved, Is.True);
+    Assert.That(prover.Prove("O0122", new IrBinary(IrBinaryOp.Subtract, Flag(IrBinaryOp.Less), Flag(IrBinaryOp.Greater)), sign, _context),
+      Is.EqualTo(new RecognitionProof(false, "not equivalent")));
+    Assert.That(prover.Prove("O0122", Flag(IrBinaryOp.NotEqual), sign, _context), Is.EqualTo(new RecognitionProof(false, "not equivalent")));
+  }
+
+  [Test]
+  public void EqualityWithZero_IsTheComplementOfInequality() {
+    var zero = new IrConst(IrType.I32, 0);
+    var equal = new IrConditional(new IrBinary(IrBinaryOp.Equal, _value, zero), new IrConst(IrType.I32, 0), new IrConst(IrType.I32, 1));
+    var unequal = new IrConditional(new IrBinary(IrBinaryOp.NotEqual, _value, zero), new IrConst(IrType.I32, 1), new IrConst(IrType.I32, 0));
+    Assert.That(new SmtRecognitionProver().Prove("O0122", equal, unequal, _context).Proved, Is.True);
+  }
+
+  [Test]
+  public void TheSignOfAFloat_MayTrapAndIsNotProved() {
+    var d = new IrLocalRef(new IrLocal("d", IrType.F64));
+    var sign = new IrIntrinsic(IrIntrinsicOp.Sign, IrType.I32, [d]);
+    Assert.That(new SmtRecognitionProver().Prove("O0122", sign, sign, _context), Is.EqualTo(new RecognitionProof(false, "unsupported proof expression")));
+  }
 }

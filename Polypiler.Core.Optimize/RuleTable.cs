@@ -29,6 +29,7 @@ public sealed class RuleTable {
     new O0122Sign(),
     new O0123Clamp(),
     new O0125ShiftAddMultiply(),
+    new O0126ReciprocalDivision(),
     new O0127QuotientRemainder(),
     new O0140EndianLoad(),
     new O0141EndianStore()

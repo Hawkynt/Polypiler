@@ -101,7 +101,7 @@ internal static class Methods {
     Add(new("rotate_right", amount, MethodResult.Same));
     Add(new("swap_bytes", [], MethodResult.Same));
     Add(new("reverse_bits", [], MethodResult.Same));
-    foreach (var count in new[] { "count_ones", "count_zeros", "leading_zeros", "trailing_zeros" })
+    foreach (var count in new[] { "count_ones", "count_zeros", "leading_zeros", "trailing_zeros", "leading_ones", "trailing_ones" })
       Add(new(count, [], MethodResult.U32));
 
     return methods;

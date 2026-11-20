@@ -124,4 +124,30 @@ public static partial class HelperOperations {
   /// <param name="bits">The width, 8 or 16.</param>
   public static int Log2Narrow(uint value, int bits) => Log2Of32(value & ((1u << bits) - 1u));
 
+  /// <summary>The number of one bits above the highest zero bit of a <c>uint</c>: the leading zeros of its complement; 32 for all ones.</summary>
+  /// <param name="value">The pattern.</param>
+  public static int LeadingOneCount32(uint value) => LeadingZeroCount32(~value);
+
+  /// <summary>The number of one bits above the highest zero bit of a <c>ulong</c>; 64 for all ones.</summary>
+  /// <param name="value">The pattern.</param>
+  public static int LeadingOneCount64(ulong value) => LeadingZeroCount64(~value);
+
+  /// <summary>The number of one bits above the highest zero bit within the lowest <paramref name="bits"/> bits; the width for all ones.</summary>
+  /// <param name="value">The pattern, perhaps with bits above the width.</param>
+  /// <param name="bits">The width, 8 or 16.</param>
+  public static int LeadingOneCountNarrow(uint value, int bits) => LeadingZeroCountNarrow(~value, bits);
+
+  /// <summary>The number of one bits below the lowest zero bit of a <c>uint</c>: the trailing zeros of its complement; 32 for all ones.</summary>
+  /// <param name="value">The pattern.</param>
+  public static int TrailingOneCount32(uint value) => TrailingZeroCount32(~value);
+
+  /// <summary>The number of one bits below the lowest zero bit of a <c>ulong</c>; 64 for all ones.</summary>
+  /// <param name="value">The pattern.</param>
+  public static int TrailingOneCount64(ulong value) => TrailingZeroCount64(~value);
+
+  /// <summary>The number of one bits below the lowest zero bit within the lowest <paramref name="bits"/> bits; the width for all ones.</summary>
+  /// <param name="value">The pattern, perhaps with bits above the width.</param>
+  /// <param name="bits">The width, 8 or 16.</param>
+  public static int TrailingOneCountNarrow(uint value, int bits) => TrailingZeroCountNarrow(~value, bits);
+
 }

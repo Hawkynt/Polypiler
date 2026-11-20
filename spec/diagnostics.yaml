@@ -766,6 +766,69 @@ codes:
     area: ir
     owner: PROTOTYPE
     surfaces: "standard error of polypiler translate, as 'error PLY0101: <reason>' with the reason that the executable carries no float-implementations resource or the reason IrModuleFormat refuses its bytes, when a strict float translation needs the float-implementations module the executable embeds and it is absent or does not read back"
+  - code: PLY0250
+    severity: error
+    exit: InternalError
+    title: unknown intrinsic
+    message: "unknown intrinsic '<name>'"
+    rule: intrinsics.registry.known
+    area: types
+    owner: INT-REGISTRY
+    surfaces: "the diagnostics of IntrinsicVerifier.Verify for an IrIntrinsic node whose operation has no contract in the registry, and the IntrinsicRegistryException of a registry lookup or of IntrinsicCatalog for a contract that names no operation of the IR; invalid IR, a defect of Polypiler"
+  - code: PLY0251
+    severity: error
+    exit: InternalError
+    title: intrinsic contract unreadable
+    message: "intrinsic contract '<file>': <finding>"
+    rule: intrinsics.registry.contract
+    area: types
+    owner: INT-REGISTRY
+    surfaces: "the IntrinsicRegistryException of ContractLoader.Load when a document of spec/intrinsics/ has a property outside the schema; the finding names the property"
+  - code: PLY0252
+    severity: error
+    exit: InternalError
+    title: intrinsic operand not admitted
+    message: "intrinsic '<name>' does not admit <type> as <position>"
+    rule: intrinsics.registry.types
+    area: types
+    owner: INT-REGISTRY
+    surfaces: "the diagnostics of IntrinsicVerifier.Verify and IntrinsicContract.Check for a node with an operand, attribute or result of a type its contract does not admit, or with too few or too many operands"
+  - code: PLY0253
+    severity: error
+    exit: InternalError
+    title: intrinsic registered twice
+    message: "intrinsic '<name>' is registered twice"
+    rule: intrinsics.registry.unique
+    area: types
+    owner: INT-REGISTRY
+    surfaces: "the IntrinsicRegistryException of IntrinsicRegistryBuilder.Build when two contracts have one name; a defect found at start-up"
+  - code: PLY0254
+    severity: error
+    exit: InternalError
+    title: intrinsic without fallback
+    message: "intrinsic '<name>' has no fallback"
+    rule: intrinsics.registry.fallback
+    area: types
+    owner: INT-REGISTRY
+    surfaces: "the IntrinsicRegistryException of IntrinsicRegistryBuilder.Build for an intrinsic with neither a decomposition nor requiresRuntime: true; a defect found at start-up"
+  - code: PLY0255
+    severity: error
+    exit: InternalError
+    title: intrinsic attribute outside its range
+    message: "intrinsic '<name>': attribute '<attribute>' = <value> is outside [<low>, <high>]"
+    rule: intrinsics.registry.attribute
+    area: types
+    owner: INT-REGISTRY
+    surfaces: "the diagnostics of IntrinsicVerifier.Verify and IntrinsicContract.Check for a constant attribute operand outside the range its contract declares"
+  - code: PLY0256
+    severity: error
+    exit: InternalError
+    title: intrinsic lowers to itself
+    message: "intrinsic '<name>' lowers to itself through <path>"
+    rule: intrinsics.registry.acyclic
+    area: types
+    owner: INT-REGISTRY
+    surfaces: "the IntrinsicRegistryException of IntrinsicRegistryBuilder.Build when the lowersTo lists of the registered contracts form a cycle; the path lists the intrinsics, 'A -> B -> A'"
   - code: PLY0800
     severity: error
     exit: UnsupportedConstruct

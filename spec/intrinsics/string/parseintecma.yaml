@@ -22,6 +22,7 @@ spec:
     algorithm: "without the white space of ECMA-262 at the start, a sign, then the longest run of digits of the radix - 0 means 10, or 16 after 0x; 16 also drops a 0x; NaN without a digit or for a radix outside 2 to 36. The radices other than 2, 4, 8, 10, 16 and 32 are approximated as V8 does"
     source: "ECMA-262 2022 §19.2.5 (parseInt)"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {}, inputs: [[48, 120, 49, 65], 0], outputs: ["0x403A000000000000"]}
     - {types: {}, inputs: [[48, 120, 49, 65], 10], outputs: ["0x0000000000000000"]}

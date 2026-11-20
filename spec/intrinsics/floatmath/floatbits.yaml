@@ -23,6 +23,7 @@ spec:
     algorithm: "the IEEE 754 binary interchange encoding of x read as a two's complement integer of the same width"
     source: "IEEE Std 754-2019, section 3.4; .NET API reference, System.BitConverter.DoubleToInt64Bits"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {F: TYPES.f64, I: TYPES.i64}, inputs: ["0x3FF0000000000000"], outputs: [4607182418800017408]}
     - {types: {F: TYPES.f64, I: TYPES.i64}, inputs: ["0x8000000000000000"], outputs: [-9223372036854775808]}

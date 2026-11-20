@@ -15,6 +15,7 @@ internal static partial class CSharpIntegerRows {
   private static IEnumerable<CSharpCapability> BitFields => [
     .. _all.SelectMany(kind => (IEnumerable<CSharpCapability>)[
       Helped(IrIntrinsicOp.ExtractBits, kind),
+      Helped(IrIntrinsicOp.ExtractBitsSigned, kind),
       Helped(IrIntrinsicOp.InsertBits, kind),
       Helped(IrIntrinsicOp.TestBit, kind)
         .WithTotal(new CSharpForm(null, Template: $"((({{0}} >> {{1}}) & {One(kind)}) != 0)"), arguments => InWidth(arguments[1], kind)),

@@ -465,6 +465,8 @@ public static partial class IrVerifier {
             this.Require(false, unnamed);
           if (RegexOperations.Problem(intrinsic) is { } unmatched)
             this.Require(false, unmatched);
+          if (IntegerOperations.Problem(intrinsic) is { } outside)
+            this.Require(false, outside);
 
           this.Declared(intrinsic.Type);
 

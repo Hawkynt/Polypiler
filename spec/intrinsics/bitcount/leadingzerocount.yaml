@@ -28,3 +28,4 @@ spec:
     - {types: {T: TYPES.i32}, inputs: [-1], outputs: [0]}
     - {types: {T: TYPES.u8}, inputs: ["0x10"], outputs: [3]}
     - {types: {T: TYPES.u64}, inputs: ["0x00000000FFFFFFFF"], outputs: [32]}
+  facts: {resultRange: [0, 64]}

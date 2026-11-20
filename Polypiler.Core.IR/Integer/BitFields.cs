@@ -11,6 +11,8 @@ public static partial class IntegerOperations {
   private static IEnumerable<IntegerOperation> BitFields => [
     Same(IrIntrinsicOp.ExtractBits, _integers, type => [type, IrType.I32, IrType.I32],
       (_, types, arguments) => ExtractBits(types[0], Long(arguments, 0), Count(arguments, 1), Count(arguments, 2))),
+    Same(IrIntrinsicOp.ExtractBitsSigned, _integers, type => [type, IrType.I32, IrType.I32],
+      (_, types, arguments) => ExtractBitsSigned(types[0], Long(arguments, 0), Count(arguments, 1), Count(arguments, 2))),
     Same(IrIntrinsicOp.InsertBits, _integers, type => [type, type, IrType.I32, IrType.I32],
       (_, types, arguments) => InsertBits(types[0], Long(arguments, 0), Long(arguments, 1), Count(arguments, 2), Count(arguments, 3))),
     Fixed(IrIntrinsicOp.TestBit, IrType.Bool, _integers, type => [type, IrType.I32], (_, types, arguments) => TestBit(types[0], Long(arguments, 0), Count(arguments, 1))),
@@ -32,6 +34,28 @@ public static partial class IntegerOperations {
   public static long ExtractBits(IrType type, long value, int start, int length) {
     Field(type, start, length);
     return length == 0 ? 0 : Value(type, (Pattern(type, value) >> start) & Ones(length));
+  }
+
+  /// <summary>
+  /// The <paramref name="length"/> bits from bit <paramref name="start"/> on, moved to the bottom
+  /// and sign-extended from the top bit of the field: a field whose top bit is set has ones above it.
+  /// A length of 0 extracts 0. The field is cut out of the value first, so that it never reaches past
+  /// the width.
+  /// </summary>
+  /// <param name="type">An integer type.</param>
+  /// <param name="value">The value.</param>
+  /// <param name="start">The position of the lowest bit of the field.</param>
+  /// <param name="length">The number of bits of the field.</param>
+  /// <returns>The field as a signed number of <paramref name="length"/> bits, in the bits of the type.</returns>
+  /// <exception cref="IrTrapException">The field does not lie within the width: an invalid operation.</exception>
+  public static long ExtractBitsSigned(IrType type, long value, int start, int length) {
+    Field(type, start, length);
+    if (length == 0)
+      return 0;
+
+    var field = (Pattern(type, value) >> start) & Ones(length);
+    var negative = ((field >> (length - 1)) & 1) == 1;
+    return Value(type, negative ? field | ~Ones(length) : field);
   }
 
   /// <summary>

@@ -46,6 +46,8 @@ public static class IntegerLibrary {
     switch (intrinsic.Op) {
       case IrIntrinsicOp.RotateLeft or IrIntrinsicOp.RotateRight or IrIntrinsicOp.PopCount or IrIntrinsicOp.LeadingZeroCount or IrIntrinsicOp.TrailingZeroCount:
         return ByWidth(name);
+      case IrIntrinsicOp.LeadingOneCount or IrIntrinsicOp.TrailingOneCount:
+        return ByWidth(name);
       case IrIntrinsicOp.Log2:
         return wide ? Helper("Log2Of64", arguments) : bits == 32 ? Helper("Log2Of32", arguments) : Helper("Log2Narrow", [.. arguments, Int(bits)]);
       case IrIntrinsicOp.Parity:
@@ -55,6 +57,8 @@ public static class IntegerLibrary {
         return bits == 8 ? arguments[0] : Helper("ByteSwap" + bits, arguments);
       case IrIntrinsicOp.BitReverse:
         return ByWidth(name);
+      case IrIntrinsicOp.ReverseBitsInBytes:
+        return Helper(name + (wide ? "64" : "32"), arguments);
       case IrIntrinsicOp.IsPow2:
         return Signedness(name);
       case IrIntrinsicOp.RoundUpPow2:
@@ -90,14 +94,19 @@ public static class IntegerLibrary {
         return calls.Legalize(Narrowed(new IrBinary(op, new IrBinary(op, left, right), new IrConditional(arguments[2], One(left.Type), Zero(left.Type))), type));
       case IrIntrinsicOp.CarryOut or IrIntrinsicOp.BorrowOut:
         return wide ? Helper(name + "64", arguments) : null;
-      case IrIntrinsicOp.ExtractBits or IrIntrinsicOp.InsertBits or IrIntrinsicOp.TestBit or IrIntrinsicOp.SetBit or IrIntrinsicOp.ClearBit or IrIntrinsicOp.ToggleBit:
+      case IrIntrinsicOp.ExtractBits or IrIntrinsicOp.ExtractBitsSigned or IrIntrinsicOp.InsertBits or IrIntrinsicOp.TestBit or IrIntrinsicOp.SetBit or IrIntrinsicOp.ClearBit or IrIntrinsicOp.ToggleBit:
         return Sized(name);
       case IrIntrinsicOp.LowMask:
         return wide ? Helper("LowMask64", arguments) : Helper("LowMask32", [.. arguments, Int(bits)]);
       case IrIntrinsicOp.IsolateLowestSet or IrIntrinsicOp.ClearLowestSet or IrIntrinsicOp.MaskToLowestSet:
         return Helper(name + (wide ? "64" : "32"), arguments);
+      case IrIntrinsicOp.Nand or IrIntrinsicOp.Nor or IrIntrinsicOp.Xnor or IrIntrinsicOp.AndNot or IrIntrinsicOp.OrNot or IrIntrinsicOp.Implies
+        or IrIntrinsicOp.BitSelect or IrIntrinsicOp.Majority or IrIntrinsicOp.TernaryLogic:
+        return Helper(name + (wide ? "64" : "32"), arguments);
       case IrIntrinsicOp.SignExtend or IrIntrinsicOp.ZeroExtend:
         return wide ? Helper(name + "64", arguments) : Helper(name + "32", [.. arguments, Int(bits)]);
+      case IrIntrinsicOp.ISqrt:
+        return Helper(wide ? "ISqrt64" : "ISqrt32", arguments);
       case IrIntrinsicOp.LoadLittle or IrIntrinsicOp.LoadBig or IrIntrinsicOp.StoreLittle or IrIntrinsicOp.StoreBig when !arguments[0].Type.IsArray:
         // An access to a view is the view's own business.
         return null;
@@ -109,6 +118,10 @@ public static class IntegerLibrary {
         return wide
           ? Helper("Store64", [.. arguments, Truth(intrinsic.Op == IrIntrinsicOp.StoreLittle)])
           : Helper("Store32", [.. arguments, Int(bits / 8), Truth(intrinsic.Op == IrIntrinsicOp.StoreLittle)]);
+      case IrIntrinsicOp.ParallelBitExtract or IrIntrinsicOp.ParallelBitDeposit or IrIntrinsicOp.CrcUpdate:
+        return Sized(name);
+      case IrIntrinsicOp.ByteShuffle:
+        return Helper(name + bits, arguments);
       default:
         return null;
     }

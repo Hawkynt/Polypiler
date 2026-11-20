@@ -22,6 +22,7 @@ spec:
     algorithm: "StringToNumber: without the white space of ECMA-262 at both ends; empty is 0; 0x, 0o and 0b without a sign; a sign and Infinity or a decimal literal, correctly rounded; anything else NaN"
     source: "ECMA-262 2022 §7.1.4.1.1 (StringToNumber)"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {}, inputs: [[48, 120, 49, 48]], outputs: ["0x4030000000000000"]}
     - {types: {}, inputs: [[]], outputs: ["0x0000000000000000"]}

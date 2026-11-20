@@ -32,7 +32,8 @@ public sealed class IntegerCSharpTests {
     var unsigned = !kind.IsSigned;
     return @case.Op switch {
       IrIntrinsicOp.RotateLeft or IrIntrinsicOp.RotateRight => narrow ? "net8.0" : "netcoreapp3.1",
-      IrIntrinsicOp.PopCount or IrIntrinsicOp.LeadingZeroCount or IrIntrinsicOp.TrailingZeroCount or IrIntrinsicOp.Log2 or IrIntrinsicOp.Parity => "netcoreapp3.1",
+      IrIntrinsicOp.PopCount or IrIntrinsicOp.LeadingZeroCount or IrIntrinsicOp.TrailingZeroCount or IrIntrinsicOp.Log2 or IrIntrinsicOp.Parity
+        or IrIntrinsicOp.LeadingOneCount or IrIntrinsicOp.TrailingOneCount => "netcoreapp3.1",
       IrIntrinsicOp.ByteSwap or IrIntrinsicOp.LoadLittle or IrIntrinsicOp.LoadBig => "netstandard2.1",
       IrIntrinsicOp.IsPow2 or IrIntrinsicOp.RoundUpPow2 => "net8.0",
       IrIntrinsicOp.BigMul => unsigned ? "net10.0" : "net2.0",
@@ -40,6 +41,8 @@ public sealed class IntegerCSharpTests {
       IrIntrinsicOp.Min or IrIntrinsicOp.Max or IrIntrinsicOp.Abs or IrIntrinsicOp.Sign or IrIntrinsicOp.AddCarry or IrIntrinsicOp.SubBorrow => "net2.0",
       // The limbs are a shift and casts, which every profile writes.
       IrIntrinsicOp.HighWord or IrIntrinsicOp.JoinWords => "net2.0",
+      // The two-input Boolean functions are C#'s operators (#97).
+      IrIntrinsicOp.Nand or IrIntrinsicOp.Nor or IrIntrinsicOp.Xnor or IrIntrinsicOp.AndNot or IrIntrinsicOp.OrNot or IrIntrinsicOp.Implies => "net2.0",
       IrIntrinsicOp.AbsWrap => unsigned ? "net2.0" : "never",
       IrIntrinsicOp.CarryOut or IrIntrinsicOp.BorrowOut => width == 64 ? "never" : "net2.0",
       IrIntrinsicOp.SubOverflows => unsigned ? "net2.0" : "never",

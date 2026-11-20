@@ -22,6 +22,7 @@ spec:
     algorithm: "the string whose only code unit is unit"
     source: "ECMA-262 2022 §22.1.2.1 (String.fromCharCode); the .NET API reference of Char.ToString(Char)"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {}, inputs: [65], outputs: [[65]]}
     - {types: {}, inputs: [55296], outputs: [[55296]]}
