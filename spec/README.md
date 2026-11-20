@@ -168,7 +168,7 @@ follow once their tolerance documents exist.
 
 ## Family `ir`
 
-The IR operations, stages and version (PRD §4.1–§4.3, [ADR 0001](../docs/adr/0001-ir-stage-invariants.md)),
+The IR operations, stages and version (PRD §4.1–§4.3, [ADR 0001](../docs/adr/0001-ir-stage-invariants.md); a stage names a legality set per [ADR 0009](../docs/adr/0009-structured-tree-ir.md)),
 checked by [`schemas/ir.schema.json`](schemas/ir.schema.json) and `IrSpecFamily`. The body's `kind`
 selects the shape, and the path follows from it:
 
@@ -247,7 +247,7 @@ network built from a grammar must prove before it is recorded is
 `spec/recognition/O<4 digits>.yaml`, ID `RECOGNITION.O<4 digits>`: one recognition rule of the block
 `O0100`–`O0169`, or of the bit-permutation recovery block `O0200`–`O0229` (PRD §4.1, §4.5).
 [`schemas/recognition.schema.json`](schemas/recognition.schema.json) states the body: the `level` it
-matches at (`source-ast`, `typed-ssa`), the `pattern` (`before`, `bindings`), the `replacement`
+matches at (`source-ast`, `typed-tree`; `typed-ssa` remains for older work orders), the `pattern` (`before`, `bindings`), the `replacement`
 (`after`, and the `INTRINSICS.` or `IR.` documents it `introduces`), at least one each of
 `preconditions` `{id, text, fact}`, `proofObligations` `{id, class, widths, budgetSeconds?}` and
 `counterexamples` `{description, input, naive, correct}` — `naive` what the near-miss source computes,
@@ -288,7 +288,7 @@ there is no mode for an unguarded guess. `RecoverySpecFamily` adds the rules `la
 ## Family `rewrites`
 
 `spec/rewrites/O####.yaml`, ID `REWRITES.O####`: one semantics-preserving transformation of the blocks
-`O0001`–`O0099` and `O0230`–`O0299` — its `before` and `after` IR text, `predicates`, `proof` class,
+`O0001`–`O0099`, `O0230`–`O0299` and `O0380`–`O0396` — its `before` and `after` IR text, `predicates`, `proof` class,
 `floatingPoint` claims, `negativeFixtures`, `switch`, `optLevels`, `interactions` and optimization page
 ([`schemas/rewrites.schema.json`](schemas/rewrites.schema.json)). Recognition rules (`O0100`–`O0169`)
 are not rewrites of this family. Its rules, each `PLY0046`:
@@ -296,7 +296,7 @@ are not rewrites of this family. Its rules, each `PLY0046`:
 | Rule | What it refuses |
 | --- | --- |
 | `layout` | a path other than `rewrites/O####.yaml`, or an ID, `optimization` or `document` that does not follow from the file name; stops the other rules |
-| `id-in-block` | a number outside `O0001`–`O0099` and `O0230`–`O0299` |
+| `id-in-block` | a number outside `O0001`–`O0099`, `O0230`–`O0299` and `O0380`–`O0396` |
 | `no-unproven-reassociation` | `reassociates` or `contracts` without proof class `float-exactness` and a predicate with fact `float-exactness`; there is no waiver |
 | `float-flags-consistent` | `reassociates` or `contracts` while `touchesFloat` is false |
 | `interaction-acyclic` | a cycle of `interactions.after` over all documents, reported once at its smallest optimization |
@@ -305,6 +305,9 @@ are not rewrites of this family. Its rules, each `PLY0046`:
 
 Every optimization under `interactions` must have a document (`PLY0043`). The valid example and one
 fixture per rule and per required property live in `tests/fixtures/spec/rewrites/`.
+
+Proof class `structural` records a graph argument such as O0381's complete reachability census;
+it does not waive the `float-exactness` requirement for reassociation or contraction.
 
 ## Family `types`
 
@@ -353,13 +356,14 @@ native from ES2015). The fixtures are in `tests/fixtures/spec/targets/`.
 
 What a comparison of generated code with its oracle runs under (PRD §4.1, §7.2, §23), body schema
 [`schemas/verification.schema.json`](schemas/verification.schema.json). A document of kind `generator`,
-`tolerance` or `oracle` lives in `verification/<kind>s/<name>.yaml` with the ID
+`tolerance`, `oracle` or `proof` lives in `verification/<kind>s/<name>.yaml` with the ID
 `VERIFICATION.<kind>.<name>`.
 
 | Kind | Body |
 | --- | --- |
 | `generator` | `type` (a `TYPES.` ID) and `strategy`: `boundary` with the explicit `values` (quoted bit patterns `"0x…"` or decimal integers, unique), `uniform` and `bit-pattern` with `seed` (0 … 4294967295) and `count` (1 … 1000000), `corpus` with neither |
 | `tolerance` | `operation` (an `INTRINSICS.` or `IR.` ID), `mode` (`exact`, `ulp`, `relative`, `absolute`), `bound` (> 0, a whole number in `ulp` mode), `specialValues` (`bitwise`, `signed-zero` when absent, `class`): the modes and rules of [ADR 0005](../docs/adr/0005-floating-point-tolerance.md). The ID is the policy name vector files and manifests refer to |
+| `proof` | `prover` (`exhaustive` or `smt`, the prover that issues the proof class), `widths` (the widths a width-generic obligation is proved at, 1 … 64), `maxInputBits` (the default enumeration budget of an exhaustive proof, ≤ 62), `solverTimeoutSeconds` (a solver's default time per obligation), `solver` (the key of `tooling/toolchains.lock` that pins the solver). The ID is the proof class a rule names, `VERIFICATION.proof.exhaustive` for the classes `exhaustive-<n>bit` |
 | `oracle` | `implementation` (what produces the reference result: `node`, `published-vectors`, …), `toolchain` (a key of `tooling/toolchains.lock`, optional), `observes` (≥ 1 of `return-value`, `buffers`, `flags`, `registers`, `memory-writes`, `io`, `external-calls`, `traps`, `cycles`) |
 
 An operation without a tolerance document is compared `exact`; a tolerance document's bound is the one
@@ -376,6 +380,6 @@ raises `version`. The rules, each `PLY0046`:
 | `one-tolerance-per-operation` | a second tolerance document for an operation, reported on the later path |
 | `oracle-not-self` | an oracle whose `implementation` is `polypiler` |
 
-A generator's `type` and a tolerance's `operation` resolve or fail with `PLY0043`. The seed document is
-`verification/generators/u32-boundary.yaml`; tolerance documents arrive with the intrinsics they belong
+A generator's `type` and a tolerance's `operation` resolve or fail with `PLY0043`. The seed documents are
+`verification/generators/u32-boundary.yaml` and the proof classes `verification/proofs/exhaustive.yaml` and `verification/proofs/smt-bitvector.yaml`; tolerance documents arrive with the intrinsics they belong
 to. The fixtures live in `tests/fixtures/spec/verification/`.

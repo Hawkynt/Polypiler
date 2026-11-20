@@ -1,0 +1,6 @@
+# Test design 9: only x = 0xFF satisfies the precondition, where x + 1 wraps to 0.
+rule: single-input-satisfies
+inputs: x: u<w>
+precondition: %p = Eq.u<w> %x, 0xFF
+before: %r = Add.u<w> %x, 1
+after: %r = Xor.u<w> %x, %x

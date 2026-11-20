@@ -1,0 +1,15 @@
+id: LANGUAGES.csharp
+title: "C#"
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#49"
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: language
+  identifier: csharp
+  displayName: "C#"

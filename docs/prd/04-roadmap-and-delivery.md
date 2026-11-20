@@ -31,7 +31,7 @@ Original section numbering is retained.
 ### P1 — Typed PolyIR core + proof infrastructure
 
 **Tasks**
-- [ ] Implement immutable typed SSA core, basic blocks/phi, instruction/effect contracts, stage verifier, canonical serialization and source maps.
+- [ ] Implement immutable typed structured tree IR, per-function effect summaries, verifier, canonical serialization and source maps ([ADR 0009](../adr/0009-structured-tree-ir.md)).
 - [ ] Implement integer/float/boolean types, explicit signedness, shifts, overflow, conversions, exceptional values and target type layouts; register PB's MBF/Extended80 numeric oracles.
 - [ ] Implement memory regions, arrays, spans, slices, pointer provenance/address spaces, union/overlay, byte order and lifetimes.
 - [ ] Port/adapt PB-Compiler interval, known-bit, alignment/nullness analyses and add congruence/reduced product, demand bits, per-program-point facts and precise invalidation.
@@ -114,7 +114,7 @@ Original section numbering is retained.
 
 ```
 P0 specs/toolchains/corpus
-  ├── P1 SSA + verifier ──> analyses ──> canonical optimizers
+  ├── P1 tree IR + verifier ─> analyses ──> canonical optimizers
   ├── type registry ──────> numeric reference oracles
   └── test runner ────────> source/target differential matrix
 

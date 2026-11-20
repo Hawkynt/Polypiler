@@ -18,7 +18,7 @@ flowchart TB
   Decoder --> Semantic
   CodeLifter --> Semantic
   MachineLifter --> Semantic
-  Semantic --> IR["Typed SSA, memory, effects,<br/>iteration and object semantics"]
+  Semantic --> IR["Structured typed tree IR: memory,<br/>effect summaries, iteration and objects"]
   IR --> Facts["Range, type, shape and alias facts"]
   Facts --> Recover["Recover semantic operations"]
   Recover --> Transform["Specialize and optimize<br/>under proven preconditions"]
@@ -29,7 +29,7 @@ flowchart TB
   Verify --> Manifest["Manifest and precise support status"]
 ```
 
-These are **conceptual stages**, not necessarily separate serialized IR formats. Facts may flow back into earlier passes; iterative passes must converge or stop at a deterministic budget with conservative fallback. The [IR contracts](IR.md) define the representation boundaries and [ADR 0001](../adr/0001-ir-stage-invariants.md) the invariants of each IR stage; [semantic recovery](SEMANTIC-RECOVERY.md) explains recognition and proof obligations.
+These are **conceptual stages**, not necessarily separate serialized IR formats. Facts may flow back into earlier passes; iterative passes must converge or stop at a deterministic budget with conservative fallback. The [IR contracts](IR.md) define the representation boundaries and [ADR 0009](../adr/0009-structured-tree-ir.md) the tree IR and its legality checks; [semantic recovery](SEMANTIC-RECOVERY.md) explains recognition and proof obligations.
 
 ## Detailed phases
 
@@ -38,19 +38,39 @@ These are **conceptual stages**, not necessarily separate serialized IR formats.
 | 0. Input discovery | Files, requested entry symbols, target profile, dependency manifest | Pinned compilation units and import graph | Input identity, version, provenance |
 | 1. Parse/lift | Language syntax, bytecode, instructions, metadata | Structured source semantics and CFG | Dialect quirks, overflow, exception and order rules |
 | 2. Bind/normalize | Modules, names, types, calls, external symbols | Typed references and explicit semantic operations | Dynamic dispatch, overload choices, API identities |
-| 3. Construct IR | Bound code and memory model | SSA values, blocks, regions, effects, provenance | All observable state, control flow, traps |
-| 4. Analyze | SSA, interprocedural summaries, target facts | Ranges, known bits, shape, ownership, alias and effects | Soundness at each program point |
+| 3. Construct IR | Bound code and memory model | Typed tree of structured statements and expressions, effect summaries, provenance | All observable state, control flow, traps |
+| 4. Analyze | The tree (an SSA view derived where an analysis needs one), interprocedural summaries, target facts | Ranges, known bits, shape, ownership, alias and effects | Soundness at each program point |
 | 5. Recognize | Expressions, loops, library calls, mixed ASM | Canonical operations and proof obligations | Exact bit, floating-point and memory semantics |
 | 6. Optimize | Semantic operations and proven facts | Optimized IR, proof/decision log | Behavioral equivalence under selected contract |
 | 7. Legalize | Optimized IR and target capabilities | Target IR, type layouts, runtime closure, ABI adapters | Target instruction, runtime and FFI legality |
 | 8. Emit/package | Target IR and dependencies | A syntax tree of the target language, rewritten by the target passes and printed last ([backends](BACKENDS.md)); source/binary plus build and dependency manifest | Reproducibility and debug/provenance mapping |
 | 9. Verify | Source oracle, generated artifact, target toolchain | Passed/failed evidence and support tier | No false "verified" claims |
 
-Stage 7 is built for the helpers of the prototype ([#1353](https://github.com/Hawkynt/Polypiler/issues/1353)): legalization replaces every operation the profile has no native form of by the call of its helper from the one IR library and copies the helper into the module ([backends](BACKENDS.md#helpers-one-library-in-the-ir)). Between legalization and emission the passes over the legalized module run over the helpers and every function a helper was inlined into, round after round until nothing changes: [O0463](../optimizations/O0463-lambda-specialisation.md) specialisation of functions for the lambdas passed to them ([#1360](https://github.com/Hawkynt/Polypiler/issues/1360)) - a function value that stays in the function it is made in is lifted into a function of the module, and its callee copied with it bound -, [O0006](../optimizations/O0006-inlining.md) inlining under a size budget of the helpers, the lifted functions and the copies, [O0003](../optimizations/O0003-sccp.md) constant propagation, [O0001](../optimizations/O0001-constant-folding.md) constant folding, [O0002](../optimizations/O0002-partial-evaluation.md) compile-time evaluation of pure calls with constant arguments, [O0464](../optimizations/O0464-call-merging.md) merging of identical pure and read-only calls, [O0005](../optimizations/O0005-dead-code-elimination.md) dead-code removal and [O0023](../optimizations/O0023-loop-unrolling.md) full unrolling of short counted loops. Evaluation, merging and the removal of unused calls ask the effect summary of each function ([#1361](https://github.com/Hawkynt/Polypiler/issues/1361), `IrEffects`): what it reads and writes outside its own variables, whether it allocates, may trap and may run forever, computed bottom-up over the calls, recursion and loops without a proven bound counting as possibly endless and calls through function values as the worst case; evaluation and merging look at every function, as specialisation and inlining do.
+Stage 7 is built for the helpers of the prototype ([#1353](https://github.com/Hawkynt/Polypiler/issues/1353)): legalization replaces every operation the profile has no native form of by the call of its helper from the one IR library and copies the helper into the module ([backends](BACKENDS.md#helpers-one-library-in-the-ir)). Between legalization and emission the passes over the legalized module run over the helpers and every function a helper was inlined into, round after round until nothing changes: [O0463](../optimizations/O0463-lambda-specialisation.md) specialisation of functions for the lambdas passed to them ([#1360](https://github.com/Hawkynt/Polypiler/issues/1360)) - a function value that stays in the function it is made in is lifted into a function of the module, and its callee copied with it bound -, [O0006](../optimizations/O0006-inlining.md) inlining under a size budget of the helpers, the lifted functions and the copies, [O0003](../optimizations/O0003-sccp.md) constant propagation, [O0001](../optimizations/O0001-constant-folding.md) constant folding, [O0002](../optimizations/O0002-partial-evaluation.md) compile-time evaluation of pure calls with constant arguments, [O0464](../optimizations/O0464-call-merging.md) merging of identical pure and read-only calls, [O0005](../optimizations/O0005-dead-code-elimination.md) dead-code removal and [O0023](../optimizations/O0023-loop-unrolling.md) full unrolling of short counted loops and [O0381](../optimizations/O0381-dead-function-elimination.md) module-wide removal of unreachable functions together with [O0383](../optimizations/O0383-global-dead-code-elimination.md) removal of unreferenced globals. The atomic sweep follows code and data references from exports, frontend test entry points, initialization, retained type declarations and host/profile global roots; disabling O0381 keeps every function as a data root, and disabling O0383 keeps every global initializer as a function root. Initializers whose effects, modeled traps or termination are uncertain remain roots. Evaluation, merging and the removal of unused calls ask the effect summary of each function ([#1361](https://github.com/Hawkynt/Polypiler/issues/1361), `IrEffects`): what it reads and writes outside its own variables, whether it allocates, may trap and may run forever, computed bottom-up over the calls, recursion and loops without a proven bound counting as possibly endless and calls through function values as the worst case; evaluation and merging look at every function, as specialisation and inlining do.
 
 Stage 8 is built for the C# and the JavaScript backend of the prototype: each builds a typed syntax tree of its language from the IR, the capability table contributing tree fragments, runs the target passes (`O0500` helper inlining, `O0501` unused declaration removal) between building and printing, and only its printer makes text. `--opt`, `--disable-opt` and `--explain-opt` govern the passes over the legalized module and the target passes as they govern the IR rules. See [backends](BACKENDS.md).
 
 ## Semantic recognition is not mandatory rewriting
+
+O0105 bit reversal and O0106 byte swap use exact weighted-bit provenance as a
+structural check; O0121 wrapping magnitude checks sign masks and signed
+compare-select forms, including promoted narrow arithmetic. These rules ask
+the host's `IRecognitionProver` to prove the actual tree expression and
+replacement equivalent. `translate` supplies `SmtRecognitionProver`, which
+encodes stable definitions, conversions, signed shifts, rotations, comparisons,
+selections and the unrolled values of pure counted loops for Z3. Only a
+proved verdict permits replacement; timeout, unknown and unavailable proofs
+leave the candidate unchanged. `--explain-opt` includes proof classes and
+refusals. Library hosts enable these proof-dependent rules with
+`OptimizerOptions.Prover = new SmtRecognitionProver()`; recognition itself has no
+dependency on the verification module. `CreateObligation` exports the same
+obligation for independent exhaustive checks and evidence.
+
+Each solver query releases its native wrappers before closing the context. The
+pinned Z3 binding's array parser retains temporary AST wrappers until collection,
+so the integration loads assertions directly into the solver. The resource
+regression runs repeated satisfiable and unsatisfiable queries in an isolated
+process without managed collection, then forces finalization to check cleanup.
 
 A pattern such as shifts/adds implementing multiplication may be recognized as a multiplication *candidate*. The optimizer may retain the original shift/add form when it is faster on 6502 or when the proof does not hold for the source's overflow and width behavior. Recognizing a permutation or a memcpy-like loop similarly does not authorize changing ordering or hardware effects.
 

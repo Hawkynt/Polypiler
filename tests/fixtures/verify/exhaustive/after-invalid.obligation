@@ -1,0 +1,5 @@
+# Test design 13: the after side shifts strictly by an amount the before side masks; invalid first at n = 8.
+rule: after-invalid
+inputs: x: u<w>, n: u<w>
+before: %m = And.u<w> %n, 7; %r = Shl.u<w>[strict] %x, %m
+after: %r = Shl.u<w>[strict] %x, %n

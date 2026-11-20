@@ -35,7 +35,10 @@ jobs:
       coverage: false
 
   # The documents generated from the specifications must match them: the error catalogue docs/errors
-  # is what spec/diagnostics.yaml and the notes of docs/errors/notes give (PLY0091 otherwise).
+  # is what spec/diagnostics.yaml and the notes of docs/errors/notes give (PLY0091 otherwise), and the
+  # capability report docs/capabilities.{json,md} claims no pair above its gate records (PLY0061) and
+  # none below them (PLY0091). No job publishes gate records to this one yet, so the gate directory is
+  # created empty and every committed cell must read planned; a missing directory would be an error.
   generated-docs:
     name: generated documents
     runs-on: ubuntu-latest
@@ -49,6 +52,10 @@ jobs:
           dotnet-version: '10.0.x'
       - name: report errors --check
         run: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -- report errors --check
+      - name: report capabilities --check
+        run: |
+          mkdir -p artifacts/gates
+          time dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build -- report capabilities --gates artifacts/gates --check
 
   # The fence around the LGPL compiler: no GPL-derived, reference-only or denied code in a Polypiler.*
   # folder, and every provenance-notice entry there names its origin and licence (PLY0024, PLY0029).

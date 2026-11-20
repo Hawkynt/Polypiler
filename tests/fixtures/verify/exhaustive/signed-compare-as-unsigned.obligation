@@ -1,0 +1,5 @@
+# Known-false identity: a signed comparison with 0 is not an unsigned one; wrong first at x = 0x80.
+rule: signed-compare-as-unsigned
+inputs: x: u<w>
+before: %r = SLt.u<w> %x, 0
+after: %r = ULt.u<w> %x, 0

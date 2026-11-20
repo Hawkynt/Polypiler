@@ -7,7 +7,7 @@ categories:
   - { name: Slow, job: layer-core, step: test }
   - { name: EndToEnd, job: layer-core, step: test }
   - { name: OsIntegration, job: layer-core, step: test }
-  - { name: ExternalInterop, job: layer-core, step: test, pending: CLI-VERIFY }
+  - { name: ExternalInterop, job: layer-core, step: test }
   - { name: PolyglotInterop, job: layer-core, step: test, pending: CAT-TESTS }
   - { name: Performance, job: layer-core, step: test }
   - { name: IrVerifier, job: layer-core, step: ir-verifier, pending: IR-VERIFIER }

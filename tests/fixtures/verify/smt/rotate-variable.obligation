@@ -1,0 +1,6 @@
+# Test design 2: a variable rotation from strict shifts under 1 <= n <= w - 1.
+rule: rotate-variable
+inputs: x: u<w>, n: u<w>
+precondition: %p1 = UGe.u<w> %n, 1; %p2 = ULt.u<w> %n, <w>; %p = And.bool %p1, %p2
+before: %a = Shl.u<w>[strict] %x, %n; %s = Sub.u<w> <w>, %n; %b = LShr.u<w>[strict] %x, %s; %r = Or.u<w> %a, %b
+after: %r = RotateLeft.u<w> %x, %n

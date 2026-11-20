@@ -104,7 +104,7 @@ public sealed class VerificationSpecFamilyTests {
       Is.EqualTo(File.ReadAllText(RepositoryFile($"{Fixtures}/valid/verification/generators/u32-boundary.yaml"))));
     Assert.That(File.ReadAllText(RepositoryFile($"{Fixtures}/valid/types/integer/u32.yaml")), Is.EqualTo(File.ReadAllText(RepositoryFile("spec/types/integer/u32.yaml"))));
     var result = new SpecValidator(SpecFamilies.All).Run(SpecTree.Load(RepositoryFile("spec"), PrototypeFixture.RepositoryRoot), Family);
-    Assert.That((result.Documents, result.Diagnostics.Count), Is.EqualTo((1, 0)));
+    Assert.That((result.Documents, result.Diagnostics.Count), Is.EqualTo((3, 0)));
   }
 
   [Test]
@@ -118,10 +118,11 @@ public sealed class VerificationSpecFamilyTests {
   [Test]
   public void KindsFixtureTree_HasNoErrors() {
     var result = new SpecValidator(SpecFamilies.All).Run(SpecTree.Load(RepositoryFile($"{Fixtures}/kinds"), PrototypeFixture.RepositoryRoot), Family);
-    Assert.That((result.Documents, result.Diagnostics.Count), Is.EqualTo((11, 0)));
+    Assert.That((result.Documents, result.Diagnostics.Count), Is.EqualTo((13, 0)));
   }
 
-  [TestCase("kind", 3)]
+  [TestCase("kind", 4)]
+  [TestCase("prover", 2)]
   [TestCase("strategy", 4)]
   [TestCase("mode", 4)]
   [TestCase("specialValues", 3)]
@@ -376,6 +377,8 @@ public sealed class VerificationSpecFamilyTests {
   [TestCase("mode", "/spec")]
   [TestCase("implementation", "/spec")]
   [TestCase("observes", "/spec")]
+  [TestCase("prover", "/spec")]
+  [TestCase("widths", "/spec")]
   public void MissingRequiredProperty_IsASchemaViolationAtItsParent(string property, string pointer) {
     var text = File.ReadAllText(RepositoryFile($"{Fixtures}/invalid/missing-{property}.yaml"));
     using var repository = Repository();
@@ -390,7 +393,7 @@ public sealed class VerificationSpecFamilyTests {
       .Concat(schema.RootElement.GetProperty("allOf").EnumerateArray().SelectMany(branch => branch.GetProperty("then").GetProperty("required").EnumerateArray()))
       .Select(value => value.GetString()!).ToArray();
     var fixtures = Directory.GetFiles(RepositoryFile($"{Fixtures}/invalid"), "missing-*.yaml").Select(file => Path.GetFileNameWithoutExtension(file)["missing-".Length..]).ToArray();
-    Assert.That(fixtures, Is.EquivalentTo(required).And.Length.EqualTo(7));
+    Assert.That(fixtures, Is.EquivalentTo(required).And.Length.EqualTo(9));
   }
 
   // Row 20: a file outside the documented folders, and an ID that does not follow from the path.

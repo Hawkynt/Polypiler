@@ -13,6 +13,9 @@
 schema: 1
 
 notices:
+  - path: Polypiler.Core.Optimize/THIRD_PARTY_NOTICES.md
+    components:
+      - { name: 'PB-Compiler 0d73acbea185a2597357d53f7ce9acb44758ba76 (GlobalDce)', licence: LGPL-3.0-or-later }
   - path: Polypiler.Cli/THIRD_PARTY_NOTICES.md
     components:
       - { name: 'System.CommandLine 2.0.15', licence: MIT }
@@ -76,6 +79,9 @@ notices:
     components:
       # A public-domain dedication followed by the permission and disclaimer of 0BSD, word for word.
       - { name: 'splitmix64.c (Sebastiano Vigna, 2015)', licence: 0BSD }
+  - path: Polypiler.Core.Verification/Proofs/THIRD-PARTY-NOTICE.Z3.txt
+    components:
+      - { name: 'Z3 (Microsoft.Z3 4.11.2, Z3Prover/z3 8e6f17ebd011a352b3e67fcec03dcd4378a1472c)', licence: MIT }
   - path: tests/fixtures/bench/cipher/THIRD-PARTY-NOTICE.Cipher.txt
     components:
       - { name: 'Cipher checksums (Hawkynt/Hawkynt.github.io b3a8a8e92cbca83475986391c3cac56f0b185d29)', licence: LGPL-3.0-or-later }
@@ -101,6 +107,7 @@ packages:
   - { id: JsonSchema.Net, version: 8.0.5, licence: MIT }
   - { id: Microsoft.CodeAnalysis.CSharp, version: 5.3.0, licence: MIT }
   - { id: Microsoft.NET.Test.Sdk, version: 17.14.0, licence: MIT }
+  - { id: Microsoft.Z3, version: 4.11.2, licence: MIT }
   - { id: NUnit, version: 4.3.2, licence: MIT }
   - { id: NUnit.Analyzers, version: 4.7.0, licence: MIT }
   - { id: NUnit3TestAdapter, version: 5.0.0, licence: MIT }

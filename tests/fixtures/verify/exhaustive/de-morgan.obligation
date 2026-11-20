@@ -1,0 +1,5 @@
+# Known-true identity: ~(a & b) = ~a | ~b (Hacker's Delight 2-1).
+rule: de-morgan
+inputs: a: u<w>, b: u<w>
+before: %c = And.u<w> %a, %b; %r = Not.u<w> %c
+after: %na = Not.u<w> %a; %nb = Not.u<w> %b; %r = Or.u<w> %na, %nb

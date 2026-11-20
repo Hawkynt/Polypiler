@@ -1,0 +1,5 @@
+# Scenario 4, test design 9: run with a budget of 0 s, which asks the solver nothing.
+rule: mul-commutes-u64
+inputs: a: u64, b: u64
+before: %r = Mul.u64 %a, %b
+after: %r = Mul.u64 %b, %a

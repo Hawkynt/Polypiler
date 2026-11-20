@@ -323,12 +323,17 @@ public sealed partial class TranslateCommand : ICliCommand {
     var result = Optimizer.Run(specialized.Module, new OptimizerOptions {
       Level = LevelOf(options)!.Value,
       Disabled = disabled,
-      Target = backend.Target
+      Target = backend.Target,
+      Prover = new Polypiler.Core.Verification.Proofs.SmtRecognitionProver()
     });
     IReadOnlyList<RuleApplication> applications = [.. specialized.Applications, .. result.Applications];
-    if (options.ContainsKey(ExplainOpt))
+    if (options.ContainsKey(ExplainOpt)) {
       foreach (var application in applications)
         context.Note($"{file}: opt {application}");
+
+      foreach (var note in result.Notes)
+        context.Note($"{file}: opt {note}");
+    }
 
     return (result.Module, applications);
   }
@@ -383,6 +388,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     // The helpers legalization bound into the module are optimised with the code that calls them.
     var passes = IrPassPipeline.Default.Run(module, new OptimizerOptions {
       Level = LevelOf(options) ?? OptimizationLevel.Default,
+      Roots = context.Layout?.Tests.ToHashSet(StringComparer.Ordinal) ?? [],
       Disabled = options.TryGetValue(DisableOpt, out var disabled) ? disabled.Split(',').ToHashSet() : []
     });
     module = passes.Module;

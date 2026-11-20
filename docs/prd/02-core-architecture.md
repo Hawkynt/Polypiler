@@ -42,7 +42,7 @@ Frontend parse/bind OR decode/tokenize/lift machine & stack instructions
   -> Machine/Bytecode Effects IR (registers, flags, stack, memory, traps; when applicable)
   -> Source Semantic IR (full source contracts)
   -> Recognized IR (patterns + high-level operations)
-  -> Typed SSA / Value IR (constants, ranges, known bits, congruences)
+  -> Typed Value IR (constants, ranges, known bits, congruences)
   -> Memory + Iteration IR (regions, alias/escape, index domains, shape/stride)
   -> Specialized IR (dedynamicization, narrowed storage, guarded versions)
   -> Representation IR (pointer/slice/union/vector layout and physical decisions)
@@ -51,12 +51,12 @@ Frontend parse/bind OR decode/tokenize/lift machine & stack instructions
   -> Target source/assembly/bytecode/machine-code + tests + manifest
 ```
 
-Layers are **logical**; implementation may share typed SSA nodes with analysis properties. Analyses must invalidate precisely and rerun to a controlled fixed point; use deterministic pass scheduling and optimization budgets. Preserve source locations, dialect provenance and semantic contracts through all stages.
+Layers are **logical**: one structured typed tree carries a module through all of them, and a layer is a set of constructs and legality checks, not a dialect ([ADR 0009](../adr/0009-structured-tree-ir.md)). Analyses key their facts by tree node or program point and may derive an SSA view where one helps. Analyses must invalidate precisely and rerun to a controlled fixed point; use deterministic pass scheduling and optimization budgets. Preserve source locations, dialect provenance and semantic contracts through all stages.
 
 <a id="s4-3"></a>
 ### 4.3 Minimum mandatory core IR
 
-Values/constants; arbitrary-fixed-width integers, signed/unsigned interpretation; floats with format identity; control flow, phi, calls, returns; structured aggregate/address-space memory; load/store/copy; checked/wrapping/saturating arithmetic; comparisons; conversions; explicit exceptions/traps; effect annotations; source mapping. IR verifier checks types, dominance, phi structure, memory bounds contracts, effect/order constraints, and stage legality. Define a stable serialized debugging form, **not** a permanently frozen serialized ABI for all internal nodes.
+Values/constants; arbitrary-fixed-width integers, signed/unsigned interpretation; floats with format identity; structured control flow, calls, returns; structured aggregate/address-space memory; load/store/copy; checked/wrapping/saturating arithmetic; comparisons; conversions; explicit exceptions/traps; effect annotations; source mapping. IR verifier checks types, declarations, structure, memory bounds contracts and effect/order constraints; target legality is checked per profile. Define a stable serialized debugging form, **not** a permanently frozen serialized ABI for all internal nodes.
 
 High-level operations may stay as intrinsics across multiple passes: `PopCount`, `DivMod`, `SinCos`, `Map`, `Filter`, `Reduce`, `Gather`, `Scatter`, `MatMul`, `Conv`, `Pshufb`-compatible `ByteShuffle` and `ParallelBitExtract` must remain recognizable until lowering. Canonicalization may also *recover* them from scalar loops and bit tricks.
 
@@ -112,8 +112,8 @@ Compute minimum symbol-level closure over generated source, helpers, target adap
 | Semantic Recovery | Reconstruct arithmetic idioms, loops, data layouts, bit permutations under proof obligations | Claiming provenance or author intent without evidence |
 | PolyPermutation | Canonical bit mappings, generalized bit Boolean transforms, candidate synthesis and target costs | Target text generation without typed legalization |
 | Semantic Type System | Canonical type/encoding identities, conversions, numerical contracts | Source-language UI or packages |
-| PolyIR | Operations, SSA, effects, memory, representation stage invariants | JS/PB syntax-specific rules |
-| Pattern Recognition | Source and shared SSA patterns, proof preconditions | Final target text emission |
+| PolyIR | Operations, structured tree, effect summaries, memory, legality sets | JS/PB syntax-specific rules |
+| Pattern Recognition | Source and shared IR patterns, proof preconditions | Final target text emission |
 | Static Analysis | Range/known-bits/type/shape/alias/effects facts and invalidation | Silent semantic assumptions |
 | Optimizer | Legal transformations, cost decisions and diagnostics | Reimplementation of every frontend |
 | Legalization & Backend | Target capabilities, physical representation, source generation | Redefining source semantic meaning |

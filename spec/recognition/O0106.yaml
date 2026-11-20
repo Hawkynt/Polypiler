@@ -1,33 +1,38 @@
 id: RECOGNITION.O0106
 title: Recognize byte swap from shift-and-mask expressions
-version: 1
-status: draft
+version: 2
+status: normative
 owner: Hawkynt
 issue: "#559"
 tests:
+  - Polypiler.Tests/Recognize/PermutationRecognitionTests.cs
+  - Polypiler.Tests/Verification/Proofs/SmtRecognitionProverTests.cs
+  - tests/features/recognize/rec-byteswap.feature
   - Polypiler.Tests/Recognize/RecognitionFixtureTests.cs
   - tests/fixtures/prototype/recognize/RecognizeByteSwap.cs
   - tests/fixtures/prototype/recognize/byteswap.js
 introducedIn: P2
-compatibility: none
-reviewedRevision: 0
+compatibility: additive
+reviewedRevision: 2
 normative: >-
-  Shifts and masks MUST become ByteSwap only when their value is the bytes of one 16-, 32- or 64-bit
-  value in reverse order and nothing else. The prototype rule O0106ByteSwap in
-  Polypiler.Core.Recognize matches the structured IR of Polypiler.Core.IR, not the typed SSA IR:
-  pattern.before and replacement.after are written in that structured form, and matching typed SSA
-  graphs belongs to REC-ENGINE (#276). RecognitionFixtureTests is the evidence the prototype has: it
-  checks that the rule fires exactly on the marked functions of its fixtures, that --disable-opt O0106
-  keeps it from firing, and that the IR interpreter computes the same before and after the rule -
-  result, kind of trap and the arrays a trap leaves behind - for every value of each 8- and 16-bit
-  parameter and for the edges and 10 000 random tuples of the wider ones. The proof obligations below
-  are planned and not discharged yet: exhaustive checks with VER-EXHAUSTIVE (#70), bit-vector proofs
-  with VER-SMT (#71). The prototype knows only the levels default, where the rule is on, and none; the
-  optLevels name the levels of the target state. The document stays a draft until its obligations are
-  discharged.
+  O0106 MUST recognize byte reversals in the structured tree IR of ADR 0009
+  when exact weighted-bit provenance maps bit 8k+j to bit 8(n-1-k)+j and
+  nothing else. Disjoint OR, XOR and ADD terms, masks before or after shifts,
+  cascades ending in an explicit rotation, and pure counted byte loops are
+  supported at 32 and 64 bits. The existing 16-bit spelling remains supported
+  for compatibility with O0100, which delegates a rotation by eight to O0106.
+  Arithmetic shifts MUST be refused when sign copies survive; masking those
+  copies away is legal. A counted loop MUST preserve every live exit value,
+  including its source and counter, and MUST be proved after unrolling. The
+  host-supplied IRecognitionProver MUST prove the actual candidate equivalent
+  to ByteSwap; the CLI supplies SmtRecognitionProver. Timeout, unknown,
+  unsupported and unavailable proofs MUST leave the candidate unchanged and
+  MUST NOT be cached as proved. The proof budget is five seconds. Library
+  hosts MUST supply OptimizerOptions.Prover to enable the rule. --opt none
+  and --disable-opt O0106 disable it, including proof requests and reports.
 spec:
   optimization: O0106
-  level: typed-ssa
+  level: typed-tree
   pattern:
     before: "%r = Or.u32 Or.u32(Or.u32(LShr.u32(%x, 24), And.u32(LShr.u32(%x, 8), 0xFF00)), And.u32(Shl.u32(%x, 8), 0xFF0000)), Shl.u32(%x, 24)"
     bindings:
@@ -41,7 +46,7 @@ spec:
     - {id: trap-free, text: "the swapped value has no effect and cannot trap: the replacement evaluates it once", fact: effect}
   proofObligations:
     - {id: byte-swap-16, class: exhaustive-16bit, widths: [16]}
-    - {id: byte-swap-wide, class: smt-bitvector, widths: [32, 64], budgetSeconds: 10}
+    - {id: byte-swap-wide, class: smt-bitvector, widths: [32, 64], budgetSeconds: 5}
   counterexamples:
     - description: "arithmetic right shifts"
       input: "x = 0x80000000, i32, (x >> 24) | ((x >> 8) & 0xFF00) | ((x << 8) & 0xFF0000) | (x << 24)"
@@ -52,5 +57,5 @@ spec:
       naive: "0x00000000"
       correct: "0x00FF0000"
   switch: "--disable-opt O0106"
-  optLevels: [balanced, speed, size, memory]
+  optLevels: [default]
   document: docs/optimizations/O0106-byte-swap-recognition.md

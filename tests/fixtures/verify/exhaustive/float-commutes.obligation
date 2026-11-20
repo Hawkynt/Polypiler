@@ -1,0 +1,5 @@
+# Scenario 6, test design 16: floating point is outside the model.
+rule: float-commutes
+inputs: a: f32, b: f32
+before: %r = Add.f32 %a, %b
+after: %r = Add.f32 %b, %a
