@@ -1,3 +1,5 @@
 # Machine vector files promise a byte-identical round trip through MachineVectorFile.Save, which
 # writes LF; keep them LF in every checkout.
 *.mvec.json text eol=lf
+# The gcc output of the interpreter fixtures is a sealed golden file; its hash is over LF bytes.
+tests/fixtures/native/mach-interp/golden/* text eol=lf
