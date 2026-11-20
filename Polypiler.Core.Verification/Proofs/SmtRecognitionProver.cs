@@ -49,7 +49,7 @@ public sealed class SmtRecognitionProver : IRecognitionProver {
       ProofResult.Proved => new RecognitionProof(true, SmtBitvectorProver.ProofClass),
       ProofResult.Inconclusive { Reason: SmtBitvectorProver.TimeoutReason } => new(false, "proof timeout"),
       ProofResult.Inconclusive => new(false, "proof unknown"),
-      ProofResult.Refuted => new(false, "not equivalent"),
+      ProofResult.Refuted => new(false, RuleContext.NotEquivalent),
       ProofResult.Unsupported unsupported => new(false, $"unsupported proof expression: {unsupported.Operation} ({unsupported.Detail})"),
       _ => new(false, "unsupported proof expression")
     };
@@ -113,6 +113,7 @@ public sealed class SmtRecognitionProver : IRecognitionProver {
         IrBinary { Left.Type.IsInteger: true } comparison when Predicate(comparison) is { } predicate => this.Compare(comparison.Left, comparison.Right, predicate),
         IrConditional choice => this.Emit("Select", choice, this.Value(choice.Condition), this.Value(choice.WhenTrue), this.Value(choice.WhenFalse)),
         IrIntrinsic { Op: IrIntrinsicOp.AbsWrap } absolute => this.Absolute(absolute),
+        IrIntrinsic { Op: IrIntrinsicOp.PopCount, Arguments: [{ Type.IsInteger: true } counted] } count => this.PopCount(count, counted),
         IrIntrinsic { Op: IrIntrinsicOp.BitReverse or IrIntrinsicOp.ByteSwap } intrinsic => this.Reverse(intrinsic),
         IrIntrinsic { Op: IrIntrinsicOp.RotateLeft or IrIntrinsicOp.RotateRight } rotate
           => this.Emit(rotate.Op.ToString(), rotate, this.Value(rotate.Arguments[0]), this.Value(rotate.Arguments[1])),
@@ -183,6 +184,21 @@ public sealed class SmtRecognitionProver : IRecognitionProver {
       var negative = this.Emit("SLt", input, value, "0");
       var negated = this.Emit("Neg", input, value);
       return this.Emit("Select", absolute, negative, negated, value);
+    }
+
+    /// <summary>The population count as the sum of every bit of the value, one at a time, independent of any SWAR step.</summary>
+    private string PopCount(IrIntrinsic count, IrExpr counted) {
+      var value = this.Value(counted);
+      var width = counted.Type.Bits;
+      var sum = "0";
+      for (var bit = 0; bit < width; ++bit) {
+        var shifted = this.Emit("LShr", counted, value, bit.ToString(CultureInfo.InvariantCulture));
+        var isolated = this.Emit("And", counted, shifted, "1");
+        sum = this.Emit("Add", counted, sum, isolated);
+      }
+
+      // The count fits every width from 8 bits on; the result type takes it unchanged.
+      return width == count.Type.Bits ? sum : this.Emit(width > count.Type.Bits ? "Truncate" : "ZeroExtend", count, sum);
     }
 
     private string Binary(IrBinary binary, string op) {
