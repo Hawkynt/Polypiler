@@ -113,6 +113,7 @@ public sealed class SmtRecognitionProver : IRecognitionProver {
         IrBinary { Left.Type.IsInteger: true } comparison when Predicate(comparison) is { } predicate => this.Compare(comparison.Left, comparison.Right, predicate),
         IrConditional choice => this.Emit("Select", choice, this.Value(choice.Condition), this.Value(choice.WhenTrue), this.Value(choice.WhenFalse)),
         IrIntrinsic { Op: IrIntrinsicOp.AbsWrap } absolute => this.Absolute(absolute),
+        IrIntrinsic { Op: IrIntrinsicOp.Parity or IrIntrinsicOp.PopCount, Arguments: [{ Type.IsInteger: true } counted] } count => this.Count(count, counted),
         IrIntrinsic { Op: IrIntrinsicOp.BitReverse or IrIntrinsicOp.ByteSwap } intrinsic => this.Reverse(intrinsic),
         IrIntrinsic { Op: IrIntrinsicOp.RotateLeft or IrIntrinsicOp.RotateRight } rotate
           => this.Emit(rotate.Op.ToString(), rotate, this.Value(rotate.Arguments[0]), this.Value(rotate.Arguments[1])),
@@ -183,6 +184,34 @@ public sealed class SmtRecognitionProver : IRecognitionProver {
       var negative = this.Emit("SLt", input, value, "0");
       var negated = this.Emit("Neg", input, value);
       return this.Emit("Select", absolute, negative, negated, value);
+    }
+
+    /// <summary>
+    /// The population count, or its parity, by their textbook definitions (Hacker's Delight §5-1, §5-2),
+    /// which share no code with the recognizers: the parity as bit 0 of the halving fold with logical
+    /// shifts, the count as a balanced tree of sums of the isolated bits, both kept at the input's width.
+    /// A rule's arithmetic shifts, tables and masks are checked against these spellings; flat xor or
+    /// sum chains of every bit leave the solver without a proof of 64-bit candidates within budget.
+    /// </summary>
+    private string Count(IrIntrinsic count, IrExpr counted) {
+      var input = this.Value(counted);
+      var width = counted.Type.Bits;
+      var resultBits = count.Type.Bits;
+      string Fit(string value) => width == resultBits ? value : this.Emit(width > resultBits ? "Truncate" : "ZeroExtend", count, value);
+      if (count.Op == IrIntrinsicOp.Parity) {
+        var folded = input;
+        for (var step = width / 2; step >= 1; step /= 2)
+          folded = this.Emit("Xor", counted, folded, this.Emit("LShr", counted, folded, step.ToString(CultureInfo.InvariantCulture)));
+
+        return Fit(this.Emit("And", counted, folded, "1"));
+      }
+
+      var terms = Enumerable.Range(0, width)
+        .Select(bit => this.Emit("And", counted, this.Emit("LShr", counted, input, bit.ToString(CultureInfo.InvariantCulture)), "1")).ToList();
+      while (terms.Count > 1)
+        terms = [.. terms.Chunk(2).Select(pair => pair.Length == 1 ? pair[0] : this.Emit("Add", counted, pair[0], pair[1]))];
+
+      return Fit(terms[0]);
     }
 
     private string Binary(IrBinary binary, string op) {
