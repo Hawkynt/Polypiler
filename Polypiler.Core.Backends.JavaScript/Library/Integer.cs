@@ -28,7 +28,8 @@ internal static partial class JavaScriptLibrary {
       IrIntrinsicOp.LeadingOneCount, IrIntrinsicOp.TrailingOneCount,
       IrIntrinsicOp.Nand, IrIntrinsicOp.Nor, IrIntrinsicOp.Xnor, IrIntrinsicOp.AndNot, IrIntrinsicOp.OrNot, IrIntrinsicOp.Implies,
       IrIntrinsicOp.BitSelect, IrIntrinsicOp.Majority, IrIntrinsicOp.TernaryLogic,
-      IrIntrinsicOp.ExtractBitsSigned, IrIntrinsicOp.ReverseBitsInBytes, IrIntrinsicOp.ISqrt
+      IrIntrinsicOp.ExtractBitsSigned, IrIntrinsicOp.ReverseBitsInBytes, IrIntrinsicOp.ISqrt,
+      IrIntrinsicOp.ParallelBitExtract, IrIntrinsicOp.ParallelBitDeposit, IrIntrinsicOp.ByteShuffle, IrIntrinsicOp.CrcUpdate
     }.Select(op => (op, Always)),
     (IrIntrinsicOp.LeadingZeroCount, new Row((node, context) => IsInteger(node) && (Bits(node) == 64 || context.Replaces("Math.clz32")), IntegerLibrary.Call)),
     (IrIntrinsicOp.Log2, new Row((node, context) => IsInteger(node) && (Bits(node) == 64 || context.Replaces("Math.clz32")), IntegerLibrary.Call)),

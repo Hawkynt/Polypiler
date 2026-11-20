@@ -103,6 +103,13 @@ internal static class IntegerCases {
     // The limbs of a 64-bit integer (#1358): taken apart and joined.
     Each(IrIntrinsicOp.HighWord, [IrType.I64], _ => IrType.U32, type => [type]);
     Each(IrIntrinsicOp.JoinWords, [IrType.U32], _ => IrType.I64, type => [type, type]);
+
+    // The bit permutations under a mask (#103), the byte shuffle (#105) and the CRC update (#352).
+    foreach (var op in new[] { IrIntrinsicOp.ParallelBitExtract, IrIntrinsicOp.ParallelBitDeposit })
+      Each(op, Integers, Same, type => [type, type]);
+
+    Each(IrIntrinsicOp.ByteShuffle, [IrType.U64], Same, type => [type, type, IrType.I32]);
+    Each(IrIntrinsicOp.CrcUpdate, Unsigned, Same, type => [type, type, IrType.Bool, _bytes, IrType.I32, IrType.I32]);
     return cases;
   }
 
@@ -128,7 +135,9 @@ internal static class IntegerCases {
   public static IReadOnlyList<PrototypeCall> Calls(IntegerCase @case, Random generator, int random = 1000) {
     var returns = @case.Result == IrType.Void ? null : HostType(@case.Result);
     var calls = new List<PrototypeCall>();
-    if (@case.Types[0].IsArray) {
+    if (@case.Op == IrIntrinsicOp.CrcUpdate) {
+      calls.AddRange(CrcBoundaries(@case.Types[0]).Select(arguments => new PrototypeCall(@case.Function, arguments) { Returns = returns }));
+    } else if (@case.Types[0].IsArray) {
       var size = (@case.Types.Length == 2 ? @case.Result : @case.Types[2]).Bits / 8;
       foreach (var bytes in new[] { _sample, [], _sample[..size] })
         foreach (var index in Indexes(bytes.Length, size))
@@ -155,6 +164,32 @@ internal static class IntegerCases {
   /// <summary>The outcome the bit-by-bit reference gives for a call of a case.</summary>
   public static string Expected(IntegerCase @case, PrototypeCall call) => IntegerReference.Outcome(@case.Op, @case.Result, @case.Types, call.Arguments);
 
+  /// <summary>
+  /// The boundary calls of a CRC update of a register type: the catalogue polynomial of the width,
+  /// 1 and all ones, and 0, which traps; both reflections; registers 0, all ones and alternating; the
+  /// message "123456789" and no bytes; spans that are the whole array, inside it, empty at either end,
+  /// one past its end and negative.
+  /// </summary>
+  private static IEnumerable<object[]> CrcBoundaries(IrType type) {
+    var catalogue = type.Bits switch {
+      8 => 0x07UL,
+      16 => 0x1021UL,
+      32 => 0x04C11DB7UL,
+      _ => 0x42F0E1EBA9EA3693UL
+    };
+    var all = type.Bits == 64 ? ulong.MaxValue : (1UL << type.Bits) - 1;
+    byte[] message = [0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39];
+    (int Index, int Count)[] spans = [(0, 9), (1, 7), (0, 0), (9, 0), (9, 1), (0, 10), (-1, 1), (0, -1), (int.MaxValue, 1)];
+    foreach (var poly in new[] { catalogue, 1UL, all, 0UL })
+      foreach (var reflected in new[] { false, true })
+        foreach (var register in new[] { 0UL, all, 0x5555555555555555UL & all })
+          foreach (var (index, count) in spans)
+            yield return [FromPattern(type, register), FromPattern(type, poly), reflected, message.Clone(), index, count];
+
+    foreach (var reflected in new[] { false, true })
+      yield return [FromPattern(type, all), FromPattern(type, catalogue), reflected, Array.Empty<byte>(), 0, 0];
+  }
+
   /// <summary>The indexes of a load or store of a size: -1, 0, 1, the last that fits, the first that does not, the length and the extremes.</summary>
   private static int[] Indexes(int length, int size)
     => [.. new[] { -1, 0, 1, length - size, length - size + 1, length, int.MinValue, int.MaxValue }.Distinct()];
@@ -171,6 +206,10 @@ internal static class IntegerCases {
       return index == 3
         ? [-1, 0, 1, 0x96, 0xCA, 0xE8, 255, 256, int.MinValue, int.MaxValue]
         : [.. new[] { 0UL, ulong.MaxValue, 0xF0F0F0F0F0F0F0F0UL, 0xCCCCCCCCCCCCCCCCUL, 0xAAAAAAAAAAAAAAAAUL }.Select(pattern => FromPattern(type, pattern))];
+
+    // The group of a byte shuffle: each admitted one, and its neighbours and extremes, which trap.
+    if (@case.Op == IrIntrinsicOp.ByteShuffle && index == 2)
+      return [8, 16, 32, 64, 0, 7, 9, -8, int.MinValue, int.MaxValue];
 
     var counted = type == IrType.I32 && (index > 0 || @case.Op == IrIntrinsicOp.LowMask) && !IsValue(@case, index);
     if (!counted)
@@ -209,6 +248,14 @@ internal static class IntegerCases {
     var type = @case.Types[index];
     if (type == IrType.Bool)
       return generator.Next(2) == 1;
+
+    // A CRC over a random array and a span that mostly lies inside it; the polynomial is never 0 by chance alone.
+    if (@case.Op == IrIntrinsicOp.CrcUpdate && index >= 4)
+      return index == 4 ? generator.Next(-1, 6) : generator.Next(-1, 12);
+
+    // A byte shuffle with the group of 8 bytes but now and then, which traps.
+    if (@case.Op == IrIntrinsicOp.ByteShuffle && index == 2)
+      return generator.Next(16) == 0 ? 16 : 8;
 
     if (type.IsArray) {
       var bytes = new byte[generator.Next(0, 13)];

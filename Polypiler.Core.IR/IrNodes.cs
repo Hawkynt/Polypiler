@@ -1015,7 +1015,40 @@ public enum IrIntrinsicOp {
   /// <c>i</c> moves to <c>8·(i / 8) + 7 - i % 8</c>. <see cref="BitReverse"/> is this followed by
   /// <see cref="ByteSwap"/>.
   /// </summary>
-  ReverseBitsInBytes
+  ReverseBitsInBytes,
+
+  /// <summary>
+  /// <c>(T value, T mask) → T</c>, every integer type: the bits of the value at the positions of the
+  /// ones of the mask, packed to the bottom in their order with zeros above them - <c>PEXT</c> of x86's
+  /// BMI2 (#103). The signedness of the type is ignored: both operands are bit patterns.
+  /// </summary>
+  ParallelBitExtract,
+
+  /// <summary>
+  /// <c>(T value, T mask) → T</c>, every integer type: the lowest bits of the value, in their order,
+  /// spread to the positions of the ones of the mask, zeros elsewhere - <c>PDEP</c> of x86's BMI2 and the
+  /// inverse of <see cref="ParallelBitExtract"/> on the mask (#103).
+  /// </summary>
+  ParallelBitDeposit,
+
+  /// <summary>
+  /// <c>(T table, T indices, i32 group) → T</c>, <c>u64</c>: byte <c>i</c> of the result is 0 where bit 7
+  /// of byte <c>i</c> of the indices is set, else byte <c>base + (index mod group)</c> of the table, with
+  /// <c>base</c> the first byte of the group of <c>group</c> bytes that holds byte <c>i</c> - <c>PSHUFB</c>
+  /// of SSSE3 for the group of 16 bytes (#105). Bytes count from the least significant. A group outside
+  /// 8, 16, 32 and 64, or one that does not divide the bytes of the type, traps as an invalid operation.
+  /// </summary>
+  ByteShuffle,
+
+  /// <summary>
+  /// <c>(T crc, T poly, bool reflected, u8[] data, i32 index, i32 count) → T</c>, every unsigned type:
+  /// the register of a cyclic redundancy check of the width of <c>T</c> after the <c>count</c> bytes of
+  /// the array from the index on, one bit at a time, with the generator polynomial in its normal form
+  /// and without its top bit, for a reflected CRC too (#352). Initial value and final XOR are not part of
+  /// it. A span outside the array traps as an index out of range before any byte is read; a polynomial
+  /// of 0 traps as an invalid operation.
+  /// </summary>
+  CrcUpdate
 
 }
 

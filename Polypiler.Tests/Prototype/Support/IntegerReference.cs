@@ -181,6 +181,40 @@ internal static class IntegerReference {
             loaded[8 * k + bit] = ((bytes[Int(1) + (op == IrIntrinsicOp.LoadLittle ? k : size - 1 - k)] >> bit) & 1) == 1;
 
         return Host(result, loaded);
+      case IrIntrinsicOp.ParallelBitExtract or IrIntrinsicOp.ParallelBitDeposit:
+        // The ones of the ones of the mask, lowest first: the j-th of them is paired with bit j.
+        var spread = A();
+        var ones = Enumerable.Range(0, width).Where(index => B()[index]).ToList();
+        var permuted = new bool[width];
+        for (var j = 0; j < ones.Count; ++j)
+          if (op == IrIntrinsicOp.ParallelBitExtract)
+            permuted[j] = spread[ones[j]];
+          else
+            permuted[ones[j]] = spread[j];
+
+        return Host(type, permuted);
+      case IrIntrinsicOp.ByteShuffle:
+        var groupBytes = Int(2);
+        Require(groupBytes is 8 or 16 or 32 or 64 && width / 8 % groupBytes == 0);
+        var tableBits = A();
+        var selectorBits = B();
+        var shuffled = new bool[width];
+        for (var at = 0; at < width / 8; ++at) {
+          if (selectorBits[8 * at + 7])
+            continue;
+
+          var selector = 0;
+          for (var bit = 6; bit >= 0; --bit)
+            selector = selector * 2 + (selectorBits[8 * at + bit] ? 1 : 0);
+
+          var chosen = at / groupBytes * groupBytes + selector % groupBytes;
+          for (var bit = 0; bit < 8; ++bit)
+            shuffled[8 * at + bit] = tableBits[8 * chosen + bit];
+        }
+
+        return Host(type, shuffled);
+      case IrIntrinsicOp.CrcUpdate:
+        return Host(type, Crc(A(), B(), Flag(2), (byte[])arguments[3], Int(4), Int(5)));
       default:
         var array = (byte[])arguments[0];
         var stored = BitsOf(arguments[2], types[2].Bits);
@@ -195,6 +229,47 @@ internal static class IntegerReference {
 
         return null;
     }
+  }
+
+  /// <summary>
+  /// A CRC register fed one data bit at a time, as a shift register with feedback: a normal CRC takes
+  /// each byte highest bit first at the top, a reflected one lowest bit first at the bottom, and the
+  /// polynomial is XORed in, reversed for a reflected CRC, whenever the bit leaving the register differs
+  /// from the data bit. That is the same as XORing a whole byte in and shifting eight times, by another way.
+  /// </summary>
+  private static bool[] Crc(bool[] register, bool[] poly, bool reflected, byte[] data, int index, int count) {
+    if (index < 0 || count < 0 || (long)index + count > data.Length)
+      throw new Trapped(IrTrap.IndexOutOfRange);
+
+    Require(poly.Any(bit => bit));
+    var width = register.Length;
+    var c = (bool[])register.Clone();
+    for (var at = index; at < index + count; ++at)
+      for (var step = 0; step < 8; ++step) {
+        var input = ((data[at] >> (reflected ? step : 7 - step)) & 1) == 1;
+        bool feedback;
+        if (reflected) {
+          feedback = c[0] ^ input;
+          for (var bit = 0; bit < width - 1; ++bit)
+            c[bit] = c[bit + 1];
+
+          c[width - 1] = false;
+          if (feedback)
+            for (var bit = 0; bit < width; ++bit)
+              c[bit] ^= poly[width - 1 - bit];
+        } else {
+          feedback = c[width - 1] ^ input;
+          for (var bit = width - 1; bit > 0; --bit)
+            c[bit] = c[bit - 1];
+
+          c[0] = false;
+          if (feedback)
+            for (var bit = 0; bit < width; ++bit)
+              c[bit] ^= poly[bit];
+        }
+      }
+
+    return c;
   }
 
   // ---------------------------------------------------------------- values as bits
