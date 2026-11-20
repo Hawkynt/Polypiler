@@ -42,10 +42,16 @@ public sealed record OptimizerOptions {
   /// <summary>What the target says about the costs some rules ask for.</summary>
   public RuleTarget Target { get; init; } = RuleTarget.Neutral;
 
+  /// <summary>The host's equivalence prover for proof-dependent recognition rules; absent refuses those rules.</summary>
+  public IRecognitionProver? Prover { get; init; }
+
   /// <summary>The rules.</summary>
   public RuleTable Rules { get; init; } = RuleTable.Default;
 
   /// <summary>Functions entered outside ordinary exports, such as the source frontend's test functions.</summary>
   public IReadOnlySet<string> Roots { get; init; } = new HashSet<string>();
+
+  /// <summary>Globals retained by a host or target profile, such as external or device storage, by name.</summary>
+  public IReadOnlySet<string> GlobalRoots { get; init; } = new HashSet<string>();
 
 }

@@ -9,11 +9,12 @@ namespace Polypiler.Core.Optimize;
 /// <summary>One rule application: which rule, where.</summary>
 /// <param name="Id">The optimization number of the rule.</param>
 /// <param name="Name">What the rule does.</param>
-/// <param name="Function">The function it applied in.</param>
+/// <param name="Function">The function it applied in, or the global removed by a module sweep.</param>
 /// <param name="Position">
 /// The statement it applied to, as the path of 1-based statement positions from the body of the
 /// function inwards - <c>3.1</c> is the first statement in a block of the third statement. The
-/// prototype IR carries no source lines, so this is the position the IR has.
+/// prototype IR carries no source lines, so this is the position the IR has. Module sweeps use
+/// <c>module</c> for functions and <c>module global</c> for globals.
 /// </param>
 public sealed record RuleApplication(string Id, string Name, string Function, string Position) {
 
@@ -27,7 +28,7 @@ public sealed record RuleApplication(string Id, string Name, string Function, st
 /// <param name="Applications">Every rule application, in the order they happened.</param>
 public sealed record OptimizationResult(IrModule Module, IReadOnlyList<RuleApplication> Applications) {
 
-  /// <summary>What a pass did not do and why, such as a call a budget left as it is, each once, as <c>--explain-opt</c> prints it.</summary>
+  /// <summary>Explanations of applications and refusals, each once, as <c>--explain-opt</c> prints them.</summary>
   public IReadOnlyList<string> Notes { get; init; } = [];
 
 }
@@ -48,6 +49,7 @@ public static class Optimizer {
   /// <exception cref="InvalidOperationException">With <see cref="OptimizerOptions.Verify"/>: a rule left the module ill-typed.</exception>
   public static OptimizationResult Run(IrModule module, OptimizerOptions options) {
     var applications = new List<RuleApplication>();
+    var notes = new HashSet<string>(StringComparer.Ordinal);
     if (options.Level == OptimizationLevel.None)
       return new(module, applications);
 
@@ -56,20 +58,20 @@ public static class Optimizer {
     for (var pass = 0; pass < options.PassLimit; ++pass) {
       var before = applications.Count;
       for (var index = 0; index < functions.Count; ++index)
-        functions[index] = new Pass(module with { Functions = functions }, index, rules, options, applications).Run();
+        functions[index] = new Pass(module with { Functions = functions }, index, rules, options, applications, notes).Run();
 
       if (applications.Count == before)
         break;
     }
 
-    return new(module with { Functions = functions }, applications);
+    return new(module with { Functions = functions }, applications) { Notes = [.. notes] };
   }
 
   /// <summary>One pass over one function, on a mirror of its tree that can be changed in place and read back at any time.</summary>
-  private sealed class Pass(IrModule module, int index, IReadOnlyList<IrRule> rules, OptimizerOptions options, List<RuleApplication> applications) {
+  private sealed class Pass(IrModule module, int index, IReadOnlyList<IrRule> rules, OptimizerOptions options, List<RuleApplication> applications, HashSet<string> notes) {
 
     private readonly IrFunction _function = module.Functions[index];
-    private readonly RuleContext _context = new(module.Functions[index], options.Target);
+    private readonly RuleContext _context = new(module.Functions[index], options.Target) { Prover = options.Prover, Note = note => notes.Add(note) };
     private Node _root = null!;
 
     public IrFunction Run() {
@@ -102,7 +104,10 @@ public static class Optimizer {
       for (var position = 0; position < block.Children.Count;) {
         var statements = block.Children.Select(statement => (IrStmt)statement.Freeze()).ToList();
         StatementRewrite? rewrite = null;
-        var rule = rules.FirstOrDefault(candidate => candidate.TryApply(statements, position, this._context, out rewrite));
+        var rule = rules.FirstOrDefault(candidate => {
+          this._context.BeginAttempt();
+          return candidate.TryApply(statements, position, this._context, out rewrite);
+        });
         if (rule is null || rewrite is null) {
           ++position;
           continue;
@@ -122,7 +127,10 @@ public static class Optimizer {
       var expression = (IrExpr)node.Freeze();
       IrExpr? replacement = null;
       // A rule that would put back what is there - its own result, met again - does not apply.
-      var rule = rules.FirstOrDefault(candidate => candidate.TryApply(expression, this._context, out replacement) && !IrShape.Same(replacement, expression));
+      var rule = rules.FirstOrDefault(candidate => {
+        this._context.BeginAttempt();
+        return candidate.TryApply(expression, this._context, out replacement) && !IrShape.Same(replacement, expression);
+      });
       if (rule is null || replacement is null)
         return false;
 
@@ -136,6 +144,7 @@ public static class Optimizer {
 
     private void Applied(IrRule rule, string position) {
       applications.Add(new(rule.Id, rule.Name, this._function.Name, position));
+      this._context.ReportApplication();
       if (!options.Verify)
         return;
 

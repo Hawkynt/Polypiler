@@ -324,12 +324,17 @@ public sealed partial class TranslateCommand : ICliCommand {
     var result = Optimizer.Run(specialized.Module, new OptimizerOptions {
       Level = LevelOf(options)!.Value,
       Disabled = disabled,
-      Target = backend.Target
+      Target = backend.Target,
+      Prover = new Polypiler.Core.Verification.Proofs.SmtRecognitionProver()
     });
     IReadOnlyList<RuleApplication> applications = [.. specialized.Applications, .. result.Applications];
-    if (options.ContainsKey(ExplainOpt))
+    if (options.ContainsKey(ExplainOpt)) {
       foreach (var application in applications)
         context.Note($"{file}: opt {application}");
+
+      foreach (var note in result.Notes)
+        context.Note($"{file}: opt {note}");
+    }
 
     return (result.Module, applications);
   }
