@@ -241,6 +241,9 @@ public sealed class SmtRecognitionProver : IRecognitionProver {
     }
 
     private string Binary(IrBinary binary, string op) {
+      if (binary.Op == IrBinaryOp.Multiply && (binary.Right is IrConst || binary.Left is IrConst))
+        return this.Product(binary);
+
       var left = this.Value(binary.Left);
       var right = this.Value(binary.Right);
       // Tree IR masks shifts to the operand width. Both values have unsigned proof types;
@@ -249,6 +252,28 @@ public sealed class SmtRecognitionProver : IRecognitionProver {
       var name = "%v" + this._lines.Count.ToString(CultureInfo.InvariantCulture);
       this._lines.Add($"{name} = {op}.{Type(binary)}{contract} {left}, {right}");
       return name;
+    }
+
+    /// <summary>
+    /// A multiplication by a constant as the sum of the other operand shifted to each set bit of the constant,
+    /// which is what it is modulo the width. A bit-blasted multiplier of 64 bits costs the solver seconds; the
+    /// sum of shifts it is compared with costs milliseconds. The expansion is taken from the constant alone.
+    /// </summary>
+    private string Product(IrBinary binary) {
+      var (constant, operand) = binary.Right is IrConst right ? (right, binary.Left) : ((IrConst)binary.Left, binary.Right);
+      var value = this.Value(operand);
+      var mask = Mask(binary.Type.Bits);
+      var bits = (ulong)constant.Value & mask;
+      // c · x is also -((-c) · x); a negative constant has far fewer set bits negated.
+      var negated = (0 - bits) & mask;
+      var negative = System.Numerics.BitOperations.PopCount(negated) + 1 < System.Numerics.BitOperations.PopCount(bits);
+      var expanded = negative ? negated : bits;
+      var result = "0";
+      for (var bit = 0; bit < binary.Type.Bits; ++bit)
+        if ((expanded >> bit & 1) != 0)
+          result = this.Emit("Add", binary, result, bit == 0 ? value : this.Emit("Shl", binary, value, bit.ToString(CultureInfo.InvariantCulture)));
+
+      return negative ? this.Emit("Neg", binary, result) : result;
     }
 
     /// <summary>The intrinsic's bit definition, independent of the recognizer's weighted-bit algebra.</summary>

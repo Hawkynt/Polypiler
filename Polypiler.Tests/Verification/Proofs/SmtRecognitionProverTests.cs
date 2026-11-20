@@ -125,6 +125,30 @@ public sealed class SmtRecognitionProverTests {
     Assert.That(new SmtRecognitionProver().Prove("O0121", choice, _value, _context).Proved, Is.True);
   }
 
+  [TestCase(10, true, true)]
+  [TestCase(10, false, true)]
+  [TestCase(-3, true, true)]
+  [TestCase(0, true, true)]
+  [TestCase(11, true, false)]
+  public void AProductByAConstant_IsItsSumOfShiftedCopies(long factor, bool constantOnTheRight, bool equivalent) {
+    IrExpr Shl(int count) => new IrBinary(IrBinaryOp.ShiftLeft, _value, new IrConst(IrType.I32, count));
+    IrExpr chain = factor switch {
+      -3 => new IrBinary(IrBinaryOp.Subtract, _value, Shl(2)),
+      0 => new IrBinary(IrBinaryOp.Subtract, _value, _value),
+      _ => new IrBinary(IrBinaryOp.Add, Shl(3), Shl(1))
+    };
+    var constant = new IrConst(IrType.I32, factor);
+    var product = constantOnTheRight ? new IrBinary(IrBinaryOp.Multiply, _value, constant) : new IrBinary(IrBinaryOp.Multiply, constant, _value);
+    Assert.That(new SmtRecognitionProver().Prove("O0125", chain, product, _context).Proved, Is.EqualTo(equivalent));
+  }
+
+  [Test]
+  public void AProductOfTwoValues_StaysAMultiplication() {
+    var y = new IrLocalRef(new IrLocal("y", IrType.I32));
+    var product = new IrBinary(IrBinaryOp.Multiply, _value, y);
+    Assert.That(new SmtRecognitionProver().Prove("O0125", product, new IrBinary(IrBinaryOp.Multiply, y, _value), _context).Proved, Is.True);
+  }
+
   private static readonly IrExpr _position = new IrLocalRef(new IrLocal("n", IrType.I32));
 
   private static IrExpr Masked(int width) => new IrBinary(IrBinaryOp.And, _position, new IrConst(IrType.I32, width - 1));

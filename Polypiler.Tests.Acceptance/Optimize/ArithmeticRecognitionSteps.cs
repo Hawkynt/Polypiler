@@ -12,7 +12,7 @@ using Reqnroll;
 namespace Polypiler.Tests.Acceptance.Optimize;
 
 /// <summary>Arithmetic recognition contracts on executable source imported into the current tree IR.</summary>
-[Binding, Scope(Feature = "Proved wrapping absolute value recognition"), Scope(Feature = "Proved single-bit recognition"), Scope(Feature = "Proved minimum and maximum recognition"), Scope(Feature = "Proved signum recognition")]
+[Binding, Scope(Feature = "Proved wrapping absolute value recognition"), Scope(Feature = "Proved shift-add multiplication recognition"), Scope(Feature = "Proved single-bit recognition"), Scope(Feature = "Proved minimum and maximum recognition"), Scope(Feature = "Proved signum recognition")]
 public sealed class ArithmeticRecognitionSteps {
 
   private IrModule _before = null!;
@@ -86,6 +86,38 @@ public sealed class ArithmeticRecognitionSteps {
     var width = function.ReturnType.Bits;
     var mask = width == 64 ? ulong.MaxValue : (1UL << width) - 1;
     var actual = unchecked((ulong)Convert.ToInt64(after, CultureInfo.InvariantCulture)) & mask;
+    Assert.That(actual, Is.EqualTo(ulong.Parse(output, NumberStyles.HexNumber, CultureInfo.InvariantCulture)));
+  }
+
+  /// <summary>The committed rewrite is one multiplication by the stated coefficient, with its proof evidence.</summary>
+  [Then("^the arithmetic result contains a multiplication by ([0-9]+) and an SMT proof$")]
+  public void Multiplication(string coefficient) {
+    var products = IrTree.Nodes(this._after.Module.Functions.Single().Body).OfType<IrBinary>().Where(node => node.Op == IrBinaryOp.Multiply).ToList();
+    Assert.That(products, Has.Count.EqualTo(1));
+    Assert.That(products[0].Right, Is.InstanceOf<IrConst>());
+    var constant = (IrConst)products[0].Right;
+    Assert.That(IrOperators.Number(constant.Type, constant.Value).ToString(CultureInfo.InvariantCulture), Is.EqualTo(coefficient));
+    Assert.That(this._after.Notes.Any(note => note.EndsWith("[proof: smt-bitvector]", StringComparison.Ordinal)), Is.True);
+    Assert.That(IrVerifier.Verify(this._after.Module), Is.Empty);
+  }
+
+  /// <summary>Both versions map one value of any integer kind to the stated bits of the result.</summary>
+  [Then("^both arithmetic versions multiply ([0-9A-Fa-f]+) to ([0-9A-Fa-f]+)$")]
+  public void Multiplied(string input, string output) {
+    var function = this._before.Functions.Single();
+    var bits = ulong.Parse(input, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+    object argument = function.Parameters[0].Type.Kind switch {
+      IrTypeKind.U8 => unchecked((byte)bits),
+      IrTypeKind.I32 => unchecked((int)bits),
+      IrTypeKind.U32 => unchecked((uint)bits),
+      IrTypeKind.I64 => unchecked((long)bits),
+      _ => bits
+    };
+    var before = IrInterpreter.Call(this._before, function.Name, [argument]);
+    var after = IrInterpreter.Call(this._after.Module, function.Name, [argument]);
+    Assert.That(after, Is.EqualTo(before));
+    var mask = function.ReturnType.Bits == 64 ? ulong.MaxValue : (1UL << function.ReturnType.Bits) - 1;
+    var actual = (after is ulong unsigned ? unsigned : unchecked((ulong)Convert.ToInt64(after, CultureInfo.InvariantCulture))) & mask;
     Assert.That(actual, Is.EqualTo(ulong.Parse(output, NumberStyles.HexNumber, CultureInfo.InvariantCulture)));
   }
 
