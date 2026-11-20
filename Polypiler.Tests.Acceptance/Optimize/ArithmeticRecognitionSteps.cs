@@ -12,7 +12,7 @@ using Reqnroll;
 namespace Polypiler.Tests.Acceptance.Optimize;
 
 /// <summary>Arithmetic recognition contracts on executable source imported into the current tree IR.</summary>
-[Binding, Scope(Feature = "Proved wrapping absolute value recognition")]
+[Binding, Scope(Feature = "Proved wrapping absolute value recognition"), Scope(Feature = "Proved zero-count loop recognition")]
 public sealed class ArithmeticRecognitionSteps {
 
   private IrModule _before = null!;
@@ -87,5 +87,24 @@ public sealed class ArithmeticRecognitionSteps {
     var mask = width == 64 ? ulong.MaxValue : (1UL << width) - 1;
     var actual = unchecked((ulong)Convert.ToInt64(after, CultureInfo.InvariantCulture)) & mask;
     Assert.That(actual, Is.EqualTo(ulong.Parse(output, NumberStyles.HexNumber, CultureInfo.InvariantCulture)));
+  }
+
+  /// <summary>Both versions return the stated count for one value of any integer kind.</summary>
+  [Then("^both arithmetic versions count ([0-9A-Fa-f]+) as ([0-9]+)$")]
+  public void Count(string input, int count) {
+    var function = this._before.Functions.Single();
+    var bits = ulong.Parse(input, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+    object argument = function.Parameters[0].Type.Kind switch {
+      IrTypeKind.I8 => unchecked((sbyte)bits),
+      IrTypeKind.U8 => unchecked((byte)bits),
+      IrTypeKind.I16 => unchecked((short)bits),
+      IrTypeKind.U16 => unchecked((ushort)bits),
+      IrTypeKind.I32 => unchecked((int)bits),
+      IrTypeKind.U32 => unchecked((uint)bits),
+      IrTypeKind.I64 => unchecked((long)bits),
+      _ => bits
+    };
+    Assert.That(IrInterpreter.Call(this._before, function.Name, [argument]), Is.EqualTo(count));
+    Assert.That(IrInterpreter.Call(this._after.Module, function.Name, [argument]), Is.EqualTo(count));
   }
 }
