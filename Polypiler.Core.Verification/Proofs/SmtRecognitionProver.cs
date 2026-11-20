@@ -115,6 +115,7 @@ public sealed class SmtRecognitionProver : IRecognitionProver {
         IrBinary { Left.Type.IsInteger: true } comparison when Predicate(comparison) is { } predicate => this.Compare(comparison.Left, comparison.Right, predicate),
         IrConditional choice => this.Emit("Select", choice, this.Value(choice.Condition), this.Value(choice.WhenTrue), this.Value(choice.WhenFalse)),
         IrIntrinsic { Op: IrIntrinsicOp.AbsWrap } absolute => this.Absolute(absolute),
+        IrIntrinsic { Op: IrIntrinsicOp.TrailingZeroCount or IrIntrinsicOp.LeadingZeroCount, Arguments: [{ Type.IsInteger: true } input] } count => this.ZeroCount(count, input),
         IrIntrinsic { Op: IrIntrinsicOp.Parity or IrIntrinsicOp.PopCount, Arguments: [{ Type.IsInteger: true } counted] } count => this.Count(count, counted),
         IrIntrinsic { Op: IrIntrinsicOp.TestBit or IrIntrinsicOp.SetBit or IrIntrinsicOp.ClearBit or IrIntrinsicOp.ToggleBit, Arguments: [var value, var position] } bit
           => this.Bit(bit, value, position),
@@ -192,6 +193,27 @@ public sealed class SmtRecognitionProver : IRecognitionProver {
       var negative = this.Emit("SLt", input, value, "0");
       var negated = this.Emit("Neg", input, value);
       return this.Emit("Select", absolute, negative, negated, value);
+    }
+
+    /// <summary>
+    /// The number of zero bits below the lowest (or above the highest) set bit, by testing every bit
+    /// position in turn, independent of the matched loops; the width for zero.
+    /// </summary>
+    private string ZeroCount(IrIntrinsic count, IrExpr input) {
+      var value = this.Value(input);
+      var width = input.Type.Bits;
+      var result = width.ToString(CultureInfo.InvariantCulture);
+      for (var step = 0; step < width; ++step) {
+        // The trailing count tests from the top down, so that the lowest set bit is chosen last; the leading count the other way.
+        var bit = count.Op == IrIntrinsicOp.TrailingZeroCount ? width - 1 - step : step;
+        var shifted = this.Emit("LShr", input, value, bit.ToString(CultureInfo.InvariantCulture));
+        var low = this.Emit("And", input, shifted, "1");
+        var set = this.Emit("Ne", input, low, "0");
+        var zeros = count.Op == IrIntrinsicOp.TrailingZeroCount ? bit : width - 1 - bit;
+        result = this.Emit("Select", count, set, zeros.ToString(CultureInfo.InvariantCulture), result);
+      }
+
+      return result;
     }
 
     /// <summary>

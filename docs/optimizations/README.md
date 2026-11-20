@@ -7,7 +7,7 @@ the page then describes what the code does rather than what is planned. The fami
 "Loop transformations" on are borrowed from PB-Compiler; the [catalog](pb-compiler-catalog.md)
 maps every one of its optimization documents to the page here that covers it.
 
-**31 of 294 implemented** - in the pass pipeline of `translate` (#1307), among the passes over the legalized module that optimise the helpers (#1353), specialise functions for the lambdas passed to them (#1360) and evaluate, merge and remove calls by the effect summaries of their functions (#1361), in legalization (#1358) and among the target passes of the backends (#1336). Each page records its implemented scope and verification. O0102, O0105, O0106, O0108, O0110, O0120, O0121, O0122 and O0125 require SMT proofs of the actual tree-IR candidate; the total remains 31 because all nine already had prototype implementations.
+**31 of 294 implemented** - in the pass pipeline of `translate` (#1307), among the passes over the legalized module that optimise the helpers (#1353), specialise functions for the lambdas passed to them (#1360) and evaluate, merge and remove calls by the effect summaries of their functions (#1361), in legalization (#1358) and among the target passes of the backends (#1336). Each page records its implemented scope and verification. O0102, O0103, O0105, O0106, O0108, O0110, O0120, O0121, O0122 and O0125 require SMT proofs of the actual tree-IR candidate; the total remains 31 because all ten already had prototype implementations.
 
 ## General passes
 

@@ -12,7 +12,7 @@ using Reqnroll;
 namespace Polypiler.Tests.Acceptance.Optimize;
 
 /// <summary>Arithmetic recognition contracts on executable source imported into the current tree IR.</summary>
-[Binding, Scope(Feature = "Proved wrapping absolute value recognition"), Scope(Feature = "Proved SWAR population count recognition"), Scope(Feature = "Proved parity recognition"), Scope(Feature = "Proved shift-add multiplication recognition"), Scope(Feature = "Proved single-bit recognition"), Scope(Feature = "Proved minimum and maximum recognition"), Scope(Feature = "Proved signum recognition")]
+[Binding, Scope(Feature = "Proved wrapping absolute value recognition"), Scope(Feature = "Proved zero-count loop recognition"), Scope(Feature = "Proved SWAR population count recognition"), Scope(Feature = "Proved parity recognition"), Scope(Feature = "Proved shift-add multiplication recognition"), Scope(Feature = "Proved single-bit recognition"), Scope(Feature = "Proved minimum and maximum recognition"), Scope(Feature = "Proved signum recognition")]
 public sealed class ArithmeticRecognitionSteps {
 
   private IrModule _before = null!;
@@ -93,9 +93,28 @@ public sealed class ArithmeticRecognitionSteps {
     Assert.That(actual, Is.EqualTo(ulong.Parse(output, NumberStyles.HexNumber, CultureInfo.InvariantCulture)));
   }
 
+  /// <summary>Both versions return the stated count for one value of any integer kind.</summary>
+  [Then("^both arithmetic versions count ([0-9A-Fa-f]+) as ([0-9]+)$")]
+  public void Count(string input, int count) {
+    var function = this._before.Functions.Single();
+    var bits = ulong.Parse(input, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+    object argument = function.Parameters[0].Type.Kind switch {
+      IrTypeKind.I8 => unchecked((sbyte)bits),
+      IrTypeKind.U8 => unchecked((byte)bits),
+      IrTypeKind.I16 => unchecked((short)bits),
+      IrTypeKind.U16 => unchecked((ushort)bits),
+      IrTypeKind.I32 => unchecked((int)bits),
+      IrTypeKind.U32 => unchecked((uint)bits),
+      IrTypeKind.I64 => unchecked((long)bits),
+      _ => bits
+    };
+    Assert.That(IrInterpreter.Call(this._before, function.Name, [argument]), Is.EqualTo(count));
+    Assert.That(IrInterpreter.Call(this._after.Module, function.Name, [argument]), Is.EqualTo(count));
+  }
+
   /// <summary>Both versions give the stated count for one unsigned value.</summary>
   [Then("^both popcount versions count ([0-9A-Fa-f]+) as ([0-9]+)$")]
-  public void Count(string value, int count) {
+  public void PopCount(string value, int count) {
     var function = this._before.Functions.Single();
     var bits = ulong.Parse(value, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
     object argument = function.Parameters[0].Type.Kind switch {
