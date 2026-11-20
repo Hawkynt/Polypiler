@@ -55,9 +55,10 @@ internal static class Windows {
         return true;
       }
 
-    // A single assignment and its reader are a plain expression, which the rule meets as such.
+    // A mutable variable's one assignment is not its stable definition. Compose it with its reader
+    // as well: a masked byte swap followed by a rotate is already a complete two-step cascade.
     var after = index + composed.Count;
-    if (composed.Count < 2 || after >= statements.Count || !context.IsDeadAfter(local, statements, after + 1))
+    if (composed.Count < 1 || after >= statements.Count || !context.IsDeadAfter(local, statements, after + 1))
       return false;
 
     var (reader, read) = statements[after] switch {
@@ -67,6 +68,11 @@ internal static class Windows {
       _ => (null, null)
     };
     if (reader is null || read is null || !IrShape.IsSideEffectFree(read) || !IrShape.Reads(read, local))
+      return false;
+
+    // Other one-assignment readers are already visited as expressions. Only an explicit rotate
+    // can finish the two-step permutation here; avoid recording mere local coalescing as a rule.
+    if (composed.Count == 1 && read is not IrIntrinsic { Op: IrIntrinsicOp.RotateLeft or IrIntrinsicOp.RotateRight })
       return false;
 
     var fired = false;
@@ -79,7 +85,7 @@ internal static class Windows {
       var mapped = operands.Select(Visit).ToList();
       var rebuilt = mapped.Where((operand, position) => !ReferenceEquals(operand, operands[position])).Any() ? IrShape.With(node, mapped) : node;
       var replaced = recognize(rebuilt);
-      fired |= replaced is not null;
+      fired |= replaced is not null && !IrShape.Same(replaced, rebuilt);
       return seen[node] = replaced ?? rebuilt;
     }
 

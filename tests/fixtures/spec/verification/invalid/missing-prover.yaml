@@ -1,0 +1,14 @@
+id: VERIFICATION.proof.no-prover
+title: A proof class without its prover
+version: 1
+status: draft
+owner: Hawkynt
+issue: VER-EXHAUSTIVE
+tests: []
+introducedIn: P0
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: proof
+  widths: [8]

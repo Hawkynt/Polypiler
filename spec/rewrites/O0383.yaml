@@ -1,0 +1,46 @@
+id: REWRITES.O0383
+title: Remove unreferenced global storage
+version: 1
+status: normative
+owner: Hawkynt
+issue: "#1154"
+tests:
+  - Polypiler.Tests/Optimize/DeadGlobalEliminationTests.cs
+  - tests/features/optimize/opt-ipa-deadglobal.feature
+introducedIn: P3
+compatibility: none
+reviewedRevision: 1
+normative: >-
+  O0383 MUST mark functions and globals in one graph. Roots are exports, additional
+  function entry points, the module initializer, retained type members and static
+  fields, explicit host/profile global roots, and initializers whose removal is
+  not proven free of effects, modeled traps and nontermination. When O0381 is
+  disabled every existing function MUST be a root. Marking MUST follow direct
+  calls, function references, global reads and global assignments, including
+  nested closures and untaken branches. Only live global initializers MUST be
+  followed. Both sweeps MUST delete atomically; surviving declarations and
+  initialization order MUST remain unchanged. The rule MUST NOT run when
+  disabled or at opt none. Fixed static data may be deleted without modeling
+  host resource exhaustion; uncertain runtime array lengths MUST remain roots.
+spec:
+  optimization: O0383
+  kind: eliminate
+  before: 'export main reads limit; dead Unused reads table; dead ops initialized by factory returning FuncRef area'
+  after: 'main and limit retained; Unused, table, ops, factory and area removed with O0381 enabled'
+  predicates:
+    - id: unreferenced
+      text: No retained function, global initializer or type declaration names the removed global.
+      fact: none
+    - id: initialization-preserved
+      text: An unused initializer is removed only when its effects, modeled traps and nontermination are excluded.
+      fact: none
+    - id: roots-complete
+      text: Host/profile roots and every function retained without O0381 are marked.
+      fact: none
+  proof: {class: structural}
+  floatingPoint: {touchesFloat: false, reassociates: false, contracts: false}
+  negativeFixtures: [tests/fixtures/optimize/o0383/nested.pir, tests/fixtures/optimize/o0383/external.pir, tests/fixtures/optimize/o0383/trap.pir, tests/fixtures/optimize/o0383/disabled.pir]
+  switch: '--disable-opt O0383'
+  optLevels: [balanced, speed, size, memory]
+  interactions: {after: [], enables: [O0381]}
+  document: docs/optimizations/O0383-global-dead-code-elimination.md

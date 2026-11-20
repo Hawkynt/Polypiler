@@ -35,7 +35,11 @@ public sealed class DeadFunctionElimination : IIrPass {
     ArgumentNullException.ThrowIfNull(scope);
     ArgumentNullException.ThrowIfNull(applied);
     ArgumentNullException.ThrowIfNull(note);
-    var live = ModuleReachability.Compute(module, roots).LiveFunctions;
+    return Sweep(module, ModuleReachability.Compute(module, roots).LiveFunctions, applied, note);
+  }
+
+  /// <summary>Deletes functions from an already-computed joint reachability result.</summary>
+  internal static IrModule Sweep(IrModule module, IReadOnlySet<IrFunction> live, Action<string, string> applied, Action<string> note) {
     if (live.Count == module.Functions.Count)
       return module;
 

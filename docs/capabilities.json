@@ -1,0 +1,2794 @@
+{
+  "schemaVersion": 1,
+  "generatedFrom": {
+    "commit": "65d569574c04117b68cd6b24d9e6b1d56cac24a7",
+    "gateRecords": 0
+  },
+  "states": [
+    "planned",
+    "parsed",
+    "lifted",
+    "recognized",
+    "proved",
+    "legalized",
+    "emitted",
+    "compiled",
+    "executed",
+    "verified",
+    "performance-validated"
+  ],
+  "pairs": [
+    {
+      "from": "csharp",
+      "sourceProfile": "net10.0",
+      "to": "csharp",
+      "targetProfile": "net10.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "decimal",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "string",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "goto statement",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "throw and try",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "multi-dimensional and jagged arrays",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "lambda",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "generic method",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "ref and out parameters",
+          "diagnostic": "PLY1002"
+        }
+      ]
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net10.0",
+      "to": "csharp",
+      "targetProfile": "net2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "decimal",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "string",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "goto statement",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "throw and try",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "multi-dimensional and jagged arrays",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "lambda",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "generic method",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "ref and out parameters",
+          "diagnostic": "PLY1002"
+        }
+      ]
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net10.0",
+      "to": "csharp",
+      "targetProfile": "net3.5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "decimal",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "string",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "goto statement",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "throw and try",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "multi-dimensional and jagged arrays",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "lambda",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "generic method",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "ref and out parameters",
+          "diagnostic": "PLY1002"
+        }
+      ]
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net10.0",
+      "to": "csharp",
+      "targetProfile": "net4.6",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "decimal",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "string",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "goto statement",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "throw and try",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "multi-dimensional and jagged arrays",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "lambda",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "generic method",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "ref and out parameters",
+          "diagnostic": "PLY1002"
+        }
+      ]
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net10.0",
+      "to": "csharp",
+      "targetProfile": "net4.8",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "decimal",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "string",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "goto statement",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "throw and try",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "multi-dimensional and jagged arrays",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "lambda",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "generic method",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "ref and out parameters",
+          "diagnostic": "PLY1002"
+        }
+      ]
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net10.0",
+      "to": "csharp",
+      "targetProfile": "net8.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "decimal",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "string",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "goto statement",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "throw and try",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "multi-dimensional and jagged arrays",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "lambda",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "generic method",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "ref and out parameters",
+          "diagnostic": "PLY1002"
+        }
+      ]
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net10.0",
+      "to": "csharp",
+      "targetProfile": "netcoreapp3.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "decimal",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "string",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "goto statement",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "throw and try",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "multi-dimensional and jagged arrays",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "lambda",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "generic method",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "ref and out parameters",
+          "diagnostic": "PLY1002"
+        }
+      ]
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net10.0",
+      "to": "csharp",
+      "targetProfile": "netstandard2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "decimal",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "string",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "goto statement",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "throw and try",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "multi-dimensional and jagged arrays",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "lambda",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "generic method",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "ref and out parameters",
+          "diagnostic": "PLY1002"
+        }
+      ]
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net10.0",
+      "to": "csharp",
+      "targetProfile": "netstandard2.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "decimal",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "string",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "goto statement",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "throw and try",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "multi-dimensional and jagged arrays",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "lambda",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "generic method",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "ref and out parameters",
+          "diagnostic": "PLY1002"
+        }
+      ]
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net10.0",
+      "to": "javascript",
+      "targetProfile": "es2015",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "decimal",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "string",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "goto statement",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "throw and try",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "multi-dimensional and jagged arrays",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "lambda",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "generic method",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "ref and out parameters",
+          "diagnostic": "PLY1002"
+        }
+      ]
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net10.0",
+      "to": "javascript",
+      "targetProfile": "es2017",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "decimal",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "string",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "goto statement",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "throw and try",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "multi-dimensional and jagged arrays",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "lambda",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "generic method",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "ref and out parameters",
+          "diagnostic": "PLY1002"
+        }
+      ]
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net10.0",
+      "to": "javascript",
+      "targetProfile": "es2020",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "decimal",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "string",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "goto statement",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "throw and try",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "multi-dimensional and jagged arrays",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "lambda",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "generic method",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "ref and out parameters",
+          "diagnostic": "PLY1002"
+        }
+      ]
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net10.0",
+      "to": "javascript",
+      "targetProfile": "es2022",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "decimal",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "string",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "goto statement",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "throw and try",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "multi-dimensional and jagged arrays",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "lambda",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "generic method",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "ref and out parameters",
+          "diagnostic": "PLY1002"
+        }
+      ]
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net10.0",
+      "to": "javascript",
+      "targetProfile": "es5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "decimal",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "string",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "goto statement",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "throw and try",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "multi-dimensional and jagged arrays",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "lambda",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "generic method",
+          "diagnostic": "PLY1002"
+        },
+        {
+          "construct": "ref and out parameters",
+          "diagnostic": "PLY1002"
+        }
+      ]
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net2.0",
+      "to": "csharp",
+      "targetProfile": "net10.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net2.0",
+      "to": "csharp",
+      "targetProfile": "net2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net2.0",
+      "to": "csharp",
+      "targetProfile": "net3.5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net2.0",
+      "to": "csharp",
+      "targetProfile": "net4.6",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net2.0",
+      "to": "csharp",
+      "targetProfile": "net4.8",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net2.0",
+      "to": "csharp",
+      "targetProfile": "net8.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net2.0",
+      "to": "csharp",
+      "targetProfile": "netcoreapp3.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net2.0",
+      "to": "csharp",
+      "targetProfile": "netstandard2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net2.0",
+      "to": "csharp",
+      "targetProfile": "netstandard2.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net2.0",
+      "to": "javascript",
+      "targetProfile": "es2015",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net2.0",
+      "to": "javascript",
+      "targetProfile": "es2017",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net2.0",
+      "to": "javascript",
+      "targetProfile": "es2020",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net2.0",
+      "to": "javascript",
+      "targetProfile": "es2022",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net2.0",
+      "to": "javascript",
+      "targetProfile": "es5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net3.5",
+      "to": "csharp",
+      "targetProfile": "net10.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net3.5",
+      "to": "csharp",
+      "targetProfile": "net2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net3.5",
+      "to": "csharp",
+      "targetProfile": "net3.5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net3.5",
+      "to": "csharp",
+      "targetProfile": "net4.6",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net3.5",
+      "to": "csharp",
+      "targetProfile": "net4.8",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net3.5",
+      "to": "csharp",
+      "targetProfile": "net8.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net3.5",
+      "to": "csharp",
+      "targetProfile": "netcoreapp3.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net3.5",
+      "to": "csharp",
+      "targetProfile": "netstandard2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net3.5",
+      "to": "csharp",
+      "targetProfile": "netstandard2.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net3.5",
+      "to": "javascript",
+      "targetProfile": "es2015",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net3.5",
+      "to": "javascript",
+      "targetProfile": "es2017",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net3.5",
+      "to": "javascript",
+      "targetProfile": "es2020",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net3.5",
+      "to": "javascript",
+      "targetProfile": "es2022",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net3.5",
+      "to": "javascript",
+      "targetProfile": "es5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net4.6",
+      "to": "csharp",
+      "targetProfile": "net10.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net4.6",
+      "to": "csharp",
+      "targetProfile": "net2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net4.6",
+      "to": "csharp",
+      "targetProfile": "net3.5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net4.6",
+      "to": "csharp",
+      "targetProfile": "net4.6",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net4.6",
+      "to": "csharp",
+      "targetProfile": "net4.8",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net4.6",
+      "to": "csharp",
+      "targetProfile": "net8.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net4.6",
+      "to": "csharp",
+      "targetProfile": "netcoreapp3.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net4.6",
+      "to": "csharp",
+      "targetProfile": "netstandard2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net4.6",
+      "to": "csharp",
+      "targetProfile": "netstandard2.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net4.6",
+      "to": "javascript",
+      "targetProfile": "es2015",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net4.6",
+      "to": "javascript",
+      "targetProfile": "es2017",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net4.6",
+      "to": "javascript",
+      "targetProfile": "es2020",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net4.6",
+      "to": "javascript",
+      "targetProfile": "es2022",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net4.6",
+      "to": "javascript",
+      "targetProfile": "es5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net4.8",
+      "to": "csharp",
+      "targetProfile": "net10.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net4.8",
+      "to": "csharp",
+      "targetProfile": "net2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net4.8",
+      "to": "csharp",
+      "targetProfile": "net3.5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net4.8",
+      "to": "csharp",
+      "targetProfile": "net4.6",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net4.8",
+      "to": "csharp",
+      "targetProfile": "net4.8",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net4.8",
+      "to": "csharp",
+      "targetProfile": "net8.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net4.8",
+      "to": "csharp",
+      "targetProfile": "netcoreapp3.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net4.8",
+      "to": "csharp",
+      "targetProfile": "netstandard2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net4.8",
+      "to": "csharp",
+      "targetProfile": "netstandard2.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net4.8",
+      "to": "javascript",
+      "targetProfile": "es2015",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net4.8",
+      "to": "javascript",
+      "targetProfile": "es2017",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net4.8",
+      "to": "javascript",
+      "targetProfile": "es2020",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net4.8",
+      "to": "javascript",
+      "targetProfile": "es2022",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net4.8",
+      "to": "javascript",
+      "targetProfile": "es5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net8.0",
+      "to": "csharp",
+      "targetProfile": "net10.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net8.0",
+      "to": "csharp",
+      "targetProfile": "net2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net8.0",
+      "to": "csharp",
+      "targetProfile": "net3.5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net8.0",
+      "to": "csharp",
+      "targetProfile": "net4.6",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net8.0",
+      "to": "csharp",
+      "targetProfile": "net4.8",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net8.0",
+      "to": "csharp",
+      "targetProfile": "net8.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net8.0",
+      "to": "csharp",
+      "targetProfile": "netcoreapp3.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net8.0",
+      "to": "csharp",
+      "targetProfile": "netstandard2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net8.0",
+      "to": "csharp",
+      "targetProfile": "netstandard2.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net8.0",
+      "to": "javascript",
+      "targetProfile": "es2015",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net8.0",
+      "to": "javascript",
+      "targetProfile": "es2017",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net8.0",
+      "to": "javascript",
+      "targetProfile": "es2020",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net8.0",
+      "to": "javascript",
+      "targetProfile": "es2022",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "net8.0",
+      "to": "javascript",
+      "targetProfile": "es5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netcoreapp3.1",
+      "to": "csharp",
+      "targetProfile": "net10.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netcoreapp3.1",
+      "to": "csharp",
+      "targetProfile": "net2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netcoreapp3.1",
+      "to": "csharp",
+      "targetProfile": "net3.5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netcoreapp3.1",
+      "to": "csharp",
+      "targetProfile": "net4.6",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netcoreapp3.1",
+      "to": "csharp",
+      "targetProfile": "net4.8",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netcoreapp3.1",
+      "to": "csharp",
+      "targetProfile": "net8.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netcoreapp3.1",
+      "to": "csharp",
+      "targetProfile": "netcoreapp3.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netcoreapp3.1",
+      "to": "csharp",
+      "targetProfile": "netstandard2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netcoreapp3.1",
+      "to": "csharp",
+      "targetProfile": "netstandard2.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netcoreapp3.1",
+      "to": "javascript",
+      "targetProfile": "es2015",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netcoreapp3.1",
+      "to": "javascript",
+      "targetProfile": "es2017",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netcoreapp3.1",
+      "to": "javascript",
+      "targetProfile": "es2020",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netcoreapp3.1",
+      "to": "javascript",
+      "targetProfile": "es2022",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netcoreapp3.1",
+      "to": "javascript",
+      "targetProfile": "es5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netstandard2.0",
+      "to": "csharp",
+      "targetProfile": "net10.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netstandard2.0",
+      "to": "csharp",
+      "targetProfile": "net2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netstandard2.0",
+      "to": "csharp",
+      "targetProfile": "net3.5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netstandard2.0",
+      "to": "csharp",
+      "targetProfile": "net4.6",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netstandard2.0",
+      "to": "csharp",
+      "targetProfile": "net4.8",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netstandard2.0",
+      "to": "csharp",
+      "targetProfile": "net8.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netstandard2.0",
+      "to": "csharp",
+      "targetProfile": "netcoreapp3.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netstandard2.0",
+      "to": "csharp",
+      "targetProfile": "netstandard2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netstandard2.0",
+      "to": "csharp",
+      "targetProfile": "netstandard2.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netstandard2.0",
+      "to": "javascript",
+      "targetProfile": "es2015",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netstandard2.0",
+      "to": "javascript",
+      "targetProfile": "es2017",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netstandard2.0",
+      "to": "javascript",
+      "targetProfile": "es2020",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netstandard2.0",
+      "to": "javascript",
+      "targetProfile": "es2022",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netstandard2.0",
+      "to": "javascript",
+      "targetProfile": "es5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netstandard2.1",
+      "to": "csharp",
+      "targetProfile": "net10.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netstandard2.1",
+      "to": "csharp",
+      "targetProfile": "net2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netstandard2.1",
+      "to": "csharp",
+      "targetProfile": "net3.5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netstandard2.1",
+      "to": "csharp",
+      "targetProfile": "net4.6",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netstandard2.1",
+      "to": "csharp",
+      "targetProfile": "net4.8",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netstandard2.1",
+      "to": "csharp",
+      "targetProfile": "net8.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netstandard2.1",
+      "to": "csharp",
+      "targetProfile": "netcoreapp3.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netstandard2.1",
+      "to": "csharp",
+      "targetProfile": "netstandard2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netstandard2.1",
+      "to": "csharp",
+      "targetProfile": "netstandard2.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netstandard2.1",
+      "to": "javascript",
+      "targetProfile": "es2015",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netstandard2.1",
+      "to": "javascript",
+      "targetProfile": "es2017",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netstandard2.1",
+      "to": "javascript",
+      "targetProfile": "es2020",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netstandard2.1",
+      "to": "javascript",
+      "targetProfile": "es2022",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "csharp",
+      "sourceProfile": "netstandard2.1",
+      "to": "javascript",
+      "targetProfile": "es5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2015",
+      "to": "csharp",
+      "targetProfile": "net10.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2015",
+      "to": "csharp",
+      "targetProfile": "net2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2015",
+      "to": "csharp",
+      "targetProfile": "net3.5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2015",
+      "to": "csharp",
+      "targetProfile": "net4.6",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2015",
+      "to": "csharp",
+      "targetProfile": "net4.8",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2015",
+      "to": "csharp",
+      "targetProfile": "net8.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2015",
+      "to": "csharp",
+      "targetProfile": "netcoreapp3.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2015",
+      "to": "csharp",
+      "targetProfile": "netstandard2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2015",
+      "to": "csharp",
+      "targetProfile": "netstandard2.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2015",
+      "to": "javascript",
+      "targetProfile": "es2015",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2015",
+      "to": "javascript",
+      "targetProfile": "es2017",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2015",
+      "to": "javascript",
+      "targetProfile": "es2020",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2015",
+      "to": "javascript",
+      "targetProfile": "es2022",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2015",
+      "to": "javascript",
+      "targetProfile": "es5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2017",
+      "to": "csharp",
+      "targetProfile": "net10.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2017",
+      "to": "csharp",
+      "targetProfile": "net2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2017",
+      "to": "csharp",
+      "targetProfile": "net3.5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2017",
+      "to": "csharp",
+      "targetProfile": "net4.6",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2017",
+      "to": "csharp",
+      "targetProfile": "net4.8",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2017",
+      "to": "csharp",
+      "targetProfile": "net8.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2017",
+      "to": "csharp",
+      "targetProfile": "netcoreapp3.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2017",
+      "to": "csharp",
+      "targetProfile": "netstandard2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2017",
+      "to": "csharp",
+      "targetProfile": "netstandard2.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2017",
+      "to": "javascript",
+      "targetProfile": "es2015",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2017",
+      "to": "javascript",
+      "targetProfile": "es2017",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2017",
+      "to": "javascript",
+      "targetProfile": "es2020",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2017",
+      "to": "javascript",
+      "targetProfile": "es2022",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2017",
+      "to": "javascript",
+      "targetProfile": "es5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2020",
+      "to": "csharp",
+      "targetProfile": "net10.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2020",
+      "to": "csharp",
+      "targetProfile": "net2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2020",
+      "to": "csharp",
+      "targetProfile": "net3.5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2020",
+      "to": "csharp",
+      "targetProfile": "net4.6",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2020",
+      "to": "csharp",
+      "targetProfile": "net4.8",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2020",
+      "to": "csharp",
+      "targetProfile": "net8.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2020",
+      "to": "csharp",
+      "targetProfile": "netcoreapp3.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2020",
+      "to": "csharp",
+      "targetProfile": "netstandard2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2020",
+      "to": "csharp",
+      "targetProfile": "netstandard2.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2020",
+      "to": "javascript",
+      "targetProfile": "es2015",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2020",
+      "to": "javascript",
+      "targetProfile": "es2017",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2020",
+      "to": "javascript",
+      "targetProfile": "es2020",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2020",
+      "to": "javascript",
+      "targetProfile": "es2022",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2020",
+      "to": "javascript",
+      "targetProfile": "es5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2022",
+      "to": "csharp",
+      "targetProfile": "net10.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "template string",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "switch section that falls through",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "with statement",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "throw and try",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "function inside a function",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "class",
+          "diagnostic": "PLY1102"
+        }
+      ]
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2022",
+      "to": "csharp",
+      "targetProfile": "net2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "template string",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "switch section that falls through",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "with statement",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "throw and try",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "function inside a function",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "class",
+          "diagnostic": "PLY1102"
+        }
+      ]
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2022",
+      "to": "csharp",
+      "targetProfile": "net3.5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "template string",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "switch section that falls through",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "with statement",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "throw and try",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "function inside a function",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "class",
+          "diagnostic": "PLY1102"
+        }
+      ]
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2022",
+      "to": "csharp",
+      "targetProfile": "net4.6",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "template string",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "switch section that falls through",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "with statement",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "throw and try",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "function inside a function",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "class",
+          "diagnostic": "PLY1102"
+        }
+      ]
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2022",
+      "to": "csharp",
+      "targetProfile": "net4.8",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "template string",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "switch section that falls through",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "with statement",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "throw and try",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "function inside a function",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "class",
+          "diagnostic": "PLY1102"
+        }
+      ]
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2022",
+      "to": "csharp",
+      "targetProfile": "net8.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "template string",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "switch section that falls through",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "with statement",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "throw and try",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "function inside a function",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "class",
+          "diagnostic": "PLY1102"
+        }
+      ]
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2022",
+      "to": "csharp",
+      "targetProfile": "netcoreapp3.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "template string",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "switch section that falls through",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "with statement",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "throw and try",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "function inside a function",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "class",
+          "diagnostic": "PLY1102"
+        }
+      ]
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2022",
+      "to": "csharp",
+      "targetProfile": "netstandard2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "template string",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "switch section that falls through",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "with statement",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "throw and try",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "function inside a function",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "class",
+          "diagnostic": "PLY1102"
+        }
+      ]
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2022",
+      "to": "csharp",
+      "targetProfile": "netstandard2.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "template string",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "switch section that falls through",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "with statement",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "throw and try",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "function inside a function",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "class",
+          "diagnostic": "PLY1102"
+        }
+      ]
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2022",
+      "to": "javascript",
+      "targetProfile": "es2015",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "template string",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "switch section that falls through",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "with statement",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "throw and try",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "function inside a function",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "class",
+          "diagnostic": "PLY1102"
+        }
+      ]
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2022",
+      "to": "javascript",
+      "targetProfile": "es2017",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "template string",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "switch section that falls through",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "with statement",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "throw and try",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "function inside a function",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "class",
+          "diagnostic": "PLY1102"
+        }
+      ]
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2022",
+      "to": "javascript",
+      "targetProfile": "es2020",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "template string",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "switch section that falls through",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "with statement",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "throw and try",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "function inside a function",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "class",
+          "diagnostic": "PLY1102"
+        }
+      ]
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2022",
+      "to": "javascript",
+      "targetProfile": "es2022",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "template string",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "switch section that falls through",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "with statement",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "throw and try",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "function inside a function",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "class",
+          "diagnostic": "PLY1102"
+        }
+      ]
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es2022",
+      "to": "javascript",
+      "targetProfile": "es5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "template string",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "switch section that falls through",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "with statement",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "throw and try",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "function inside a function",
+          "diagnostic": "PLY1102"
+        },
+        {
+          "construct": "class",
+          "diagnostic": "PLY1102"
+        }
+      ]
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es5",
+      "to": "csharp",
+      "targetProfile": "net10.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es5",
+      "to": "csharp",
+      "targetProfile": "net2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es5",
+      "to": "csharp",
+      "targetProfile": "net3.5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es5",
+      "to": "csharp",
+      "targetProfile": "net4.6",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es5",
+      "to": "csharp",
+      "targetProfile": "net4.8",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es5",
+      "to": "csharp",
+      "targetProfile": "net8.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es5",
+      "to": "csharp",
+      "targetProfile": "netcoreapp3.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es5",
+      "to": "csharp",
+      "targetProfile": "netstandard2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es5",
+      "to": "csharp",
+      "targetProfile": "netstandard2.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es5",
+      "to": "javascript",
+      "targetProfile": "es2015",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es5",
+      "to": "javascript",
+      "targetProfile": "es2017",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es5",
+      "to": "javascript",
+      "targetProfile": "es2020",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es5",
+      "to": "javascript",
+      "targetProfile": "es2022",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "javascript",
+      "sourceProfile": "es5",
+      "to": "javascript",
+      "targetProfile": "es5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    }
+  ]
+}

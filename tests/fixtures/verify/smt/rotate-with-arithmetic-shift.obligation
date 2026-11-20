@@ -1,0 +1,5 @@
+# Known-false identity: an arithmetic right shift copies the sign bit into the rotation.
+rule: rotate-with-arithmetic-shift
+inputs: x: i<w>
+before: %s = Sub.i<w> <w>, 1; %a = Shl.i<w>[strict] %x, 1; %b = AShr.i<w>[strict] %x, %s; %r = Or.i<w> %a, %b
+after: %r = RotateLeft.i<w> %x, 1

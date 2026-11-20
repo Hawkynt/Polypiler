@@ -1,0 +1,286 @@
+{
+  "bitReversal": {
+    "source": "Hawkynt/CompressionWorkbench@21e609396e8fceb80e49185cc34cab7bce7f6483:Compression.Core/BitIO/BitHelpers.cs",
+    "oracle": ".NET 10.0.9",
+    "cases": [
+      {
+        "input": "00000000",
+        "length": -1,
+        "expected": "00000000"
+      },
+      {
+        "input": "00000000",
+        "length": 0,
+        "expected": "00000000"
+      },
+      {
+        "input": "00000000",
+        "length": 1,
+        "expected": "00000000"
+      },
+      {
+        "input": "00000000",
+        "length": 3,
+        "expected": "00000000"
+      },
+      {
+        "input": "00000000",
+        "length": 16,
+        "expected": "00000000"
+      },
+      {
+        "input": "00000000",
+        "length": 31,
+        "expected": "00000000"
+      },
+      {
+        "input": "00000000",
+        "length": 32,
+        "expected": "00000000"
+      },
+      {
+        "input": "00000000",
+        "length": 33,
+        "expected": "00000000"
+      },
+      {
+        "input": "00000001",
+        "length": -1,
+        "expected": "40000000"
+      },
+      {
+        "input": "00000001",
+        "length": 0,
+        "expected": "80000000"
+      },
+      {
+        "input": "00000001",
+        "length": 1,
+        "expected": "00000001"
+      },
+      {
+        "input": "00000001",
+        "length": 3,
+        "expected": "00000004"
+      },
+      {
+        "input": "00000001",
+        "length": 16,
+        "expected": "00008000"
+      },
+      {
+        "input": "00000001",
+        "length": 31,
+        "expected": "40000000"
+      },
+      {
+        "input": "00000001",
+        "length": 32,
+        "expected": "80000000"
+      },
+      {
+        "input": "00000001",
+        "length": 33,
+        "expected": "00000001"
+      },
+      {
+        "input": "00000003",
+        "length": -1,
+        "expected": "60000000"
+      },
+      {
+        "input": "00000003",
+        "length": 0,
+        "expected": "C0000000"
+      },
+      {
+        "input": "00000003",
+        "length": 1,
+        "expected": "00000001"
+      },
+      {
+        "input": "00000003",
+        "length": 3,
+        "expected": "00000006"
+      },
+      {
+        "input": "00000003",
+        "length": 16,
+        "expected": "0000C000"
+      },
+      {
+        "input": "00000003",
+        "length": 31,
+        "expected": "60000000"
+      },
+      {
+        "input": "00000003",
+        "length": 32,
+        "expected": "C0000000"
+      },
+      {
+        "input": "00000003",
+        "length": 33,
+        "expected": "00000001"
+      },
+      {
+        "input": "80000000",
+        "length": -1,
+        "expected": "00000000"
+      },
+      {
+        "input": "80000000",
+        "length": 0,
+        "expected": "00000001"
+      },
+      {
+        "input": "80000000",
+        "length": 1,
+        "expected": "00000000"
+      },
+      {
+        "input": "80000000",
+        "length": 3,
+        "expected": "00000000"
+      },
+      {
+        "input": "80000000",
+        "length": 16,
+        "expected": "00000000"
+      },
+      {
+        "input": "80000000",
+        "length": 31,
+        "expected": "00000000"
+      },
+      {
+        "input": "80000000",
+        "length": 32,
+        "expected": "00000001"
+      },
+      {
+        "input": "80000000",
+        "length": 33,
+        "expected": "00000000"
+      },
+      {
+        "input": "12345678",
+        "length": -1,
+        "expected": "0F351624"
+      },
+      {
+        "input": "12345678",
+        "length": 0,
+        "expected": "1E6A2C48"
+      },
+      {
+        "input": "12345678",
+        "length": 1,
+        "expected": "00000000"
+      },
+      {
+        "input": "12345678",
+        "length": 3,
+        "expected": "00000000"
+      },
+      {
+        "input": "12345678",
+        "length": 16,
+        "expected": "00001E6A"
+      },
+      {
+        "input": "12345678",
+        "length": 31,
+        "expected": "0F351624"
+      },
+      {
+        "input": "12345678",
+        "length": 32,
+        "expected": "1E6A2C48"
+      },
+      {
+        "input": "12345678",
+        "length": 33,
+        "expected": "00000000"
+      },
+      {
+        "input": "FFFFFFFF",
+        "length": -1,
+        "expected": "7FFFFFFF"
+      },
+      {
+        "input": "FFFFFFFF",
+        "length": 0,
+        "expected": "FFFFFFFF"
+      },
+      {
+        "input": "FFFFFFFF",
+        "length": 1,
+        "expected": "00000001"
+      },
+      {
+        "input": "FFFFFFFF",
+        "length": 3,
+        "expected": "00000007"
+      },
+      {
+        "input": "FFFFFFFF",
+        "length": 16,
+        "expected": "0000FFFF"
+      },
+      {
+        "input": "FFFFFFFF",
+        "length": 31,
+        "expected": "7FFFFFFF"
+      },
+      {
+        "input": "FFFFFFFF",
+        "length": 32,
+        "expected": "FFFFFFFF"
+      },
+      {
+        "input": "FFFFFFFF",
+        "length": 33,
+        "expected": "00000001"
+      }
+    ]
+  },
+  "byteSwap": {
+    "source": "Hawkynt/Hawkynt.github.io@b3a8a8e92cbca83475986391c3cac56f0b185d29:Cipher/algorithms/hash/cityhash.js",
+    "oracle": "v22.16.0",
+    "cases": [
+      {
+        "input": "0000000000000000",
+        "expected": "0000000000000000"
+      },
+      {
+        "input": "0000000000000001",
+        "expected": "0100000000000000"
+      },
+      {
+        "input": "00000000000000FF",
+        "expected": "FF00000000000000"
+      },
+      {
+        "input": "8000000000000000",
+        "expected": "0000000000000080"
+      },
+      {
+        "input": "FF00000000000000",
+        "expected": "00000000000000FF"
+      },
+      {
+        "input": "0102030405060708",
+        "expected": "0807060504030201"
+      },
+      {
+        "input": "1122334455667788",
+        "expected": "8877665544332211"
+      },
+      {
+        "input": "FFFFFFFFFFFFFFFF",
+        "expected": "FFFFFFFFFFFFFFFF"
+      }
+    ]
+  }
+}

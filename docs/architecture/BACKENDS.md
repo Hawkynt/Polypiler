@@ -22,7 +22,9 @@ flowchart LR
 | Passes | `CSharpTargetPasses.Pipeline` | `JavaScriptTargetPasses.Pipeline` | `PythonTargetPasses.Pipeline` | `RustTargetPasses.Pipeline` |
 | Tree after the passes | `CSharpEmitter.Build(…)` | `JavaScriptEmitter.Build(…)` | `PythonEmitter.Build(…)` | `RustEmitter.Build(…)` |
 
-The Rust backend is described on [its own page](RUST-BACKEND.md).
+The language-specific guides describe the profiles and lowering contracts of the
+[C#](CSHARP-BACKEND.md), [JavaScript](JAVASCRIPT-BACKEND.md), [Python](PYTHON-BACKEND.md) and
+[Rust](RUST-BACKEND.md) backends.
 
 ## The tree
 

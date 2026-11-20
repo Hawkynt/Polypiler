@@ -6,6 +6,7 @@ using System.Linq;
 using NUnit.Framework;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Optimize;
+using Polypiler.Core.Verification.Proofs;
 using Polypiler.Prototype.Testing;
 using Polypiler.Tests.Acceptance.Support;
 using Reqnroll;
@@ -83,7 +84,7 @@ public sealed class RecognitionSteps(PrototypeScenario scenario) {
   /// <summary>The optimized IR has the operation of the step and not the other.</summary>
   [Then("^the optimized IR contains " + StepText.Quoted + " and no " + StepText.Quoted + "$")]
   public void OptimizedIrContains(string operation, string other) {
-    var ir = IrText.Of(Optimizer.Run(PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(scenario.Text)), new OptimizerOptions()).Module);
+    var ir = IrText.Of(Optimizer.Run(PrototypeFixture.Import("Snippet.cs", PrototypeFixture.Wrap(scenario.Text)), new OptimizerOptions { Prover = new SmtRecognitionProver() }).Module);
     Assert.That(ir, Does.Contain(operation).And.Not.Contain(other));
   }
 

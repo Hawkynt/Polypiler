@@ -1,0 +1,6 @@
+# Scenario 1, test design 1: a rotation written as two shifts, 1 <= n <= 7 (Hacker's Delight 2-15).
+rule: rotate-from-shifts
+inputs: x: u<w>, n: u<w>
+precondition: %p1 = UGe.u<w> %n, 1; %p2 = ULe.u<w> %n, 7; %p = And.bool %p1, %p2
+before: %a = Shl.u<w>[strict] %x, %n; %s = Sub.u<w> 8, %n; %b = LShr.u<w>[strict] %x, %s; %r = Or.u<w> %a, %b
+after: %r = RotateLeft.u<w> %x, %n

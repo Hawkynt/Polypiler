@@ -1,0 +1,5 @@
+# Test design 8: a zero divisor is invalid on both sides and excluded.
+rule: udiv-self
+inputs: x: u<w>, y: u<w>
+before: %r = UDiv.u<w> %x, %y
+after: %r = UDiv.u<w> %x, %y

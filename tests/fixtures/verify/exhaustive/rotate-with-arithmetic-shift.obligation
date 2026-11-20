@@ -1,0 +1,5 @@
+# Scenario 2, test design 14: an arithmetic right shift copies the sign bit; wrong from x = 0x80.
+rule: rotate-with-arithmetic-shift
+inputs: x: i<w>
+before: %a = Shl.i<w>[strict] %x, 1; %b = AShr.i<w>[strict] %x, 7; %r = Or.i<w> %a, %b
+after: %r = RotateLeft.i<w> %x, 1

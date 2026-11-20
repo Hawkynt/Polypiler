@@ -247,7 +247,7 @@ network built from a grammar must prove before it is recorded is
 `spec/recognition/O<4 digits>.yaml`, ID `RECOGNITION.O<4 digits>`: one recognition rule of the block
 `O0100`–`O0169`, or of the bit-permutation recovery block `O0200`–`O0229` (PRD §4.1, §4.5).
 [`schemas/recognition.schema.json`](schemas/recognition.schema.json) states the body: the `level` it
-matches at (`source-ast`, `typed-ssa`), the `pattern` (`before`, `bindings`), the `replacement`
+matches at (`source-ast`, `typed-tree`; `typed-ssa` remains for older work orders), the `pattern` (`before`, `bindings`), the `replacement`
 (`after`, and the `INTRINSICS.` or `IR.` documents it `introduces`), at least one each of
 `preconditions` `{id, text, fact}`, `proofObligations` `{id, class, widths, budgetSeconds?}` and
 `counterexamples` `{description, input, naive, correct}` — `naive` what the near-miss source computes,
@@ -356,13 +356,14 @@ native from ES2015). The fixtures are in `tests/fixtures/spec/targets/`.
 
 What a comparison of generated code with its oracle runs under (PRD §4.1, §7.2, §23), body schema
 [`schemas/verification.schema.json`](schemas/verification.schema.json). A document of kind `generator`,
-`tolerance` or `oracle` lives in `verification/<kind>s/<name>.yaml` with the ID
+`tolerance`, `oracle` or `proof` lives in `verification/<kind>s/<name>.yaml` with the ID
 `VERIFICATION.<kind>.<name>`.
 
 | Kind | Body |
 | --- | --- |
 | `generator` | `type` (a `TYPES.` ID) and `strategy`: `boundary` with the explicit `values` (quoted bit patterns `"0x…"` or decimal integers, unique), `uniform` and `bit-pattern` with `seed` (0 … 4294967295) and `count` (1 … 1000000), `corpus` with neither |
 | `tolerance` | `operation` (an `INTRINSICS.` or `IR.` ID), `mode` (`exact`, `ulp`, `relative`, `absolute`), `bound` (> 0, a whole number in `ulp` mode), `specialValues` (`bitwise`, `signed-zero` when absent, `class`): the modes and rules of [ADR 0005](../docs/adr/0005-floating-point-tolerance.md). The ID is the policy name vector files and manifests refer to |
+| `proof` | `prover` (`exhaustive` or `smt`, the prover that issues the proof class), `widths` (the widths a width-generic obligation is proved at, 1 … 64), `maxInputBits` (the default enumeration budget of an exhaustive proof, ≤ 62), `solverTimeoutSeconds` (a solver's default time per obligation), `solver` (the key of `tooling/toolchains.lock` that pins the solver). The ID is the proof class a rule names, `VERIFICATION.proof.exhaustive` for the classes `exhaustive-<n>bit` |
 | `oracle` | `implementation` (what produces the reference result: `node`, `published-vectors`, …), `toolchain` (a key of `tooling/toolchains.lock`, optional), `observes` (≥ 1 of `return-value`, `buffers`, `flags`, `registers`, `memory-writes`, `io`, `external-calls`, `traps`, `cycles`) |
 
 An operation without a tolerance document is compared `exact`; a tolerance document's bound is the one
@@ -379,6 +380,6 @@ raises `version`. The rules, each `PLY0046`:
 | `one-tolerance-per-operation` | a second tolerance document for an operation, reported on the later path |
 | `oracle-not-self` | an oracle whose `implementation` is `polypiler` |
 
-A generator's `type` and a tolerance's `operation` resolve or fail with `PLY0043`. The seed document is
-`verification/generators/u32-boundary.yaml`; tolerance documents arrive with the intrinsics they belong
+A generator's `type` and a tolerance's `operation` resolve or fail with `PLY0043`. The seed documents are
+`verification/generators/u32-boundary.yaml` and the proof classes `verification/proofs/exhaustive.yaml` and `verification/proofs/smt-bitvector.yaml`; tolerance documents arrive with the intrinsics they belong
 to. The fixtures live in `tests/fixtures/spec/verification/`.

@@ -1,0 +1,5 @@
+# Known-true identity: the average without overflow equals the sum taken one bit wider and halved (Hacker's Delight 2-5).
+rule: average-correct
+inputs: a: u<w>, b: u<w>
+before: %x = Xor.u<w> %a, %b; %h = LShr.u<w>[strict] %x, 1; %c = And.u<w> %a, %b; %r = Add.u<w> %c, %h
+after: %wa = ZeroExtend.u9 %a; %wb = ZeroExtend.u9 %b; %s = Add.u9 %wa, %wb; %h = LShr.u9[strict] %s, 1; %r = Truncate.u<w> %h

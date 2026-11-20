@@ -1,6 +1,8 @@
 # Polypiler documentation
 
-This index explains the **intended** architecture and development workflow. The repository is currently in its specification/bootstrap phase; diagrams and code snippets below are designs, **not implemented-feature claims**.
+This index links the architecture, implementation guides and development workflow. Each page marks
+its status: language guides describe the implemented subset, while planned architecture remains a
+design rather than an implemented-feature claim.
 
 The [product requirements index](PRD.md) links ten topical parts carrying the normative specification.
 Original chapter numbers and section links are retained. The pages here are a readable, cross-linked engineering guide; if a description conflicts with the PRD, create a design decision and reconcile the two before implementation.
@@ -41,11 +43,19 @@ Original chapter numbers and section links are retained. The pages here are a re
 - [String operations](reference/string-operations.md) — strings of UTF-16 code units: every operation with its ordinal meaning, the two white-space sets, what each frontend imports or refuses and how each profile writes it.
 - [Numbers to text and back](reference/number-text.md) — the conversions between numbers, truth values and text by the rules of .NET and of ECMA-262, each an operation of its own: what each frontend imports or refuses and how each profile writes it.
 - [Enums](reference/enums.md) — C# enums and JavaScript frozen objects of named numbers as named integer types, with .NET's rules for the text, the parse and the order of the names: what each frontend imports or refuses and how each profile writes it.
+- [C# frontend](architecture/CSHARP-FRONTEND.md) — Roslyn binding, the host-class import boundary, typed lowering, semantic caveats and refusals.
+- [C# backend](architecture/CSHARP-BACKEND.md) — nine framework profiles, capability rows, target syntax, runtime contracts and verification.
+- [JavaScript frontend](architecture/JAVASCRIPT-FRONTEND.md) — Acornima parsing, value-flow typing, module selection and the import caveats.
+- [JavaScript backend](architecture/JAVASCRIPT-BACKEND.md) — ECMAScript levels and packaging, exact-width numbers, older-profile fallbacks and verification.
 - [Python frontend](architecture/PYTHON-FRONTEND.md) — Python 3 parsed by CPython's `ast` module: the subset imported, how a value gets its static type, `int` exact within 64 bits, and the diagnostics.
+- [Python backend](architecture/PYTHON-BACKEND.md) — profile-specific syntax, fixed-width numeric contracts, helpers and verification under CPython.
+- [Rust frontend](architecture/RUST-FRONTEND.md) — parsing, typing, borrowing, overflow modes and the supported crate subset.
+- [Rust backend](architecture/RUST-BACKEND.md) — Cargo output, editions/MSRV, value representation, traps and verification.
 - [Benchmarks](benchmarks/README.md) — how to add a benchmark, run it, read its result and compare two result sets against the budgets.
 - [Audit of the PB-Compiler LLVM emitter](llvm/pb-emitter-audit.md) — what PB-Compiler's `--emit-llvm` writes at the pinned commit, what LLVM 23.1.3 accepts of it, and the gaps against PRD §26.3.
 - [Licence of emitted code](../LICENSE-OUTPUT.md) — the helpers and portable implementations a translation copies into its output are MIT, so a translated program keeps the licence of its source; the compiler stays LGPL-3.0-or-later.
 - [Error catalogue](errors/README.md) — every diagnostic code with its severity, exit code, cause and what to do, generated from `spec/diagnostics.yaml` by `polypiler-tooling report errors`.
+- [Capability report](capabilities.md) — every source profile against every target profile at the state its gate records prove, `planned` without evidence, generated from `spec/` and `artifacts/gates` by `polypiler-tooling report capabilities` ([JSON](capabilities.json)).
 - [Backends: tree, passes, printer](architecture/BACKENDS.md) — the syntax tree each backend builds of its language, the target passes over it and the printer that writes it; how to add a capability row or a pass.
 
 ## Work-item readiness
