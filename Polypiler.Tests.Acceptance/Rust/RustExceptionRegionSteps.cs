@@ -23,6 +23,9 @@ namespace Polypiler.Tests.Acceptance.Rust;
 [Binding, Scope(Feature = "Rust backend: exception regions with finally blocks")]
 public sealed class RustExceptionRegionSteps {
 
+  /// <summary>Held while the .NET build of a fixture runs, whose static state the scenarios share.</summary>
+  private static readonly System.Threading.Lock _dotNet = new();
+
   private IrModule? _module;
   private string? _className;
   private RustProfile _profile = RustProfile.Default;
@@ -71,7 +74,12 @@ public sealed class RustExceptionRegionSteps {
       return new PrototypeCall(row["call"], arguments) { Returns = method.ReturnType };
     }).ToList();
     var expected = table.Rows.Select(row => row["result"]).ToList();
-    Assert.That(calls.Select(call => PrototypeFixture.InvokedOutcome(ExceptionFixtures.Compiled(this._className!, call.Method), call)), Is.EqualTo(expected), ".NET");
+    // The fixtures keep a log in a static field of this process: the scenarios of both policies run in
+    // parallel, so the .NET calls take turns.
+    List<string> dotNet;
+    lock (_dotNet)
+      dotNet = [.. calls.Select(call => PrototypeFixture.InvokedOutcome(ExceptionFixtures.Compiled(this._className!, call.Method), call))];
+    Assert.That(dotNet, Is.EqualTo(expected), ".NET");
     Assert.That(calls.Select(call => PrototypeFixture.InterpretedOutcome(module, call)), Is.EqualTo(expected), "the IR interpreter");
     foreach (var checks in new[] { OverflowChecks.Panic, OverflowChecks.Wrap })
       Assert.That(await RustRun.OutcomesAsync(module, calls, checks, this._profile), Is.EqualTo(expected), $"Rust with overflow checks {checks}");
