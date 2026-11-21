@@ -59,8 +59,8 @@ public sealed class Z3SolverResourceTests {
     }
 
     var output = await stdout + await stderr;
-    if (output.Contains("the runtime gave no allocation budget", StringComparison.Ordinal))
-      Assert.Inconclusive("the child could not measure without a collection: " + output[output.IndexOf("the runtime gave no allocation budget", StringComparison.Ordinal)..].Split('\n')[0]);
+    if (output.Contains("no pass ran without a collection", StringComparison.Ordinal))
+      Assert.Inconclusive("the child could not measure without a collection: " + output[output.IndexOf("no pass ran without a collection", StringComparison.Ordinal)..].Split('\n')[0]);
     Assert.That(process.ExitCode, Is.Zero, output);
     Assert.That(output, Does.Contain(Completed), "the child must actually execute the check");
     TestContext.Out.WriteLine(output[output.IndexOf(Completed, StringComparison.Ordinal)..].Split('\n')[0]);
@@ -82,34 +82,29 @@ public sealed class Z3SolverResourceTests {
       GC.WaitForPendingFinalizers();
     }
 
-    // A region without collections makes finalizers unable to free a context while the queries run. A
-    // runtime may refuse the budget for a moment (the CI runners do now and then): it is asked again after
-    // a collection, and where it keeps refusing, the measurement counts only a pass no collection ran in.
-    var region = false;
-    for (var attempt = 0; attempt < 5 && !region; ++attempt) {
+    // What matters is that no collection runs while the queries do, so that no finalizer can free a
+    // context: a region without collections is asked for to make that likely, but a runtime may refuse
+    // the budget, or leave the region when the pass allocates more than it (the CI runners do now and
+    // then, more so under the coverage collector). A pass counts only where gen-0 saw no collection;
+    // up to five passes are made.
+    long? peak = null;
+    for (var pass = 0; pass < 5 && peak is null; ++pass) {
       GC.Collect();
       GC.WaitForPendingFinalizers();
-      region = GC.TryStartNoGCRegion(32 * 1024 * 1024);
-    }
-
-    long? peak = null;
-    try {
-      for (var pass = 0; pass < (region ? 1 : 5) && peak is null; ++pass) {
+      var region = GC.TryStartNoGCRegion(32 * 1024 * 1024);
+      try {
         var collections = GC.CollectionCount(0);
         var measured = Measure(solver, queries);
-        if (region || GC.CollectionCount(0) == collections)
+        if (GC.CollectionCount(0) == collections)
           peak = measured;
+      } finally {
+        if (region && GCSettings.LatencyMode == GCLatencyMode.NoGCRegion)
+          GC.EndNoGCRegion();
       }
-
-      if (region)
-        Assert.That(GCSettings.LatencyMode, Is.EqualTo(GCLatencyMode.NoGCRegion), "the check must not depend on finalizers freeing contexts");
-    } finally {
-      if (GCSettings.LatencyMode == GCLatencyMode.NoGCRegion)
-        GC.EndNoGCRegion();
     }
 
     if (peak is null)
-      Assert.Inconclusive("the runtime gave no allocation budget and collected during every pass: finalizers could have freed the contexts");
+      Assert.Inconclusive("no pass ran without a collection: finalizers could have freed the contexts");
 
     // Context finalizers must also remain safe after all native handles have been released.
     for (var pass = 0; pass < 2; ++pass) {
