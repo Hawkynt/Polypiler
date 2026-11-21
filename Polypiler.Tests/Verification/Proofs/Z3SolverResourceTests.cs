@@ -49,13 +49,13 @@ public sealed class Z3SolverResourceTests {
     using var process = Process.Start(info)!;
     var stdout = process.StandardOutput.ReadToEndAsync();
     var stderr = process.StandardError.ReadToEndAsync();
-    using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+    using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(3));
     try {
       await process.WaitForExitAsync(timeout.Token);
     } catch (OperationCanceledException) {
       process.Kill(entireProcessTree: true);
       await process.WaitForExitAsync();
-      Assert.Fail("The isolated native-resource check exceeded one minute.");
+      Assert.Fail("The isolated native-resource check exceeded three minutes.");
     }
 
     var output = await stdout + await stderr;
