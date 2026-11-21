@@ -85,7 +85,9 @@ jobs:
   coverage-gate:
     name: coverage gate
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Run 44892885160 passed 33,299 tests and both 95% gates, but its report hit the 20-minute
+    # deadline (#1460). Leave headroom for collection, report generation and artifact upload.
+    timeout-minutes: 30
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
       MIN_LINE: '95'
