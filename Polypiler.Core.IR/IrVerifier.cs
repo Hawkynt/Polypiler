@@ -65,6 +65,7 @@ public static partial class IrVerifier {
       foreach (var (constructor, call) in IrConstruction.VirtualCalls(module))
         diagnostics.Add(Error(constructor, $"a virtual call of '{call.Method.Name}' on 'this' during construction"));
 
+    diagnostics.AddRange(OriginRule.Check(module));
     return diagnostics;
   }
 

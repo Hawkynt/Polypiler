@@ -108,6 +108,15 @@ public sealed class SpecDocumentTests {
   }
 
   [Test]
+  public void Tree_SkipsTheCostProfilesBesideTheTargetDocuments() {
+    using var repository = new SpecRepository();
+    repository.Document("demo/b.yaml", SpecText.Document()).Document("demo/x/cost.yaml", "profile: x\n").Document("demo/x/costs.yaml", "a: [1\n");
+    var tree = repository.Tree();
+    Assert.That(tree.Documents.Select(document => document.Path), Is.EqualTo(new[] { "demo/b.yaml" }));
+    Assert.That(tree.Unreadable.Select(diagnostic => diagnostic.File), Is.EqualTo(new[] { "demo/x/costs.yaml" }));
+  }
+
+  [Test]
   public void Tree_ReportsAFileThatIsNotValidYamlAndKeepsTheOthers() {
     using var repository = new SpecRepository();
     repository.Document("demo/a.yaml", "a: [1\n").Document("demo/b.yaml", SpecText.Document());

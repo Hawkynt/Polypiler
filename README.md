@@ -168,7 +168,7 @@ dotnet run --project Polypiler.Cli -c Release -- translate tests/fixtures/protot
   --from csharp --to csharp --profile net4.8 --output ./generated
 ```
 
-This is a walking skeleton, not the product: one thin path from source to generated code, with the first recognition rules as its only optimization and without analysis or `--verify`.
+This is a walking skeleton, not the product: one thin path from source to generated code, with the first recognition rules as its only optimization and without `--verify`. The [fact facade](docs/architecture/IR.md#the-fact-facade-what-exists) with its constant, range and pointer-provenance analyses and the per-target cost model exist as libraries that no pass consults yet.
 
 - **Input:** one C# file holding one `static class` of `static` methods and constants, and the structs and record structs it uses ([value records](docs/reference/records.md)).
   - **Types:** `sbyte`, `byte`, `short`, `ushort`, `char`, `int`, `uint`, `long`, `ulong`, `float`, `double`, `bool`, and one-dimensional arrays of the numeric ones.

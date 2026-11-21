@@ -53,6 +53,44 @@ A pure function does not invalidate unrelated memory facts. A write invalidates 
 
 Use fixpoints with widening/narrowing and deterministic budgets where required. After any pass changes the CFG, effects or representation, invalidate or recompute affected facts.
 
+### The fact facade (what exists)
+
+`Polypiler.Core.Analysis` holds the one place a pass asks for facts (#88). The IR is a structured tree,
+so a **program point** is `ProgramPoint(block, index)`: the point before statement `index` of a block
+node, or its end when the index is the number of statements; the edge into a branch of an `IrIf` is the
+entry of that branch. Points compare by the identity of the block node, not by record equality.
+
+- `ValueFacts` answers `Get<TFact>(value, point)` for any registered domain. A domain without a provider,
+  a provider that gives up (`FactUnavailableException`) and a provider out of its budget (PLY0301, once
+  per domain) all answer the domain's `Unknown`; only `Require` insists (PLY0300). `Decide` asks every
+  provider that decides comparisons and reports two that contradict each other (PLY0302). `Describe`
+  lists one line per domain in the order of the domain names. A value may only be asked about where every
+  variable it reads is defined; elsewhere the query is an `ArgumentException`.
+- A fact type names its domain (`IFact<TSelf>.Domain`); a domain (`IFactDomain<TFact>`) is a lattice with
+  `Unknown` on top, `Unreachable` at the bottom, join, meet, widening and `Contains` for an observed value.
+- `TreeDataflow<TFact>` walks the tree forward: joins after branches, iterates loops to a fixpoint and
+  widens after three passes, records the state at every point. A variable a lambda captures or whose
+  address is taken is always `Unknown`; a write inside an expression forgets the variable; catch and
+  finally blocks start from the state before the `try` with what it may write forgotten.
+- `ConstantAnalysis` is the first provider: integer and truth constants, folded by the interpreter
+  itself, refined on the edges of `==`, `!=`, truth variables, `!`, `&&` and `||`.
+- `RangeAnalysis` is a minimal interval provider (`ValueRange`, mathematical integers, so a `u64` fits):
+  exact constants, sums, differences and products while they stay within the type, masks with a
+  non-negative operand, remainders and divisions by a positive divisor, and the edges of `<`, `<=`, `>`,
+  `>=` and `==`. The full range analysis (#94) is to replace it.
+- `ProvenanceAnalysis` (#93) gives every bounded pointer its allocation sites - a `stackalloc`, a pin, the
+  address of a local; at most four, more is `Unknown` - its byte offset as a `ValueRange` and whether it may
+  be null. Pointer arithmetic adds the range of its count times the element size, read from the range
+  analysis at the same point; an offset that may leave 64 bits is `Unknown`, the sites stay. `IsInBounds`
+  answers `True` only for a never-null pointer whose every site has a known size that holds the access,
+  `False` when every possible pointer leaves its region. A pointer bumped in a loop keeps its site but
+  loses its offset to widening: narrowing by the loop's trip count is not done yet. The IR stores no
+  pointer to memory and has no integer-to-pointer conversion, so those sources of the issue do not arise.
+- `FactChecker` holds every answered query against runs of the interpreter, which reports each point it
+  reaches to an `IIrObserver`; a value a run observes outside its fact is PLY0302. The tests check the
+  constant domain on 10 000 seeded random functions (`RandomIr`, seed 300) and on loops, switches and
+  exception handlers of real C#.
+
 ## Numeric, encoded and collection operations
 
 IR semantics should distinguish:
@@ -86,6 +124,44 @@ An example IR fragment is illustrative, **not** a proposed parser grammar:
     %sum = AddWithCarry8(%a, %b, incoming_carry)
     Store8(program_ram, base + 2, %sum.value)
     ObserveFlags(%sum.flags)  // retained only if flags are live
+
+## Source locations and provenance
+
+What exists today, on the prototype's tree IR (`Polypiler.Core.IR`), where an instruction is a
+statement (`IrStmt`) other than a block:
+
+- **Sources.** `IrModule.Sources` lists the `SourceArtifact`s a module was made from: repository,
+  commit, path relative to the repository, SHA-256 of the file and dialect ID (`pb/3.5`). Never an
+  absolute local path, never the text.
+- **Origins.** `IrStmt.Origins` and `IrExpr.Origins` hold, in order, any number of `SourceSpan`
+  (source index, 1-based start and end line and column, end exclusive, columns in UTF-16 code units;
+  `SourceSpan.FromOffsets` computes one from text offsets), `AddressSpan` (source index, byte offset,
+  length, for binary inputs) and `Synthetic` (the ID of the pass that made the node). Origins take no
+  part in equality, hashing or `ToString`: two nodes that differ only in origins are equal and
+  interchangeable for every pass.
+- **Rewrites.** A `with` expression copies origins, and `IrTree.With` keeps them also for the
+  expressions it rebuilds with `new`. `IrOrigins.Replace(replacement, replaced...)` gives a
+  replacement the origins of everything it replaces, in their order (one for a replacement, N for a
+  merge); `IrOrigins.MarkSynthetic(node, passId)` marks a node a pass inserted; `IrOrigins.Split`
+  leaves both halves of a split block the block's origins. A missing origin is never borrowed from a
+  neighbour.
+- **Verification.** `IrVerifier.Verify` runs `OriginRule`: a malformed origin or source is PLY0116,
+  an origin naming a source index at or past `Sources.Count` is PLY0117, and in a module that declares
+  sources every instruction without an origin is PLY0115. A module that declares no sources is exempt
+  from PLY0115: no frontend records locations yet, and the optimizer's passes do not yet carry them,
+  so the rule binds exactly the modules made by something that tracks them. The IR has no stages, so
+  the rule is the same wherever it runs.
+- **Text form.** There is no textual IR; the suffixes `!loc(0:12:5-12:18)`, `!addr(0:0x1F40+3)` and
+  `!synthetic("O0100")` are printed by `Origin.Format` and read by `Origin.TryParse`, and the
+  `sources { 0: "repo@commit:path" sha256:<hex> dialect:"pb/3.5" }` header by
+  `SourceArtifact.FormatTable` and `SourceArtifact.TryParseTable`.
+- **Bytes.** `IrModuleFormat` keeps sources and origins exactly. A node with origins is preceded by a
+  marker byte and its origins, and a module with sources ends with their table; a module without
+  either writes the bytes it always wrote, so the layout version stays 11.
+- **Export.** `SourceMapWriter.Write(module, function)` writes a function's `*.map.json` per
+  [`spec/ir/sourcemap.schema.json`](../../spec/ir/sourcemap.schema.json): the ECMA-426 field names
+  where the concepts coincide (`version`, `sources`), the hashes (`sourcesSha256`) where ECMA-426
+  embeds content, and one mapping per instruction with its number, kind and origins.
 
 ## Pass contract and invariants
 

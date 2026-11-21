@@ -9,7 +9,36 @@ public sealed record IrLocal(string Name, IrType Type);
 
 /// <summary>An expression; it evaluates its operands left to right and yields a value of <see cref="Type"/>.</summary>
 /// <param name="Type">The type of the value, which fixes width, signedness and wrap-around.</param>
-public abstract record IrExpr(IrType Type);
+public abstract record IrExpr(IrType Type) {
+
+  /// <summary>
+  /// Where the expression came from, in order; empty when nothing recorded it. A rewrite through
+  /// <c>with</c> or <see cref="IrTree.With(IrExpr, IReadOnlyList{IrExpr})"/> keeps them,
+  /// <see cref="IrOrigins"/> carries them to a replacement. They take no part in equality.
+  /// </summary>
+  public IReadOnlyList<Origin> Origins { get; init; } = [];
+
+  /// <summary>Equality of what the expression means: the kind and the type, without <see cref="Origins"/>.</summary>
+  /// <param name="other">The other expression.</param>
+  /// <returns>Whether both are of the same kind and type; each kind adds its own parts.</returns>
+  public virtual bool Equals(IrExpr? other)
+    => ReferenceEquals(this, other) || (other is not null && this.EqualityContract == other.EqualityContract && EqualityComparer<IrType>.Default.Equals(this.Type, other.Type));
+
+  /// <summary>The hash of what <see cref="Equals(IrExpr?)"/> compares.</summary>
+  /// <returns>The hash.</returns>
+  public override int GetHashCode()
+    => unchecked((EqualityComparer<System.Type>.Default.GetHashCode(this.EqualityContract) * -1521134295) + EqualityComparer<IrType>.Default.GetHashCode(this.Type));
+
+  /// <summary>The parts <see cref="object.ToString"/> shows: the type, without <see cref="Origins"/>.</summary>
+  /// <param name="builder">The text so far.</param>
+  /// <returns>Whether a part was written.</returns>
+  protected virtual bool PrintMembers(System.Text.StringBuilder builder) {
+    builder.Append("Type = ");
+    builder.Append((object)this.Type);
+    return true;
+  }
+
+}
 
 /// <summary>
 /// A constant. Integers carry their numeric value, a <c>u64</c> its 64 bits (so a value above the
@@ -1062,8 +1091,31 @@ public enum IrIntrinsicOp {
 /// <param name="Arguments">The operands.</param>
 public sealed record IrIntrinsic(IrIntrinsicOp Op, IrType Type, IReadOnlyList<IrExpr> Arguments) : IrExpr(Type);
 
-/// <summary>A statement.</summary>
-public abstract record IrStmt;
+/// <summary>A statement: an instruction of the IR.</summary>
+public abstract record IrStmt {
+
+  /// <summary>
+  /// Where the statement came from, in order; empty when nothing recorded it. A rewrite through
+  /// <c>with</c> or <see cref="IrTree.With(IrStmt, IReadOnlyList{IrExpr}, IReadOnlyList{IrBlock})"/>
+  /// keeps them, <see cref="IrOrigins"/> carries them to a replacement. They take no part in equality.
+  /// </summary>
+  public IReadOnlyList<Origin> Origins { get; init; } = [];
+
+  /// <summary>Equality of what the statement means: the kind, without <see cref="Origins"/>.</summary>
+  /// <param name="other">The other statement.</param>
+  /// <returns>Whether both are of the same kind; each kind adds its own parts.</returns>
+  public virtual bool Equals(IrStmt? other) => ReferenceEquals(this, other) || (other is not null && this.EqualityContract == other.EqualityContract);
+
+  /// <summary>The hash of what <see cref="Equals(IrStmt?)"/> compares.</summary>
+  /// <returns>The hash.</returns>
+  public override int GetHashCode() => EqualityComparer<System.Type>.Default.GetHashCode(this.EqualityContract);
+
+  /// <summary>The parts <see cref="object.ToString"/> shows: none, as <see cref="Origins"/> is left out.</summary>
+  /// <param name="builder">The text so far.</param>
+  /// <returns>Whether a part was written: never.</returns>
+  protected virtual bool PrintMembers(System.Text.StringBuilder builder) => false;
+
+}
 
 /// <summary>A sequence of statements with its own scope for declared locals.</summary>
 /// <param name="Statements">The statements, in execution order.</param>
@@ -1267,5 +1319,12 @@ public sealed record IrModule(string Name, IReadOnlyList<IrFunction> Functions, 
   /// function of the module any more, but stays listed.
   /// </summary>
   public IReadOnlyList<IrClone> Clones { get; init; } = [];
+
+  /// <summary>
+  /// The sources the module was made from, which the origins of its nodes name by index. A module
+  /// that declares any requires every statement to have an origin or to be marked
+  /// <see cref="Synthetic"/> (<see cref="SourceMapDiagnostics.MissingOrigin"/>); empty by default.
+  /// </summary>
+  public IReadOnlyList<SourceArtifact> Sources { get; init; } = [];
 
 }

@@ -34,6 +34,20 @@ public static partial class IrModuleFormat {
 
   private const int HashSize = 32;
 
+  /// <summary>
+  /// The byte before the tag of a node that has origins, followed by them (<see cref="IrStmt.Origins"/>,
+  /// <see cref="IrExpr.Origins"/>); a node without origins has none, so its bytes are those it always had.
+  /// </summary>
+  private const byte Located = 0xFE;
+
+  /// <summary>The byte that opens the table of sources after the end of a module that declares any (<see cref="IrModule.Sources"/>).</summary>
+  private const byte SourcesTable = 0xFD;
+
+  /// <summary>The kinds of origin, as the byte before each origin says.</summary>
+  private enum OriginKind : byte {
+    Span, Address, Synthetic
+  }
+
   private enum Tag : byte {
     Null, Shared,
     Const, ConstRef, LocalRef, Unary, Binary, Convert, Conditional, ArrayLoad, ArrayLength, NewArray, Call, Step,
@@ -234,6 +248,46 @@ public static partial class IrModuleFormat {
       writer.Write(module.Initializer is not null);
       if (module.Initializer is not null)
         writer.Write(module.Initializer);
+
+      if (module.Sources.Count == 0)
+        return;
+
+      writer.Write(SourcesTable);
+      this.Count(module.Sources.Count);
+      foreach (var source in module.Sources) {
+        this.Text(source.Repository);
+        this.Text(source.Commit);
+        this.Text(source.Path);
+        this.Text(source.Sha256);
+        this.Text(source.Dialect);
+      }
+    }
+
+    /// <summary>The origins of a node, after <see cref="Located"/>.</summary>
+    private void Origins(IReadOnlyList<Origin> origins) {
+      writer.Write(Located);
+      this.Count(origins.Count);
+      foreach (var origin in origins)
+        switch (origin) {
+          case SourceSpan span:
+            writer.Write((byte)OriginKind.Span);
+            writer.Write(span.Artifact);
+            writer.Write(span.StartLine);
+            writer.Write(span.StartColumn);
+            writer.Write(span.EndLine);
+            writer.Write(span.EndColumn);
+            break;
+          case AddressSpan address:
+            writer.Write((byte)OriginKind.Address);
+            writer.Write(address.Artifact);
+            writer.Write(address.Offset);
+            writer.Write(address.Length);
+            break;
+          default:
+            writer.Write((byte)OriginKind.Synthetic);
+            this.Text(((Synthetic)origin).PassId);
+            break;
+        }
     }
 
     /// <summary>
@@ -675,6 +729,10 @@ public static partial class IrModuleFormat {
       }
 
       this._nodes.Add(node, this._nodes.Count);
+      var origins = node is IrExpr located ? located.Origins : ((IrStmt)node).Origins;
+      if (origins.Count > 0)
+        this.Origins(origins);
+
       if (node is IrExpr expression) {
         writer.Write((byte)TagOf(expression));
         this.Type(expression.Type);
@@ -1122,8 +1180,23 @@ public static partial class IrModuleFormat {
 
       return new IrModule(name, functions, constants) {
         Types = [.. this._declarations.Take(owned)], Globals = [.. this._globals], Caveats = caveats, ForeignFunctions = this.ForeignFunctions(),
-        Initializer = reader.ReadBoolean() ? reader.ReadString() : null
+        Initializer = reader.ReadBoolean() ? reader.ReadString() : null,
+        Sources = this.Sources()
       };
+    }
+
+    /// <summary>The table of sources, when the bytes go on with one; any other byte is left for the check of the end.</summary>
+    private IReadOnlyList<SourceArtifact> Sources() {
+      var stream = reader.BaseStream;
+      if (stream.Position == stream.Length)
+        return [];
+
+      if (reader.ReadByte() != SourcesTable) {
+        --stream.Position;
+        return [];
+      }
+
+      return this.List(() => new SourceArtifact(this.Text(), this.Text(), this.Text(), this.Text(), this.Text()));
     }
 
     private IrTypeDeclaration Header(List<IrTypeDeclaration> defined, List<IrClassType> hierarchies, List<IrClassType> classes, List<IrInterfaceType> interfaces) {
@@ -1389,6 +1462,14 @@ public static partial class IrModuleFormat {
 
     private T? OptionalNode<T>() where T : class {
       var tag = (Tag)reader.ReadByte();
+      IReadOnlyList<Origin>? origins = null;
+      if ((byte)tag == Located) {
+        origins = this.List(this.Origin);
+        tag = (Tag)reader.ReadByte();
+        if (tag is Tag.Null or Tag.Shared || (byte)tag == Located)
+          throw new InvalidDataException("Origins stand before no new node.");
+      }
+
       if (tag == Tag.Null)
         return null;
 
@@ -1403,6 +1484,9 @@ public static partial class IrModuleFormat {
       var slot = this._nodes.Count;
       this._nodes.Add(null);
       object node = tag >= Tag.Block && tag is not (Tag.ArraySequence or Tag.Sequence or Tag.Await or Tag.Async or Tag.ForeignCall or Tag.LastError or Tag.BigConst) ? this.Statement(tag) : this.Expression(tag);
+      if (origins is not null)
+        node = node is IrExpr expression ? expression with { Origins = origins } : (IrStmt)node with { Origins = origins };
+
       this._nodes[slot] = node;
       return node as T ?? throw new InvalidDataException($"A {node.GetType().Name} stands where a {typeof(T).Name} belongs.");
     }
@@ -1460,6 +1544,16 @@ public static partial class IrModuleFormat {
         _ => new IrInvoke(type, this.Node<IrExpr>(), this.Nodes<IrExpr>())
       };
       return expression.Type == type ? expression : expression with { Type = type };
+    }
+
+    private Origin Origin() {
+      var kind = reader.ReadByte();
+      return kind switch {
+        (byte)OriginKind.Span => new SourceSpan(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32()),
+        (byte)OriginKind.Address => new AddressSpan(reader.ReadInt32(), reader.ReadInt64(), reader.ReadInt32()),
+        (byte)OriginKind.Synthetic => new Synthetic(this.Text()),
+        _ => throw new InvalidDataException($"{kind} is no kind of origin.")
+      };
     }
 
     private IrStep Step() {

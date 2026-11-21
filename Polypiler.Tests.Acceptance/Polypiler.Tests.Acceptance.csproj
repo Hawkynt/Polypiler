@@ -63,6 +63,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Polypiler.Cli\Polypiler.Cli.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Analysis\Polypiler.Core.Analysis.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Backends.CSharp\Polypiler.Core.Backends.CSharp.csproj" />
     <ProjectReference Include="..\Polypiler.Core.BinaryFormats\Polypiler.Core.BinaryFormats.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Backends.Rust\Polypiler.Core.Backends.Rust.csproj" />
