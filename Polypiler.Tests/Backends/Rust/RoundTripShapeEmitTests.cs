@@ -32,7 +32,7 @@ public sealed class RoundTripShapeEmitTests {
   [Test]
   public void ListOfASecondVariable_BorrowsItExclusively_WhereItIsChangedThrough() {
     var text = CSharp("public static int F(byte k) { var v = new System.Collections.Generic.List<byte> { 9 }; var r = v; r.Clear(); r.Add(k); return v.Count; }");
-    Assert.That(text, Does.Contain("let mut v: Vec<u8> = Vec::new();\n    v.push(9);\n    let r: &mut Vec<u8> = &mut v;\n    r.clear();\n    r.push(k);"));
+    Assert.That(text, Does.Contain("let mut v: Vec<u8> = vec![9];\n    let r: &mut Vec<u8> = &mut v;\n    r.clear();\n    r.push(k);"));
   }
 
   [Test]

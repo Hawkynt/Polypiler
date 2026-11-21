@@ -377,6 +377,18 @@ public sealed partial class TranslateCommand : ICliCommand {
       return InternalError;
     }
 
+    // The helpers legalization bound into the module are optimised with the code that calls them; the
+    // backend checks the module it is going to write, a function value the passes bound to its one
+    // callee no longer in it. A module the verifier rejects gets no pass: the backend says why it
+    // cannot be written, as it would of the passes' result.
+    var disabled = options.TryGetValue(DisableOpt, out var names) ? names.Split(',').ToHashSet() : [];
+    var passes = IrVerifier.Verify(module).Count > 0 ? new OptimizationResult(module, [])
+      : IrPassPipeline.Default.Run(module, new OptimizerOptions {
+        Level = LevelOf(options) ?? OptimizationLevel.Default,
+        Roots = context.Layout?.Tests.ToHashSet(StringComparer.Ordinal) ?? [],
+        Disabled = disabled
+      });
+    module = passes.Module;
     var problems = backend.Check(module, options);
     if (problems.Count > 0) {
       foreach (var problem in problems)
@@ -385,13 +397,6 @@ public sealed partial class TranslateCommand : ICliCommand {
       return problems.Any(problem => problem.Code == IrVerifier.Code) ? InternalError : UnsupportedConstruct;
     }
 
-    // The helpers legalization bound into the module are optimised with the code that calls them.
-    var passes = IrPassPipeline.Default.Run(module, new OptimizerOptions {
-      Level = LevelOf(options) ?? OptimizationLevel.Default,
-      Roots = context.Layout?.Tests.ToHashSet(StringComparer.Ordinal) ?? [],
-      Disabled = options.TryGetValue(DisableOpt, out var disabled) ? disabled.Split(',').ToHashSet() : []
-    });
-    module = passes.Module;
     if (record is not null) {
       if (options.ContainsKey(ExplainOpt)) {
         foreach (var application in passes.Applications)

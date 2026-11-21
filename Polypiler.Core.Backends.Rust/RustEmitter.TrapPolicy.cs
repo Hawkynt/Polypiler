@@ -256,15 +256,30 @@ public static partial class RustEmitter {
     }
 
     /// <summary>
-    /// Refuses, under the trap policy <c>result</c>, a call of a helper that may panic: the helpers of
-    /// the strings and collections signal their traps by panicking, which no caller can turn into an error.
+    /// The call of a helper of the strings and collections: as it is; under the trap policy
+    /// <c>result</c>, where the helper's form there gives its traps as its value, the value checked -
+    /// an <c>Option</c> of one trap as <see cref="Checked"/> does; for several traps the error of each
+    /// passed to the helper, whose <c>Result</c> is handed on as a call of a fallible function is.
+    /// </summary>
+    private RsExpression HelperCall(string name, IrType? type, IReadOnlyList<RsExpression> arguments) {
+      var traps = this.Results ? Polypiler.Core.Backends.Rust.Helpers.Strings.Traps(name).Select(Enum.Parse<IrTrap>).ToList() : [];
+      if (traps.Count > 1)
+        return this.Propagated(new RsCall(new RsPath(this.StringHelper(name)), [.. arguments, .. traps.Select(this.TrapError)]) { Type = type });
+
+      RsExpression call = new RsCall(new RsPath(this.StringHelper(name)), arguments) { Type = type };
+      return traps.Count == 1 ? this.Checked(call, traps[0]) : call;
+    }
+
+    /// <summary>
+    /// Refuses, under the trap policy <c>result</c>, a call of a helper that may panic there: a helper
+    /// with no form of its own for the policy that signals a trap by panicking, which no caller can turn into an error.
     /// </summary>
     private void PanicFree(RsFunction function) {
       if (!this.Results)
         return;
 
       foreach (var node in RustSyntaxRewriter.DescendantsAndSelf(function.Body))
-        if (node is RsCall { Callee: RsPath { Name: var name } } && Polypiler.Core.Backends.Rust.Helpers.Strings.Panics(name))
+        if (node is RsCall { Callee: RsPath { Name: var name } } && Polypiler.Core.Backends.Rust.Helpers.Strings.Panics(name, true))
           this.LimitResult($"the helper {name}, which panics");
     }
 

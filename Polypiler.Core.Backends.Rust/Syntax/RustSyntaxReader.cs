@@ -227,7 +227,24 @@ public static class RustSyntaxReader {
       RsItem item;
       if (this.Accept("fn"))
         item = this.Function(visibility);
-      else if (this.Is("const") || this.Is("static")) {
+      else if (this.Accept("thread_local")) {
+        this.Expect("!");
+        this.Expect("{");
+        this.Expect("static");
+        var name = this.Identifier();
+        this.Expect(":");
+        var type = this.TypeText();
+        this.Expect("=");
+        var constant = this.Accept("const");
+        if (constant)
+          this.Expect("{");
+        var value = this.Expression();
+        if (constant)
+          this.Expect("}");
+        this.Expect(";");
+        this.Expect("}");
+        item = new RsConst(name, visibility, type, value) { IsStatic = true, IsThreadLocal = true, IsConstInitialized = constant };
+      } else if (this.Is("const") || this.Is("static")) {
         var isStatic = this.Next().Text == "static";
         var name = this.Identifier();
         this.Expect(":");
@@ -477,7 +494,9 @@ public static class RustSyntaxReader {
           if (12 < minimum)
             return left;
           this.Next();
-          left = new RsCast(left, this.Identifier());
+          // A cast to a generic type, x as Rc<dyn Base>; a comparison after a cast stands in parentheses.
+          var target = this.Identifier();
+          left = new RsCast(left, this.Is("<") ? target + this.TypeText() : target);
           continue;
         }
 
@@ -602,10 +621,18 @@ public static class RustSyntaxReader {
       }
 
       if (this.Accept("(")) {
+        // The unit value, (), as in Some(()).
+        if (this.Accept(")"))
+          return new RsTuple([]);
+
         // Inside parentheses a struct literal stands again, also in a header: (P { x: 0 }).x.
         var outer = this._noStruct;
         this._noStruct = false;
         try {
+          // The unit value, (): Ok(()).
+          if (this.Accept(")"))
+            return new RsTuple([]);
+
           var inner = this.Expression();
           if (this.Is(",")) {
             var elements = new List<RsExpression> { inner };

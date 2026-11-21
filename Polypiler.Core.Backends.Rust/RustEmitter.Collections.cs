@@ -44,7 +44,7 @@ public static partial class RustEmitter {
     }
 
     /// <summary>Whether the function being written changes a collection variable of its own, itself or through a variable that borrows it.</summary>
-    private bool IsChangedCollection(IrLocal local) => local.Type.IsCollection && this.ChangedThrough(local);
+    private bool IsChangedCollection(IrLocal local) => local.Type.IsCollection && !this.IsSharedCollection(local.Type) && this.ChangedThrough(local);
 
     /// <summary>Whether a collection variable is changed, by an operation or a call on it or on a variable that borrows it.</summary>
     private bool ChangedThrough(IrLocal local) => this.ChangesCollection(this._function.Body, local)
@@ -56,7 +56,7 @@ public static partial class RustEmitter {
     /// (#1393): the other variable is read again only after the borrow's last use, or is itself such a borrow, handed on.
     /// </summary>
     private bool IsBorrowedCollection(IrLocal local)
-      => local.Type.IsCollection && !this._function.Parameters.Contains(local)
+      => local.Type.IsCollection && !this.IsSharedCollection(local.Type) && !this._function.Parameters.Contains(local)
         && (ArrayOwnership.BorrowsLocal(this._function, local) || this.BorrowedOwner(local) is { } owner && this.IsBorrowedCollection(owner));
 
     /// <summary>The variable a local is declared with, <c>let r = v;</c>, where it is no parameter; <see langword="null"/> for any other declaration.</summary>
@@ -81,10 +81,31 @@ public static partial class RustEmitter {
     /// meets the keys in the order .NET's <c>Dictionary</c> and <c>HashSet</c> do. A key is compared by
     /// <c>==</c>: an integer, a truth value, an enum or a string; any other key is refused.
     /// </summary>
-    private string CollectionType(IrType type) {
+    private string CollectionType(IrType type) => this.IsSharedCollection(type) ? this.SharedCollectionType(type) : this.VectorType(type);
+
+    /// <summary>
+    /// The Rust type of an element of a collection: a value or a string as itself, an object as its
+    /// <c>Rc</c> (in an <c>Option</c> where the module puts null into such a collection), an array of
+    /// values as a vector, a shared collection as its <c>Rc</c>; any other refused.
+    /// </summary>
+    private string ElementTypeOf(IrType element, IrType collection) {
+      if (IsValue(element) || element.IsString)
+        return this.Type(element);
+      if (element.IsObject && !this.IsPlain(element))
+        return this.ObjectType(element, this._nullness.ElementsMayBeNull(collection));
+      if (element.IsArray && element.Element is { } item && IsValue(item))
+        return $"Vec<{this.Type(item)}>";
+      if (this.IsSharedCollection(element))
+        return this.SharedCollectionType(element);
+
+      return ((RsPath)this.Refuse($"a {(collection.IsList ? "list" : "collection")} of {element}")).Name;
+    }
+
+    /// <summary>The vector a collection is: <c>Vec&lt;T&gt;</c> of a list, the vector of slots of a map or a set.</summary>
+    private string VectorType(IrType type) {
       var element = type.Element!;
       if (type.IsList)
-        return IsValue(element) || element.IsString ? $"Vec<{this.Type(element)}>" : ((RsPath)this.Refuse($"a list of {element}")).Name;
+        return $"Vec<{this.ElementTypeOf(element, type)}>";
 
       if (type.Order != MapOrder.SlotReuse)
         return ((RsPath)this.Refuse($"a collection in the order of insertion ({type})")).Name;
@@ -98,24 +119,33 @@ public static partial class RustEmitter {
 
     /// <summary>The type of a collection parameter: a slice it only reads, <c>&amp;[T]</c>, or the vector it changes, <c>&amp;mut Vec&lt;T&gt;</c>.</summary>
     private string CollectionParameterType(IrFunction function, int index) {
-      var vector = this.CollectionType(function.Parameters[index].Type);
+      if (this.IsSharedCollection(function.Parameters[index].Type))
+        return this.SharedCollectionType(function.Parameters[index].Type);
+
+      var vector = this.VectorType(function.Parameters[index].Type);
       return this._changedCollections.GetValueOrDefault(function.Name)?.Contains(index) == true ? "&mut " + vector : $"&[{vector[4..^1]}]";
     }
 
     /// <summary>A collection as the receiver of an operation: the variable or the value.</summary>
-    private RsExpression CollectionPlace(IrExpr collection) => collection switch {
+    private RsExpression CollectionPlace(IrExpr collection, bool mutable = false) => collection switch {
+      _ when this.IsSharedCollection(collection.Type) => this.SharedVector(collection, mutable),
       IrLocalRef reference => new RsPath(this._locals[reference.Local]) { Type = collection.Type },
       _ => this.Operand(this.Expression(collection), 15)
     };
 
     /// <summary>A collection where a helper takes it: a slice of it or the vector, borrowed as such unless the variable is the borrow itself.</summary>
     private RsExpression CollectionArgument(IrExpr collection, bool mutable) {
-      var place = this.CollectionPlace(collection);
+      var place = this.CollectionPlace(collection, mutable);
+      if (this.IsSharedCollection(collection.Type))
+        return new RsReference(mutable, place) { Type = collection.Type };
+
       return collection is IrLocalRef { Local: var local } && (this._function.Parameters.Contains(local) || this.IsBorrowedCollection(local)) ? place : new RsReference(mutable, place);
     }
 
     /// <summary>A collection where a function takes it: the borrow its parameter is.</summary>
     private RsExpression CollectionPassed(IrExpr collection, bool mutable) {
+      if (this.IsSharedCollection(collection.Type))
+        return this.SharedCollectionValue(collection);
       if (collection is not IrLocalRef)
         return this.Refuse("a collection passed on that no variable holds");
 
@@ -124,6 +154,7 @@ public static partial class RustEmitter {
 
     /// <summary>A collection where a variable or a result takes it: a new one, the result of a call, a choice of two new ones, or a variable moved for good.</summary>
     private RsExpression CollectionValue(IrExpr value) => value switch {
+      _ when this.IsSharedCollection(value.Type) => this.SharedCollectionValue(value),
       IrCollection or IrCall => this.Expression(value),
       IrConditional conditional when IsNewCollection(conditional) => this.Expression(value),
       IrLocalRef { Local: var local } reference when !this._function.Parameters.Contains(local) && this.IsLastUse(reference) => new RsPath(this._locals[local]) { Type = value.Type },
@@ -160,8 +191,22 @@ public static partial class RustEmitter {
         .Any(inside => inside.Any(node => ReferenceEquals(node, reference)) && inside.Count > 1);
     }
 
-    /// <summary>An element, key or value where a collection takes it: a string as a vector of its own, any other value as it is.</summary>
-    private RsExpression Entry(IrExpr value) => value.Type.IsString ? this.StringValue(value) : this.Expression(value);
+    /// <summary>The variables an element was bound to before a change of a shared collection, which hold it in the form the collection takes.</summary>
+    private readonly HashSet<IrLocal> _settledEntries = [];
+
+    /// <summary>
+    /// An element, key or value where a collection takes it: a string as a vector of its own, an object
+    /// as an <c>Rc</c> of its own, an array as a vector, a shared collection as its <c>Rc</c>, any other
+    /// value as it is.
+    /// </summary>
+    private RsExpression Entry(IrExpr value, IrType? collection = null) => value switch {
+      IrLocalRef reference when this._settledEntries.Contains(reference.Local) => new RsPath(this._locals[reference.Local]) { Type = value.Type },
+      { Type.IsString: true } => this.StringValue(value),
+      { Type.IsObject: true } when !this.IsPlain(value.Type) => this.ObjectValue(value, collection is not null && this._nullness.ElementsMayBeNull(collection), collection?.Element ?? value.Type),
+      { Type.IsArray: true } => this.Vector(value, false),
+      _ when this.IsSharedCollection(value.Type) => this.SharedCollectionValue(value),
+      _ => this.Expression(value)
+    };
 
     /// <summary>A key where a helper compares it: borrowed, a string variable the function owns in place.</summary>
     private RsExpression Key(IrExpr key) => key is IrLocalRef { Type.IsString: true } local && !this.IsBorrowedString(local)
@@ -173,6 +218,8 @@ public static partial class RustEmitter {
     /// change takes it exclusively: <c>{ let value = ply_map_get(&amp;m, &amp;k)…; ply_map_put(&amp;mut m, k, value) }</c>.
     /// </summary>
     private RsExpression Settled(IrCollection operation, Func<IrCollection, RsExpression> write) {
+      if (!IrCollections.Constructs(operation.Op) && IrCollections.Mutates(operation.Op) && this.IsSharedCollection(operation.Arguments[0].Type))
+        return this.SharedSettled(operation, write);
       if (IrCollections.Constructs(operation.Op) || operation.Arguments[0] is not IrLocalRef { Local: var local } || !IrCollections.Mutates(operation.Op))
         return write(operation);
 
@@ -195,7 +242,7 @@ public static partial class RustEmitter {
     }
 
     private RsExpression Helper(string name, IrType type, params IReadOnlyList<RsExpression> arguments)
-      => new RsCall(new RsPath(this.StringHelper(name)), arguments) { Type = type };
+      => this.HelperCall(name, type, arguments);
 
     /// <summary>An operation on a list, a map or a set.</summary>
     private RsExpression Collection(IrCollection operation) {
@@ -203,20 +250,29 @@ public static partial class RustEmitter {
       var type = operation.Type;
       if (operation.Op is IrCollectionOp.ListNew or IrCollectionOp.MapNew or IrCollectionOp.SetNew) {
         this.CollectionType(type);
-        return new RsCall(new RsPath("Vec::new"), []) { Type = type };
+        RsExpression empty = new RsCall(new RsPath("Vec::new"), []) { Type = type };
+        return this.IsSharedCollection(type) ? this.SharedCollection(empty, type) : empty;
       }
 
       if (operation.Op == IrCollectionOp.ListFromArray) {
         this.CollectionType(type);
         // A method borrows its receiver itself: `array.to_vec()`, never `(&array).to_vec()` (clippy's needless_borrow).
         var borrowed = this.Borrow(arguments[0], false);
-        return new RsMethodCall(this.Receiver(borrowed is RsReference { Mutable: false, Operand: var owner } ? owner : borrowed), "to_vec", []) { Type = type };
+        RsExpression copied = new RsMethodCall(this.Receiver(borrowed is RsReference { Mutable: false, Operand: var owner } ? owner : borrowed), "to_vec", []) { Type = type };
+        return this.IsSharedCollection(type) ? this.SharedCollection(copied, type) : copied;
+      }
+
+      if (operation.Op == IrCollectionOp.ListOf) {
+        this.CollectionType(type);
+        RsExpression listed = arguments.Count == 0 ? new RsCall(new RsPath("Vec::new"), []) { Type = type }
+          : new RsMacro("vec", [new RsArray([.. arguments.Select(argument => this.Listed(argument, type))])]) { Bracketed = true, Type = type };
+        return this.IsSharedCollection(type) ? this.SharedCollection(listed, type) : listed;
       }
 
       var collection = arguments[0];
       this.CollectionType(collection.Type);
       var element = collection.Type.Element!;
-      var place = this.CollectionPlace(collection);
+      var place = this.CollectionPlace(collection, IrCollections.Mutates(operation.Op));
       RsExpression Call(string method, params IReadOnlyList<RsExpression> rest) => new RsMethodCall(place, method, rest) { Type = type };
       RsExpression Count() => new RsMethodCall(place, "len", []);
       RsExpression Index(IrExpr index, string helper) => this.Helper(helper, IrType.U64, this.Expression(index), Count());
@@ -227,12 +283,12 @@ public static partial class RustEmitter {
           return this.Cast(new RsMethodCall(new RsMethodCall(new RsMethodCall(place, "iter", []), "flatten", []), "count", []), IrType.I32);
         case IrCollectionOp.ListGet: {
           RsExpression read = new RsIndex(place, Index(arguments[1], "ply_list_index")) { Type = element };
-          return element.IsString ? new RsMethodCall(read, "clone", []) { Type = element } : read;
+          return IsValue(element) ? read : new RsMethodCall(read, "clone", []) { Type = element };
         }
         case IrCollectionOp.ListAdd:
-          return Call("push", this.Entry(arguments[1]));
+          return Call("push", this.Entry(arguments[1], collection.Type));
         case IrCollectionOp.ListInsert:
-          return Call("insert", Index(arguments[1], "ply_list_insert_index"), this.Entry(arguments[2]));
+          return Call("insert", Index(arguments[1], "ply_list_insert_index"), this.Entry(arguments[2], collection.Type));
         case IrCollectionOp.ListRemoveAt:
           return Call("remove", Index(arguments[1], "ply_list_index"));
         case IrCollectionOp.ListRemoveLast:
@@ -289,7 +345,19 @@ public static partial class RustEmitter {
       var place = this.CollectionPlace(collection);
       var at = this.Temporary("index");
       into.Add(new RsLet(at, false, null, this.Helper("ply_list_index", IrType.U64, this.Expression(operation.Arguments[1]), new RsMethodCall(place, "len", []))));
-      into.Add(new RsExpressionStatement(new RsAssign(new RsIndex(place, new RsPath(at)) { Type = operation.Arguments[2].Type }, "=", this.Entry(operation.Arguments[2]))));
+      var value = this.Entry(operation.Arguments[2], collection.Type);
+      if (this.IsSharedCollection(collection.Type)) {
+        // The value first, which may read the collection, then the element written under the exclusive borrow.
+        if (operation.Arguments[2] is not (IrConst or IrLocalRef)) {
+          var bound = this.Temporary("value");
+          into.Add(new RsLet(bound, false, null, value));
+          value = new RsPath(bound) { Type = operation.Arguments[2].Type };
+        }
+
+        place = this.CollectionPlace(collection, true);
+      }
+
+      into.Add(new RsExpressionStatement(new RsAssign(new RsIndex(place, new RsPath(at)) { Type = operation.Arguments[2].Type }, "=", value)));
     }
 
     /// <summary>
@@ -311,14 +379,16 @@ public static partial class RustEmitter {
         return;
       }
 
-      var place = new RsPath(this._locals[local]) { Type = collection.Type };
+      RsExpression place = new RsPath(this._locals[local]) { Type = collection.Type };
+      if (this.IsSharedCollection(collection.Type))
+        place = new RsMethodCall(place, "borrow", []) { Type = collection.Type };
       var iterated = (RsExpression)new RsMethodCall(place, "iter", []);
       if (!collection.Type.IsList)
         iterated = new RsMethodCall(iterated, "flatten", []);
 
       var entry = this.Temporary("entry");
       var statements = new List<RsStatement>();
-      RsExpression Copied(RsExpression value, IrType type) => type.IsString ? new RsMethodCall(value, "clone", []) { Type = type } : new RsUnary("*", value) { Type = type };
+      RsExpression Copied(RsExpression value, IrType type) => IsValue(type) ? new RsUnary("*", value) { Type = type } : new RsMethodCall(value, "clone", []) { Type = type };
       if (collection.Type.Kind == IrTypeKind.Map) {
         RsExpression Part(string field, IrType type) => type.IsString ? new RsMethodCall(new RsField(new RsPath(entry), field), "clone", []) { Type = type } : new RsField(new RsPath(entry), field) { Type = type };
         if (loop.Element is { } key)

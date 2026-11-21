@@ -25,7 +25,7 @@ namespace Polypiler.Core.IR;
 public static partial class IrModuleFormat {
 
   /// <summary>The version of the layout; bytes of another version are refused.</summary>
-  public const int Version = 11;
+  public const int Version = 12;
 
   /// <summary>The byte that stands for the kind of an enum type, followed by its declaration: the kind of an enum type is that of its underlying type.</summary>
   private const byte EnumType = 0xFF;
@@ -135,6 +135,7 @@ public static partial class IrModuleFormat {
     private readonly Dictionary<IrMethod, int> _methods = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<IrConstructor, int> _constructors = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<IrGenericTemplate, int> _templates = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<IrGenericClassTemplate, int> _classTemplates = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<IrModuleConst, int> _constants = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<IrGlobal, int> _globals = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<IrLocal, int> _locals = new(ReferenceEqualityComparer.Instance);
@@ -216,16 +217,44 @@ public static partial class IrModuleFormat {
       foreach (var function in module.Functions)
         this.Function(function);
 
+      // The templates of the generic classes last: their member templates name the members of every class.
+      foreach (var (template, _) in this._classTemplates.OrderBy(entry => entry.Value)) {
+        writer.Write(template.IsDefined);
+        if (!template.IsDefined)
+          continue;
+
+        this.Reference(template.Class!);
+        this.Types(template.Parameters);
+        this.Count(template.Members.Count);
+        foreach (var member in template.Members)
+          this.Template(member);
+      }
+
       this.ForeignFunctions(module.ForeignFunctions);
       writer.Write(module.Initializer is not null);
       if (module.Initializer is not null)
         writer.Write(module.Initializer);
     }
 
-    /// <summary>The declarations that stand for the type parameters of the templates the functions of a module reach.</summary>
+    /// <summary>
+    /// The declarations no module holds that its templates name: the types that stand for the type
+    /// parameters of the templates the functions of a module reach, and the class of the template of
+    /// every generic class with its parameters.
+    /// </summary>
     private static IEnumerable<IrTypeDeclaration> StandIns(IrModule module) {
       var templates = new HashSet<IrGenericTemplate>(ReferenceEqualityComparer.Instance);
       var pending = new Stack<IrFunction>(module.Functions.Reverse());
+      var classes = module.Types.OfType<IrClassType>().Select(type => type.Origin?.ClassTemplate).OfType<IrGenericClassTemplate>().Where(template => template.IsDefined)
+        .Distinct(ReferenceEqualityComparer.Instance).Cast<IrGenericClassTemplate>();
+      foreach (var generic in classes) {
+        foreach (var parameter in generic.Parameters)
+          yield return parameter.Declaration!;
+
+        yield return generic.Class!;
+        foreach (var member in generic.Members)
+          pending.Push(member.Function);
+      }
+
       while (pending.TryPop(out var function))
         if (function.Origin?.Template is { } template && templates.Add(template)) {
           foreach (var parameter in template.Parameters)
@@ -273,6 +302,7 @@ public static partial class IrModuleFormat {
 
             writer.Write(origin.Name);
             this.Strings(origin.TypeParameters);
+            this.ClassTemplate(origin.ClassTemplate);
           }
 
           break;
@@ -433,6 +463,22 @@ public static partial class IrModuleFormat {
       }
 
       this._templates.Add(template, this._templates.Count);
+    }
+
+    /// <summary>
+    /// The template of a generic class by its number plus one, 0 for none; numbered in the order the
+    /// classes name them, its parts follow the functions of the module.
+    /// </summary>
+    private void ClassTemplate(IrGenericClassTemplate? template) {
+      if (template is null) {
+        this.Count(0);
+        return;
+      }
+
+      if (!this._classTemplates.TryGetValue(template, out var number))
+        this._classTemplates.Add(template, number = this._classTemplates.Count);
+
+      this.Count(number + 1);
     }
 
     private void Count(int count) => writer.Write7BitEncodedInt(count);
@@ -1015,6 +1061,7 @@ public static partial class IrModuleFormat {
     private readonly List<IrMethod> _methods = [];
     private readonly List<IrConstructor> _constructors = [];
     private readonly List<IrGenericTemplate> _templates = [];
+    private readonly List<IrGenericClassTemplate> _classTemplates = [];
     private readonly List<IrModuleConst> _constants = [];
     private readonly List<IrGlobal> _globals = [];
     private readonly List<IrLocal> _locals = [];
@@ -1069,6 +1116,10 @@ public static partial class IrModuleFormat {
         type.DefineMembers(this.Methods(), properties[type], this.List(this.Interface));
 
       var functions = this.List(this.Function);
+      foreach (var template in this._classTemplates)
+        if (reader.ReadBoolean())
+          template.Define(this.Class(), this.Types(), [.. this.List(this.Template).OfType<IrGenericTemplate>()]);
+
       return new IrModule(name, functions, constants) {
         Types = [.. this._declarations.Take(owned)], Globals = [.. this._globals], Caveats = caveats, ForeignFunctions = this.ForeignFunctions(),
         Initializer = reader.ReadBoolean() ? reader.ReadString() : null
@@ -1096,7 +1147,7 @@ public static partial class IrModuleFormat {
           bool isDefined = reader.ReadBoolean(), hasHierarchy = reader.ReadBoolean(), hasMembers = reader.ReadBoolean();
           List<IrType> arguments = [];
           List<IrGenericConstraint> constraints = [];
-          var origin = reader.ReadBoolean() ? new IrGenericOrigin(reader.ReadString(), this.Strings(), arguments, constraints) : null;
+          var origin = reader.ReadBoolean() ? new IrGenericOrigin(reader.ReadString(), this.Strings(), arguments, constraints) { ClassTemplate = this.ClassTemplate() } : null;
           var type = new IrClassType(declared) { IsSealed = isSealed, IsAbstract = isAbstract, IsRecord = isRecord, Visibility = visibility, Origin = origin };
           if (isDefined)
             defined.Add(type);
@@ -1173,6 +1224,20 @@ public static partial class IrModuleFormat {
 
     private IReadOnlyList<IrGenericConstraint> Constraints()
       => this.List(() => new IrGenericConstraint(reader.ReadString(), this.Enum<IrGenericConstraintKind>()) { Interface = reader.ReadBoolean() ? this.Type() : null });
+
+    /// <summary>The template of a generic class by its number plus one: a new one, defined after the functions, where the number is the next.</summary>
+    private IrGenericClassTemplate? ClassTemplate() {
+      var number = this.Count();
+      if (number == 0)
+        return null;
+
+      if (number - 1 != this._classTemplates.Count)
+        return Of(this._classTemplates, number - 1, "template of a class");
+
+      var template = new IrGenericClassTemplate();
+      this._classTemplates.Add(template);
+      return template;
+    }
 
     private IrGenericTemplate? Template() {
       var number = this.Count();

@@ -111,6 +111,8 @@ public static partial class RustEmitter {
           if (this.PassesOn(functions[name]))
             changed |= this._sharedSelf.Add(name);
       }
+
+      this.SharedObjects(module);
     }
 
     /// <summary>Whether a member uses its object otherwise than through a field or a member that needs no <c>Rc</c>.</summary>
@@ -185,7 +187,7 @@ public static partial class RustEmitter {
         case IrLocalRef reference when this.CurrentMember is { Kind: MemberKind.Instance } && this._function.Parameters[0] == reference.Local && !this.IsKept(reference.Local):
           return (new RsPath("self") { Type = value.Type }, this._sharedSelf.Contains(this._function.Name) ? Held.Reference : Held.Self);
         case IrLocalRef reference when this._free.ContainsKey(this._function.Name) && this._function.Parameters[0] == reference.Local:
-          return (new RsPath(this._locals[reference.Local]) { Type = value.Type }, Held.Borrowed);
+          return (new RsPath(this._locals[reference.Local]) { Type = value.Type }, this._rcFree.Contains(this._function.Name) ? Held.Reference : Held.Borrowed);
         case IrCast cast:
           return this.Conversion(cast.Value, cast.Type, true);
         case IrAsCast cast:
@@ -198,6 +200,10 @@ public static partial class RustEmitter {
           return (this.Expression(call), this._nullness.ReturnsNull(call.Function) ? Held.OptionalValue : Held.Value);
         case IrFieldLoad load:
           return (this.Expression(load), Held.OptionalValue);
+        case IrCollection or IrMethodCall:
+          return (this.Expression(value), this.MayBeNull(value) ? Held.OptionalValue : Held.Value);
+        case IrGlobalRef global when this.IsThreadLocal(global.Global):
+          return (this.Expression(global), Held.OptionalValue);
         case IrConditional choice when this.MayBeNull(choice):
           return (this.Choice(choice, branch => this.ObjectValue(branch, true)), Held.OptionalValue);
         case IrConditional choice:
@@ -220,12 +226,56 @@ public static partial class RustEmitter {
     /// class, a base class), which an <c>Rc</c> of a struct is by itself.
     /// </summary>
     private RsExpression ObjectValue(IrExpr value, bool optional, IrType target) {
+      if (this.IsUpcast(value, optional, target)) {
+        // A value that is never null is converted before it is wrapped: Some(Rc::clone(&b) as Rc<dyn A>),
+        // whose clone Rust would otherwise make of the trait object's type (#1422).
+        if (optional && !this.MayBeNull(value))
+          return new RsCall(new RsPath("Some"), [this.ObjectValue(value, false, target)]) { Type = target };
+
+        return this.Upcast(this.ObjectValue(value, optional), optional, target);
+      }
       if (!this.IsPolymorphic(target) || !this.IsPolymorphic(value.Type) || value.Type == target || value is IrNull)
         return this.ObjectValue(value, optional);
       if (optional)
         return this.Method(this.ObjectValue(value, true), "and_then", target, new RsPath($"{ObjectTrait}::{this.Conversion("into_", target)}"));
 
       return this.Checked(this.Method(this.ObjectValue(value, false), this.Conversion("into_", target), target), IrTrap.InvalidCast);
+    }
+
+    /// <summary>A value of a class type as a variable or a result of a type holds it: converted to the type's trait where it is an <c>Option</c> of a struct, else as it is.</summary>
+    private RsExpression ObjectValueAs(IrExpr value, bool optional, IrType target)
+      => this.IsUpcast(value, optional, target) ? this.ObjectValue(value, optional, target) : this.ObjectValue(value, optional);
+
+    /// <summary>Whether a value is of a struct and goes to a place of a trait.</summary>
+    private bool IsUpcast(IrExpr value, bool optional, IrType target)
+      => value is not IrNull && value.Type != target && this.IsPolymorphic(target) && !this.IsPolymorphic(value.Type) && !this.IsPlain(value.Type);
+
+    /// <summary>
+    /// An <c>Option&lt;Rc&lt;B&gt;&gt;</c> of a struct as the <c>Option</c> of a trait it implements:
+    /// <c>b.map(|o| o as Rc&lt;dyn A&gt;)</c>, as an <c>Rc</c> of a struct is converted by itself and an
+    /// <c>Option</c> of one is not; <c>Some(B::new())</c> is left as it is, its <c>Rc</c> converted where it is made.
+    /// An <c>Rc</c> that is never null is converted by itself, apart from <c>Rc::clone(&amp;b)</c>, which Rust would
+    /// make an <c>Rc&lt;dyn A&gt;</c> of the clone's own type parameter and then reject <c>&amp;b</c>: it is cast,
+    /// <c>Rc::clone(&amp;b) as Rc&lt;dyn A&gt;</c>.
+    /// </summary>
+    private RsExpression Upcast(RsExpression shared, bool optional, IrType target) => shared switch {
+      RsCall { Callee: RsPath { Name: "Some" } } => shared,
+      RsCall { Callee: RsPath { Name: "Rc::clone" } } when !optional => new RsCast(shared, this.ObjectType(target, false)) { Type = target },
+      _ when !optional => shared,
+      _ => this.Method(shared, "map", target, new RsClosure(false, [new RsParameter("o", "")], new RsCast(new RsPath("o"), this.ObjectType(target, false))))
+    };
+
+    /// <summary>
+    /// The <c>Rc</c> of a struct as the trait object of a class it derives from, whatever made it (#1422):
+    /// <c>x as Rc&lt;dyn Base&gt;</c>, <c>x.map(|o| o as Rc&lt;dyn Base&gt;)</c> of one that may be null - where
+    /// nothing around it says the type, as an element of <c>vec!</c>, which would otherwise take the struct's.
+    /// </summary>
+    private RsExpression Converted(RsExpression shared, bool optional, IrType target) {
+      var type = $"Rc<{this.ClassName(target)}>";
+      if (!optional)
+        return new RsCast(this.Operand(shared, 12), type) { Type = target };
+
+      return this.Method(shared, "map", target, new RsClosure(false, [new RsParameter("o", "")], new RsCast(new RsPath("o"), type)));
     }
 
     /// <summary>A value of a class type as a place owns it: <c>Rc&lt;T&gt;</c>, or <c>Option&lt;Rc&lt;T&gt;&gt;</c> where it may be null.</summary>
@@ -282,7 +332,7 @@ public static partial class RustEmitter {
       if (index == 0 && this._members.TryGetValue(callee, out var member) && member.Kind == MemberKind.Instance)
         return new RsPath("self");
       if (index == 0 && this._free.TryGetValue(callee, out var owner))
-        return this.ObjectRef(value, this._traits.Contains(owner));
+        return this._rcFree.Contains(callee) ? this.ObjectBorrow(value) : this.ObjectRef(value, this._traits.Contains(owner));
       if (this.IsPlain(value.Type))
         return this.PlainArgument(callee, index, value);
 
@@ -358,7 +408,7 @@ public static partial class RustEmitter {
     }
 
     /// <summary>Whether a field is a <c>Cell</c>, which holds a value copied in and out, rather than a <c>RefCell</c>.</summary>
-    private static bool IsCellField(IrField field) => IsValue(field.Type);
+    private static bool IsCellField(IrField field) => IsValue(field.Type) || IsOptionalValue(field.Type);
 
     /// <summary>The Rust type of a field of a class: a value in a <c>Cell</c>, anything else in a <c>RefCell</c>.</summary>
     private string ClassFieldType(IrField field) {
@@ -370,8 +420,11 @@ public static partial class RustEmitter {
       this._uses.Add("std::cell::RefCell");
       return field.Type switch {
         { IsObject: true } => $"RefCell<{this.ObjectType(field.Type, true)}>",
+        { IsString: true } when this._stringNulls.MayBeNull(field) => $"RefCell<{NullableString}>",
         { IsString: true } => $"RefCell<{OwnedString}>",
+        { IsArray: true } when this._arrayNulls.MayBeNull(field) => $"RefCell<Option<Vec<{this.ElementType(field.Type)}>>>",
         { IsArray: true } => $"RefCell<Vec<{this.ElementType(field.Type)}>>",
+        _ when this.IsSharedCollection(field.Type) => $"RefCell<{this.SharedCollectionType(field.Type)}>",
         _ => $"RefCell<{((RsPath)this.Refuse($"a field of the type {field.Type}")).Name}>"
       };
     }
@@ -404,7 +457,10 @@ public static partial class RustEmitter {
       }
 
       var value = store.Field.Type.IsObject ? this.ObjectValue(store.Value, true, store.Field.Type)
+        : store.Field.Type.IsArray && this._arrayNulls.MayBeNull(store.Field) ? this.NullableArray(store.Value, false)
         : store.Field.Type.IsArray ? this.Vector(store.Value, false)
+        : store.Field.Type.IsCollection ? this.CollectionValue(store.Value)
+        : this._stringNulls.MayBeNull(store.Field) ? this.NullableStringValue(store.Value)
         : this.StringValue(store.Value);
       if (IrTree.Nodes(store.Value).Any(node => node is IrFieldLoad or IrCall)) {
         var name = RustNames.Unique(["value"], name => name, this._taken)[0];
@@ -416,9 +472,17 @@ public static partial class RustEmitter {
     }
 
     /// <summary>An array a field of an object holds, borrowed from its <c>RefCell</c>: <c>o.f.borrow()</c>, <c>o.f.borrow_mut()</c>.</summary>
-    private RsExpression FieldArray(IrFieldLoad load, bool mutable)
-      => this.IsPlain(load.Target.Type) ? new RsField(this.Receiver(this.PlainObject(load.Target)), this.FieldName(load.Field)) { Type = load.Type }
-        : new RsMethodCall(this.FieldCell(load.Target, load.Field), mutable ? "borrow_mut" : "borrow", []) { Type = load.Type };
+    private RsExpression FieldArray(IrFieldLoad load, bool mutable) {
+      if (this.IsPlain(load.Target.Type))
+        return new RsField(this.Receiver(this.PlainObject(load.Target)), this.FieldName(load.Field)) { Type = load.Type };
+
+      var cell = new RsMethodCall(this.FieldCell(load.Target, load.Field), mutable ? "borrow_mut" : "borrow", []) { Type = load.Type };
+      if (!this._arrayNulls.MayBeNull(load.Field))
+        return cell;
+
+      // A field that may hold null: the array it holds, a null one trapping.
+      return mutable ? this.Checked(new RsMethodCall(cell, "as_mut", []) { Type = load.Type }, IrTrap.NullReference) : this.NonNull(cell);
+    }
 
     /// <summary>Whether an array is the one a field of an object holds.</summary>
     private static bool IsFieldArray(IrExpr array) => array is IrFieldLoad { Target.Type.IsObject: true };
@@ -427,7 +491,7 @@ public static partial class RustEmitter {
     private RsExpression MemberCall(IrCall call, Member member) {
       var arguments = this.Arguments(call);
       if (member.Kind != MemberKind.Instance)
-        return new RsCall(new RsPath($"{this.StructName(member.Class)}::{member.Name}"), arguments) { Type = call.Type };
+        return new RsCall(new RsPath($"{this.ClassPath(member.Class)}::{member.Name}"), arguments) { Type = call.Type };
 
       var receiver = this._sharedSelf.Contains(call.Function) ? this.Receiver(SelfBorrowed(this.ObjectBorrow(call.Arguments[0]))) : this.ObjectReceiver(call.Arguments[0]);
       return new RsMethodCall(receiver, member.Name, [.. arguments.Skip(1)]) { Type = call.Type };
@@ -512,6 +576,11 @@ public static partial class RustEmitter {
     private IEnumerable<RsItem> Globals(IrModule module) {
       foreach (var global in module.Globals) {
         this._construct = $"the global '{global.Name}'";
+        if (this.IsThreadLocal(global)) {
+          yield return this.ThreadLocalGlobal(global);
+          continue;
+        }
+
         if (Atomic(global.Type) is not { } atomic) {
           if (this.LockedGlobal(global) is { } locked)
             yield return locked;
@@ -530,8 +599,8 @@ public static partial class RustEmitter {
 
     private readonly Dictionary<string, string> _globals = new(StringComparer.Ordinal);
 
-    /// <summary>The atomic type of the standard library a global of a type is, or <see langword="null"/>.</summary>
-    private static string? Atomic(IrType type) => type.Kind switch {
+    /// <summary>The atomic type of the standard library a global of a type is, or <see langword="null"/>: none for an enum, which is a type of its own.</summary>
+    private static string? Atomic(IrType type) => type.IsEnum ? null : type.Kind switch {
       IrTypeKind.Bool => "AtomicBool",
       IrTypeKind.I8 or IrTypeKind.U8 or IrTypeKind.I16 or IrTypeKind.U16 or IrTypeKind.I32 or IrTypeKind.U32 or IrTypeKind.I64 or IrTypeKind.U64
         => "Atomic" + char.ToUpperInvariant(TypeName(type)![0]) + TypeName(type)![1..],

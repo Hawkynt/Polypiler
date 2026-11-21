@@ -204,6 +204,8 @@ internal static class ArrayOwnership {
     var written = new List<object>();
     var created = new List<object>();
     var problems = new List<string>();
+    // The variables given a choice of a field's array and another (#1422): each holds a copy of the field's, as a read of the field as a whole does.
+    var copies = new List<object>();
 
     void Link(object node, IrExpr value) {
       switch (value) {
@@ -224,8 +226,14 @@ internal static class ArrayOwnership {
             created.Add(node);
           break;
         case IrConditional choice:
-          Link(node, choice.WhenTrue);
-          Link(node, choice.WhenFalse);
+          foreach (var branch in new[] { choice.WhenTrue, choice.WhenFalse }) {
+            if (branch is IrFieldLoad { Target.Type.IsObject: true } && node is IrLocal) {
+              created.Add(node);
+              copies.Add(node);
+            } else {
+              Link(node, branch);
+            }
+          }
           break;
         case IrCollection { Op: IrCollectionOp.ListCopyToArray }:
           created.Add(node);
@@ -352,6 +360,9 @@ internal static class ArrayOwnership {
     // and a new array, or of two owners, copies it where it changes hands.
     var owned = created.Select(groups.Find).ToHashSet(ReferenceEqualityComparer.Instance);
     var writtenRoots = written.Select(groups.Find).ToHashSet(ReferenceEqualityComparer.Instance);
+    // A copy is the field's array only where neither is written: .NET shares it.
+    if (copies.FirstOrDefault(copy => writtenRoots.Contains(groups.Find(copy))) is IrLocal copied)
+      problems.Add($"the variable '{copied.Name}' given a field's array or another one, and written");
     for (var index = 0; index < function.Parameters.Count; ++index) {
       var parameter = function.Parameters[index];
       if (!parameter.Type.IsArray)

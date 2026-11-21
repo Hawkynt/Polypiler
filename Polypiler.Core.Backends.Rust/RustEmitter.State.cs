@@ -15,12 +15,12 @@ public static partial class RustEmitter {
     private readonly Dictionary<string, int> _globalLengths = new(System.StringComparer.Ordinal);
 
     /// <summary>Whether a global has no atomic type and is held in a <c>Mutex</c>.</summary>
-    private static bool IsLocked(IrGlobal global) => Atomic(global.Type) is null;
+    private static bool IsLocked(IrGlobal global) => Atomic(global.Type) is null && !IsThreadLocalType(global.Type);
 
     /// <summary>
     /// A global that has no atomic form, as a static of the process behind a <c>Mutex</c> (Rust 1.63 made
     /// <c>Mutex::new</c> const): an array as the fixed array it always is, <c>Mutex&lt;[u32; 4]&gt;</c>, a
-    /// string as <c>Mutex&lt;Vec&lt;u16&gt;&gt;</c>, a floating-point number as itself. A first value
+    /// string as <c>Mutex&lt;Vec&lt;u16&gt;&gt;</c>, a floating-point number and an enum as themselves. A first value
     /// Rust cannot make in a constant - a string that is not empty - is made on first use by a
     /// <c>LazyLock</c> (Rust 1.80). A <c>thread_local!</c> would give each thread a global of its own,
     /// where .NET has one for the process.
@@ -58,6 +58,13 @@ public static partial class RustEmitter {
         initial = global.Initializer switch {
           null => Literal(new IrConst(global.Type, 0)),
           IrConst constant => Literal(constant),
+          _ => this.Refuse("a global with a computed first value")
+        };
+      } else if (global.Type.IsEnum) {
+        type = this.Type(global.Type);
+        initial = global.Initializer switch {
+          null => this.EnumConstant(new IrConst(global.Type, 0)),
+          IrConst constant => this.EnumConstant(constant),
           _ => this.Refuse("a global with a computed first value")
         };
       } else {
@@ -108,7 +115,7 @@ public static partial class RustEmitter {
 
     /// <summary>Whether evaluating an expression may take a lock or have an effect: a call, a step, a bind, a locked global.</summary>
     private static bool MayLock(IrExpr expression)
-      => IrTree.Nodes(expression).Any(node => node is IrCall or IrInvoke or IrMethodCall or IrStep or IrBind || node is IrGlobalRef { Global: var global } && IsLocked(global));
+      => IrTree.Nodes(expression).Any(node => node is IrCall or IrInvoke or IrMethodCall or IrStep or IrBind || node is IrGlobalRef { Global: var global } && (IsLocked(global) || IsThreadLocalType(global.Type)));
 
     /// <summary>A value, bound first into a statement where it may take a lock: the binding's name, or the value as it is.</summary>
     private RsExpression Settled(IrExpr value, string stem, List<RsStatement> before, System.Func<IrExpr, RsExpression> write) {

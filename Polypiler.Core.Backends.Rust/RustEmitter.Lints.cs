@@ -100,6 +100,12 @@ public static partial class RustEmitter {
           case RsLet { TypeName: { } type } when IsComplex(type):
             needed.Add("clippy::type_complexity");
             break;
+          case RsStruct structure when structure.Fields.Any(field => IsComplex(field.TypeName)):
+            needed.Add("clippy::type_complexity");
+            break;
+          case RsConst constant when IsComplex(constant.TypeName):
+            needed.Add("clippy::type_complexity");
+            break;
           case RsClosure closure when closure.Parameters.Any(parameter => IsComplex(parameter.TypeName)):
             needed.Add("clippy::type_complexity");
             break;
@@ -188,7 +194,43 @@ public static partial class RustEmitter {
     /// <summary>Whether a type is a function value that takes or gives another one, <c>Rc&lt;dyn Fn() -&gt; Rc&lt;dyn Fn() -&gt; i32&gt;&gt;</c>, which the source spelled as one name and clippy finds too complex.</summary>
     private static bool IsComplex(string type) {
       var first = type.IndexOf("dyn Fn", StringComparison.Ordinal);
-      return first >= 0 && type.IndexOf("dyn Fn", first + 1, StringComparison.Ordinal) > first;
+      // A field or a global holding a shared collection of objects (#1422): the source named it List<T>.
+      return first >= 0 && type.IndexOf("dyn Fn", first + 1, StringComparison.Ordinal) > first || !type.Contains("dyn Fn", StringComparison.Ordinal) && Complexity(type) > 250;
+    }
+
+    /// <summary>
+    /// The score clippy's <c>type_complexity</c> gives a type without function traits, which it flags
+    /// above 250: a path 10 times its depth, a trait object 20 times, a reference 1; a generic argument
+    /// one level deeper than its type.
+    /// </summary>
+    private static int Complexity(string type) {
+      var score = 0;
+      var depth = 1;
+      var trait = false;
+      for (var index = 0; index < type.Length; ++index) {
+        var character = type[index];
+        if (char.IsLetter(character) || character == '_') {
+          var start = index;
+          while (index + 1 < type.Length && (char.IsLetterOrDigit(type[index + 1]) || type[index + 1] == '_'))
+            ++index;
+          var word = type[start..(index + 1)];
+          // A segment after :: belongs to the path before it; a lifetime counts nothing.
+          if (word == "dyn") {
+            trait = true;
+          } else if (word != "mut" && !(start >= 2 && type[start - 2] == ':' && type[start - 1] == ':') && !(start >= 1 && type[start - 1] == '\'')) {
+            score += (trait ? 20 : 10) * depth;
+            trait = false;
+          }
+        } else if (character == '<') {
+          ++depth;
+        } else if (character == '>') {
+          --depth;
+        } else if (character == '&') {
+          ++score;
+        }
+      }
+
+      return score;
     }
 
     /// <summary>Whether a literal is close to a well-known constant: within a ten-thousandth, with four digits or more.</summary>

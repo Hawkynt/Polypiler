@@ -13,7 +13,7 @@ namespace Polypiler.Core.Backends.Rust.Helpers;
 /// which the IR has no weaker operation to write them with. Each is Rust source in rustfmt's layout,
 /// read into the syntax tree when a crate needs it, with the functions it calls.
 /// </summary>
-internal static class Strings {
+internal static partial class Strings {
 
   /// <summary>Every helper by name: its source, and the helpers it calls.</summary>
   private static readonly Dictionary<string, (string Source, string[] Calls)> _helpers = new(StringComparer.Ordinal) {
@@ -731,30 +731,36 @@ internal static class Strings {
   /// cannot.
   /// </summary>
   /// <param name="name">The helper.</param>
+  /// <param name="results">Whether the forms of the trap policy <c>result</c> are asked about (<see cref="ResultForms"/>).</param>
   /// <returns><see langword="true"/> when a call of it may panic.</returns>
-  public static bool Panics(string name)
-    => _helpers.ContainsKey(name) && _panics.GetOrAdd(name, helper => With(helper).Any(function => RustSyntaxRewriter.DescendantsAndSelf(function).Any(node =>
+  public static bool Panics(string name, bool results = false)
+    => _helpers.ContainsKey(name) && (results ? _resultPanics : _panics).GetOrAdd(name, helper => With(helper, results).Any(function => RustSyntaxRewriter.DescendantsAndSelf(function).Any(node =>
       node is RsMacro { Name: "panic" } || node is RsMethodCall { Name: "expect" or "unwrap" })));
 
   /// <summary>Whether a helper panics, by name, as <see cref="Panics"/> found it.</summary>
   private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _panics = new(StringComparer.Ordinal);
 
+  /// <summary>Whether a helper's form under the trap policy <c>result</c> panics, by name, as <see cref="Panics"/> found it.</summary>
+  private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _resultPanics = new(StringComparer.Ordinal);
+
   /// <summary>A helper as its function, and every helper it calls, each once, the helper first.</summary>
   /// <param name="name">The helper.</param>
+  /// <param name="results">Whether to take the forms of the trap policy <c>result</c> where a helper has one.</param>
   /// <returns>The functions.</returns>
-  public static IReadOnlyList<RsFunction> With(string name) {
+  public static IReadOnlyList<RsFunction> With(string name, bool results = false) {
+    (string Source, string[] Calls) Of(string helper) => results && _resultForms.TryGetValue(helper, out var form) ? (form.Source, form.Calls) : _helpers[helper];
     var names = new List<string>();
     void Add(string helper) {
       if (names.Contains(helper))
         return;
 
       names.Add(helper);
-      foreach (var call in _helpers[helper].Calls)
+      foreach (var call in Of(helper).Calls)
         Add(call);
     }
 
     Add(name);
-    return [.. names.Select(helper => (RsFunction)RustSyntaxReader.Read(_helpers[helper].Source.Replace("\r", "", StringComparison.Ordinal) + "\n").Items[0])];
+    return [.. names.Select(helper => (RsFunction)RustSyntaxReader.Read(Of(helper).Source.Replace("\r", "", StringComparison.Ordinal) + "\n").Items[0])];
   }
 
 }

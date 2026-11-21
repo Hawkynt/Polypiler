@@ -10,7 +10,7 @@ JavaScript and checked on the known-answer tests the file itself carries (#1365)
 | Target | Files | Translated | Built and run | Every checked KAT passes | KATs failing in translated files |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | csharp | 933 | 3 | 3 | 3 | 0 |
-| rust | 933 | 0 | 0 | 0 | 0 |
+| rust | 933 | 3 | 3 | 3 | 0 |
 
 4958 known-answer tests in 933 files, 4840 of them checkable on a translation (node passes it, every value is data and the result is bytes; without an expected result node's own, where it is the same on every run).
 
@@ -43,7 +43,7 @@ The first diagnostic of every refused file, the quoted names left out, by how ma
 
 | Files | First diagnostic |
 | ---: | --- |
-| 933 | PLY0003: unknown target language '…'; the prototype writes '…' and '…' |
+| 930 | PLY0003: unknown target language '…'; the prototype writes '…' and '…' |
 
 ## Files
 
@@ -338,9 +338,9 @@ The first diagnostic of every refused file, the quoted names left out, by how ma
 | `block/xtea.js` | 2 / 2 | refused: PLY1105: 'test' holds both TestCase and { text, uri, input, key, expected } | refused: PLY0003: unknown target language 'rust'; the prototype writes 'javascript' and 'csharp' |
 | `block/xxtea.js` | 3 / 3 | refused: PLY1102: '?: on nothing and nothing' is not supported yet | refused: PLY0003: unknown target language 'rust'; the prototype writes 'javascript' and 'csharp' |
 | `checksum/aba-routing.js` | 3 / 3 | refused: PLY1105: 'test' holds both TestCase and { text, uri, input, expected } | refused: PLY0003: unknown target language 'rust'; the prototype writes 'javascript' and 'csharp' |
-| `checksum/adler.js` | 11 / 11 | 11 / 11 pass | refused: PLY0003: unknown target language 'rust'; the prototype writes 'javascript' and 'csharp' |
+| `checksum/adler.js` | 11 / 11 | 11 / 11 pass | 11 / 11 pass |
 | `checksum/bsd-checksum.js` | 3 / 3 | refused: PLY1102: 'float64 where int32 is expected' is not supported yet | refused: PLY0003: unknown target language 'rust'; the prototype writes 'javascript' and 'csharp' |
-| `checksum/check-digit.js` | 12 / 12 | 12 / 12 pass | refused: PLY0003: unknown target language 'rust'; the prototype writes 'javascript' and 'csharp' |
+| `checksum/check-digit.js` | 12 / 12 | 12 / 12 pass | 12 / 12 pass |
 | `checksum/complement.js` | 8 / 8 | refused: PLY1102: 'a call of /^[0-9A-Fa-f]*$/.test' is not supported yet | refused: PLY0003: unknown target language 'rust'; the prototype writes 'javascript' and 'csharp' |
 | `checksum/constant-weight.js` | 4 / 4 | refused: PLY1105: 'test' holds both TestCase and { text, uri, weight, length, input, expected } | refused: PLY0003: unknown target language 'rust'; the prototype writes 'javascript' and 'csharp' |
 | `checksum/crc.js` | 60 / 60 | refused: PLY1102: 'a call of /^[0-9A-Fa-f]*$/.test' is not supported yet | refused: PLY0003: unknown target language 'rust'; the prototype writes 'javascript' and 'csharp' |
@@ -354,7 +354,7 @@ The first diagnostic of every refused file, the quoted names left out, by how ma
 | `checksum/iccid-checksum.js` | 3 / 3 | refused: PLY1105: 'test' holds both TestCase and { text, uri, input, expected } | refused: PLY0003: unknown target language 'rust'; the prototype writes 'javascript' and 'csharp' |
 | `checksum/imei-checksum.js` | 3 / 3 | refused: PLY1105: 'test' holds both TestCase and { text, uri, input, expected } | refused: PLY0003: unknown target language 'rust'; the prototype writes 'javascript' and 'csharp' |
 | `checksum/internet-checksum.js` | 4 / 4 | refused: PLY1102: 'a call of /^[0-9A-Fa-f]*$/.test' is not supported yet | refused: PLY0003: unknown target language 'rust'; the prototype writes 'javascript' and 'csharp' |
-| `checksum/isbn.js` | 6 / 6 | 6 / 6 pass | refused: PLY0003: unknown target language 'rust'; the prototype writes 'javascript' and 'csharp' |
+| `checksum/isbn.js` | 6 / 6 | 6 / 6 pass | 6 / 6 pass |
 | `checksum/isin-checksum.js` | 3 / 3 | refused: PLY1105: 'test' holds both TestCase and { text, uri, input, expected } | refused: PLY0003: unknown target language 'rust'; the prototype writes 'javascript' and 'csharp' |
 | `checksum/issn-checksum.js` | 3 / 3 | refused: PLY1105: 'test' holds both TestCase and { text, uri, input, expected } | refused: PLY0003: unknown target language 'rust'; the prototype writes 'javascript' and 'csharp' |
 | `checksum/lrc.js` | 2 / 2 | refused: PLY1105: 'test' holds both TestCase and { text, uri, input, expected } | refused: PLY0003: unknown target language 'rust'; the prototype writes 'javascript' and 'csharp' |

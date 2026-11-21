@@ -321,13 +321,16 @@ object, `Rc<PlyError>` (its class as a number, its message, its inner exception)
 | `catch (X e) when (f)` | `if ply_is(error.class, <X>) && f { … }`, the next clause in the `else`, the exception going on after the last |
 | `throw;` | the caught exception going on, `Rc::clone(&error)` |
 | `e.Message`, `e.InnerException` | `e.message.clone()`, `e.inner.clone()` |
-| `finally` around a body that always returns and throws nothing | the body a labelled block its `return` leaves, then the `finally`, then the return |
+| `throw new InvalidOperationException(…)` with a clause of its class around it in the function | an exception like the module's own, `ply_error(7, …)`; without one a trap |
+| `try { … } finally { … }`, with or without catch clauses | the body a labelled block every way out of which leaves it first - `thrown = Some(e)`, `returned = Some(v)`, `jumped = 1`, or the block's value where it is left one way only - then the `finally`, then the way out made |
+| `catch (X) when (f)` with a `finally` between it and the throw | the clause chosen at the throw, before the `finally`: `(e, selected)` leaves, the handler a chain over `selected` |
 
 Under the default trap policy `panic` a catch clause of a class a trap belongs to stands only around
 code that cannot trap, since a trap is a panic no clause sees; catching a trap (`exceptions/Traps`) is
-refused with `PLY1560`. Under both policies so are a filter with a `finally` between it and the throw
-(.NET runs the filter first, `exceptions/order`), a `try` with both catch clauses and a `finally`, any
-other `finally`, and a jump out of a `try`, each naming why. Rust's own messages (`attempt to divide by zero`,
+refused with `PLY1560`. A filter with a `finally` between it and the throw runs first, as .NET runs it
+(`exceptions/order` gives "W,F,C" under both policies). Under both policies a filter that may trap, one
+behind a handler whose own body holds a `finally`, and one around a call of a function that may run a
+`finally` while the exception leaves it are refused with `PLY1560`, each naming why. Rust's own messages (`attempt to divide by zero`,
 `index out of bounds`, `called Option::unwrap() on a None value`, …) map to the traps their class
 stands for.
 
@@ -346,8 +349,11 @@ can leave returns a `Result`; a function nothing can leave keeps its type.
 
 `Error` is `#[repr(u16)] pub enum Error` in `src/error.rs`, re-exported from `src/lib.rs`, with the codes
 `DivideByZero = 1`, `IntegerOverflow = 2`, `IndexOutOfRange = 3` and the other traps from 4, and
-`Display` printing the trap's name. A call of a helper that panics, a trap inside a closure, a step of
-locked module state and a type named `Error` are refused with `PLY1552`.
+`Display` printing the trap's name. A helper of strings and collections that traps (a list's index, an
+enum's or a number's parse, a cast, a view) gives the trap as its value there and the call checks it
+(`ply_list_index(i, n).ok_or(Error::ArgumentOutOfRange)?`). A call of a helper that panics and has no such
+form, a trap inside a closure, a step of locked module state and a type named `Error` are refused with
+`PLY1552`.
 
 ## Known differences
 

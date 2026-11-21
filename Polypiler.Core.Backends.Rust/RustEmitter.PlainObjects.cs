@@ -91,8 +91,12 @@ public static partial class RustEmitter {
     /// </summary>
     private IEnumerable<RsItem> PlainClass(IrClassType type, IReadOnlyDictionary<string, RsFunction> written) {
       var name = this._types[type];
+      // A generic class (#1421): its fields name the parameters, its struct and impl are generic.
+      var generic = this._genericClasses.GetValueOrDefault(type);
+      this._standIns = generic?.StandIns ?? [];
       var fields = this.PlainFields(type).Select(field => new RsFieldDeclaration(this.FieldName(field), "", this.PlainFieldType(field))).ToList();
-      yield return new RsStruct(name, "pub", fields) { Attributes = ["derive(Default)"] };
+      this._standIns = [];
+      yield return new RsStruct(name, "pub", fields) { Attributes = ["derive(Default)"], Generics = generic?.Generics ?? "" };
       var members = this._members.Where(pair => pair.Value.Class == type && written.ContainsKey(pair.Key)).ToList();
       var items = new List<RsItem>();
       foreach (var (function, member) in members.Where(pair => pair.Value.Kind == MemberKind.Maker))
@@ -101,7 +105,7 @@ public static partial class RustEmitter {
         items.Add(written[function]);
 
       if (items.Count > 0)
-        yield return new RsImpl(null, name, items);
+        yield return new RsImpl(null, name + (generic?.Generics ?? ""), items) { Generics = generic?.Bounded ?? "" };
     }
 
     /// <summary><c>pub fn new(..) -&gt; Self</c>: the object made with every field at its default, the constructor's body run on it, the object moved out.</summary>

@@ -137,9 +137,25 @@ public sealed class RustTrapPolicyTests {
     }
   }
 
-  /// <summary>The exceptions family under result: the traps caught by the clauses of their classes, the module's own exceptions as before.</summary>
+  /// <summary>#1414: exceptions/order under result - the filter runs before the inner finally, "W,F,C" as .NET.</summary>
+  [Test]
+  [RequiresToolchain(RustRunner.Toolchain)]
+  public async Task OrderFixture_UnderResult_RunsTheFilterFirst() {
+    var module = ExceptionFixtures.Imported("order");
+    Assert.That(RustCrates.Check(module, Result), Is.Empty);
+    PrototypeCall[] calls = [new("Run", []) { Returns = typeof(string) }];
+    Assert.That(PrototypeFixture.InvokedOutcome(ExceptionFixtures.Compiled("OrderDemo", "Run"), calls[0]), Is.EqualTo("W,F,C"));
+    foreach (var checks in new[] { OverflowChecks.Panic, OverflowChecks.Wrap })
+      Assert.That(await RustRun.OutcomesAsync(module, calls, checks, Result), Is.EqualTo(new[] { "W,F,C" }), $"overflow checks {checks}");
+  }
+
+  /// <summary>
+  /// The exceptions family under result: the traps caught by the clauses of their classes, the module's own exceptions as before,
+  /// and the regions of a finally (#1414) - a try with catch clauses and a finally, a return, break and continue through one, filters run before it.
+  /// </summary>
   [TestCase("Traps", "TrapsDemo")]
   [TestCase("Classes", "ClassesDemo")]
+  [TestCase("Regions", "RegionsDemo")]
   [RequiresToolchain(RustRunner.Toolchain)]
   public async Task ExceptionFixture_UnderResult_AgreesWithDotNet(string file, string className) {
     var module = ExceptionFixtures.Imported(file);
