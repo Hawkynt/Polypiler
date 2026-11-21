@@ -66,6 +66,9 @@ public sealed class VectorFile {
   /// <summary>The call signature the images follow; <see langword="null"/> in a whole-program byte-stream file.</summary>
   public CallSignature? Signature { get; }
 
+  internal VectorFile WithRecordedVectors(VectorProvenance provenance, IReadOnlyList<TestVector> vectors)
+    => new(this.Path, this.Fixture, provenance, this.Exactness, vectors, this.Export, this.Signature);
+
   /// <summary>Loads a vector file.</summary>
   /// <param name="path">The file.</param>
   /// <returns>The file's content.</returns>
