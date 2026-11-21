@@ -206,6 +206,35 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY1592](PLY1592.md) | error | 7 (OracleFailure) | `the Rust driver died with exit code <code>: <standard error>` | #468 |
 | [PLY1595](PLY1595.md) | error | 7 (OracleFailure) | `<reason>` | #468 |
 
+## PLY1700–PLY1799 · perl
+
+| Code | Severity | Exit code | Message | Owner |
+| --- | --- | --- | --- | --- |
+| [PLY1700](PLY1700.md) | error | 4 (InvalidSource) | `Perl compilation failed: <detail>` | #438 |
+| [PLY1702](PLY1702.md) | error | 3 (UnsupportedConstruct) | `'<construct>' is not supported by the Perl frontend` | #438 |
+| [PLY1710](PLY1710.md) | error | 3 (UnsupportedConstruct) | `'<construct>' is not supported by the Perl frontend` | #435 |
+| [PLY1711](PLY1711.md) | error | 3 (UnsupportedConstruct) | `'<construct>' does not target a loop that lexically encloses it in the same sub; dynamic loop control is not imported` | #435 |
+| [PLY1720](PLY1720.md) | error | 3 (UnsupportedConstruct) | `array or list operation '<construct>' is not supported by the Perl frontend` | #437 |
+| [PLY1721](PLY1721.md) | error | 3 (UnsupportedConstruct) | `reference construct '<construct>' is not supported by the Perl frontend` | #437 |
+| [PLY1722](PLY1722.md) | error | 3 (UnsupportedConstruct) | `string operation '<construct>' is not supported; the Perl subset handles byte strings only` | #437 |
+| [PLY1723](PLY1723.md) | error | 3 (UnsupportedConstruct) | `pack/unpack template '<template>' is not supported: <reason>` | #437 |
+| [PLY1730](PLY1730.md) | error | 3 (UnsupportedConstruct) | `'<construct>' is not supported for subs and modules by the Perl frontend` | #436 |
+| [PLY1732](PLY1732.md) | error | 3 (UnsupportedConstruct) | `the code reference '<name>' escapes; only anonymous subs called through the lexical they are assigned to are imported` | #436 |
+| [PLY1733](PLY1733.md) | error | 3 (UnsupportedConstruct) | `'<name>' is neither part of this import nor in the Perl call map` | #436 |
+| [PLY1740](PLY1740.md) | error | 3 (UnsupportedConstruct) | `'<construct>' uses Perl's object system, which is outside the first Perl subset` | #439 |
+| [PLY1741](PLY1741.md) | error | 3 (UnsupportedConstruct) | `'<construct>' observes the order of a hash, which Perl leaves unspecified; sort the keys` | #439 |
+| [PLY1742](PLY1742.md) | error | 3 (UnsupportedConstruct) | `error-handling construct '<construct>' is not supported by the Perl frontend` | #439 |
+| [PLY1743](PLY1743.md) | error | 3 (UnsupportedConstruct) | `'<construct>' relies on tie, typeglob or special-variable behaviour that is not imported` | #439 |
+| [PLY1750](PLY1750.md) | error | 3 (UnsupportedConstruct) | `type '<type>' has no Perl representation in profile '<profile>'` | #433 |
+| [PLY1751](PLY1751.md) | error | 3 (UnsupportedConstruct) | `operation '<operation>' cannot be emitted as Perl` | #433 |
+| [PLY1758](PLY1758.md) | error | 3 (UnsupportedConstruct) | `control construct '<construct>' has no Perl form` | #430 |
+| [PLY1766](PLY1766.md) | error | 3 (UnsupportedConstruct) | `pointer '<construct>' cannot be represented in Perl` | #432 |
+| [PLY1767](PLY1767.md) | error | 3 (UnsupportedConstruct) | `a live view of '<source>' as '<target>' is not supported by the Perl backend; use explicit loads and stores` | #432 |
+| [PLY1774](PLY1774.md) | error | 3 (UnsupportedConstruct) | `<reason>` | #431 |
+| [PLY1775](PLY1775.md) | error | 3 (UnsupportedConstruct) | `the signature of export '<export>' uses '<construct>', which the Perl backend cannot expose` | #431 |
+| [PLY1782](PLY1782.md) | error | 3 (UnsupportedConstruct) | `'<construct>' is beyond the Perl backend's plain-Perl subset (hash records, constants, undef, die/eval)` | #434 |
+| [PLY1783](PLY1783.md) | error | 3 (UnsupportedConstruct) | `trap kind '<kind>' has no Perl mapping` | #434 |
+
 ## PLY1800–PLY1899 · python
 
 | Code | Severity | Exit code | Message | Owner |
