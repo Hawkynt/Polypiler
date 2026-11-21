@@ -96,9 +96,9 @@ public sealed class SharedStateEmitTests {
   }
 
   [Test]
-  public void ThrowOfALibraryException_PanicsWithItsMessage() {
+  public void ThrowOfALibraryException_PanicsWithItsClassName() {
     var text = Module("using System; public static class S { public static int Fail(int x) { if (x < 0) throw new Exception(\"negative: \" + x); return x; } }");
-    Assert.That(text, Does.Contain("let message = [&ply_utf16(\"negative: \")[..], &ply_utf16(&x.to_string())[..]].concat();\n        panic!(\"{}\", String::from_utf16_lossy(&message));"));
+    Assert.That(text, Does.Contain("if x < 0 {\n        panic!(\"Exception\");\n    }"), "named after its class, as the verification reads a panic back");
   }
 
   [Test]
@@ -141,7 +141,7 @@ public sealed class SharedStateEmitTests {
     Assert.That(text, Does.Contain("    fn field_name(&self) -> &RefCell<Option<Vec<u16>>>;"));
     Assert.That(text, Does.Contain("*Base::field_name(this).borrow_mut() = None;"));
     Assert.That(text, Does.Contain("*this.name.borrow_mut() = Some(n.to_vec());"));
-    Assert.That(text, Does.Contain("if b.name.borrow().is_none() {\n        panic!(\"{}\", \"no name\");"));
+    Assert.That(text, Does.Contain("if b.name.borrow().is_none() {\n        panic!(\"Exception\");"));
     Assert.That(text, Does.Contain("let find_lambda: bool = x.name.borrow().as_deref() == Some(name);"));
   }
 

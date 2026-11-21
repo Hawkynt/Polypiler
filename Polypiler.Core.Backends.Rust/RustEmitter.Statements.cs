@@ -833,20 +833,19 @@ public static partial class RustEmitter {
 
     /// <summary>
     /// A new exception of the library that no trap is, thrown where the crate panics (#1422): the panic
-    /// with its message, <c>panic!("{}", String::from_utf16_lossy(&amp;message))</c>, or its class's name
-    /// without one - what .NET prints of an unhandled exception, which nothing in the module catches.
+    /// named after its class, <c>panic!("Exception")</c>, as an unhandled exception of the module's own
+    /// classes is (<c>ply_unhandled</c>) and as the verification reads a panic back. Its arguments are
+    /// evaluated first where they may have an effect (a call): <c>let _message = …;</c>.
     /// </summary>
     private RsExpression Unhandled(IrClassType library, IReadOnlyList<IrExpr> arguments) {
-      if (arguments is not [{ Type.IsString: true } message])
-        return new RsMacro("panic", [new RsString(library.Name[(library.Name.LastIndexOf('.') + 1)..])]);
+      RsExpression panic = new RsMacro("panic", [new RsString(library.Name[(library.Name.LastIndexOf('.') + 1)..])]);
+      var effects = arguments.Where(argument => IrTree.Nodes(argument).Any(node => node is IrCall or IrMethodCall or IrInvoke)).ToList();
+      if (effects.Count == 0)
+        return panic;
 
-      if (message is IrStrConst constant && !HasLoneSurrogate(constant.Value))
-        return new RsMacro("panic", [new RsString("{}"), new RsString(constant.Value)]);
-
-      // The message made first, then the panic that prints it.
-      var name = this.Temporary("message");
-      return new RsBlockExpression(new RsBlock([new RsLet(name, false, null, this.StringValue(message))],
-        new RsMacro("panic", [new RsString("{}"), new RsCall(new RsPath("String::from_utf16_lossy"), [new RsReference(false, new RsPath(name))])])));
+      var statements = effects.Select(argument => (RsStatement)new RsLet(this.Temporary("_message"), false, null,
+        argument.Type.IsString ? this.StringValue(argument) : this.Expression(argument))).ToList();
+      return new RsBlockExpression(new RsBlock(statements, panic));
     }
 
     /// <summary>The trap whose class an exception class of the library is; the first one where several share it.</summary>
