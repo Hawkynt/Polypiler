@@ -34,7 +34,7 @@ public sealed class CommandRegistry {
   public ICliCommand? Find(string name) => this._commands.GetValueOrDefault(name);
 
   /// <summary>Whether a name is a <c>word</c> of the grammar: a lower-case ASCII letter, then letters and digits, in parts joined by single hyphens.</summary>
-  private static bool IsWord(string? name)
+  internal static bool IsWord(string? name)
     => name is { Length: > 0 } && char.IsAsciiLetterLower(name[0]) && !name.EndsWith('-') && !name.Contains("--", StringComparison.Ordinal)
       && name.All(character => char.IsAsciiLetterLower(character) || char.IsAsciiDigit(character) || character == '-');
 

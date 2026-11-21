@@ -22,7 +22,7 @@ public static partial class RustEmitter {
     /// by), and no value of it comes from anywhere else: no integer converted to it (a bitwise operator on it
     /// is one on its integer, converted back), no parse of a text, no constant that is no member, no public function that takes or gives it
     /// (a caller outside passes any integer), and - where no member is zero - no value it holds by
-    /// default, in a new array, a default struct or a field of a class.
+    /// default, in a new array, a default struct, a field of a class or a global without a first value.
     /// </summary>
     private void ClosedEnums(IrModule module) {
       var closed = new HashSet<IrEnumType>(module.Types.OfType<IrEnumType>().Where(Closable), ReferenceEqualityComparer.Instance);
@@ -49,6 +49,9 @@ public static partial class RustEmitter {
 
       foreach (var field in module.Types.OfType<IrClassType>().SelectMany(type => type.AllFields))
         OpenDefaulted(field.Type);
+
+      foreach (var global in module.Globals.Where(global => global.Initializer is null))
+        OpenDefaulted(global.Type);
 
       var expressions = module.Functions.SelectMany(function => IrTree.Nodes(function.Body)).Concat(module.Globals.Select(global => global.Initializer).OfType<IrExpr>().SelectMany(IrTree.Nodes));
       foreach (var node in expressions) {

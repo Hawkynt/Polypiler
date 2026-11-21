@@ -21,8 +21,7 @@ namespace Polypiler.Tests.Acceptance.Rust;
 /// translation through, gets its test crate: every vector passes; an altered byte, a panic of the
 /// translation, a property it lacks and an algorithm it does not register fail with their reason; a
 /// translation that does not compile names the compiler's first error. Then the scenario files of the
-/// corpus go through polypiler itself: each is either refused with the backend's own diagnostic, or
-/// it passes every checked vector.
+/// corpus go through polypiler itself: each passes every checked vector (#1422).
 /// </summary>
 [TestFixture, Category("Acceptance"), Category("EndToEnd")]
 [Layer("rust")]
@@ -32,8 +31,8 @@ public sealed class CipherKatRustTests {
 
   private string _work = "";
 
-  /// <summary>Held while the Cipher corpus is imported, which the scenario cases share.</summary>
-  private static readonly Lock _import = new();
+  /// <summary>Held while the Cipher corpus is imported, which the scenario cases and the steps of the Cipher framework's feature share.</summary>
+  internal static readonly Lock Import = new();
 
   [SetUp]
   public void CreateWork() => this._work = Directory.CreateTempSubdirectory("polypiler-cipher-kat-rust-").FullName;
@@ -97,21 +96,21 @@ public sealed class CipherKatRustTests {
   }
 
   /// <summary>
-  /// The scenario files of #1365 through polypiler and cargo: the first diagnostic of a refusal is the
-  /// Rust backend's own - the target is known - and a file that translates passes every checked vector.
+  /// The scenario files of #1365 through polypiler and cargo (#1422): each translates, builds and passes
+  /// every checked vector of its golden file.
   /// </summary>
-  [TestCase("checksum/adler.js")]
-  [TestCase("checksum/check-digit.js")]
-  [TestCase("checksum/isbn.js")]
+  [TestCase("checksum/adler.js", 11)]
+  [TestCase("checksum/check-digit.js", 12)]
+  [TestCase("checksum/isbn.js", 6)]
   [RequiresToolchain(RustRunner.Toolchain)]
-  public void ScenarioFile_IsRefusedByTheBackend_OrPassesEveryVector(string file) {
+  public void ScenarioFile_PassesEveryVector(string file, int checkable) {
     var root = PrototypeFixture.RepositoryRoot;
     var manifest = CorpusManifest.Load(Path.Combine(root, CorpusManifest.RepositoryPath));
     var fixture = manifest.Fixture(CipherCommand.Fixture)!;
     var pin = fixture.PinOf(manifest.Repository(fixture.Repository)!);
     var corpus = Path.GetDirectoryName(CorpusImporter.FilePath(root, pin.Name, pin.Commit, fixture.Path))!;
     // The cases run in parallel and share one checkout: one imports it, the others wait for it.
-    lock (_import)
+    lock (Import)
       if (!Directory.Exists(Path.Combine(corpus, "algorithms"))) {
         using var output = new StringWriter();
         using var error = new StringWriter();
@@ -123,11 +122,8 @@ public sealed class CipherKatRustTests {
     var row = new KatHarness(new ProcessRunner(), polypiler, corpus, Path.Combine(root, CipherCommand.Goldens), this._work).Check(file, [KatTarget.Rust]);
     var result = row.Targets[0];
     TestContext.Out.WriteLine($"{row.File}: {row.Checkable} / {row.Vectors} KATs checkable; rust {KatReport.Status(result)}");
-    Assert.That(row.Checkable, Is.GreaterThan(0), "the golden file has vectors a translation can be checked on");
-    if (result.Stage == KatStage.Refused)
-      Assert.That(result.Reason, Does.StartWith("PLY").And.Not.StartWith("PLY0003"), "the refusal is the backend's own");
-    else
-      Assert.That((result.Stage, result.AllPassed, result.Failures), Is.EqualTo((KatStage.Ran, true, new List<string>())), KatReport.Status(result));
+    Assert.That(row.Checkable, Is.EqualTo(checkable), "the golden file's vectors a translation can be checked on");
+    Assert.That((result.Stage, result.Passed, result.AllPassed, result.Failures), Is.EqualTo((KatStage.Ran, checkable, true, new List<string>())), KatReport.Status(result));
   }
 
 }

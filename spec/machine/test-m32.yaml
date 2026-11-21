@@ -1,0 +1,31 @@
+id: MACHINE.test-m32
+title: Test machine with 32-bit registers
+version: 1
+status: draft
+owner: Hawkynt
+issue: MACH-IR
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  isa: test-m32
+  addressBits: 32
+  byteOrder: little
+  interruptVectors: 256
+  registers:
+    - {name: r0, bits: 32}
+    - {name: r1, bits: 32}
+    - {name: r2, bits: 32}
+    - {name: r3, bits: 32}
+    - {name: sp, bits: 32, class: stack-pointer}
+    - {name: pc, bits: 32, class: program-counter}
+    - {name: r0w, bits: 16, parent: r0, offset: 0, write: preserve}
+    - {name: r0l, bits: 8, parent: r0, offset: 0, write: preserve}
+    - {name: r0h, bits: 8, parent: r0, offset: 8, write: preserve}
+  flags:
+    - {name: c}
+    - {name: z}
+    - {name: s}
+    - {name: o}

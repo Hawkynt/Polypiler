@@ -29,7 +29,12 @@ public sealed record NamedValue(string Name, ImageValue Value) {
 /// <summary>What a call ended in: an output image, or a trap that has none.</summary>
 /// <param name="Image">The output image; <see langword="null"/> when the call trapped.</param>
 /// <param name="Trap">The trap; <see langword="null"/> when the call returned.</param>
-public sealed record CallOutcome(byte[]? Image, TrapClass? Trap);
+public sealed record CallOutcome(byte[]? Image, TrapClass? Trap) {
+
+  /// <summary>The native name reported by the driver, when the call trapped.</summary>
+  public string? NativeTrapName { get; init; }
+
+}
 
 /// <summary>
 /// The input and output images of a call under its signature. The input image is the images of the

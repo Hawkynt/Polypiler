@@ -14,12 +14,12 @@ using Reqnroll;
 namespace Polypiler.Tests.Acceptance.Rust;
 
 /// <summary>
-/// The steps of <c>tests/features/lang/rs/be-rs-single-owner.feature</c> (#1393): C# classes through the
+/// The steps of <c>tests/features/lang/rs/be-rs-single-owner.feature</c> (#1393) and <c>be-rs-enum-globals.feature</c> (#1424): C# classes through the
 /// frontend and the Rust backend, the module's text, the crate under clippy and rustfmt, calls the
 /// generated driver makes compared with the table and the IR interpreter, and the Rust fixtures that
 /// come back through the backend compared with what rustc recorded.
 /// </summary>
-[Binding, Scope(Feature = "Rust backend: single-owner classes as plain structs")]
+[Binding, Scope(Feature = "Rust backend: single-owner classes as plain structs"), Scope(Feature = "Rust backend: enum globals and nullable objects converted to their base")]
 public sealed class RustSingleOwnerSteps {
 
   private static readonly string[] _fixtures = ["types", "edges", "reassign"];

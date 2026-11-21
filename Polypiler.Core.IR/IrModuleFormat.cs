@@ -34,6 +34,20 @@ public static partial class IrModuleFormat {
 
   private const int HashSize = 32;
 
+  /// <summary>
+  /// The byte before the tag of a node that has origins, followed by them (<see cref="IrStmt.Origins"/>,
+  /// <see cref="IrExpr.Origins"/>); a node without origins has none, so its bytes are those it always had.
+  /// </summary>
+  private const byte Located = 0xFE;
+
+  /// <summary>The byte that opens the table of sources after the end of a module that declares any (<see cref="IrModule.Sources"/>).</summary>
+  private const byte SourcesTable = 0xFD;
+
+  /// <summary>The kinds of origin, as the byte before each origin says.</summary>
+  private enum OriginKind : byte {
+    Span, Address, Synthetic
+  }
+
   private enum Tag : byte {
     Null, Shared,
     Const, ConstRef, LocalRef, Unary, Binary, Convert, Conditional, ArrayLoad, ArrayLength, NewArray, Call, Step,
@@ -135,6 +149,7 @@ public static partial class IrModuleFormat {
     private readonly Dictionary<IrMethod, int> _methods = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<IrConstructor, int> _constructors = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<IrGenericTemplate, int> _templates = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<IrGenericClassTemplate, int> _classTemplates = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<IrModuleConst, int> _constants = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<IrGlobal, int> _globals = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<IrLocal, int> _locals = new(ReferenceEqualityComparer.Instance);
@@ -217,16 +232,84 @@ public static partial class IrModuleFormat {
       foreach (var function in module.Functions)
         this.Function(function);
 
+      // The templates of the generic classes last: their member templates name the members of every class.
+      foreach (var (template, _) in this._classTemplates.OrderBy(entry => entry.Value)) {
+        writer.Write(template.IsDefined);
+        if (!template.IsDefined)
+          continue;
+
+        this.Reference(template.Class!);
+        this.Types(template.Parameters);
+        this.Count(template.Members.Count);
+        foreach (var member in template.Members)
+          this.Template(member);
+      }
+
       this.ForeignFunctions(module.ForeignFunctions);
       writer.Write(module.Initializer is not null);
       if (module.Initializer is not null)
         writer.Write(module.Initializer);
+
+      if (module.Sources.Count == 0)
+        return;
+
+      writer.Write(SourcesTable);
+      this.Count(module.Sources.Count);
+      foreach (var source in module.Sources) {
+        this.Text(source.Repository);
+        this.Text(source.Commit);
+        this.Text(source.Path);
+        this.Text(source.Sha256);
+        this.Text(source.Dialect);
+      }
     }
 
-    /// <summary>The declarations that stand for the type parameters of the templates the functions of a module reach.</summary>
+    /// <summary>The origins of a node, after <see cref="Located"/>.</summary>
+    private void Origins(IReadOnlyList<Origin> origins) {
+      writer.Write(Located);
+      this.Count(origins.Count);
+      foreach (var origin in origins)
+        switch (origin) {
+          case SourceSpan span:
+            writer.Write((byte)OriginKind.Span);
+            writer.Write(span.Artifact);
+            writer.Write(span.StartLine);
+            writer.Write(span.StartColumn);
+            writer.Write(span.EndLine);
+            writer.Write(span.EndColumn);
+            break;
+          case AddressSpan address:
+            writer.Write((byte)OriginKind.Address);
+            writer.Write(address.Artifact);
+            writer.Write(address.Offset);
+            writer.Write(address.Length);
+            break;
+          default:
+            writer.Write((byte)OriginKind.Synthetic);
+            this.Text(((Synthetic)origin).PassId);
+            break;
+        }
+    }
+
+    /// <summary>
+    /// The declarations no module holds that its templates name: the types that stand for the type
+    /// parameters of the templates the functions of a module reach, and the class of the template of
+    /// every generic class with its parameters.
+    /// </summary>
     private static IEnumerable<IrTypeDeclaration> StandIns(IrModule module) {
       var templates = new HashSet<IrGenericTemplate>(ReferenceEqualityComparer.Instance);
       var pending = new Stack<IrFunction>(module.Functions.Reverse());
+      var classes = module.Types.OfType<IrClassType>().Select(type => type.Origin?.ClassTemplate).OfType<IrGenericClassTemplate>().Where(template => template.IsDefined)
+        .Distinct(ReferenceEqualityComparer.Instance).Cast<IrGenericClassTemplate>();
+      foreach (var generic in classes) {
+        foreach (var parameter in generic.Parameters)
+          yield return parameter.Declaration!;
+
+        yield return generic.Class!;
+        foreach (var member in generic.Members)
+          pending.Push(member.Function);
+      }
+
       while (pending.TryPop(out var function))
         if (function.Origin?.Template is { } template && templates.Add(template)) {
           foreach (var parameter in template.Parameters)
@@ -274,6 +357,7 @@ public static partial class IrModuleFormat {
 
             writer.Write(origin.Name);
             this.Strings(origin.TypeParameters);
+            this.ClassTemplate(origin.ClassTemplate);
           }
 
           break;
@@ -434,6 +518,22 @@ public static partial class IrModuleFormat {
       }
 
       this._templates.Add(template, this._templates.Count);
+    }
+
+    /// <summary>
+    /// The template of a generic class by its number plus one, 0 for none; numbered in the order the
+    /// classes name them, its parts follow the functions of the module.
+    /// </summary>
+    private void ClassTemplate(IrGenericClassTemplate? template) {
+      if (template is null) {
+        this.Count(0);
+        return;
+      }
+
+      if (!this._classTemplates.TryGetValue(template, out var number))
+        this._classTemplates.Add(template, number = this._classTemplates.Count);
+
+      this.Count(number + 1);
     }
 
     private void Count(int count) => writer.Write7BitEncodedInt(count);
@@ -630,6 +730,10 @@ public static partial class IrModuleFormat {
       }
 
       this._nodes.Add(node, this._nodes.Count);
+      var origins = node is IrExpr located ? located.Origins : ((IrStmt)node).Origins;
+      if (origins.Count > 0)
+        this.Origins(origins);
+
       if (node is IrExpr expression) {
         writer.Write((byte)TagOf(expression));
         this.Type(expression.Type);
@@ -1016,6 +1120,7 @@ public static partial class IrModuleFormat {
     private readonly List<IrMethod> _methods = [];
     private readonly List<IrConstructor> _constructors = [];
     private readonly List<IrGenericTemplate> _templates = [];
+    private readonly List<IrGenericClassTemplate> _classTemplates = [];
     private readonly List<IrModuleConst> _constants = [];
     private readonly List<IrGlobal> _globals = [];
     private readonly List<IrLocal> _locals = [];
@@ -1070,10 +1175,29 @@ public static partial class IrModuleFormat {
         type.DefineMembers(this.Methods(), properties[type], this.List(this.Interface));
 
       var functions = this.List(this.Function);
+      foreach (var template in this._classTemplates)
+        if (reader.ReadBoolean())
+          template.Define(this.Class(), this.Types(), [.. this.List(this.Template).OfType<IrGenericTemplate>()]);
+
       return new IrModule(name, functions, constants) {
         Types = [.. this._declarations.Take(owned)], Globals = [.. this._globals], Caveats = caveats, ForeignFunctions = this.ForeignFunctions(),
-        Initializer = reader.ReadBoolean() ? reader.ReadString() : null
+        Initializer = reader.ReadBoolean() ? reader.ReadString() : null,
+        Sources = this.Sources()
       };
+    }
+
+    /// <summary>The table of sources, when the bytes go on with one; any other byte is left for the check of the end.</summary>
+    private IReadOnlyList<SourceArtifact> Sources() {
+      var stream = reader.BaseStream;
+      if (stream.Position == stream.Length)
+        return [];
+
+      if (reader.ReadByte() != SourcesTable) {
+        --stream.Position;
+        return [];
+      }
+
+      return this.List(() => new SourceArtifact(this.Text(), this.Text(), this.Text(), this.Text(), this.Text()));
     }
 
     private IrTypeDeclaration Header(List<IrTypeDeclaration> defined, List<IrClassType> hierarchies, List<IrClassType> classes, List<IrInterfaceType> interfaces) {
@@ -1097,7 +1221,7 @@ public static partial class IrModuleFormat {
           bool isDefined = reader.ReadBoolean(), hasHierarchy = reader.ReadBoolean(), hasMembers = reader.ReadBoolean();
           List<IrType> arguments = [];
           List<IrGenericConstraint> constraints = [];
-          var origin = reader.ReadBoolean() ? new IrGenericOrigin(reader.ReadString(), this.Strings(), arguments, constraints) : null;
+          var origin = reader.ReadBoolean() ? new IrGenericOrigin(reader.ReadString(), this.Strings(), arguments, constraints) { ClassTemplate = this.ClassTemplate() } : null;
           var type = new IrClassType(declared) { IsSealed = isSealed, IsAbstract = isAbstract, IsRecord = isRecord, Visibility = visibility, Origin = origin };
           if (isDefined)
             defined.Add(type);
@@ -1174,6 +1298,20 @@ public static partial class IrModuleFormat {
 
     private IReadOnlyList<IrGenericConstraint> Constraints()
       => this.List(() => new IrGenericConstraint(reader.ReadString(), this.Enum<IrGenericConstraintKind>()) { Interface = reader.ReadBoolean() ? this.Type() : null });
+
+    /// <summary>The template of a generic class by its number plus one: a new one, defined after the functions, where the number is the next.</summary>
+    private IrGenericClassTemplate? ClassTemplate() {
+      var number = this.Count();
+      if (number == 0)
+        return null;
+
+      if (number - 1 != this._classTemplates.Count)
+        return Of(this._classTemplates, number - 1, "template of a class");
+
+      var template = new IrGenericClassTemplate();
+      this._classTemplates.Add(template);
+      return template;
+    }
 
     private IrGenericTemplate? Template() {
       var number = this.Count();
@@ -1325,6 +1463,14 @@ public static partial class IrModuleFormat {
 
     private T? OptionalNode<T>() where T : class {
       var tag = (Tag)reader.ReadByte();
+      IReadOnlyList<Origin>? origins = null;
+      if ((byte)tag == Located) {
+        origins = this.List(this.Origin);
+        tag = (Tag)reader.ReadByte();
+        if (tag is Tag.Null or Tag.Shared || (byte)tag == Located)
+          throw new InvalidDataException("Origins stand before no new node.");
+      }
+
       if (tag == Tag.Null)
         return null;
 
@@ -1339,6 +1485,9 @@ public static partial class IrModuleFormat {
       var slot = this._nodes.Count;
       this._nodes.Add(null);
       object node = tag >= Tag.Block && tag is not (Tag.ArraySequence or Tag.Sequence or Tag.Await or Tag.Async or Tag.ForeignCall or Tag.LastError or Tag.BigConst) ? this.Statement(tag) : this.Expression(tag);
+      if (origins is not null)
+        node = node is IrExpr expression ? expression with { Origins = origins } : (IrStmt)node with { Origins = origins };
+
       this._nodes[slot] = node;
       return node as T ?? throw new InvalidDataException($"A {node.GetType().Name} stands where a {typeof(T).Name} belongs.");
     }
@@ -1396,6 +1545,16 @@ public static partial class IrModuleFormat {
         _ => new IrInvoke(type, this.Node<IrExpr>(), this.Nodes<IrExpr>())
       };
       return expression.Type == type ? expression : expression with { Type = type };
+    }
+
+    private Origin Origin() {
+      var kind = reader.ReadByte();
+      return kind switch {
+        (byte)OriginKind.Span => new SourceSpan(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32()),
+        (byte)OriginKind.Address => new AddressSpan(reader.ReadInt32(), reader.ReadInt64(), reader.ReadInt32()),
+        (byte)OriginKind.Synthetic => new Synthetic(this.Text()),
+        _ => throw new InvalidDataException($"{kind} is no kind of origin.")
+      };
     }
 
     private IrStep Step() {

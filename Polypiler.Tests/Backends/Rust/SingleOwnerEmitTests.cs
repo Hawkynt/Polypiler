@@ -106,9 +106,11 @@ public sealed class SingleOwnerEmitTests {
   public void Shared(string body, string other = "") => Assert.That(Emitted(other + Counter + "public static class S { " + body + " }"), Does.Contain("Rc<C>"));
 
   [Test]
-  public void ListOfObjects_KeepsTheClassShared()
-    => Assert.That(RustCrates.Check(PrototypeFixture.Import("Snippet.cs", "using System.Collections.Generic; " + Counter + "public static class S { public static int F() { var l = new List<C>(); l.Add(new C()); return l.Count; } }")).Select(problem => problem.Message),
-      Has.Some.Contain("'a list of C'"));
+  public void ListOfObjects_KeepsTheClassShared() {
+    var text = RustCrates.ModuleText(RustCrates.Emit(PrototypeFixture.Import("Snippet.cs", "using System.Collections.Generic; " + Counter + "public static class S { public static int F() { var l = new List<C>(); l.Add(new C()); return l.Count; } }")));
+    Assert.That(text, Does.Contain("let l: Vec<Rc<C>> = vec![C::new()];"));
+    Assert.That(text, Does.Contain("pub fn new() -> Rc<Self>"));
+  }
 
   [Test]
   public void ObjectOnceInOneCall_StaysPlain() {

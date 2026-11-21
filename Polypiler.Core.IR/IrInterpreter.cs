@@ -185,7 +185,7 @@ public static partial class IrInterpreter {
   }
 
   /// <summary>A function of the module called with values taken across the boundary, in the globals of an instance.</summary>
-  private static object? Call(Program program, Dictionary<IrGlobal, object> globals, IrModule module, string function, object[] arguments, long steps = long.MaxValue) {
+  private static object? Call(Program program, Dictionary<IrGlobal, object> globals, IrModule module, string function, object[] arguments, long steps = long.MaxValue, IIrObserver? observer = null) {
     var functions = program.Functions;
     if (!functions.TryGetValue(function, out var target))
       throw new ArgumentException($"The module '{module.Name}' has no function '{function}'.", nameof(function));
@@ -194,7 +194,7 @@ public static partial class IrInterpreter {
       throw new ArgumentException($"'{function}' takes {target.Parameters.Count} arguments, not {arguments.Length}.", nameof(arguments));
 
     var values = arguments.Select((argument, index) => FromHost(target.Parameters[index], argument)).ToArray();
-    var machine = new Machine(program, globals);
+    var machine = new Machine(program, globals) { Observer = observer };
     if (steps != long.MaxValue)
       machine.Limit(steps);
 
@@ -413,6 +413,8 @@ public static partial class IrInterpreter {
         this.Step();
 
       switch (statement) {
+        case IrBlock block when this.Observer is { } observer:
+          return this.Observed(block, frame, observer);
         case IrBlock block:
           foreach (var inner in block.Statements) {
             var ended = this.Run(inner, frame);

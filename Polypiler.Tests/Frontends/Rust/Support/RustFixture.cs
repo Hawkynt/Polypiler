@@ -27,12 +27,11 @@ internal static class RustFixture {
 
   /// <summary>
   /// The fixtures whose constructs the Rust backend does not write yet, which the round trip through
-  /// the Rust backend and its parse-back sweep leave out until it does: lists of classes
-  /// (objects). The backend refuses it with PLY1550,
-  /// naming it. The C# and the JavaScript backends write every fixture: their differential tests
-  /// leave none out.
+  /// the Rust backend and its parse-back sweep leave out until it does: none since the lists of
+  /// classes of <c>objects</c> (#1422). The C# and the JavaScript backends write every fixture: their
+  /// differential tests leave none out.
   /// </summary>
-  public static readonly string[] BackendPending = ["objects"];
+  public static readonly string[] BackendPending = [];
 
   /// <summary>Both overflow modes.</summary>
   public static readonly OverflowChecks[] Modes = [OverflowChecks.Panic, OverflowChecks.Wrap];

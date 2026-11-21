@@ -1,0 +1,4 @@
+{"schemaVersion": 1, "fixture": "mach-trace.invalid", "isa": "test-m32", "provenance": {"kind": "published", "producer": "hand", "source": "s"},
+ "observe": {"registers": ["r0"], "flags": [], "memory": [], "events": ["return"], "cycles": false, "mode": "semantic"},
+ "vectors": [{"name": "v", "initial": {"registers": {}, "flags": {}, "memory": []},
+   "expected": {"registers": {"r0": "0x1"}, "flags": {}, "memory": [{"address": "0x1000", "hex": "012"}], "events": [{"kind": "return"}], "outcome": "returned"}}]}

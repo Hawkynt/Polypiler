@@ -44,8 +44,8 @@ public static partial class RustEmitter {
 
     /// <summary>The crate: manifest, root and module.</summary>
     public RustCrate Crate(IrModule module) {
-      module = this.Generalized(module);
-      module = Polypiler.Core.Backends.Rust.Emit.AliasSpecialization.Run(Polypiler.Core.Backends.Rust.Emit.ObjectLowering.Run(Polypiler.Core.Backends.Rust.Emit.BindHoisting.Run(module)));
+      module = this.GeneralizedClasses(this.Generalized(module));
+      module = Polypiler.Core.Backends.Rust.Emit.AliasSpecialization.Run(Polypiler.Core.Backends.Rust.Emit.ObjectLowering.Run(Polypiler.Core.Backends.Rust.Emit.ListLiterals.Run(Polypiler.Core.Backends.Rust.Emit.BindHoisting.Run(module))));
       this._module = module;
       var moduleName = ModuleName(module.Name, this._profile);
       var package = this._options.PackageName ?? moduleName;
@@ -55,23 +55,29 @@ public static partial class RustEmitter {
       this.NameTypes(module);
       this.NameIterators(module);
       this.NameGlobals(module);
+      this.NameReaders(module);
+      this.SharedCollections(module);
+      this.Loading(module);
       this.Classes(module);
       this.Signatures(module);
       this.Exceptions(module);
       this.CollectionParameters(module);
       this._arrays = Polypiler.Core.Backends.Rust.Emit.ArrayOwnership.Of(module);
       this._arrayNulls = Polypiler.Core.Backends.Rust.Emit.ArrayNullness.Of(module);
+      this._stringNulls = Polypiler.Core.Backends.Rust.Emit.StringNullness.Of(module);
       this.Ownership(module);
+      this.ConfirmGenericClasses();
       this.ClosedEnums(module);
       var copied = module.Implementations.Select(pair => pair.Function).ToHashSet(StringComparer.Ordinal);
       var items = new List<RsItem>();
       foreach (var constant in module.Constants)
         items.Add(this.Constant(constant));
       items.AddRange(this.Globals(module));
+      items.AddRange(this.ModuleStateItems(module));
       items.AddRange(this.ErrorItems());
       if (this.Results && this._types.Values.Contains(TrapErrorType))
         this.LimitResult($"a type of the module named '{TrapErrorType}'");
-      var written = module.Functions.Where(function => !this._generalized.ContainsKey(function.Name)).Select(function => (Source: function, Written: this.Function(function) with { IsHelper = copied.Contains(function.Name) })).ToList();
+      var written = module.Functions.Where(function => !this._generalized.ContainsKey(function.Name) && !this._unwritten.Contains(function.Name)).Select(function => (Source: function, Written: this.Function(function) with { IsHelper = copied.Contains(function.Name) })).ToList();
       var members = written.Where(pair => this._members.ContainsKey(pair.Source.Name))
         .ToDictionary(pair => pair.Source.Name, pair => this.AsMember(pair.Written, pair.Source, this._members[pair.Source.Name]), StringComparer.Ordinal);
       var functions = written.Where(pair => !this._members.ContainsKey(pair.Source.Name) && !this._bodiless.Contains(pair.Source.Name) && !this._options.TestFunctions.Contains(pair.Source.Name)).Select(pair => pair.Written).ToList();
@@ -85,7 +91,7 @@ public static partial class RustEmitter {
           IrStructType structType => this.Struct(structType),
           IrEnumType enumType when this._closedEnums.Contains(enumType) => this.ClosedEnumItems(enumType),
           IrEnumType enumType => this.EnumItems(enumType),
-          IrClassType classType when !classType.IsLibrary && !this._hierarchy.Contains(classType) && !IrExceptionClass.IsException(classType) => this.Class(classType, members),
+          IrClassType classType when !classType.IsLibrary && !this._hierarchy.Contains(classType) && !IrExceptionClass.IsException(classType) && !this._unwrittenClasses.Contains(classType) => this.Class(classType, members),
           _ => []
         });
 
@@ -130,7 +136,8 @@ public static partial class RustEmitter {
       // unsafe code instead of forbidding it, so that the one spelling function may allow it.
       header.AddRange(this._unsafe.Select(use => $"Unsafe code: {use.Helper}, for the {use.Construct} in the function '{use.Function}'; the crate passes Miri."));
       RsItem[] declarations = errors is null ? [new RsModuleDeclaration(moduleName, "pub")]
-        : [new RsModuleDeclaration("error", ""), new RsModuleDeclaration(moduleName, "pub"), new RsUse("error::" + TrapErrorType) { Visibility = "pub" }];
+        // The modules in the order of their names, as rustfmt's reorder_modules sorts them.
+        : [.. new[] { new RsModuleDeclaration("error", ""), new RsModuleDeclaration(moduleName, "pub") }.OrderBy(declaration => declaration.Name, StringComparer.Ordinal), new RsUse("error::" + TrapErrorType) { Visibility = "pub" }];
       var root = new RsFile(header, [this._unsafe.Count > 0 ? "deny(unsafe_code)" : "forbid(unsafe_code)"], declarations);
       var file = new RsFile([], [], items);
       var crate = new RustCrate(package, Manifest(package, this._options.PackageVersion, this._profile, this._capabilities), root, moduleName, file) { Errors = errors };

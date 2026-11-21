@@ -51,6 +51,28 @@ LLVM and native/DOS emission are separate routes; support for either does not es
 
 The first two dimensions exist today in the C# backend. A profile (`--profile net2.0` … `net10.0`) fixes the framework and the C# version of its time, and one capability table (`CSharpCapabilities`) says for every API and every language feature the emitter writes which profile has it first and what replaces it elsewhere: an older call with the same bits, or a private helper emitted only where it is called. A defect of a runtime that changes what correct code computes is a row too, naming the first profile whose runtime has it; the emitter writes the affected expressions in a form the runtime computes correctly there ([known runtime defects](../reference/known-runtime-defects.md)). Adding an operation is one row of that table. The generated file of each profile is compiled against that framework's reference assemblies in the tests, never only against the runtime the tests run on.
 
+### Cost model
+
+The optimization-policy dimension has its numbers in a cost profile: `spec/targets/<language>/<profile>/cost.yaml`
+beside the target document, format in [`spec/targets/README.md`](../../spec/targets/README.md#costyaml). A pass that
+has proven several forms equivalent asks `ICostModel` (`Polypiler.Core.Optimize.Cost`) which is cheapest and
+carries no threshold of its own. `CostModel` prices the six decision families from the profile: operation form
+(`OperationForms`: native, sequence, helper at a number of call sites), loop form (`LoopForms`: loop or fully
+unrolled), data path (`DataPaths`: scalar, `swar-<bits>`, `simd-<width>`), placement (`Placements`: `cpu`,
+`threads-<count>`, `gpu`, `npu`); storage (unpacked, packed) and evaluation (eager, lazy) are alternatives whose
+cost the pass supplies. `CostFormulas` holds the shared formulas, a count that is not a constant is the midpoint
+of its proven range (`CountFact`) or the profile's `unknownTripCount`.
+
+`Choose` scores each alternative by the weights of the objective (latency, size, memory, allocations): `Speed`
+(1, 0, 0, 0), `Size` (0, 1, 0, 0), `Memory` (0, 0, 1, 1), `Balanced` (4, 1, 1, 1). The lowest score wins, a tie
+goes to the lower `Balanced` score, then to the alternative listed first. All arithmetic is exact 64-bit integer
+arithmetic and a score beyond `long` is `long.MaxValue`, so every host ranks alike. The decision carries the
+detail an opt-report entry records, `cost: <chosen> <score> vs <rejected> <score>, …` (`CostModel.FormatDetail`
+formats it for any list). The model never changes IR and never decides legality; a form the profile does not
+list is never offered (`IsAvailable`). A target without `cost.yaml` is `PLY0355`, never a default profile; a
+malformed one is `PLY0356` naming the key path. No target ships a `cost.yaml` yet: each backend adds its own,
+and the two test profiles are `tests/fixtures/optimize/cost/wide.yaml` and `narrow.yaml`.
+
 Do not infer target portability solely from the language name. PowerBASIC for Windows DLL imports and PowerBASIC DOS OMF linking are different targets; a Win64 library is not callable directly from a 32-bit DOS executable.
 
 ## Bidirectional support is tested direction by direction

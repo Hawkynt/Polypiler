@@ -1,0 +1,29 @@
+id: MACHINE.test-m64
+title: Test machine with 64-bit registers
+version: 1
+status: draft
+owner: Hawkynt
+issue: MACH-IR
+tests: []
+introducedIn: P1
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  isa: test-m64
+  addressBits: 64
+  byteOrder: little
+  registers:
+    - {name: r0, bits: 64}
+    - {name: r1, bits: 64}
+    - {name: r2, bits: 64}
+    - {name: r3, bits: 64}
+    - {name: sp, bits: 64, class: stack-pointer}
+    - {name: pc, bits: 64, class: program-counter}
+    - {name: r0d, bits: 32, parent: r0, offset: 0, write: zero-extend}
+    - {name: r0l, bits: 8, parent: r0, offset: 0, write: preserve}
+  flags:
+    - {name: c}
+    - {name: z}
+    - {name: s}
+    - {name: o}

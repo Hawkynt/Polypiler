@@ -1,0 +1,13 @@
+# Address 0 and the highest address of the 32-bit space with a map covering neither, an access
+# running from RAM into an unmapped range, and one into the stack range.
+# map middle.map.json
+machine test-m32
+
+@edges {
+entry:
+  Store.u8 0, 1                   # expect UnknownMemory Memory.Unknown PLY4010
+  Store.u8 0xFFFFFFFF, 1          # expect UnknownMemory Memory.Unknown PLY4010
+  %x = Load.u32 0x1FFE            # expect UnknownMemory Memory:low,Memory.Unknown PLY4010
+  %s = Load.u32 0x8000            # expect ProvenShared Memory:stack
+  Ret
+}

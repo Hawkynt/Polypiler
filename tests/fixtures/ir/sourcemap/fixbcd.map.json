@@ -1,0 +1,228 @@
+{
+  "version": 1,
+  "function": "Main",
+  "sources": [
+    "Hawkynt/PB-Compiler@0d73acbea185a2597357d53f7ce9acb44758ba76:tests/idioms/FIXBCD.BAS"
+  ],
+  "sourcesSha256": [
+    "3cbfc6e96157a8d450632afa44b4637c302f3ab84099beb50079025b159ef7ce"
+  ],
+  "dialects": [
+    "pb/3.5"
+  ],
+  "mappings": [
+    {
+      "instruction": 1,
+      "kind": "ExprStmt",
+      "origins": [
+        {
+          "source": 0,
+          "startLine": 1,
+          "startColumn": 1,
+          "endLine": 1,
+          "endColumn": 23
+        }
+      ]
+    },
+    {
+      "instruction": 2,
+      "kind": "ExprStmt",
+      "origins": [
+        {
+          "source": 0,
+          "startLine": 2,
+          "startColumn": 5,
+          "endLine": 2,
+          "endColumn": 10
+        }
+      ]
+    },
+    {
+      "instruction": 3,
+      "kind": "ExprStmt",
+      "origins": [
+        {
+          "source": 0,
+          "startLine": 3,
+          "startColumn": 1,
+          "endLine": 3,
+          "endColumn": 9
+        }
+      ]
+    },
+    {
+      "instruction": 4,
+      "kind": "ExprStmt",
+      "origins": [
+        {
+          "source": 0,
+          "startLine": 4,
+          "startColumn": 7,
+          "endLine": 4,
+          "endColumn": 12
+        }
+      ]
+    },
+    {
+      "instruction": 5,
+      "kind": "ExprStmt",
+      "origins": [
+        {
+          "source": 0,
+          "startLine": 4,
+          "startColumn": 14,
+          "endLine": 4,
+          "endColumn": 19
+        }
+      ]
+    },
+    {
+      "instruction": 6,
+      "kind": "ExprStmt",
+      "origins": [
+        {
+          "source": 0,
+          "startLine": 4,
+          "startColumn": 21,
+          "endLine": 4,
+          "endColumn": 26
+        }
+      ]
+    },
+    {
+      "instruction": 7,
+      "kind": "ExprStmt",
+      "origins": [
+        {
+          "source": 0,
+          "startLine": 5,
+          "startColumn": 10,
+          "endLine": 5,
+          "endColumn": 13
+        }
+      ]
+    },
+    {
+      "instruction": 8,
+      "kind": "ExprStmt",
+      "origins": [
+        {
+          "source": 0,
+          "startLine": 6,
+          "startColumn": 5,
+          "endLine": 6,
+          "endColumn": 10
+        }
+      ]
+    },
+    {
+      "instruction": 9,
+      "kind": "ExprStmt",
+      "origins": [
+        {
+          "source": 0,
+          "startLine": 7,
+          "startColumn": 7,
+          "endLine": 7,
+          "endColumn": 12
+        }
+      ]
+    },
+    {
+      "instruction": 10,
+      "kind": "ExprStmt",
+      "origins": [
+        {
+          "source": 0,
+          "startLine": 8,
+          "startColumn": 7,
+          "endLine": 8,
+          "endColumn": 19
+        }
+      ]
+    },
+    {
+      "instruction": 11,
+      "kind": "ExprStmt",
+      "origins": [
+        {
+          "source": 0,
+          "startLine": 8,
+          "startColumn": 21,
+          "endLine": 8,
+          "endColumn": 32
+        }
+      ]
+    },
+    {
+      "instruction": 12,
+      "kind": "ExprStmt",
+      "origins": [
+        {
+          "source": 0,
+          "startLine": 9,
+          "startColumn": 1,
+          "endLine": 9,
+          "endColumn": 4
+        }
+      ]
+    },
+    {
+      "instruction": 13,
+      "kind": "ExprStmt",
+      "origins": [
+        {
+          "source": 0,
+          "startLine": 9,
+          "startColumn": 7,
+          "endLine": 9,
+          "endColumn": 20
+        }
+      ]
+    },
+    {
+      "instruction": 14,
+      "kind": "ExprStmt",
+      "origins": [
+        {
+          "source": 0,
+          "startLine": 10,
+          "startColumn": 12,
+          "endLine": 10,
+          "endColumn": 19
+        }
+      ]
+    },
+    {
+      "instruction": 15,
+      "kind": "ExprStmt",
+      "origins": [
+        {
+          "source": 0,
+          "offset": 0,
+          "length": 3
+        }
+      ]
+    },
+    {
+      "instruction": 16,
+      "kind": "ExprStmt",
+      "origins": [
+        {
+          "source": 0,
+          "offset": 27,
+          "length": 5
+        }
+      ]
+    },
+    {
+      "instruction": 17,
+      "kind": "ExprStmt",
+      "origins": [
+        {
+          "synthetic": "O0003"
+        }
+      ]
+    }
+  ]
+}

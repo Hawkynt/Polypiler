@@ -82,10 +82,10 @@ public sealed class TranslateToRustTests {
   [Test]
   public void TrapPolicyResult_RefusesWhatWouldStillPanic() {
     var source = Path.Combine(this._directory, "Lists.cs");
-    File.WriteAllText(source, "public static class Lists { public static int At(System.Collections.Generic.List<int> l, int i) => l[i]; }");
+    File.WriteAllText(source, "public static class Lists { public static System.Func<int, int> At(System.Collections.Generic.List<int> l) => x => l[x]; }");
     var (exitCode, _, error) = Invoke("translate", source, "--from", "csharp", "--to", "rust", "--output", this._out, "--trap-policy", "result");
     Assert.That(exitCode, Is.EqualTo((int)ExitCode.UnsupportedConstruct));
-    Assert.That(error, Does.Contain("PLY1552").And.Contain("'the helper ply_list_index, which panics'"));
+    Assert.That(error, Does.Contain("PLY1552").And.Contain("'a trap inside a closure'"));
   }
 
   [Test]

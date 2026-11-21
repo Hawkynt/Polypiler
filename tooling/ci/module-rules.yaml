@@ -38,6 +38,8 @@ projects:
 sameLayerExceptions:
   - { from: Polypiler.Core.Recovery, to: Polypiler.Core.Recognize }
   - { from: Polypiler.Core.Legalize, to: Polypiler.Core.Optimize }
+  # A binary image is a source of machine code and builds the address map of the machine layer.
+  - { from: Polypiler.Core.BinaryFormats, to: Polypiler.Core.MachineSemantics }
   # Build order only: the executable embeds the float implementations that polypiler-tooling precomputes.
   - { from: Polypiler.Cli, to: Polypiler.Tooling }
 

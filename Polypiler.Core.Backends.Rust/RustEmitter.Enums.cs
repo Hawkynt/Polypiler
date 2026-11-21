@@ -126,11 +126,11 @@ public static partial class RustEmitter {
         case IrIntrinsicOp.EnumParse: {
           var (values, names) = this.EnumTables(type);
           var underlying = type.Underlying;
-          var parsed = new RsCall(new RsPath(this.StringHelper("ply_enum_parse")), [
+          var parsed = this.HelperCall("ply_enum_parse", IrType.U64, [
             this.StringArgument(arguments[0]), new RsReference(false, new RsPath(values)), new RsReference(false, new RsPath(names)), this.Expression(arguments[1]),
             new RsLiteral(IrOperators.Minimum(underlying).ToString(CultureInfo.InvariantCulture)), new RsLiteral(IrOperators.Maximum(underlying).ToString(CultureInfo.InvariantCulture)),
             new RsReference(false, new RsPath(this.WhitespaceTable(WhitespaceSet.DotNet)))
-          ]) { Type = IrType.U64 };
+          ]);
           return this.Wrapped(operation.Type, underlying == IrType.U64 ? parsed : this.Cast(parsed, underlying));
         }
         case IrIntrinsicOp.EnumHasFlag: {

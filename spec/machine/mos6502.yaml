@@ -1,0 +1,33 @@
+id: MACHINE.mos6502
+title: MOS 6502 registers and status flags
+version: 1
+status: draft
+owner: Hawkynt
+issue: MACH-IR
+tests: []
+introducedIn: P3
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  # The register file of BINARY.mos6502.instructions; the flags are the bits of the status register P
+  # as the MOS MCS6500 Microcomputer Family Programming Manual (January 1976) lays them out:
+  # N V - B D I Z C from bit 7 down to bit 0. Bit 5 has no flag.
+  isa: mos6502
+  addressBits: 16
+  byteOrder: little
+  registers:
+    - {name: A, bits: 8}
+    - {name: X, bits: 8}
+    - {name: Y, bits: 8}
+    - {name: SP, bits: 8, class: stack-pointer}
+    - {name: PC, bits: 16, class: program-counter}
+    - {name: P, bits: 8, class: status}
+  flags:
+    - {name: C, register: P, bit: 0}
+    - {name: Z, register: P, bit: 1}
+    - {name: I, register: P, bit: 2}
+    - {name: D, register: P, bit: 3}
+    - {name: B, register: P, bit: 4}
+    - {name: V, register: P, bit: 6}
+    - {name: N, register: P, bit: 7}

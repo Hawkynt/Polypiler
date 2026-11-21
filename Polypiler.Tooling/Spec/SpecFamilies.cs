@@ -21,6 +21,7 @@ public static class SpecFamilies {
     new VerificationSpecFamily(),
     new IntrinsicsSpecFamily(),
     new RecognitionSpecFamily(),
+    new MachineSpecFamily(),
   ];
 
 }

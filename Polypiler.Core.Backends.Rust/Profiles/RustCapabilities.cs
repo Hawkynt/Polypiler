@@ -47,6 +47,9 @@ public sealed class RustCapabilities {
   /// <summary><c>std::sync::LazyLock</c>, a static made on first use (Rust 1.80).</summary>
   public const string LazyLock = "LazyLock";
 
+  /// <summary>A static of each thread whose value is a constant, <c>thread_local! { static X: T = const { v }; }</c> (Rust 1.59).</summary>
+  public const string ConstThreadLocal = "const_thread_local";
+
   /// <summary>The key <c>rust-version</c> of <c>Cargo.toml</c>, which Cargo reads from Rust 1.56.</summary>
   public const string RustVersionKey = "rust-version";
 
@@ -59,6 +62,7 @@ public sealed class RustCapabilities {
     [ReverseBits] = new(1, 37),
     [IsSubnormal] = new(1, 53),
     [RustVersionKey] = new(1, 56),
+    [ConstThreadLocal] = new(1, 59),
     [ConstMutex] = new(1, 63),
     [LabeledBlock] = new(1, 65),
     [RoundTiesEven] = new(1, 77),

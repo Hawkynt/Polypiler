@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "fixture": "mach-trace.device",
+  "isa": "test-m32",
+  "provenance": {
+    "kind": "published",
+    "producer": "hand",
+    "source": "issue 144, test design row 4: a palette index then a palette value to two I/O ports"
+  },
+  "observe": {
+    "registers": [],
+    "flags": [],
+    "memory": [],
+    "events": [
+      "device"
+    ],
+    "cycles": false,
+    "mode": "semantic"
+  },
+  "vectors": [
+    {
+      "name": "palette-entry",
+      "initial": {
+        "registers": {
+          "r0": "0x10",
+          "r1": "0x3F"
+        },
+        "flags": {},
+        "memory": []
+      },
+      "expected": {
+        "registers": {},
+        "flags": {},
+        "memory": [],
+        "events": [
+          {
+            "kind": "device",
+            "space": "io",
+            "address": "0x3C8",
+            "width": 8,
+            "write": true,
+            "value": "0x10"
+          },
+          {
+            "kind": "device",
+            "space": "io",
+            "address": "0x3C9",
+            "width": 8,
+            "write": true,
+            "value": "0x3F"
+          },
+          {
+            "kind": "device",
+            "space": "io",
+            "address": "0x3DA",
+            "width": 8,
+            "write": false,
+            "value": "0x8"
+          }
+        ],
+        "outcome": "returned"
+      }
+    }
+  ]
+}

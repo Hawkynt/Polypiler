@@ -1,0 +1,8 @@
+FIXBCD.BAS is copied unchanged from PB-Compiler, part of Hawkynt/PB-Compiler
+(https://github.com/Hawkynt/PB-Compiler), commit 0d73acbea185a2597357d53f7ce9acb44758ba76:
+
+  tests/idioms/FIXBCD.BAS  sha256 3cbfc6e96157a8d450632afa44b4637c302f3ab84099beb50079025b159ef7ce
+
+It is a real multi-line source whose lines, columns and byte offsets fixbcd.locations names; the
+lexemes there are copied from the file by hand. PB-Compiler is licensed under the GNU Lesser General
+Public License, version 3 or later.
