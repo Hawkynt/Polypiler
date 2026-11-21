@@ -1,0 +1,16 @@
+# One vector per line: routine, initial registers and memory (m<address>=<bytes>), all hex.
+addc r0=00000002 r1=00000003
+addc r0=FFFFFFFF r1=00000001
+addc r0=7FFFFFFF r1=00000001
+addc r0=00000000 r1=00000000
+addc r0=80000000 r1=80000000
+subreg r0=12345678 r1=000000FF r2=000000AB
+subreg r0=00000000 r1=FFFFFF01 r2=00000102
+bytesum r0=00001000 r1=00000004 m1000=010203FF
+bytesum r0=00001000 r1=00000000
+bytesum r0=00001000 r1=00000001 m1000=FF
+ud
+wild r0=00000000 r1=00000077
+wild r0=000BFFFF r1=00000012
+wild r0=000C0000 r1=00000034
+wild r0=000FFFFF r1=00000056

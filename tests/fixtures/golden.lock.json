@@ -6822,6 +6822,11 @@
       "bytes": 1595
     },
     {
+      "path": "tests/fixtures/native/mach-interp/golden/routines.expected.txt",
+      "sha256": "8691d07f7195428dfb12803fafcb2c73ad0356c143d6ea552a77353ba08eb8ed",
+      "bytes": 1210
+    },
+    {
       "path": "tests/fixtures/prototype/js/recorded/adler32.txt",
       "sha256": "0b06b7203ec0c3e339e9e5698376add358f77ab70ef3ede33446a744c30e1717",
       "bytes": 5010

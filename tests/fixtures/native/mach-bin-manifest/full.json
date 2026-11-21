@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "image": {
+    "path": "blob.bin",
+    "sha256": "614da4cf773be2621d0d57b413ad234f305482cb7738411487cb6e8fb071f498"
+  },
+  "container": "raw",
+  "isa": "x86",
+  "mode": "protected32",
+  "byteOrder": "little",
+  "loadAddress": "0x00401000",
+  "entries": [
+    {
+      "name": "bswap32",
+      "address": "0x00401000",
+      "abi": "cdecl (u32) -> u32"
+    },
+    {
+      "name": "fill",
+      "address": "0x00401006",
+      "abi": "cdecl (u8*, u32, u8*) -> void",
+      "buffers": [
+        {
+          "parameter": 0,
+          "length": {
+            "parameter": 1
+          },
+          "access": "read"
+        },
+        {
+          "parameter": 2,
+          "length": {
+            "bytes": 16
+          },
+          "access": "write"
+        }
+      ]
+    }
+  ],
+  "cpuFeatures": [
+    "bswap"
+  ],
+  "codeRanges": [
+    {
+      "start": "0x00401000",
+      "end": "0x00401007"
+    }
+  ],
+  "dataRanges": [
+    {
+      "start": "0x00401007",
+      "end": "0x00401008"
+    }
+  ],
+  "relocations": [
+    {
+      "address": "0x00401003",
+      "kind": "absolute",
+      "symbol": "memcpy",
+      "addend": 4
+    }
+  ],
+  "imports": [
+    {
+      "slot": "0x00402000",
+      "symbol": "memcpy",
+      "library": "libc.so.6",
+      "abi": "cdecl (u8*, u8*, u32) -> u8*"
+    }
+  ],
+  "stack": {
+    "bytes": 4096
+  },
+  "memoryMap": {
+    "regions": [
+      {
+        "name": "text",
+        "start": "0x00400000",
+        "end": "0x00410000",
+        "kind": "rom",
+        "executable": true
+      },
+      {
+        "name": "stack",
+        "start": "0x00500000",
+        "end": "0x00510000",
+        "kind": "stack"
+      }
+    ]
+  },
+  "observe": {
+    "registers": [
+      "eax"
+    ],
+    "memory": [
+      {
+        "start": "0x00500000",
+        "end": "0x00500010"
+      }
+    ]
+  },
+  "referenceRunner": "qemu-i386",
+  "acceptHeuristicFunctions": true
+}

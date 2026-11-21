@@ -231,3 +231,35 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY3935](PLY3935.md) | error | 7 (OracleFailure) | `VICE run of '<program>' failed: <cause>` | FMT-CBMBASIC-ORACLE |
 | [PLY3936](PLY3936.md) | error | 7 (OracleFailure) | `petcat <operation> failed for dialect '<dialect>': <cause>` | FMT-CBMBASIC-ORACLE |
 | [PLY3960](PLY3960.md) | error | 7 (OracleFailure) | `PC-BASIC <operation> failed: <cause>` | FMT-GWBASIC-ORACLE |
+
+## PLY4000–PLY4099 · machine
+
+| Code | Severity | Exit code | Message | Owner |
+| --- | --- | --- | --- | --- |
+| [PLY4000](PLY4000.md) | error | 4 (InvalidSource) | `'<name>' is not a register or flag of machine profile '<profile>'` | MACH-IR |
+| [PLY4001](PLY4001.md) | error | 4 (InvalidSource) | `'<instruction>' has type <type> but register '<register>' is <bits> bits wide` | MACH-IR |
+| [PLY4002](PLY4002.md) | error | 4 (InvalidSource) | `flag '<flag>' is read at <where> but is undefined after <undefined at>` | MACH-IR |
+| [PLY4003](PLY4003.md) | error | 4 (InvalidSource) | `'@<function>' uses machine operations but module '<module>' declares no machine profile; or: machine profile '<profile>': <reason>` | MACH-IR |
+| [PLY4004](PLY4004.md) | error | 4 (InvalidSource) | `'<instruction>' is not allowed in '@<function>' after normalization to root registers` | MACH-IR |
+| [PLY4005](PLY4005.md) | error | 4 (InvalidSource) | `'@<function>' is not well-formed MachineIR: <problem>` | MACH-IR |
+| [PLY4006](PLY4006.md) | error | 4 (InvalidSource) | `MachineIR text is not valid: <problem>` | MACH-IR |
+| [PLY4009](PLY4009.md) | error | 4 (InvalidSource) | `address ranges '<a>' and '<b>' overlap at <address>` | MACH-REGIONS |
+| [PLY4010](PLY4010.md) | warning | — | `'<instruction>' at <where> accesses constant address <address>, which no declared region covers; treated as unknown memory` | MACH-REGIONS |
+| [PLY4011](PLY4011.md) | error | 4 (InvalidSource) | `address range '<name>' ends before it starts; or: address range '<name>' exceeds the <bits>-bit address space of '<isa>'` | MACH-REGIONS |
+| [PLY4025](PLY4025.md) | error | 4 (InvalidSource) | `interrupt vector <vector> is outside 0..<last> for machine profile '<profile>'; or: trap kind '<kind>' requires a vector` | MACH-TRAP |
+| [PLY4026](PLY4026.md) | warning | — | `software interrupt <vector> at <where> has no service contract; all registers and unknown memory are assumed read and written` | MACH-TRAP |
+| [PLY4030](PLY4030.md) | error | 1 (EnvironmentError) | `machine vector file '<file>' is not valid: <reason>` | MACH-TRACE |
+| [PLY4031](PLY4031.md) | error | 5 (SemanticMismatch) | `'<fixture>' vector '<vector>': <what> expected <expected>, actual <actual>` | MACH-TRACE |
+| [PLY4032](PLY4032.md) | error | 1 (EnvironmentError) | `'<file>' observes '<name>', which machine profile '<profile>' does not define` | MACH-TRACE |
+| [PLY4033](PLY4033.md) | error | 1 (EnvironmentError) | `'<fixture>' vector '<vector>': the reference produced <count> event(s) of kind '<kind>' but the projection does not observe that kind` | MACH-TRACE |
+| [PLY4034](PLY4034.md) | error | 3 (UnsupportedConstruct) | `opaque instruction <id> at <where> cannot be interpreted; or: <kind> trap <id> at <where> resumes but no trap model handles it` | MACH-INTERP |
+| [PLY4035](PLY4035.md) | error | 5 (SemanticMismatch) | `undefined flag '<flag>' is read at <where>; or: uninitialized register '<register>' is read at <where>; or: unwritten memory at <address> is read at <where>` | MACH-INTERP |
+| [PLY4036](PLY4036.md) (reserved) | error | 5 (SemanticMismatch) | `device model has no value for a <bits>-bit read of <space>:<address>` | MACH-INTERP |
+| [PLY4037](PLY4037.md) (reserved) | error | 3 (UnsupportedConstruct) | `code write at <address> overlaps the lifted instruction at <instruction>` | MACH-INTERP |
+| [PLY4038](PLY4038.md) | error | 5 (SemanticMismatch) | `indirect jump at <where> went to <address>, which is not among its listed targets; or: indirect jump at <where> has unresolved targets` | MACH-INTERP |
+| [PLY4039](PLY4039.md) | error | 10 (BudgetExceeded) | `the interpretation of '@<function>' exceeded its budget of <steps> steps` | MACH-INTERP |
+| [PLY4055](PLY4055.md) | error | 1 (EnvironmentError) | `binary manifest '<file>' is not valid: <reason>` | MACH-BIN-MANIFEST |
+| [PLY4056](PLY4056.md) | error | 1 (EnvironmentError) | `'<image>' has SHA-256 <actual>, the manifest expects <expected>` | MACH-BIN-MANIFEST |
+| [PLY4057](PLY4057.md) | error | 1 (EnvironmentError) | `manifest states <field> '<value>' but <other> states '<other value>'` | MACH-BIN-MANIFEST |
+| [PLY4058](PLY4058.md) | error | 1 (EnvironmentError) | `entry '<name>' at <address> is not inside executable code; or: range <start>..<end> lies outside the image` | MACH-BIN-MANIFEST |
+| [PLY4059](PLY4059.md) | error | 1 (EnvironmentError) | `'<file>' is not a recognized container; give the manifest field 'container' or use a raw profile` | MACH-BIN-MANIFEST |

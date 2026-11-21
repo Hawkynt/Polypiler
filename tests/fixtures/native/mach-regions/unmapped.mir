@@ -1,0 +1,13 @@
+# Without an address map and without provenance every access is unknown memory, the constant
+# ones included: the numeric value of an address alone never gives it a class.
+# map none
+machine test-m32
+
+@unmapped {
+entry:
+  %v = Const.u32 7
+  %p = RegRead.u32 @r0
+  Store.u32 %p, %v                # expect UnknownMemory Memory.Unknown
+  Store.u8 0xA0000, 77            # expect UnknownMemory Memory.Unknown
+  Ret
+}

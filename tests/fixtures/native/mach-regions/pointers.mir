@@ -1,0 +1,30 @@
+# Accesses through pointers, classified by the provenance facts listed here (what a provenance
+# analysis proves about each value), against the IBM PC memory map.
+# map pc-vga.map.json
+# fact %buf private buf
+# fact %g global table
+# fact %d caller dst buffer(len=16)
+# fact %rt runtime libc
+# fact %io range 0xA0000 0xA00FF
+# fact %span range 0x9FF00 0xA00FF
+machine test-m32
+
+@pointers {
+entry:
+  %v = Const.u32 7
+  %buf = RegRead.u32 @sp
+  Store.u32 %buf, %v              # expect ProvenLocal Memory:buf
+  %g = RegRead.u32 @r1
+  %t = Load.u32 %g                # expect ProvenShared Memory:table
+  %d = RegRead.u32 @r2
+  Store.u32 %d, %v                # expect ExternalMemory Memory:ext.dst
+  %rt = RegRead.u32 @r3
+  %e = Load.u32 %rt               # expect RuntimeState Runtime.State:libc
+  %io = RegRead.u32 @r0
+  Store.u8 %io, 1                 # expect MemoryMappedIO Device:mmio.vga
+  %span = RegRead.u32 @r1
+  Store.u8 %span, 1               # expect MemoryMappedIO Memory:ram,Device:mmio.vga
+  %p = RegRead.u32 @r2
+  Store.u32 %p, %v                # expect UnknownMemory Memory.Unknown
+  Ret
+}
