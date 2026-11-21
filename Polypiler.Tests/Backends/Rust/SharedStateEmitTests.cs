@@ -96,6 +96,13 @@ public sealed class SharedStateEmitTests {
   }
 
   [Test]
+  public void SearchOfAListOfObjects_IsByIdentity() {
+    var text = Module(Item + "public static class S { public static int F() { var first = new Item(1); var l = new List<Item> { first, new Item(2) }; return l.IndexOf(first) + (l.Contains(new Item(1)) ? 100 : 0); } }");
+    Assert.That(text, Does.Contain(".position(|element| Rc::ptr_eq(element, &first))"));
+    Assert.That(text, Does.Contain(".any(|element| Rc::ptr_eq(element, &Item::new(1)))"));
+  }
+
+  [Test]
   public void ThrowOfALibraryException_PanicsWithItsClassName() {
     var text = Module("using System; public static class S { public static int Fail(int x) { if (x < 0) throw new Exception(\"negative: \" + x); return x; } }");
     Assert.That(text, Does.Contain("if x < 0 {\n        panic!(\"Exception\");\n    }"), "named after its class, as the verification reads a panic back");

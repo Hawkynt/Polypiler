@@ -153,7 +153,7 @@ public sealed class RustFamilyDifferentialTests {
   }
 
   /// <summary>The functions of collections/Collections the backend writes; the others catch traps, hold objects or floating-point keys, or change a collection in a loop over it.</summary>
-  private static readonly string[] WrittenCollections = ["ListOps", "Grow", "Write", "RemoveLastOfEmpty", "Search", "Copies", "Words", "Pairs", "Widened", "DictionaryOrder", "SetOrder", "Count", "ClearThenInsert", "MissingKey", "Values"];
+  private static readonly string[] WrittenCollections = ["ListOps", "Grow", "Write", "RemoveLastOfEmpty", "Search", "Copies", "Words", "Boxes", "Pairs", "Widened", "DictionaryOrder", "SetOrder", "Count", "ClearThenInsert", "MissingKey", "Values"];
 
   /// <summary>
   /// The functions of sequences/Iterators the backend writes (#1391); the others write an array their

@@ -297,10 +297,13 @@ public static partial class RustEmitter {
           return Call("clear");
         case IrCollectionOp.ListContains when element.IsFloat:
           return new RsMethodCall(new RsMethodCall(place, "iter", []), "any", [this.SameValue(element, arguments[1])]) { Type = IrType.Bool };
+        case IrCollectionOp.ListContains when element.IsObject && !this.IsPlain(element):
+          return new RsMethodCall(new RsMethodCall(place, "iter", []), "any", [this.SameObjectAs(element, collection.Type, arguments[1])]) { Type = IrType.Bool };
         case IrCollectionOp.ListContains:
           return Call("contains", this.Key(arguments[1]));
         case IrCollectionOp.ListIndexOfEquals: {
           var found = new RsMethodCall(new RsMethodCall(place, "iter", []), "position", [element.IsFloat ? this.SameValue(element, arguments[1])
+            : element.IsObject && !this.IsPlain(element) ? this.SameObjectAs(element, collection.Type, arguments[1])
             : new RsClosure(false, [new RsParameter("element", "")], this.Binary(new RsPath("element"), "==", this.Key(arguments[1]), IrType.Bool))]);
           return new RsMethodCall(found, "map_or", [Literal(new IrConst(IrType.I32, -1)), new RsClosure(false, [new RsParameter("at", "")], new RsCast(new RsPath("at"), "i32"))]) { Type = IrType.I32 };
         }
@@ -329,6 +332,22 @@ public static partial class RustEmitter {
         default:
           return this.Refuse($"the collection operation {operation.Op}");
       }
+    }
+
+    /// <summary>
+    /// <c>|element| Rc::ptr_eq(element, &amp;o)</c>: the equality a list of objects searches by, .NET's
+    /// <c>Equals</c> of a class - its identity, a record's fields (<c>element == &amp;o</c>). A list that may
+    /// hold null compares the addresses its options hold.
+    /// </summary>
+    private RsClosure SameObjectAs(IrType element, IrType collection, IrExpr value) {
+      this._uses.Add("std::rc::Rc");
+      var nullable = this._nullness.ElementsMayBeNull(collection);
+      var sought = nullable ? new RsReference(false, this.Operand(this.ObjectValue(value, true, element), 15)) { Type = element } : this.ObjectBorrow(value);
+      RsExpression test = element.ClassType is { IsRecord: true } ? this.Binary(new RsPath("element"), "==", sought, IrType.Bool)
+        : nullable ? this.Binary(new RsMethodCall(new RsMethodCall(new RsPath("element"), "as_ref", []), "map", [new RsPath("Rc::as_ptr")]), "==",
+            new RsMethodCall(new RsMethodCall(sought, "as_ref", []), "map", [new RsPath("Rc::as_ptr")]), IrType.Bool)
+        : new RsCall(new RsPath("Rc::ptr_eq"), [new RsPath("element"), sought]) { Type = IrType.Bool };
+      return new RsClosure(false, [new RsParameter("element", "")], test);
     }
 
     /// <summary><c>|element| ply_same_value_f64(*element, v)</c>: the equality of floating-point numbers a list's search has, under which a NaN is found.</summary>
