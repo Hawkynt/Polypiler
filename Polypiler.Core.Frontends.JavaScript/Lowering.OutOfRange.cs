@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Acornima;
 using Acornima.Ast;
 using Polypiler.Core.Frontends.JavaScript.Inference;
@@ -62,7 +63,10 @@ internal sealed partial class Lowering {
   /// </summary>
   private (IrExpr Inside, IrArrayLoad Element) Guard(IrExpr array, IrExpr index) {
     // A total index is computed again rather than bound to a temporary: the access stays one expression without an effect.
-    var (first, again) = Fixed(array) ? (array, array) : this.Bound(array);
+    // An array read without an effect - a field, an element of a list - is read again rather than bound when
+    // the index has no effect either: nothing can change it in between, and a read that traps traps the first time.
+    var reread = Fixed(array) || (Steady(array) && Steady(index is IrConvert { Contract: IrConversion.Trap, Operand: var operand } ? operand : index));
+    var (first, again) = reread ? (array, array) : this.Bound(array);
     IrExpr Length(IrExpr of) => new IrConvert(IrType.U32, of.Type.IsView ? new IrIntrinsic(IrIntrinsicOp.ViewLength, IrType.I32, [of]) : new IrArrayLength(of));
     if (index is IrConvert { Contract: IrConversion.Trap, Operand: { Type.Kind: IrTypeKind.F64 } number }) {
       var (tested, held) = Total(number) ? (number, number) : this.Bound(number);
@@ -90,6 +94,22 @@ internal sealed partial class Lowering {
       Op: IrBinaryOp.And or IrBinaryOp.Or or IrBinaryOp.Xor or IrBinaryOp.ShiftLeft or IrBinaryOp.ShiftRight or IrBinaryOp.ShiftRightLogical
       or IrBinaryOp.Add or IrBinaryOp.Subtract or IrBinaryOp.Multiply
     } binary => binary.Type.IsInteger && Total(binary.Left) && Total(binary.Right),
+    _ => false
+  };
+
+  /// <summary>
+  /// Whether an expression has no effect, though it may trap: variables, constants, fields, the elements of
+  /// arrays and lists, their lengths, conversions and the operators of the IR over such operands.
+  /// </summary>
+  private static bool Steady(IrExpr value) => value switch {
+    IrLocalRef or IrConst or IrConstRef or IrGlobalRef => true,
+    IrFieldLoad load => Steady(load.Target),
+    IrArrayLoad load => Steady(load.Array) && Steady(load.Index),
+    IrArrayLength length => Steady(length.Array),
+    IrCollection { Op: IrCollectionOp.ListGet or IrCollectionOp.ListCount } read => read.Arguments.All(Steady),
+    IrConvert conversion => Steady(conversion.Operand),
+    IrBinary binary => Steady(binary.Left) && Steady(binary.Right),
+    IrUnary unary => Steady(unary.Operand),
     _ => false
   };
 
