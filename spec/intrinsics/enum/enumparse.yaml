@@ -22,6 +22,7 @@ spec:
     algorithm: "Enum.Parse(Type, String, Boolean) from .NET Core 3.0 on: the text without the white space of char.IsWhiteSpace at its start; one that begins with a digit, - or + and is a number by NumberStyles.Integer is that number of the underlying type; otherwise names separated by commas, each trimmed, every one a member's (ordinal or OrdinalIgnoreCase, the first in the order of unsigned values), the result the bits of all of them. The vectors are of [Flags] enum Perm { None = 0, Read = 1, Write = 2, Exec = 4, ReadWrite = 3 }"
     source: ".NET API reference, System.Enum.Parse(Type, String, Boolean)"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {E: TYPES.i32}, inputs: [[32, 82, 101, 97, 100, 32], 0], outputs: [1]}
     - {types: {E: TYPES.i32}, inputs: [[82, 101, 97, 100, 44, 32, 87, 114, 105, 116, 101], 0], outputs: [3]}

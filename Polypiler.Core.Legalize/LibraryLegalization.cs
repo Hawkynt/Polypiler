@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Polypiler.Core.IR;
+using Polypiler.Core.IR.Intrinsics;
 
 namespace Polypiler.Core.Legalize;
 
@@ -20,7 +21,7 @@ public delegate IrExpr? LibraryRewrite(IrExpr expression, LibraryCalls calls);
 /// implementation or a helper - while a module is legalized: the function, what it calls and the
 /// tables it reads are copied into the module under names no name of the module has.
 /// </summary>
-public sealed class LibraryCalls {
+public sealed class LibraryCalls : IIntrinsicLibrary {
 
   private readonly Func<string, IReadOnlyList<IrExpr>, IrCall> _call;
   private readonly Func<string, IrFunction> _signature;

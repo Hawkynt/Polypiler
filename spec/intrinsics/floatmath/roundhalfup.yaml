@@ -22,6 +22,7 @@ spec:
     algorithm: "the nearest integral value, a tie towards positive infinity; a value from -0.5 to -0 becomes -0"
     source: "ECMA-262, 15th ed. (2024), section 21.3.2.28 (Math.round)"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {F: TYPES.f64}, inputs: ["0x4004000000000000"], outputs: ["0x4008000000000000"]}
     - {types: {F: TYPES.f64}, inputs: ["0xC004000000000000"], outputs: ["0xC000000000000000"]}

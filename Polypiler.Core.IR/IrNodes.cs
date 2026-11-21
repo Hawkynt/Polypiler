@@ -955,7 +955,100 @@ public enum IrIntrinsicOp {
   HighWord,
 
   /// <summary><c>(u32 high, u32 low) → i64</c>: the 64-bit integer of two limbs, the inverse of <see cref="HighWord"/> and the conversion to <c>u32</c>.</summary>
-  JoinWords
+  JoinWords,
+
+  /// <summary><c>f → f</c>: the square <c>x * x</c>, rounded once (#198).</summary>
+  Square,
+
+  /// <summary><c>f → f</c>: the cube <c>(x * x) * x</c>, rounded twice in that order (#198).</summary>
+  Cube,
+
+  /// <summary><c>u → u</c>: the integer square root, the largest <c>r</c> with <c>r * r ≤ x</c>, of an unsigned value (#198).</summary>
+  ISqrt,
+
+  /// <summary>The number of one bits above the highest zero bit of an integer, as an <c>i32</c>; the width for all ones, 0 for 0.</summary>
+  LeadingOneCount,
+
+  /// <summary>The number of one bits below the lowest zero bit of an integer, as an <c>i32</c>; the width for all ones, 0 for 0.</summary>
+  TrailingOneCount,
+
+  /// <summary><c>(a, b)</c>: the complement of the bitwise and, <c>~(a &amp; b)</c>, of two integers of one type.</summary>
+  Nand,
+
+  /// <summary><c>(a, b)</c>: the complement of the bitwise or, <c>~(a | b)</c>.</summary>
+  Nor,
+
+  /// <summary><c>(a, b)</c>: the bitwise equivalence, the complement of the exclusive or, <c>~(a ^ b)</c>.</summary>
+  Xnor,
+
+  /// <summary><c>(a, b)</c>: <c>a &amp; ~b</c>, the second operand complemented - not the first, as x86's <c>ANDN</c> does.</summary>
+  AndNot,
+
+  /// <summary><c>(a, b)</c>: <c>a | ~b</c>.</summary>
+  OrNot,
+
+  /// <summary><c>(a, b)</c>: the bitwise implication, <c>~a | b</c>.</summary>
+  Implies,
+
+  /// <summary><c>(mask, a, b)</c>: each bit of <c>a</c> where the mask has a 1 and of <c>b</c> where it has a 0.</summary>
+  BitSelect,
+
+  /// <summary><c>(a, b, c)</c>: each bit set where at least two of the three integers have it set.</summary>
+  Majority,
+
+  /// <summary>
+  /// <c>(a, b, c, table)</c>: the three-input function of a truth table, the <c>i32</c> 0 to 255: bit
+  /// <c>i</c> of the result is bit <c>a_i·4 + b_i·2 + c_i</c> of the table. A constant table outside
+  /// that range is refused by the verifier, any other traps with an invalid operation.
+  /// </summary>
+  TernaryLogic,
+
+  /// <summary>
+  /// <c>(value, start, length)</c>: the field of <see cref="ExtractBits"/>, sign-extended from its top
+  /// bit, bit <c>length - 1</c>; 0 for a length of 0. A field outside the width traps with an invalid
+  /// operation.
+  /// </summary>
+  ExtractBitsSigned,
+
+  /// <summary>
+  /// An integer with the bits of each byte in the opposite order and the bytes in their place: bit
+  /// <c>i</c> moves to <c>8·(i / 8) + 7 - i % 8</c>. <see cref="BitReverse"/> is this followed by
+  /// <see cref="ByteSwap"/>.
+  /// </summary>
+  ReverseBitsInBytes,
+
+  /// <summary>
+  /// <c>(T value, T mask) → T</c>, every integer type: the bits of the value at the positions of the
+  /// ones of the mask, packed to the bottom in their order with zeros above them - <c>PEXT</c> of x86's
+  /// BMI2 (#103). The signedness of the type is ignored: both operands are bit patterns.
+  /// </summary>
+  ParallelBitExtract,
+
+  /// <summary>
+  /// <c>(T value, T mask) → T</c>, every integer type: the lowest bits of the value, in their order,
+  /// spread to the positions of the ones of the mask, zeros elsewhere - <c>PDEP</c> of x86's BMI2 and the
+  /// inverse of <see cref="ParallelBitExtract"/> on the mask (#103).
+  /// </summary>
+  ParallelBitDeposit,
+
+  /// <summary>
+  /// <c>(T table, T indices, i32 group) → T</c>, <c>u64</c>: byte <c>i</c> of the result is 0 where bit 7
+  /// of byte <c>i</c> of the indices is set, else byte <c>base + (index mod group)</c> of the table, with
+  /// <c>base</c> the first byte of the group of <c>group</c> bytes that holds byte <c>i</c> - <c>PSHUFB</c>
+  /// of SSSE3 for the group of 16 bytes (#105). Bytes count from the least significant. A group outside
+  /// 8, 16, 32 and 64, or one that does not divide the bytes of the type, traps as an invalid operation.
+  /// </summary>
+  ByteShuffle,
+
+  /// <summary>
+  /// <c>(T crc, T poly, bool reflected, u8[] data, i32 index, i32 count) → T</c>, every unsigned type:
+  /// the register of a cyclic redundancy check of the width of <c>T</c> after the <c>count</c> bytes of
+  /// the array from the index on, one bit at a time, with the generator polynomial in its normal form
+  /// and without its top bit, for a reflected CRC too (#352). Initial value and final XOR are not part of
+  /// it. A span outside the array traps as an index out of range before any byte is read; a polynomial
+  /// of 0 traps as an invalid operation.
+  /// </summary>
+  CrcUpdate
 
 }
 

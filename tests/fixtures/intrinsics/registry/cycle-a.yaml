@@ -1,0 +1,16 @@
+# One half of a decomposition cycle: CycleA lowers to CycleB, which lowers back (PLY0256).
+id: INTRINSICS.CycleA
+title: CycleA
+spec:
+  name: CycleA
+  group: IntMath
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: x, type: T}]
+  returns: [{name: result, type: T}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  lowersTo: [IR.op.or, INTRINSICS.CycleB]
+  reference: {algorithm: "x", source: "registry self-test"}
+  mustSurviveUntil: IR.stage.lifted
+  vectors: []

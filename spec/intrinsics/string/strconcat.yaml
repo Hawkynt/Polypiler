@@ -22,6 +22,7 @@ spec:
     algorithm: "the code units of every argument in order; the operation takes two arguments or more"
     source: "ECMA-262 2022 §22.1.3.4 (concat); the .NET API reference of System.String.Concat"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {}, inputs: [[97, 98], [99]], outputs: [[97, 98, 99]]}
     - {types: {}, inputs: [[], []], outputs: [[]]}

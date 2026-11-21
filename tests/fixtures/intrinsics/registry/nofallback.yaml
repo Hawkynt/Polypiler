@@ -1,0 +1,16 @@
+# A contract with neither a decomposition nor requiresRuntime: true; the registry refuses it (PLY0254).
+id: INTRINSICS.NoFallback
+title: NoFallback
+spec:
+  name: NoFallback
+  group: IntMath
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: x, type: T}]
+  returns: [{name: result, type: T}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  requiresRuntime: false
+  reference: {algorithm: "x", source: "registry self-test"}
+  mustSurviveUntil: IR.stage.lifted
+  vectors: []

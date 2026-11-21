@@ -22,6 +22,7 @@ spec:
     algorithm: "Enum.HasFlag: (value & flag) == flag. The vectors are of [Flags] enum Perm { None = 0, Read = 1, Write = 2, Exec = 4, ReadWrite = 3 }"
     source: ".NET API reference, System.Enum.HasFlag(Enum)"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {E: TYPES.i32}, inputs: [7, 5], outputs: [1]}
     - {types: {E: TYPES.i32}, inputs: [6, 5], outputs: [0]}

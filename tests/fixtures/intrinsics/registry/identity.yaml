@@ -1,0 +1,23 @@
+# The self-test intrinsic of the registry: Abs restricted to the unsigned types, on which it is the
+# identity. Only the registry tests load it; the shipped contract of Abs is spec/intrinsics/intmath/abs.yaml.
+id: INTRINSICS.Abs
+title: Identity (registry self-test)
+spec:
+  name: Abs
+  group: IntMath
+  typeParameters: [{name: T, constraint: unsigned}]
+  parameters: [{name: x, type: T}]
+  returns: [{name: result, type: T}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  algebra: [idempotent]
+  lowersTo: [IR.op.or]
+  facts: {resultRange: [0, 255], knownZeroBits: "0x0", knownOneBits: "0x0"}
+  laneLiftable: true
+  reference: {algorithm: "x", source: "registry self-test"}
+  mustSurviveUntil: IR.stage.lifted
+  vectors:
+    - {types: {T: TYPES.u32}, inputs: ["0xDEADBEEF"], outputs: ["0xDEADBEEF"]}
+    - {types: {T: TYPES.u8}, inputs: ["0x7F"], outputs: ["0x7F"]}
+    - {types: {T: TYPES.u64}, inputs: [0], outputs: [0]}

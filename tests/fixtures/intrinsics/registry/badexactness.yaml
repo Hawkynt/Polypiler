@@ -1,0 +1,15 @@
+# Exactness mode outside the schema's enum: refused with PLY0251 naming the file and the property.
+id: INTRINSICS.BadExactness
+title: BadExactness
+spec:
+  name: BadExactness
+  group: IntMath
+  typeParameters: [{name: T, constraint: integer}]
+  parameters: [{name: x, type: T}]
+  returns: [{name: result, type: T}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: roughly}
+  reference: {algorithm: "x", source: "registry self-test"}
+  mustSurviveUntil: IR.stage.lifted
+  vectors: []

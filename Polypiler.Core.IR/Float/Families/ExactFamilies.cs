@@ -30,6 +30,12 @@ internal static class ExactFamilies {
       FloatOperations.IeeeRemainderF, FloatOperations.IeeeRemainder)
       .With(Special.Of(IrIntrinsicOp.IeeeRemainder, [Special.NegativeZero, 1.0], Special.NegativeZero, "a zero remainder has the sign of the dividend")),
     FloatOperation.Unary(IrIntrinsicOp.Reciprocal, Arithmetic, _exact, nameof(FloatOperations.Reciprocal), FloatOperations.ReciprocalF, FloatOperations.Reciprocal),
+    FloatOperation.Unary(IrIntrinsicOp.Square, Arithmetic, _exact, nameof(FloatOperations.Square), FloatOperations.SquareF, FloatOperations.Square)
+      .With(Special.Of(IrIntrinsicOp.Square, Special.NegativeZero, 0.0, "the square of -0 is +0"),
+        Special.Of(IrIntrinsicOp.Square, double.NegativeInfinity, double.PositiveInfinity, "the square of an infinity is +∞")),
+    FloatOperation.Unary(IrIntrinsicOp.Cube, Arithmetic, _exact, nameof(FloatOperations.Cube), FloatOperations.CubeF, FloatOperations.Cube)
+      .With(Special.Of(IrIntrinsicOp.Cube, Special.NegativeZero, Special.NegativeZero, "the cube keeps the sign of zero"),
+        Special.Of(IrIntrinsicOp.Cube, 1.5, 3.375, "an exact cube is exact")),
 
     FloatOperation.Existing(IrIntrinsicOp.Floor, Rounding, FloatShape.Unary, _exact),
     FloatOperation.Existing(IrIntrinsicOp.Ceiling, Rounding, FloatShape.Unary, _exact),

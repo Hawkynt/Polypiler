@@ -23,6 +23,7 @@ spec:
     algorithm: "T.Parse(text, CultureInfo.InvariantCulture): an integer by NumberStyles.Integer, a float by NumberStyles.Float and AllowThousands with Infinity and NaN in any case, correctly rounded and infinite beyond the range; a malformed text traps InvalidFormat before an integer out of range traps IntegerOverflow"
     source: ".NET API reference, Int32.Parse(String, IFormatProvider), Double.Parse(String, IFormatProvider)"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {N: TYPES.f64}, inputs: [[49, 44, 48, 48, 48]], outputs: ["0x408F400000000000"]}
     - {types: {N: TYPES.f64}, inputs: [[105, 110, 102, 105, 110, 105, 116, 121]], outputs: ["0x7FF0000000000000"]}

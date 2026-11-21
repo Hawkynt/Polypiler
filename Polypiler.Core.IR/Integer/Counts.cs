@@ -12,7 +12,9 @@ public static partial class IntegerOperations {
     Count(IrIntrinsicOp.TrailingZeroCount, TrailingZeroCount),
     // The base-2 logarithm of a floating-point number is the same operation, which is not this class's concern.
     Count(IrIntrinsicOp.Log2, Log2, true),
-    Count(IrIntrinsicOp.Parity, Parity)
+    Count(IrIntrinsicOp.Parity, Parity),
+    Count(IrIntrinsicOp.LeadingOneCount, LeadingOneCount),
+    Count(IrIntrinsicOp.TrailingOneCount, TrailingOneCount)
   ];
 
   private static IntegerOperation Count(IrIntrinsicOp op, System.Func<IrType, long, int> count, bool shared = false)
@@ -50,5 +52,34 @@ public static partial class IntegerOperations {
   /// <param name="value">The value.</param>
   /// <returns>0 or 1.</returns>
   public static int Parity(IrType type, long value) => PopCount(type, value) & 1;
+
+  /// <summary>
+  /// The number of one bits above the highest zero bit; the width for all ones. It is counted bit by
+  /// bit from the top of the width down, so that it holds for every width.
+  /// </summary>
+  /// <param name="type">An integer type.</param>
+  /// <param name="value">The value.</param>
+  /// <returns>0 to the width.</returns>
+  public static int LeadingOneCount(IrType type, long value) {
+    var pattern = Pattern(type, value);
+    var count = 0;
+    while (count < Width(type) && ((pattern >> (Width(type) - 1 - count)) & 1) == 1)
+      ++count;
+
+    return count;
+  }
+
+  /// <summary>The number of one bits below the lowest zero bit; the width for all ones. It is counted bit by bit from the bottom up.</summary>
+  /// <param name="type">An integer type.</param>
+  /// <param name="value">The value.</param>
+  /// <returns>0 to the width.</returns>
+  public static int TrailingOneCount(IrType type, long value) {
+    var pattern = Pattern(type, value);
+    var count = 0;
+    while (count < Width(type) && ((pattern >> count) & 1) == 1)
+      ++count;
+
+    return count;
+  }
 
 }

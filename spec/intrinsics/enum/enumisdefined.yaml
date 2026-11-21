@@ -22,6 +22,7 @@ spec:
     algorithm: "Enum.IsDefined: a member has exactly the value; a combination of flags is none. The vectors are of [Flags] enum Perm { None = 0, Read = 1, Write = 2, Exec = 4, ReadWrite = 3 }"
     source: ".NET API reference, System.Enum.IsDefined(Type, Object)"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {E: TYPES.i32}, inputs: [5], outputs: [0]}
     - {types: {E: TYPES.i32}, inputs: [3], outputs: [1]}

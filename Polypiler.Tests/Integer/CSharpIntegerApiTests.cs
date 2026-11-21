@@ -136,6 +136,13 @@ public sealed class CSharpIntegerApiTests {
 
       yield return ("System.BitConverter", $"To{sized}", $"public static {type} F(byte[] a, int b) => System.BitConverter.To{sized}(a, b);");
     }
+
+    // The parallel bit extract and deposit of BMI2 (#103), of uint and of ulong.
+    const string Bmi2 = "System.Runtime.Intrinsics.X86.Bmi2";
+    foreach (var name in new[] { "ParallelBitExtract", "ParallelBitDeposit" }) {
+      yield return (Bmi2, name, $"public static uint F(uint a, uint b) => {Bmi2}.{name}(a, b);");
+      yield return (Bmi2 + ".X64", name, $"public static ulong F(ulong a, ulong b) => {Bmi2}.X64.{name}(a, b);");
+    }
   }
 
   /// <summary>A method as the one class of a source file that has <c>System</c> in scope, which <c>AsSpan</c> needs.</summary>

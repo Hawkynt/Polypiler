@@ -1,0 +1,17 @@
+# A dotted IR spelling that differs from the PascalCase name.
+id: INTRINSICS.TestEcho
+title: Echo
+spec:
+  name: TestEcho
+  spelling: Test.Echo
+  group: IntMath
+  typeParameters: [{name: T, constraint: any}]
+  parameters: [{name: x, type: T}]
+  returns: [{name: result, type: T}]
+  legality: []
+  effects: [pure]
+  exactness: {mode: exact}
+  requiresRuntime: true
+  reference: {algorithm: "x", source: "registry self-test"}
+  mustSurviveUntil: IR.stage.lifted
+  vectors: []

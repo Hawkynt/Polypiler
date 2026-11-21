@@ -23,6 +23,7 @@ spec:
     algorithm: "the value of F whose IEEE 754 binary interchange encoding is the bit pattern of bits"
     source: "IEEE Std 754-2019, section 3.4; .NET API reference, System.BitConverter.Int64BitsToDouble"
   mustSurviveUntil: IR.stage.legalized-target
+  requiresRuntime: true
   vectors:
     - {types: {F: TYPES.f64, I: TYPES.i64}, inputs: [4607182418800017408], outputs: ["0x3FF0000000000000"]}
     - {types: {F: TYPES.f64, I: TYPES.i64}, inputs: [-9223372036854775808], outputs: ["0x8000000000000000"]}
