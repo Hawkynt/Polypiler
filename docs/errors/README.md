@@ -96,16 +96,6 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY0116](PLY0116.md) | error | 4 (InvalidSource) | `malformed location '<text>'` | IR-SOURCEMAP |
 | [PLY0117](PLY0117.md) | error | 4 (InvalidSource) | `location refers to source <index>, but the module declares <count> sources` | IR-SOURCEMAP |
 
-## PLY0300–PLY0399 · optimization
-
-| Code | Severity | Exit code | Message | Owner |
-| --- | --- | --- | --- | --- |
-| [PLY0300](PLY0300.md) | error | 70 (InternalError) | `no analysis provides facts of domain '<domain>'` | ANA-FACADE |
-| [PLY0301](PLY0301.md) | info | — | `analysis '<domain>' stopped at its budget in '<function>'; affected facts are Unknown` | ANA-FACADE |
-| [PLY0302](PLY0302.md) | error | 70 (InternalError) | `unsound fact: <domain> claims <fact> for <value> at <point>, observed <observed>` | ANA-FACADE |
-| [PLY0355](PLY0355.md) | error | 3 (UnsupportedConstruct) | `target profile '<language>/<profile>' has no cost profile` | OPT-COST |
-| [PLY0356](PLY0356.md) | error | 4 (InvalidSource) | `cost profile '<path>': <key>: <problem>` | OPT-COST |
-
 ## PLY0200–PLY0299 · types
 
 | Code | Severity | Exit code | Message | Owner |
@@ -117,6 +107,16 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY0254](PLY0254.md) | error | 70 (InternalError) | `intrinsic '<name>' has no fallback` | INT-REGISTRY |
 | [PLY0255](PLY0255.md) | error | 70 (InternalError) | `intrinsic '<name>': attribute '<attribute>' = <value> is outside [<low>, <high>]` | INT-REGISTRY |
 | [PLY0256](PLY0256.md) | error | 70 (InternalError) | `intrinsic '<name>' lowers to itself through <path>` | INT-REGISTRY |
+
+## PLY0300–PLY0399 · optimization
+
+| Code | Severity | Exit code | Message | Owner |
+| --- | --- | --- | --- | --- |
+| [PLY0300](PLY0300.md) | error | 70 (InternalError) | `no analysis provides facts of domain '<domain>'` | ANA-FACADE |
+| [PLY0301](PLY0301.md) | info | — | `analysis '<domain>' stopped at its budget in '<function>'; affected facts are Unknown` | ANA-FACADE |
+| [PLY0302](PLY0302.md) | error | 70 (InternalError) | `unsound fact: <domain> claims <fact> for <value> at <point>, observed <observed>` | ANA-FACADE |
+| [PLY0355](PLY0355.md) | error | 3 (UnsupportedConstruct) | `target profile '<language>/<profile>' has no cost profile` | OPT-COST |
+| [PLY0356](PLY0356.md) | error | 4 (InvalidSource) | `cost profile '<path>': <key>: <problem>` | OPT-COST |
 
 ## PLY0800–PLY0899 · permutation
 
