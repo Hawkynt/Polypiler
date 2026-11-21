@@ -59,6 +59,8 @@ public sealed class Z3SolverResourceTests {
     }
 
     var output = await stdout + await stderr;
+    if (output.Contains("the runtime gave no allocation budget", StringComparison.Ordinal))
+      Assert.Inconclusive("the child could not measure without a collection: " + output[output.IndexOf("the runtime gave no allocation budget", StringComparison.Ordinal)..].Split('\n')[0]);
     Assert.That(process.ExitCode, Is.Zero, output);
     Assert.That(output, Does.Contain(Completed), "the child must actually execute the check");
     TestContext.Out.WriteLine(output[output.IndexOf(Completed, StringComparison.Ordinal)..].Split('\n')[0]);
@@ -80,35 +82,61 @@ public sealed class Z3SolverResourceTests {
       GC.WaitForPendingFinalizers();
     }
 
-    Assert.That(GC.TryStartNoGCRegion(32 * 1024 * 1024), Is.True, "the dedicated child needs a small managed allocation budget");
-    using var process = Process.GetCurrentProcess();
-    process.Refresh();
-    var baseline = process.PrivateMemorySize64;
-    var peak = 0L;
-    try {
-      for (var query = 0; query < 128; ++query) {
-        var kind = query % queries.Length;
-        var answer = solver.Check(queries[kind], kind == 2 ? ["flag"] : ["x"], TimeSpan.FromSeconds(1));
-        Assert.That(answer.Status, Is.EqualTo(kind == 0 ? SmtStatus.Unsat : SmtStatus.Sat));
-        if (kind != 0)
-          Assert.That(answer.Model[kind == 2 ? "flag" : "x"], Is.EqualTo(kind == 2 ? 1UL : 17UL));
+    // A region without collections makes finalizers unable to free a context while the queries run. A
+    // runtime may refuse the budget for a moment (the CI runners do now and then): it is asked again after
+    // a collection, and where it keeps refusing, the measurement counts only a pass no collection ran in.
+    var region = false;
+    for (var attempt = 0; attempt < 5 && !region; ++attempt) {
+      GC.Collect();
+      GC.WaitForPendingFinalizers();
+      region = GC.TryStartNoGCRegion(32 * 1024 * 1024);
+    }
 
-        process.Refresh();
-        peak = Math.Max(peak, process.PrivateMemorySize64 - baseline);
-        Assert.That(peak, Is.LessThan(128L * 1024 * 1024),
-          $"native memory accumulated after {query + 1} trivial queries without a managed collection");
+    long? peak = null;
+    try {
+      for (var pass = 0; pass < (region ? 1 : 5) && peak is null; ++pass) {
+        var collections = GC.CollectionCount(0);
+        var measured = Measure(solver, queries);
+        if (region || GC.CollectionCount(0) == collections)
+          peak = measured;
       }
 
-      Assert.That(GCSettings.LatencyMode, Is.EqualTo(GCLatencyMode.NoGCRegion), "the check must not depend on finalizers freeing contexts");
+      if (region)
+        Assert.That(GCSettings.LatencyMode, Is.EqualTo(GCLatencyMode.NoGCRegion), "the check must not depend on finalizers freeing contexts");
     } finally {
       if (GCSettings.LatencyMode == GCLatencyMode.NoGCRegion)
         GC.EndNoGCRegion();
     }
 
+    if (peak is null)
+      Assert.Inconclusive("the runtime gave no allocation budget and collected during every pass: finalizers could have freed the contexts");
+
     // Context finalizers must also remain safe after all native handles have been released.
     for (var pass = 0; pass < 2; ++pass) {
       GC.Collect();
       GC.WaitForPendingFinalizers();
+    }
+
+    return peak.Value;
+  }
+
+  /// <summary>Runs 128 trivial queries and gives the largest growth of the private memory, failing where it passes 128 MiB.</summary>
+  private static long Measure(Z3Solver solver, string[] queries) {
+    using var process = Process.GetCurrentProcess();
+    process.Refresh();
+    var baseline = process.PrivateMemorySize64;
+    var peak = 0L;
+    for (var query = 0; query < 128; ++query) {
+      var kind = query % queries.Length;
+      var answer = solver.Check(queries[kind], kind == 2 ? ["flag"] : ["x"], TimeSpan.FromSeconds(1));
+      Assert.That(answer.Status, Is.EqualTo(kind == 0 ? SmtStatus.Unsat : SmtStatus.Sat));
+      if (kind != 0)
+        Assert.That(answer.Model[kind == 2 ? "flag" : "x"], Is.EqualTo(kind == 2 ? 1UL : 17UL));
+
+      process.Refresh();
+      peak = Math.Max(peak, process.PrivateMemorySize64 - baseline);
+      Assert.That(peak, Is.LessThan(128L * 1024 * 1024),
+        $"native memory accumulated after {query + 1} trivial queries without a managed collection");
     }
 
     return peak;
