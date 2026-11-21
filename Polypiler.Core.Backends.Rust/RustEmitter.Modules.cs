@@ -104,7 +104,9 @@ public static partial class RustEmitter {
         .Order(StringComparer.Ordinal)
         .Select(name => new RsModuleDeclaration(name, Public(parent.Length == 0 ? name : parent + "::" + name) ? "pub" : ""));
 
-      var root = crate.Root with { Items = [.. crate.Root.Items.Where(item => item is not RsModuleDeclaration || crate.Errors is not null && item is RsModuleDeclaration { Name: "error" }), .. Declarations(""), .. inRoot ? written[0].Items.Select(Opened) : []] };
+      // The module of the errors among the others, in the order of their names.
+      IEnumerable<RsModuleDeclaration> modules = [.. crate.Root.Items.OfType<RsModuleDeclaration>().Where(item => crate.Errors is not null && item.Name == "error"), .. Declarations("").Cast<RsModuleDeclaration>()];
+      var root = crate.Root with { Items = [.. modules.OrderBy(item => item.Name, StringComparer.Ordinal), .. crate.Root.Items.Where(item => item is not RsModuleDeclaration), .. inRoot ? written[0].Items.Select(Opened) : []] };
       var own = inRoot ? [] : written[0].Items.Select(Opened);
       return crate with {
         Root = root,

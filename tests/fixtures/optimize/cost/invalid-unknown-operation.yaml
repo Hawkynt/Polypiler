@@ -1,0 +1,8 @@
+# Refused with PLY0356 at operations.Rotat.u32: the IR has no operation Rotat.
+profile: invalid-unknown-operation
+unknownTripCount: 16
+default: { latency: 2, size: 2 }
+operations:
+  Rotat.u32:
+    native: { latency: 1, size: 1 }
+loop: { overhead: 2 }

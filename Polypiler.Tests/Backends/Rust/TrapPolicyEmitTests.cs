@@ -238,7 +238,7 @@ public sealed class TrapPolicyEmitTests {
     => Assert.That(Emitted("public static int F(int? a) => a.Value;"), Does.Contain("pub fn f(a: Option<i32>) -> Result<i32, Error> {\n    a.ok_or(Error::MissingValue)\n}"));
 
   private static IEnumerable<TestCaseData> Limits() {
-    yield return new TestCaseData("public static int F(System.Collections.Generic.List<int> l, int i) => l[i];", "the helper ply_list_index, which panics").SetName("HelperThatPanics");
+    yield return new TestCaseData("public static int F(System.Collections.Generic.List<int> l, int i) { System.Func<int, int> g = x => l[x]; return g(i); }", "a trap inside a closure").SetName("HelperTrapInAClosure");
     yield return new TestCaseData("public static int F(int a) { System.Func<int, int> g = x => checked(x * a); return g(2); }", "a trap inside a closure").SetName("TrapInAClosure");
     yield return new TestCaseData("static int[] t = new int[4]; public static int F(int i) => t[i]++;", "a step of an element of module state behind a lock").SetName("LockedStep");
     yield return new TestCaseData("public struct Error { public int A; } public static int F(Error e) => checked(e.A * 2);", "a type of the module named 'Error'").SetName("TypeNamedError");
@@ -249,10 +249,13 @@ public sealed class TrapPolicyEmitTests {
   public void WhatWouldStillPanic_IsRefusedWithPly1552(string methods, string construct)
     => Assert.That(Problems(methods), Has.Some.EqualTo($"PLY1552 trap policy 'result' is not available for '{construct}'").Or.Some.StartsWith($"PLY1552 trap policy 'result' is not available for '{construct}' (in "));
 
+  /// <summary>#1414: a try with catch clauses and a finally under result, a trap of its body caught, the finally run on every path.</summary>
   [Test]
-  public void ExceptionRegionTheAdrLeavesOut_StaysRefusedUnderResult()
-    => Assert.That(Problems("static int s; public static int F(int k) { try { s = checked(k * 2); } catch (System.OverflowException) { s = -1; } finally { s++; } return s; }"),
-      Has.Some.StartsWith("PLY1560 exception region in the function 'F' cannot be emitted under the trap policy 'result': 'a try with both catch clauses and a finally block'"));
+  public void TryWithCatchClausesAndAFinally_IsWrittenUnderResult() {
+    const string Methods = "static int s; public static int F(int k) { try { s = checked(k * 2); } catch (System.OverflowException) { s = -1; } finally { s++; } return s; }";
+    Assert.That(Problems(Methods), Is.Empty);
+    Assert.That(Emitted(Methods), Does.Contain("let mut thrown = None;").And.Contain("thrown = Some(error);"));
+  }
 
   [Test]
   public void WhatWouldStillPanic_IsWrittenUnderPanic()

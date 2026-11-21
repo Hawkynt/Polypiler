@@ -35,7 +35,7 @@ public sealed class PolypilerRunner(ScenarioWorkspace workspace, ScenarioIdentit
       this.LastArguments = arguments;
       using var output = new StringWriter();
       using var error = new StringWriter();
-      var exitCode = global::Polypiler.Cli.Program.Run(arguments, output, error, registry, workspace.Path);
+      var exitCode = global::Polypiler.Cli.Program.Run(arguments, output, error, registry, commands.Contributions ?? new(registry), workspace.Path);
       return log.Add(new CommandResult(exitCode, output.ToString(), error.ToString()));
     }
 

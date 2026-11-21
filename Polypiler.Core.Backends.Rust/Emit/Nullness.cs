@@ -17,6 +17,10 @@ internal sealed class Nullness {
 
   private readonly HashSet<(string Function, IrLocal Local)> _variables = [];
   private readonly HashSet<string> _results = new(StringComparer.Ordinal);
+  private readonly HashSet<IrType> _elements = [];
+
+  /// <summary>Whether a collection of a type of objects may hold null: the module puts a value that may be null into one (#1422).</summary>
+  public bool ElementsMayBeNull(IrType collection) => this._elements.Contains(collection);
 
   /// <summary>Whether a variable or parameter of a function may hold null.</summary>
   public bool MayBeNull(string function, IrLocal local) => this._variables.Contains((function, local));
@@ -29,9 +33,19 @@ internal sealed class Nullness {
     IrNew => false,
     IrLocalRef reference => this._variables.Contains((function, reference.Local)),
     IrCall call => this._results.Contains(call.Function),
+    IrMethodCall call => this._results.Contains(call.Method.Function),
     IrConditional choice => this.MayBeNull(function, choice.WhenTrue) || this.MayBeNull(function, choice.WhenFalse),
     IrCast cast => this.MayBeNull(function, cast.Value),
+    IrCollection { Op: IrCollectionOp.ListGet } read => this._elements.Contains(read.Arguments[0].Type),
     _ => true
+  };
+
+  /// <summary>The elements an operation puts into a collection: the value of an add, an insert or a store, every element of a list made of them.</summary>
+  private static IEnumerable<IrExpr> Stored(IrCollection operation) => operation.Op switch {
+    IrCollectionOp.ListAdd or IrCollectionOp.SetAdd => [operation.Arguments[1]],
+    IrCollectionOp.ListInsert or IrCollectionOp.ListSet or IrCollectionOp.MapPut or IrCollectionOp.MapAdd or IrCollectionOp.MapTryAdd => [operation.Arguments[2]],
+    IrCollectionOp.ListOf => operation.Arguments,
+    _ => []
   };
 
   /// <summary>The nullness of every reference of a module.</summary>
@@ -44,6 +58,7 @@ internal sealed class Nullness {
         facts._variables.Add((function.Name, parameter));
 
     var byName = module.Functions.ToDictionary(function => function.Name, StringComparer.Ordinal);
+    var groups = SlotGroups.Of(module);
     for (var changed = true; changed;) {
       changed = false;
       foreach (var function in module.Functions) {
@@ -64,6 +79,13 @@ internal sealed class Nullness {
           }
 
           foreach (var node in IrTree.Expressions(statement).SelectMany(IrTree.Nodes)) {
+            if (node is IrCollection operation) {
+              var collection = IrCollections.Constructs(operation.Op) ? operation.Type : operation.Arguments[0].Type;
+              if (collection.Element is { } element && IsReference(element) && Stored(operation).Any(value => facts.MayBeNull(function.Name, value)))
+                changed |= facts._elements.Add(collection);
+              continue;
+            }
+
             if (node is not IrCall call || !byName.TryGetValue(call.Function, out var target))
               continue;
 
@@ -75,6 +97,8 @@ internal sealed class Nullness {
           }
         }
       }
+
+      changed |= SlotGroups.Unify(groups, facts._results, facts._variables);
     }
 
     return facts;

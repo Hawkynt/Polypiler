@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Polypiler.Cli.Options;
 using Polypiler.Core;
 
 namespace Polypiler.Cli;
@@ -69,6 +70,15 @@ public sealed class CliContext : IDiagnosticSink {
 
   /// <summary>The directory relative paths of the command line are resolved against.</summary>
   public string WorkingDirectory { get; }
+
+  /// <summary>The values the contributors of the command read from its command line; empty before the command runs.</summary>
+  public OptionBag Contributed { get; internal set; } = new();
+
+  /// <summary>
+  /// The contributed options in the form of the canonical command line (ADR 0004, "Recorded command
+  /// line"): what a command appends after its own and the pipeline options; empty when none was contributed.
+  /// </summary>
+  public IReadOnlyList<string> ContributedArguments { get; internal set; } = [];
 
   /// <summary>How the source of a translation is laid out where it has modules and tests of its own, as a Rust crate has; <see langword="null"/> for a source of one module.</summary>
   internal TranslateCommand.CrateLayout? Layout { get; set; }

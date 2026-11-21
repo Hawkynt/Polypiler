@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/machine-vector.schema.json",
+  "title": "Polypiler machine vector file",
+  "description": "A *.mvec.json file, read by Polypiler.Core.MachineSemantics.Tracing.MachineVectorFile: the vectors of one machine-code fixture, what of a run is observed and the trace each vector must produce. Numbers are 0x-prefixed hexadecimal strings, byte blocks hexadecimal strings, counts JSON integers. Rules the schema cannot state (PLY4030 and PLY4032 of the loader, which need the machine profile): isa (the file is for the profile it is loaded with), storage (register and flag names are the profile's), value-width (a value fits its register), unique-vector-name.",
+  "type": "object",
+  "required": ["schemaVersion", "fixture", "isa", "provenance", "observe", "vectors"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "fixture": { "type": "string" },
+    "isa": { "type": "string" },
+    "provenance": {
+      "type": "object",
+      "required": ["kind", "producer", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["published", "reference-run", "upstream-embedded"] },
+        "producer": { "type": "string", "not": { "const": "polypiler" } },
+        "source": { "type": "string" }
+      }
+    },
+    "observe": {
+      "type": "object",
+      "required": ["registers", "flags", "memory", "events", "cycles", "mode"],
+      "additionalProperties": false,
+      "properties": {
+        "registers": { "type": "array", "items": { "type": "string" } },
+        "flags": { "type": "array", "items": { "type": "string" } },
+        "memory": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["address", "length"],
+            "additionalProperties": false,
+            "properties": {
+              "address": { "$ref": "#/$defs/number" },
+              "length": { "$ref": "#/$defs/count" }
+            }
+          }
+        },
+        "events": { "type": "array", "items": { "$ref": "#/$defs/eventKind" } },
+        "cycles": { "type": "boolean" },
+        "mode": { "enum": ["semantic", "raw"] }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "maxCycles": { "$ref": "#/$defs/count" },
+        "maxSteps": { "$ref": "#/$defs/count" }
+      }
+    },
+    "vectors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "initial", "expected"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "call": {
+            "type": "object",
+            "required": ["contract", "arguments"],
+            "additionalProperties": false,
+            "properties": {
+              "contract": { "type": "string" },
+              "arguments": { "type": "array", "items": { "$ref": "#/$defs/number" } }
+            }
+          },
+          "initial": {
+            "type": "object",
+            "required": ["registers", "flags", "memory"],
+            "additionalProperties": false,
+            "properties": {
+              "registers": { "$ref": "#/$defs/registers" },
+              "flags": { "$ref": "#/$defs/flags" },
+              "memory": { "$ref": "#/$defs/memory" }
+            }
+          },
+          "expected": {
+            "type": "object",
+            "required": ["registers", "flags", "memory", "events", "outcome"],
+            "additionalProperties": false,
+            "properties": {
+              "registers": { "$ref": "#/$defs/registers" },
+              "flags": { "$ref": "#/$defs/flags" },
+              "memory": { "$ref": "#/$defs/memory" },
+              "events": { "type": "array", "items": { "$ref": "#/$defs/event" } },
+              "outcome": { "enum": ["returned", "trapped", "aborted", "budget-exceeded"] },
+              "cycles": { "$ref": "#/$defs/count" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "number": { "type": "string", "pattern": "^0x[0-9A-Fa-f]{1,16}$" },
+    "hex": { "type": "string", "pattern": "^([0-9A-Fa-f]{2})*$" },
+    "count": { "type": "integer", "minimum": 0 },
+    "eventKind": { "enum": ["device", "external", "trap", "memory-write", "return"] },
+    "registers": { "type": "object", "additionalProperties": { "$ref": "#/$defs/number" } },
+    "flags": { "type": "object", "additionalProperties": { "type": ["boolean", "null"] } },
+    "memory": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["address", "hex"],
+        "additionalProperties": false,
+        "properties": {
+          "address": { "$ref": "#/$defs/number" },
+          "hex": { "$ref": "#/$defs/hex" }
+        }
+      }
+    },
+    "event": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": { "kind": { "$ref": "#/$defs/eventKind" } },
+      "oneOf": [
+        {
+          "required": ["address", "hex"],
+          "additionalProperties": false,
+          "properties": { "kind": { "const": "memory-write" }, "address": { "$ref": "#/$defs/number" }, "hex": { "$ref": "#/$defs/hex" } }
+        },
+        {
+          "required": ["space", "address", "width", "write", "value"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "const": "device" },
+            "space": { "type": "string" },
+            "address": { "$ref": "#/$defs/number" },
+            "width": { "type": "integer", "minimum": 1 },
+            "write": { "type": "boolean" },
+            "value": { "$ref": "#/$defs/number" }
+          }
+        },
+        {
+          "required": ["symbol", "arguments"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "const": "external" },
+            "symbol": { "type": "string" },
+            "abi": { "type": "string" },
+            "arguments": { "type": "array", "items": { "$ref": "#/$defs/number" } },
+            "result": { "$ref": "#/$defs/number" }
+          }
+        },
+        {
+          "required": ["trap"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "const": "trap" },
+            "trap": { "type": "string" },
+            "vector": { "$ref": "#/$defs/count" },
+            "at": { "$ref": "#/$defs/number" }
+          }
+        },
+        {
+          "additionalProperties": false,
+          "properties": { "kind": { "const": "return" }, "value": { "$ref": "#/$defs/number" } }
+        }
+      ]
+    }
+  }
+}

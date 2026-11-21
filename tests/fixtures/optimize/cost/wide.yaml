@@ -1,0 +1,19 @@
+# A test profile of a wide machine: a native rotate, 128-bit SIMD, SWAR in 64-bit registers and four
+# threads. The numbers are made up for the tests of the cost model (#155); they are no measurement.
+profile: wide
+unknownTripCount: 16
+default: { latency: 2, size: 2 }
+operations:
+  RotateLeft.u32:
+    native: { latency: 1, size: 1 }
+    sequence: { latency: 3, size: 3 }
+    helper:
+      call: { latency: 12, size: 2 }
+      body: { latency: 0, size: 20 }
+  Xor.u8:
+    native: { latency: 1, size: 1 }
+loop: { overhead: 2 }
+swar: { registerBits: 64, setup: 4, perBlock: 1 }
+simd:
+  - { width: 128, setup: 4, perBlock: 1 }
+threads: { count: 4, spawn: 10000 }

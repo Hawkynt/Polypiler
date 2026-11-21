@@ -124,6 +124,9 @@ public static partial class RustEmitter {
     private RsBlock ClosureBody(IrLambda lambda) {
       var breakables = this._breakables.ToList();
       this._breakables.Clear();
+      // A closure is called elsewhere: the try statements around it are none of its own.
+      var tries = this._tries.ToList();
+      this._tries.Clear();
       this._closureResults.Add(lambda.ReturnType);
       var statements = new List<RsStatement>();
       // A parameter the body assigns is bound again as one it may change.
@@ -132,6 +135,7 @@ public static partial class RustEmitter {
       this.Statements(lambda.Body.Statements, statements);
       this._closureResults.RemoveAt(this._closureResults.Count - 1);
       this._breakables.AddRange(breakables);
+      this._tries.AddRange(tries);
       return Tidy.Function(new RsBlock(statements, null), lambda.ReturnType == IrType.Void);
     }
 
@@ -262,7 +266,7 @@ public static partial class RustEmitter {
     };
 
     /// <summary>A value as an argument of a call or a function value: a function value shared, any other as it is.</summary>
-    private RsExpression Argument(IrExpr argument) => argument.Type.IsFunction ? this.FunctionValue(argument) : this.Expression(argument);
+    private RsExpression Argument(IrExpr argument) => argument.Type.IsFunction ? this.FunctionValue(argument) : argument.Type.IsString ? this.StringArgument(argument) : this.Expression(argument);
 
     /// <summary>
     /// A call of a function value: <c>f(a, b)</c>, a local function by its name. A value that may be
@@ -305,7 +309,7 @@ public static partial class RustEmitter {
         if (member.Kind != MemberKind.Static || this._hierarchy.Contains(member.Class))
           return this.Refuse("a method of a class as a function value without its object");
 
-        name = $"{this.StructName(member.Class)}::{member.Name}";
+        name = $"{this.ClassPath(member.Class)}::{member.Name}";
       }
 
       var function = this._module.Functions.First(candidate => candidate.Name == reference.Function);

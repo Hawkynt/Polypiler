@@ -48,6 +48,8 @@ public static partial class RustEmitter {
         }
         case IrCall when !borrowed:
           return this.Expression(value);
+        case IrFieldLoad { Target.Type.IsObject: true } load:
+          return new RsMethodCall(new RsMethodCall(this.FieldCell(load.Target, load.Field), "borrow", []), borrowed ? "as_deref" : "clone", []) { Type = value.Type };
         default:
           return this.Refuse("a borrow of an array that may be null and is made in place");
       }
@@ -73,6 +75,8 @@ public static partial class RustEmitter {
           var made = this.Checked(this.Expression(value), IrTrap.NullReference);
           return slice ? new RsReference(false, made) { Type = value.Type } : made;
         }
+        case IrFieldLoad { Target.Type.IsObject: true } load:
+          return this.FieldArray(load, false);
         default:
           return this.Refuse("an array that may be null of the form " + value.GetType().Name[2..]);
       }
@@ -84,6 +88,8 @@ public static partial class RustEmitter {
         return new RsLiteral(negated ? "false" : "true") { Type = IrType.Bool };
       if (!this.IsNullableArray(value))
         return value is IrLocalRef ? new RsLiteral(negated ? "true" : "false") { Type = IrType.Bool } : this.Refuse("a test for null of an array that is made");
+      if (value is IrFieldLoad { Target.Type.IsObject: true } load)
+        return new RsMethodCall(new RsMethodCall(this.FieldCell(load.Target, load.Field), "borrow", []), negated ? "is_some" : "is_none", []) { Type = IrType.Bool };
 
       return this.Bound(value, place => new RsMethodCall(this.Receiver(place), negated ? "is_some" : "is_none", []) { Type = IrType.Bool });
     }

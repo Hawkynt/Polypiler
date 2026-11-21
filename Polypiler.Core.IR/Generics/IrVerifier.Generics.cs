@@ -31,6 +31,18 @@ public static partial class IrVerifier {
 
       foreach (var parameter in origin.Template?.Parameters ?? [])
         open.TryAdd(parameter.Declaration!, origin);
+
+      if (origin.ClassTemplate is { Class: { } template } generic) {
+        Require(!module.Types.Contains(template), $"the class {template.Name} of the template of {origin.Display} is a type of the module");
+        Require(module.Types.FirstOrDefault(type => type.Name == name) is IrClassType { IsDefined: true } instance && instance.Fields.Count == template.Fields.Count
+            && instance.Constructors.Count == template.Constructors.Count && instance.Methods.Count == template.Methods.Count,
+          $"its fields, constructors and methods are not those of the template {template.Name}");
+        Require(generic.Members.Select(member => member.Function.Name).SequenceEqual(template.Functions)
+            && generic.Members.All(member => member.Parameters.SequenceEqual(generic.Parameters)),
+          $"the templates of the members of {template.Name} are not one per function of it, with its type parameters");
+        foreach (var parameter in generic.Parameters.Where(parameter => parameter.Declaration is not null))
+          open.TryAdd(parameter.Declaration!, origin);
+      }
     }
 
     void Closed(string member, IrType type) {

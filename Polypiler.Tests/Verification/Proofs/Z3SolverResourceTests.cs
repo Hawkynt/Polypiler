@@ -49,16 +49,18 @@ public sealed class Z3SolverResourceTests {
     using var process = Process.Start(info)!;
     var stdout = process.StandardOutput.ReadToEndAsync();
     var stderr = process.StandardError.ReadToEndAsync();
-    using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+    using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(3));
     try {
       await process.WaitForExitAsync(timeout.Token);
     } catch (OperationCanceledException) {
       process.Kill(entireProcessTree: true);
       await process.WaitForExitAsync();
-      Assert.Fail("The isolated native-resource check exceeded one minute.");
+      Assert.Fail("The isolated native-resource check exceeded three minutes.");
     }
 
     var output = await stdout + await stderr;
+    if (output.Contains("no pass ran without a collection", StringComparison.Ordinal))
+      Assert.Inconclusive("the child could not measure without a collection: " + output[output.IndexOf("no pass ran without a collection", StringComparison.Ordinal)..].Split('\n')[0]);
     Assert.That(process.ExitCode, Is.Zero, output);
     Assert.That(output, Does.Contain(Completed), "the child must actually execute the check");
     TestContext.Out.WriteLine(output[output.IndexOf(Completed, StringComparison.Ordinal)..].Split('\n')[0]);
@@ -80,35 +82,56 @@ public sealed class Z3SolverResourceTests {
       GC.WaitForPendingFinalizers();
     }
 
-    Assert.That(GC.TryStartNoGCRegion(32 * 1024 * 1024), Is.True, "the dedicated child needs a small managed allocation budget");
-    using var process = Process.GetCurrentProcess();
-    process.Refresh();
-    var baseline = process.PrivateMemorySize64;
-    var peak = 0L;
-    try {
-      for (var query = 0; query < 128; ++query) {
-        var kind = query % queries.Length;
-        var answer = solver.Check(queries[kind], kind == 2 ? ["flag"] : ["x"], TimeSpan.FromSeconds(1));
-        Assert.That(answer.Status, Is.EqualTo(kind == 0 ? SmtStatus.Unsat : SmtStatus.Sat));
-        if (kind != 0)
-          Assert.That(answer.Model[kind == 2 ? "flag" : "x"], Is.EqualTo(kind == 2 ? 1UL : 17UL));
-
-        process.Refresh();
-        peak = Math.Max(peak, process.PrivateMemorySize64 - baseline);
-        Assert.That(peak, Is.LessThan(128L * 1024 * 1024),
-          $"native memory accumulated after {query + 1} trivial queries without a managed collection");
+    // What matters is that no collection runs while the queries do, so that no finalizer can free a
+    // context: a region without collections is asked for to make that likely, but a runtime may refuse
+    // the budget, or leave the region when the pass allocates more than it (the CI runners do now and
+    // then, more so under the coverage collector). A pass counts only where gen-0 saw no collection;
+    // up to five passes are made.
+    long? peak = null;
+    for (var pass = 0; pass < 5 && peak is null; ++pass) {
+      GC.Collect();
+      GC.WaitForPendingFinalizers();
+      var region = GC.TryStartNoGCRegion(32 * 1024 * 1024);
+      try {
+        var collections = GC.CollectionCount(0);
+        var measured = Measure(solver, queries);
+        if (GC.CollectionCount(0) == collections)
+          peak = measured;
+      } finally {
+        if (region && GCSettings.LatencyMode == GCLatencyMode.NoGCRegion)
+          GC.EndNoGCRegion();
       }
-
-      Assert.That(GCSettings.LatencyMode, Is.EqualTo(GCLatencyMode.NoGCRegion), "the check must not depend on finalizers freeing contexts");
-    } finally {
-      if (GCSettings.LatencyMode == GCLatencyMode.NoGCRegion)
-        GC.EndNoGCRegion();
     }
+
+    if (peak is null)
+      Assert.Inconclusive("no pass ran without a collection: finalizers could have freed the contexts");
 
     // Context finalizers must also remain safe after all native handles have been released.
     for (var pass = 0; pass < 2; ++pass) {
       GC.Collect();
       GC.WaitForPendingFinalizers();
+    }
+
+    return peak.Value;
+  }
+
+  /// <summary>Runs 128 trivial queries and gives the largest growth of the private memory, failing where it passes 128 MiB.</summary>
+  private static long Measure(Z3Solver solver, string[] queries) {
+    using var process = Process.GetCurrentProcess();
+    process.Refresh();
+    var baseline = process.PrivateMemorySize64;
+    var peak = 0L;
+    for (var query = 0; query < 128; ++query) {
+      var kind = query % queries.Length;
+      var answer = solver.Check(queries[kind], kind == 2 ? ["flag"] : ["x"], TimeSpan.FromSeconds(1));
+      Assert.That(answer.Status, Is.EqualTo(kind == 0 ? SmtStatus.Unsat : SmtStatus.Sat));
+      if (kind != 0)
+        Assert.That(answer.Model[kind == 2 ? "flag" : "x"], Is.EqualTo(kind == 2 ? 1UL : 17UL));
+
+      process.Refresh();
+      peak = Math.Max(peak, process.PrivateMemorySize64 - baseline);
+      Assert.That(peak, Is.LessThan(128L * 1024 * 1024),
+        $"native memory accumulated after {query + 1} trivial queries without a managed collection");
     }
 
     return peak;

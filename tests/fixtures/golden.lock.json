@@ -512,6 +512,16 @@
       "bytes": 109716
     },
     {
+      "path": "tests/fixtures/backend/golden/exceptions/Regions.cs.csharp.golden",
+      "sha256": "0b59f6cb6d1e2e4ea968751ad4c0957afdecd4b1a7f16686ae14463fac2cab69",
+      "bytes": 120378
+    },
+    {
+      "path": "tests/fixtures/backend/golden/exceptions/Regions.cs.javascript.golden",
+      "sha256": "d4b992c07d8b9db50ba717fa9b6e3dd02cb96c19738b578278d9d469c46f8dc3",
+      "bytes": 1004
+    },
+    {
       "path": "tests/fixtures/backend/golden/exceptions/Traps.cs.csharp.golden",
       "sha256": "5b9465e04573606ea1fc27e66fda3644949860d2d3ef1e8e2f6816e1675a43c1",
       "bytes": 74518
@@ -6810,6 +6820,11 @@
       "path": "tests/fixtures/corpus/cipher/stream/zuc256.kat.json",
       "sha256": "8a0fcabeea439132aeff3b5960fdfdbf95f04ad1de1dcb2373bee9c34ad47b86",
       "bytes": 1595
+    },
+    {
+      "path": "tests/fixtures/native/mach-interp/golden/routines.expected.txt",
+      "sha256": "8691d07f7195428dfb12803fafcb2c73ad0356c143d6ea552a77353ba08eb8ed",
+      "bytes": 1210
     },
     {
       "path": "tests/fixtures/prototype/js/recorded/adler32.txt",

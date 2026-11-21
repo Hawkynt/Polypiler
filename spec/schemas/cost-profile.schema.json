@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/cost-profile.schema.json",
+  "title": "Polypiler target cost profile",
+  "description": "spec/targets/<language>/<profile>/cost.yaml, written in YAML: the abstract integer costs the cost model ranks equivalent forms by (PRD §4.8, §23.5; spec/targets/README.md). A form the file does not list is unavailable. The loader TargetCostProfile also requires every operation name to be a member of IrBinaryOp, IrUnaryOp or IrIntrinsicOp.",
+  "type": "object",
+  "required": ["profile", "unknownTripCount", "default", "loop"],
+  "additionalProperties": false,
+  "properties": {
+    "profile": { "type": "string", "minLength": 1 },
+    "unknownTripCount": { "$ref": "#/$defs/count" },
+    "default": { "$ref": "#/$defs/cost" },
+    "operations": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[A-Z][A-Za-z0-9]*\\.(bool|i8|u8|i16|u16|i32|u32|i64|u64|f32|f64)$": { "$ref": "#/$defs/forms" }
+      }
+    },
+    "loop": {
+      "type": "object",
+      "required": ["overhead"],
+      "additionalProperties": false,
+      "properties": { "overhead": { "$ref": "#/$defs/count" } }
+    },
+    "swar": {
+      "type": "object",
+      "required": ["registerBits", "setup", "perBlock"],
+      "additionalProperties": false,
+      "properties": {
+        "registerBits": { "$ref": "#/$defs/positive" },
+        "setup": { "$ref": "#/$defs/count" },
+        "perBlock": { "$ref": "#/$defs/count" }
+      }
+    },
+    "simd": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["width", "setup", "perBlock"],
+        "additionalProperties": false,
+        "properties": {
+          "width": { "$ref": "#/$defs/positive" },
+          "setup": { "$ref": "#/$defs/count" },
+          "perBlock": { "$ref": "#/$defs/count" }
+        }
+      }
+    },
+    "threads": {
+      "type": "object",
+      "required": ["count", "spawn"],
+      "additionalProperties": false,
+      "properties": {
+        "count": { "$ref": "#/$defs/positive" },
+        "spawn": { "$ref": "#/$defs/count" }
+      }
+    },
+    "gpu": { "$ref": "#/$defs/accelerator" },
+    "npu": { "$ref": "#/$defs/accelerator" }
+  },
+  "$defs": {
+    "count": { "type": "integer", "minimum": 0, "maximum": 9223372036854775807 },
+    "positive": { "type": "integer", "minimum": 1, "maximum": 9223372036854775807 },
+    "cost": {
+      "type": "object",
+      "required": ["latency", "size"],
+      "additionalProperties": false,
+      "properties": {
+        "latency": { "$ref": "#/$defs/count" },
+        "size": { "$ref": "#/$defs/count" },
+        "memory": { "$ref": "#/$defs/count" },
+        "allocations": { "$ref": "#/$defs/count" }
+      }
+    },
+    "forms": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "native": { "$ref": "#/$defs/cost" },
+        "sequence": { "$ref": "#/$defs/cost" },
+        "helper": {
+          "type": "object",
+          "required": ["call", "body"],
+          "additionalProperties": false,
+          "properties": {
+            "call": { "$ref": "#/$defs/cost" },
+            "body": { "$ref": "#/$defs/cost" }
+          }
+        }
+      }
+    },
+    "accelerator": {
+      "type": "object",
+      "required": ["transfer", "perElement"],
+      "additionalProperties": false,
+      "properties": {
+        "transfer": { "$ref": "#/$defs/count" },
+        "perElement": { "$ref": "#/$defs/count" }
+      }
+    }
+  }
+}

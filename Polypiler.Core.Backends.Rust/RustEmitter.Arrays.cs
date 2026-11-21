@@ -45,7 +45,7 @@ public static partial class RustEmitter {
       if (parameter.Type.IsLazySequence)
         return this.SequenceParameterType(parameter.Type);
       if (parameter.Type.IsString)
-        return BorrowedString;
+        return this._stringNulls.MayBeNull(function.Name, parameter) ? NullableString : BorrowedString;
       if (IsError(parameter.Type))
         return ((RsPath)this.Refuse("an exception passed as a value")).Name;
       if (this.IsPlain(parameter.Type))
@@ -73,6 +73,8 @@ public static partial class RustEmitter {
         return ((RsPath)this.Refuse("an exception returned as a value")).Name;
       if (function.ReturnType.IsObject)
         return this.ObjectType(function.ReturnType, this._nullness.ReturnsNull(function.Name));
+      if (function.ReturnType.IsString && this._stringNulls.ReturnsNull(function.Name))
+        return NullableString;
       if (function.ReturnType.IsCollection)
         return this.CollectionType(function.ReturnType);
       if (!function.ReturnType.IsArray)
@@ -95,6 +97,8 @@ public static partial class RustEmitter {
         return ErrorType;
       if (local.Type.IsObject)
         return this.ObjectType(local.Type, this.MayBeNull(local));
+      if (local.Type.IsString && this.IsNullableString(local))
+        return NullableString;
       if (local.Type.IsView)
         return this.ViewType(local.Type, this.WritesView(local));
       if (local.Type.IsCollection)
@@ -141,9 +145,11 @@ public static partial class RustEmitter {
     /// </summary>
     private RsExpression Vector(IrExpr array, bool move = true) {
       switch (array) {
+        case IrGlobalRef { Global: var global } when this.IsUnwrittenTable(global):
+          return this.LockedCopy(global);
         case IrGlobalRef:
           return this.Refuse("a global array used as a whole");
-        case IrCollection { Op: IrCollectionOp.ListCopyToArray }:
+        case IrCollection { Op: IrCollectionOp.ListCopyToArray or IrCollectionOp.ListGet }:
           return this.Expression(array);
         case IrLocalRef { Local: var alias } when this.IsFieldAlias(alias):
           // A copy would part the variable from the field, which .NET shares with whoever takes it.
@@ -187,10 +193,14 @@ public static partial class RustEmitter {
       switch (array) {
         case IrGlobalRef:
           return this.Refuse("a global array used as a whole");
+        case IrCollection { Op: IrCollectionOp.ListGet } element:
+          return new RsReference(mutable, this.ListElement(element, mutable)) { Type = array.Type };
         case IrLocalRef { Local: var alias } when this.IsFieldAlias(alias):
           return this.FieldAliasSlice(alias, mutable);
         case IrLocalRef or IrBind or IrCall when this.IsNullableArray(array):
           return mutable ? this.Refuse("an array that may be null and is written") : this.NonNullArray(array, true);
+        case IrFieldLoad { Target.Type.IsObject: true } load when !mutable && this._arrayNulls.MayBeNull(load.Field):
+          return this.FieldArray(load, false);
         case IrFieldLoad { Target.Type.IsObject: true } load:
           return new RsReference(mutable, this.FieldArray(load, mutable)) { Type = array.Type };
         case IrFieldLoad { Target.Type.IsStruct: true } load:
@@ -219,6 +229,7 @@ public static partial class RustEmitter {
 
     /// <summary>An array as the target of an index or a method: a variable or a table as it is, a literal as an array, anything else borrowed.</summary>
     private RsExpression ArrayTarget(IrExpr array, bool mutable = false) => array switch {
+      IrCollection { Op: IrCollectionOp.ListGet } element => this.ListElement(element, mutable),
       IrLocalRef or IrBind or IrCall when this.IsNullableArray(array) => mutable ? this.Refuse("an array that may be null and is written") : this.NonNullArray(array, false),
       IrLocalRef reference => new RsPath(this._locals[reference.Local]) { Type = array.Type },
       IrFieldLoad { Target.Type.IsObject: true } load => this.FieldArray(load, mutable),
@@ -261,7 +272,8 @@ public static partial class RustEmitter {
     }
 
     /// <summary>The zero of an element type: <c>0</c>, <c>0.0</c>, <c>false</c>.</summary>
-    private RsExpression Zero(IrType element) => element.IsFunction ? new RsPath("None")
+    private RsExpression Zero(IrType element) => this._standIns.TryGetValue(element, out var parameter) ? new RsCall(new RsPath(parameter + "::default"), []) { Type = element }
+      : element.IsFunction ? new RsPath("None")
       : element.IsStruct || element.IsEnum
       ? new RsCall(new RsPath(this.Type(element) + "::default"), []) { Type = element }
       : TypeName(element) is null ? this.Refuse($"an array of {element}") : Literal(new IrConst(element, 0)) with { Type = null };
@@ -508,6 +520,10 @@ public static partial class RustEmitter {
       return new RsMethodCall(this.ArrayTarget(array, true), "fill", [value]);
     }
 
+    /// <summary>Whether a parameter of a function of the module is a string that may be null, which takes an <c>Option&lt;Vec&lt;u16&gt;&gt;</c>.</summary>
+    private bool TakesNullString(string function, int index)
+      => this._module.Functions.FirstOrDefault(candidate => candidate.Name == function) is { } target && index < target.Parameters.Count && this._stringNulls.MayBeNull(function, target.Parameters[index]);
+
     /// <summary>The arguments of a call: an array borrowed as the callee's parameter takes it, refused where one array is passed twice and written.</summary>
     private IReadOnlyList<RsExpression> Arguments(IrCall call) {
       if (!this._arrays.TryGetValue(call.Function, out var callee))
@@ -550,7 +566,7 @@ public static partial class RustEmitter {
         }
 
         if (argument.Type.IsString) {
-          arguments.Add(this.StringArgument(argument));
+          arguments.Add(this.TakesNullString(call.Function, index) ? this.NullableStringValue(argument) : this.StringArgument(argument));
           continue;
         }
 

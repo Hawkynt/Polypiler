@@ -252,6 +252,15 @@ public sealed record RsConst(string Name, string Visibility, string TypeName, Rs
   /// <summary>Whether the item is a <c>static</c>, one place in memory, rather than a <c>const</c> copied wherever it is named.</summary>
   public bool IsStatic { get; init; }
 
+  /// <summary>
+  /// Whether the item is a static of each thread, <c>thread_local! { static NAME: T = value; }</c>, made
+  /// on its first use in a thread: module state of a type no <c>static</c> may hold, an <c>Rc</c>.
+  /// </summary>
+  public bool IsThreadLocal { get; init; }
+
+  /// <summary>Whether the value of a static of each thread is a constant, <c>const { value }</c>, which needs no check of its first use (Rust 1.59).</summary>
+  public bool IsConstInitialized { get; init; }
+
 }
 
 /// <summary><c>Name { a: x, b }</c>: a struct built from the values of its fields, a field named like its value's variable written once.</summary>

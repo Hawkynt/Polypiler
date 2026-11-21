@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/binary-manifest.schema.json",
+  "title": "Polypiler binary input manifest",
+  "description": "What a binary is, where its code starts and what its entries promise (PRD 18.2), read by BinaryManifest.Load. Addresses are strings 0x and 1 to 16 hexadecimal digits; every range excludes its end. Rules the schema cannot state, which the loader enforces as PLY4055: entry names are unique; a range ends after it starts; a buffer names parameters its entry's abi has; a referenced memory map is a file of the shape of the inline one.",
+  "type": "object",
+  "required": ["schemaVersion", "image", "isa", "mode", "entries"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "image": {
+      "type": "object",
+      "required": ["path", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[0-9A-Fa-f]{64}$" }
+      }
+    },
+    "container": { "enum": ["elf", "pe", "raw"], "description": "Omitted: detected by the file's magic." },
+    "isa": { "type": "string", "minLength": 1, "description": "The ID of a machine profile under spec/machine." },
+    "mode": { "type": "string", "minLength": 1 },
+    "byteOrder": { "enum": ["little", "big"] },
+    "cpuFeatures": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "loadAddress": { "$ref": "#/$defs/address" },
+    "entries": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/entry" } },
+    "codeRanges": { "type": "array", "items": { "$ref": "#/$defs/range" }, "description": "Decoding is restricted to these bytes; empty or omitted for no restriction." },
+    "dataRanges": { "type": "array", "items": { "$ref": "#/$defs/range" } },
+    "relocations": {
+      "oneOf": [
+        { "const": "from-container" },
+        { "type": "array", "items": { "$ref": "#/$defs/relocation" } }
+      ]
+    },
+    "imports": { "type": "array", "items": { "$ref": "#/$defs/import" } },
+    "stack": {
+      "type": "object",
+      "required": ["bytes"],
+      "additionalProperties": false,
+      "properties": { "bytes": { "type": "integer", "minimum": 1 } }
+    },
+    "memoryMap": {
+      "oneOf": [
+        { "type": "string", "minLength": 1, "description": "A file, relative to the manifest, holding an object of the inline shape." },
+        { "$ref": "#/$defs/memoryMap" }
+      ]
+    },
+    "observe": { "description": "The observation projection, as in a machine vector file; kept as written." },
+    "referenceRunner": { "type": "string", "minLength": 1, "description": "A toolchain key of tooling/toolchains.lock." },
+    "acceptHeuristicFunctions": { "type": "boolean", "default": false }
+  },
+  "$defs": {
+    "address": { "type": "string", "pattern": "^0x[0-9A-Fa-f]{1,16}$" },
+    "abi": { "type": "string", "pattern": "^\\s*([A-Za-z_][A-Za-z0-9_]*)\\s*\\(\\s*([A-Za-z_][A-Za-z0-9_*]*(?:\\s*,\\s*[A-Za-z_][A-Za-z0-9_*]*)*)?\\s*\\)\\s*(?:->\\s*([A-Za-z_][A-Za-z0-9_*]*)\\s*)?$" },
+    "range": {
+      "type": "object",
+      "required": ["start", "end"],
+      "additionalProperties": false,
+      "properties": { "start": { "$ref": "#/$defs/address" }, "end": { "$ref": "#/$defs/address" } }
+    },
+    "entry": {
+      "type": "object",
+      "required": ["name", "address", "abi"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "address": { "$ref": "#/$defs/address" },
+        "abi": { "$ref": "#/$defs/abi" },
+        "buffers": { "type": "array", "items": { "$ref": "#/$defs/buffer" } }
+      }
+    },
+    "buffer": {
+      "type": "object",
+      "required": ["parameter", "length", "access"],
+      "additionalProperties": false,
+      "properties": {
+        "parameter": { "type": "integer", "minimum": 0 },
+        "length": {
+          "oneOf": [
+            { "type": "object", "required": ["parameter"], "additionalProperties": false, "properties": { "parameter": { "type": "integer", "minimum": 0 } } },
+            { "type": "object", "required": ["bytes"], "additionalProperties": false, "properties": { "bytes": { "type": "integer", "minimum": 1 } } }
+          ]
+        },
+        "access": { "enum": ["read", "write", "readwrite"] }
+      }
+    },
+    "relocation": {
+      "type": "object",
+      "required": ["address", "kind"],
+      "additionalProperties": false,
+      "properties": {
+        "address": { "$ref": "#/$defs/address" },
+        "kind": { "enum": ["absolute", "pc-relative", "import-slot", "base-relative"] },
+        "symbol": { "type": "string", "minLength": 1 },
+        "addend": { "type": "integer" }
+      }
+    },
+    "import": {
+      "type": "object",
+      "required": ["slot", "symbol"],
+      "additionalProperties": false,
+      "properties": {
+        "slot": { "$ref": "#/$defs/address" },
+        "symbol": { "type": "string", "minLength": 1 },
+        "library": { "type": "string", "minLength": 1 },
+        "abi": { "$ref": "#/$defs/abi" }
+      }
+    },
+    "memoryMap": {
+      "type": "object",
+      "required": ["regions"],
+      "additionalProperties": false,
+      "properties": {
+        "regions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "start", "end", "kind"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "start": { "$ref": "#/$defs/address" },
+              "end": { "$ref": "#/$defs/address" },
+              "kind": { "enum": ["ram", "rom", "stack", "mmio", "unmapped"] },
+              "executable": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

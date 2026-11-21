@@ -766,6 +766,33 @@ codes:
     area: ir
     owner: PROTOTYPE
     surfaces: "standard error of polypiler translate, as 'error PLY0101: <reason>' with the reason that the executable carries no float-implementations resource or the reason IrModuleFormat refuses its bytes, when a strict float translation needs the float-implementations module the executable embeds and it is absent or does not read back"
+  - code: PLY0115
+    severity: error
+    exit: InternalError
+    title: instruction without origin
+    message: "instruction <number> (<kind>) in '@<function>' has no origin and is not marked synthetic"
+    rule: ir.sourcemap.origin
+    area: ir
+    owner: IR-SOURCEMAP
+    surfaces: "IrVerifier.Verify and OriginRule.Check, for a statement that is no block, in a module that declares its sources (IrModule.Sources), whose Origins are empty; a module that declares no sources is exempt"
+  - code: PLY0116
+    severity: error
+    exit: InvalidSource
+    title: malformed location
+    message: "malformed location '<text>'"
+    rule: ir.sourcemap.syntax
+    area: ir
+    owner: IR-SOURCEMAP
+    surfaces: "Origin.TryParse for a suffix that is not !loc(s:l:c-l:c), !addr(s:0x<hex>+n) or !synthetic(\"<pass>\") or describes no span (a line or column below 1, an end before the start, a negative offset); SourceArtifact.TryParseTable for a sources table or entry that is malformed, out of order or names an absolute path; IrVerifier.Verify for such an origin or source in a module"
+  - code: PLY0117
+    severity: error
+    exit: InvalidSource
+    title: location names an undeclared source
+    message: "location refers to source <index>, but the module declares <count> sources"
+    rule: ir.sourcemap.source
+    area: ir
+    owner: IR-SOURCEMAP
+    surfaces: "Origin.TryParse and IrVerifier.Verify, for a !loc or !addr whose source index is not below the number of sources the module declares"
   - code: PLY0250
     severity: error
     exit: InternalError
@@ -829,6 +856,50 @@ codes:
     area: types
     owner: INT-REGISTRY
     surfaces: "the IntrinsicRegistryException of IntrinsicRegistryBuilder.Build when the lowersTo lists of the registered contracts form a cycle; the path lists the intrinsics, 'A -> B -> A'"
+  - code: PLY0300
+    severity: error
+    exit: InternalError
+    title: no provider of a required fact domain
+    message: "no analysis provides facts of domain '<domain>'"
+    rule: analysis.facade.require
+    area: optimization
+    owner: ANA-FACADE
+    surfaces: "the FactException of ValueFacts.Require when no provider of the domain is registered; a defect of the pass that required it"
+  - code: PLY0301
+    severity: info
+    title: analysis stopped at its budget
+    message: "analysis '<domain>' stopped at its budget in '<function>'; affected facts are Unknown"
+    rule: analysis.facade.budget
+    area: optimization
+    owner: ANA-FACADE
+    surfaces: "ValueFacts.Diagnostics, once per domain whose provider ran out of its budget; every fact it would have answered is Unknown"
+  - code: PLY0302
+    severity: error
+    exit: InternalError
+    title: unsound fact
+    message: "unsound fact: <domain> claims <fact> for <value> at <point>, observed <observed>"
+    rule: analysis.facade.soundness
+    area: optimization
+    owner: ANA-FACADE
+    surfaces: "the diagnostics of FactChecker.Run when a run of the interpreter observes a value a queried fact excludes, and the FactException of ValueFacts.Decide when two providers decide a comparison differently"
+  - code: PLY0355
+    severity: error
+    exit: UnsupportedConstruct
+    title: no cost profile for the target profile
+    message: "target profile '<language>/<profile>' has no cost profile"
+    rule: opt-cost.profile-missing
+    area: optimization
+    owner: OPT-COST
+    surfaces: "the CostProfileException of TargetCostProfile.ForTarget and CostModel.ForTarget when spec/targets/<language>/<profile>/cost.yaml does not exist; the cost model never falls back to a default profile"
+  - code: PLY0356
+    severity: error
+    exit: InvalidSource
+    title: cost profile malformed
+    message: "cost profile '<path>': <key>: <problem>"
+    rule: opt-cost.profile-invalid
+    area: optimization
+    owner: OPT-COST
+    surfaces: "the CostProfileException of TargetCostProfile.Load and Parse, at the line and column of the offending node: invalid YAML, a missing required key such as default, a negative or non-integer number, an unknown key, or an operation name the IR's operator enums and scalar types do not know"
   - code: PLY0800
     severity: error
     exit: UnsupportedConstruct
@@ -1657,3 +1728,242 @@ codes:
     area: tokenized-basic
     owner: FMT-GWBASIC-ORACLE
     surfaces: "the PcBasicException of a conversion to ASCII or to a token file, and the diagnostics of a PcBasicRun, when PC-BASIC exited non-zero, hit a runner limit (the cause names the runner's PLY0031, PLY0032 or PLY0033), wrote no conversion, or wrote an empty one for an input that is not empty"
+  - code: PLY4000
+    severity: error
+    exit: InvalidSource
+    title: unknown machine register or flag
+    message: "'<name>' is not a register or flag of machine profile '<profile>'"
+    rule: machine.ir.storage
+    area: machine
+    owner: MACH-IR
+    surfaces: the diagnostics of MachineVerifier.Verify for a RegRead, RegWrite, FlagRead, FlagWrite or FlagUndef that names storage its module's profile does not declare
+  - code: PLY4001
+    severity: error
+    exit: InvalidSource
+    title: machine access of the wrong width
+    message: "'<instruction>' has type <type> but register '<register>' is <bits> bits wide"
+    rule: machine.ir.width
+    area: machine
+    owner: MACH-IR
+    surfaces: the diagnostics of MachineVerifier.Verify for a register access whose type is not as wide as the register
+  - code: PLY4002
+    severity: error
+    exit: InvalidSource
+    title: read of an undefined flag
+    message: "flag '<flag>' is read at <where> but is undefined after <undefined at>"
+    rule: machine.ir.undefined-flag
+    area: machine
+    owner: MACH-IR
+    surfaces: the diagnostics of MachineVerifier.Verify for a FlagRead that only a FlagUndef reaches on every path
+  - code: PLY4003
+    severity: error
+    exit: InvalidSource
+    title: machine profile missing or invalid
+    message: "'@<function>' uses machine operations but module '<module>' declares no machine profile; or: machine profile '<profile>': <reason>"
+    rule: machine.ir.profile
+    area: machine
+    owner: MACH-IR
+    surfaces: "the diagnostics of MachineVerifier.Verify for machine operations in a module without a machine line; the MachineException of IsaProfile.Load, ProfileLoader.Parse and MachineSyntax.Parse for a profile file that breaks a rule (duplicate name, unknown or cyclic parent, sub-register exceeding its parent, flag outside its register) or an unknown profile ID"
+  - code: PLY4004
+    severity: error
+    exit: InvalidSource
+    title: sub-register after normalization
+    message: "'<instruction>' is not allowed in '@<function>' after normalization to root registers"
+    rule: machine.ir.normalized
+    area: machine
+    owner: MACH-IR
+    surfaces: the diagnostics of MachineVerifier.Verify for a sub-register access in a function with the attribute root-registers
+  - code: PLY4005
+    severity: error
+    exit: InvalidSource
+    title: malformed MachineIR
+    message: "'@<function>' is not well-formed MachineIR: <problem>"
+    rule: machine.ir.well-formed
+    area: machine
+    owner: MACH-IR
+    surfaces: "the diagnostics of MachineVerifier.Verify for a block without a terminator or with an instruction after it, a duplicate label, an unknown jump target, a value used before its definition or defined twice, and operands or types an opcode does not take"
+  - code: PLY4006
+    severity: error
+    exit: InvalidSource
+    title: MachineIR text not valid
+    message: "MachineIR text is not valid: <problem>"
+    rule: machine.ir.syntax
+    area: machine
+    owner: MACH-IR
+    surfaces: the MachineException of MachineSyntax.Parse, naming the line
+  - code: PLY4009
+    severity: error
+    exit: InvalidSource
+    title: address ranges overlap
+    message: "address ranges '<a>' and '<b>' overlap at <address>"
+    rule: machine.regions.overlap
+    area: machine
+    owner: MACH-REGIONS
+    surfaces: the MachineException of new AddressMap and the diagnostics of AddressMap.Validate
+  - code: PLY4010
+    severity: warning
+    title: constant address outside every region
+    message: "'<instruction>' at <where> accesses constant address <address>, which no declared region covers; treated as unknown memory"
+    rule: machine.regions.uncovered
+    area: machine
+    owner: MACH-REGIONS
+    surfaces: the diagnostic sink of RegionClassifier.Classify and RegionClassifier.Annotate
+  - code: PLY4011
+    severity: error
+    exit: InvalidSource
+    title: address range invalid
+    message: "address range '<name>' ends before it starts; or: address range '<name>' exceeds the <bits>-bit address space of '<isa>'"
+    rule: machine.regions.range
+    area: machine
+    owner: MACH-REGIONS
+    surfaces: the MachineException of new AddressMap and the diagnostics of AddressMap.Validate
+  - code: PLY4025
+    severity: error
+    exit: InvalidSource
+    title: interrupt vector invalid
+    message: "interrupt vector <vector> is outside 0..<last> for machine profile '<profile>'; or: trap kind '<kind>' requires a vector"
+    rule: machine.trap.vector
+    area: machine
+    owner: MACH-TRAP
+    surfaces: the diagnostics of MachineVerifier.Verify for a MachineTrap whose vector lies outside the profile's interruptVectors, or a software interrupt without a vector
+  - code: PLY4026
+    severity: warning
+    title: software interrupt without a service contract
+    message: "software interrupt <vector> at <where> has no service contract; all registers and unknown memory are assumed read and written"
+    rule: machine.trap.contract
+    area: machine
+    owner: MACH-TRAP
+    surfaces: the diagnostics of MachineVerifier.Verify for a resuming software interrupt without service(...); MachineEffects then gives it the conservative summary
+  - code: PLY4030
+    severity: error
+    exit: EnvironmentError
+    title: machine vector file not valid
+    message: "machine vector file '<file>' is not valid: <reason>"
+    rule: machine.vectors.valid
+    area: machine
+    owner: MACH-TRACE
+    surfaces: "MachineVectorFile.Load and MachineVectorFile.Parse, for a machine vector file that cannot be read or breaks a rule; the reason ends in \"(rule: <rule>)\""
+  - code: PLY4031
+    severity: error
+    exit: SemanticMismatch
+    title: machine trace differs
+    message: "'<fixture>' vector '<vector>': <what> expected <expected>, actual <actual>"
+    rule: machine.trace.mismatch
+    area: machine
+    owner: MACH-TRACE
+    surfaces: TraceComparer.ToDiagnostic, for the first difference TraceComparer.Compare found between a reference trace and a trace under test
+  - code: PLY4032
+    severity: error
+    exit: EnvironmentError
+    title: observed storage not in the profile
+    message: "'<file>' observes '<name>', which machine profile '<profile>' does not define"
+    rule: machine.vectors.observed
+    area: machine
+    owner: MACH-TRACE
+    surfaces: MachineVectorFile.Load and MachineVectorFile.Parse, for an observe.registers or observe.flags entry the machine profile does not define
+  - code: PLY4033
+    severity: error
+    exit: EnvironmentError
+    title: reference reports unobserved events
+    message: "'<fixture>' vector '<vector>': the reference produced <count> event(s) of kind '<kind>' but the projection does not observe that kind"
+    rule: machine.trace.unobserved-events
+    area: machine
+    owner: MACH-TRACE
+    surfaces: TraceComparer.CheckReference, for each device, external or trap kind a reference trace has events of while the projection does not observe it
+  - code: PLY4034
+    severity: error
+    exit: UnsupportedConstruct
+    title: opaque instruction not interpretable
+    message: "opaque instruction <id> at <where> cannot be interpreted; or: <kind> trap <id> at <where> resumes but no trap model handles it"
+    rule: machine.interp.opaque
+    area: machine
+    owner: MACH-INTERP
+    surfaces: the Diagnostics of MachineInterpreter.Run with outcome Aborted for a resuming MachineTrap that no ITrapModel handles
+  - code: PLY4035
+    severity: error
+    exit: SemanticMismatch
+    title: undefined machine state read
+    message: "undefined flag '<flag>' is read at <where>; or: uninitialized register '<register>' is read at <where>; or: unwritten memory at <address> is read at <where>"
+    rule: machine.interp.undefined
+    area: machine
+    owner: MACH-INTERP
+    surfaces: the Diagnostics of MachineInterpreter.Run with outcome Aborted for a read of an undefined flag, an uninitialized register or unwritten memory
+  - code: PLY4036
+    severity: error
+    exit: SemanticMismatch
+    title: device model exhausted
+    message: "device model has no value for a <bits>-bit read of <space>:<address>"
+    area: machine
+    owner: MACH-INTERP
+    reserved: true
+  - code: PLY4037
+    severity: error
+    exit: UnsupportedConstruct
+    title: code write over a lifted instruction
+    message: "code write at <address> overlaps the lifted instruction at <instruction>"
+    area: machine
+    owner: MACH-INTERP
+    reserved: true
+  - code: PLY4038
+    severity: error
+    exit: SemanticMismatch
+    title: indirect jump outside its targets
+    message: "indirect jump at <where> went to <address>, which is not among its listed targets; or: indirect jump at <where> has unresolved targets"
+    rule: machine.interp.indirect-jump
+    area: machine
+    owner: MACH-INTERP
+    surfaces: the Diagnostics of MachineInterpreter.Run with outcome Aborted for an IndirectJump whose address is no listed target's origin, or whose targets are unresolved
+  - code: PLY4039
+    severity: error
+    exit: BudgetExceeded
+    title: machine interpretation over budget
+    message: "the interpretation of '@<function>' exceeded its budget of <steps> steps"
+    rule: machine.interp.budget
+    area: machine
+    owner: MACH-INTERP
+    surfaces: the Diagnostics of MachineInterpreter.Run with outcome BudgetExceeded
+  - code: PLY4055
+    severity: error
+    exit: EnvironmentError
+    title: binary manifest not valid
+    message: "binary manifest '<file>' is not valid: <reason>"
+    rule: machine.binary.manifest
+    area: machine
+    owner: MACH-BIN-MANIFEST
+    surfaces: "the failure of BinaryManifest.Load and BinaryManifest.Parse naming the broken rule (for example \"'isa' is required in the manifest\", \"unknown field '<name>' in <where>\", \"the manifest needs at least one entry\"); of RawBinaryCodec.Read for a missing 'byteOrder' or 'loadAddress'; and of ImageBuilder.Load for an isa without a machine profile when a catalog is given"
+  - code: PLY4056
+    severity: error
+    exit: EnvironmentError
+    title: image hash mismatch
+    message: "'<image>' has SHA-256 <actual>, the manifest expects <expected>"
+    rule: machine.binary.hash
+    area: machine
+    owner: MACH-BIN-MANIFEST
+    surfaces: "the failure of ImageBuilder.Load when the image's SHA-256 is not the manifest's image.sha256"
+  - code: PLY4057
+    severity: error
+    exit: EnvironmentError
+    title: manifest contradicted
+    message: "manifest states <field> '<value>' but <other> states '<other value>'"
+    rule: machine.binary.conflict
+    area: machine
+    owner: MACH-BIN-MANIFEST
+    surfaces: "the failure of ImageBuilder.Load for a container or machine profile that contradicts isa, mode, byteOrder or an import slot of the manifest; BinaryManifest.CheckAgainst for a command-line value, with exit UsageError"
+  - code: PLY4058
+    severity: error
+    exit: EnvironmentError
+    title: entry or range outside the image
+    message: "entry '<name>' at <address> is not inside executable code; or: range <start>..<end> lies outside the image"
+    rule: machine.binary.range
+    area: machine
+    owner: MACH-BIN-MANIFEST
+    surfaces: "the failure of ImageBuilder.Load for an entry outside an executable section or the code ranges, and as 'range <start>..<end> lies outside the image' for a code or data range no section holds"
+  - code: PLY4059
+    severity: error
+    exit: EnvironmentError
+    title: container not recognized
+    message: "'<file>' is not a recognized container; give the manifest field 'container' or use a raw profile"
+    rule: machine.binary.container
+    area: machine
+    owner: MACH-BIN-MANIFEST
+    surfaces: "the failure of ImageBuilder.Load and BinaryCodecRegistry.Select for a file whose magic no registered codec claims; as \"'<file>' is a <format> file, which no registered codec reads; ...\" for a known container (ELF, PE, Mach-O, Mach-O universal) and as \"'<file>' is declared as container '<id>', which no registered codec reads; ...\" for a manifest container without a codec"

@@ -14,6 +14,7 @@ public static class OptionRules {
 
   private static readonly ConditionalWeakTable<Option, string[]> _allowed = [];
   private static readonly ConditionalWeakTable<Command, List<(Option First, Option Second)>> _exclusive = [];
+  private static readonly ConditionalWeakTable<Option, object> _repeatOnly = [];
 
   /// <summary>Restricts an option to a set of values; another value is <c>PLY0003</c> naming them in this order.</summary>
   /// <typeparam name="T">The type of the option.</typeparam>
@@ -45,6 +46,12 @@ public static class OptionRules {
     lock (pairs)
       pairs.Add((first, second));
   }
+
+  /// <summary>Marks a list option repeat-only, as its contributor declared it: one value per occurrence, never split at commas.</summary>
+  internal static void MarkRepeatOnly(Option option) => _repeatOnly.AddOrUpdate(option, _repeatOnly);
+
+  /// <summary>Whether an option was marked repeat-only.</summary>
+  internal static bool IsRepeatOnly(Option option) => _repeatOnly.TryGetValue(option, out _);
 
   /// <summary>The values an option allows, or <see langword="null"/> when it takes any.</summary>
   internal static IReadOnlyList<string>? Allowed(Option option) => _allowed.TryGetValue(option, out var values) ? values : null;

@@ -276,7 +276,15 @@ parser of the prototype is the fallback and this section is superseded.
 - **An option on a command of another area** is registered through the option registry, never by
   editing the command. Its issue states: name, kind, set or sequence, default, allowed values, whether
   it is recorded, and the normal spelling of its value. A name already used by any command keeps the
-  meaning it has there.
+  meaning it has there. In code that is one `ICommandOptionContributor` (`Polypiler.Cli/Options/`),
+  listed in `Program.CreateContributions()`: it names its owner and commands, declares each option as
+  a `ContributedOption`, adds the options to the command, reads them into an `OptionBag` under keys
+  its area declares, and yields its part of the canonical command line. `OptionContributions.Add`
+  refuses a name outside the grammar, a global option, a declaration that does not match what is
+  configured, and an option the command or another owner already has, naming both owners. The help
+  lists contributed options under `Options from <owner>:`; an identifier for `--from` and `--to` is
+  one `IIdentifierContributor`. What is registered is [`docs/cli/registered-options.md`](../cli/registered-options.md),
+  generated from the code.
 - **A global option** needs an amendment of this ADR. It qualifies only if it applies to every command
   and changes reporting, never the result.
 - **Adding** a command, an option, an allowed value or an identifier is compatible. **Renaming or

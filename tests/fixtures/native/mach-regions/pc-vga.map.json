@@ -1,0 +1,8 @@
+{
+  "cpu": "test-m32",
+  "regions": [
+    { "name": "ram", "start": "0x00000", "end": "0x9FFFF", "kind": "ram" },
+    { "name": "vga", "start": "0xA0000", "end": "0xBFFFF", "kind": "mmio" },
+    { "name": "rom", "start": "0xF0000", "end": "0xFFFFF", "kind": "rom", "executable": true }
+  ]
+}

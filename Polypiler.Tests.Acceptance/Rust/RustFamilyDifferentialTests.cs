@@ -15,7 +15,7 @@ namespace Polypiler.Tests.Acceptance.Rust;
 
 /// <summary>
 /// The fixtures of the prototype's families through the Rust backend (#460, #462): bit operations,
-/// value records, strings, enums, numbers as text, classes, dispatch, generics, function values, optional values, module state, collections, exceptions, views,
+/// value records, strings, enums, numbers as text, classes, dispatch, generics, function values, optional values, module state, collections, exceptions (with finally blocks since #1414), views,
 /// floating-point views of bytes. Every fixture of a family that the backend writes is
 /// built by the pinned toolchain and called on the family's cases with overflow checks on and off;
 /// every outcome, the arrays a call was given included, must be what .NET computes of the original
@@ -119,6 +119,12 @@ public sealed class RustFamilyDifferentialTests {
     yield return new("exceptions/Classes", () => ExceptionFixtures.Imported("Classes"), () => [.. ExceptionFixtures.Calls().Where(call => call.File == "Classes").Select(call => call.Call)],
       call => PrototypeFixture.InvokedOutcome(ExceptionFixtures.Compiled("ClassesDemo", call.Method), call));
 
+    yield return new("exceptions/Regions", () => ExceptionFixtures.Imported("Regions"), () => [.. ExceptionFixtures.Calls().Where(call => call.File == "Regions").Select(call => call.Call)],
+      call => PrototypeFixture.InvokedOutcome(ExceptionFixtures.Compiled("RegionsDemo", call.Method), call));
+
+    yield return new("exceptions/order", () => ExceptionFixtures.Imported("order"), () => [new PrototypeCall("Run", []) { Returns = typeof(string) }],
+      call => PrototypeFixture.InvokedOutcome(ExceptionFixtures.Compiled("OrderDemo", call.Method), call));
+
     yield return new("optional/Find", OptionalFixtures.Imported, () => [.. OptionalFixtures.Calls()],
       call => PrototypeFixture.InvokedOutcome(OptionalFixtures.Compiled(call.Method), call));
 
@@ -147,7 +153,7 @@ public sealed class RustFamilyDifferentialTests {
   }
 
   /// <summary>The functions of collections/Collections the backend writes; the others catch traps, hold objects or floating-point keys, or change a collection in a loop over it.</summary>
-  private static readonly string[] WrittenCollections = ["ListOps", "Grow", "Write", "RemoveLastOfEmpty", "Search", "Copies", "Words", "Pairs", "Widened", "DictionaryOrder", "SetOrder", "Count", "ClearThenInsert", "MissingKey", "Values"];
+  private static readonly string[] WrittenCollections = ["ListOps", "Grow", "Write", "RemoveLastOfEmpty", "Search", "Copies", "Words", "Boxes", "Pairs", "Widened", "DictionaryOrder", "SetOrder", "Count", "ClearThenInsert", "MissingKey", "Values"];
 
   /// <summary>
   /// The functions of sequences/Iterators the backend writes (#1391); the others write an array their
@@ -258,6 +264,36 @@ public sealed class RustFamilyDifferentialTests {
     var matches = family.Matches ?? ((_, wanted, actual) => wanted == actual);
     foreach (var checks in new[] { OverflowChecks.Panic, OverflowChecks.Wrap }) {
       var actual = await RustRun.OutcomesAsync(module, calls, checks);
+      var mismatches = calls.Select((call, index) => (call, index)).Where(pair => !matches(pair.call, expected[pair.index], actual[pair.index]))
+        .Select(pair => $"{pair.call}: C# {expected[pair.index]}, Rust {actual[pair.index]}").ToList();
+      Assert.That(mismatches.Take(20), Is.Empty, $"{mismatches.Count} of {calls.Count} calls differ with overflow checks {checks}");
+    }
+  }
+
+  /// <summary>
+  /// #1415: the fixtures whose helpers of strings and collections trap - an enum's parse, a cast, the parse
+  /// of a number, a list's index - written under the trap policy <c>result</c> as well, where the helpers'
+  /// forms give a trap as their value; with overflow checks on and off no call panics and every outcome is
+  /// what .NET computes.
+  /// </summary>
+  [TestCase("enums/Big")]
+  [TestCase("enums/Color")]
+  [TestCase("enums/Perm")]
+  [TestCase("dispatch/Shapes")]
+  [TestCase("numtext/Parse")]
+  [TestCase("collections/WordFrequency")]
+  [TestCase("collections/Collections (written part)")]
+  [RequiresToolchain(RustRunner.Toolchain)]
+  public async Task Fixture_UnderResult_AgreesWithDotNet(string name) {
+    var result = RustProfile.Default.WithTrapPolicy(RustTrapPolicy.Result);
+    var family = Families().Single(candidate => candidate.Name == name);
+    var module = family.Module();
+    Assert.That(RustCrates.Check(module, result).Select(problem => problem.Message), Is.Empty, "the fixture is written as Rust under result");
+    var calls = family.Calls();
+    var expected = family.Sequenced?.Invoke(calls) ?? [.. calls.Select(family.Expected)];
+    var matches = family.Matches ?? ((_, wanted, actual) => wanted == actual);
+    foreach (var checks in new[] { OverflowChecks.Panic, OverflowChecks.Wrap }) {
+      var actual = await RustRun.OutcomesAsync(module, calls, checks, result);
       var mismatches = calls.Select((call, index) => (call, index)).Where(pair => !matches(pair.call, expected[pair.index], actual[pair.index]))
         .Select(pair => $"{pair.call}: C# {expected[pair.index]}, Rust {actual[pair.index]}").ToList();
       Assert.That(mismatches.Take(20), Is.Empty, $"{mismatches.Count} of {calls.Count} calls differ with overflow checks {checks}");

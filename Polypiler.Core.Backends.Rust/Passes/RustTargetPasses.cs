@@ -61,7 +61,7 @@ public static class RustTargetPasses {
 /// O0500, helper inlining in Rust: a call of a helper whose body is one expression is replaced by that
 /// expression with the arguments put in for the parameters, in parentheses, where the body has at
 /// most <see cref="Budget"/> nodes. It is never inlined where that could change what the program does:
-/// a recursive helper, one with statements, a body that assigns, returns, breaks or names a variable
+/// a recursive helper, one with statements, a body that assigns, returns, breaks, hands an error on with <c>?</c> or names a variable
 /// the calling function has, and an argument that is no variable or literal, whose evaluation the
 /// body could move past a trap of its own or repeat.
 /// </summary>
@@ -97,7 +97,7 @@ public sealed class RustHelperInlining : ITargetPass<RustCrate, RustProfile> {
       return null;
 
     var nodes = RustSyntaxRewriter.DescendantsAndSelf(body).ToList();
-    return nodes.Any(node => node is RsAssign or RsReturn or RsBreak or RsContinue or RsLet || node is RsPath path && path.Name == function.Name) ? null : body;
+    return nodes.Any(node => node is RsAssign or RsReturn or RsBreak or RsContinue or RsLet or RsTry || node is RsPath path && path.Name == function.Name) ? null : body;
   }
 
   private static RsFunction Inline(RsFunction function, Dictionary<string, (RsFunction Function, RsExpression Body)> helpers, Action<string> applied) {

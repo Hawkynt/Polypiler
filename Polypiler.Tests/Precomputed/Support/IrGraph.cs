@@ -47,7 +47,8 @@ internal static class IrGraph {
       if (left is string or bool or long or int or Enum)
         return left.Equals(right) ? null : $"{path}: {left} against {right}";
 
-      if (left is not (IrType or IrFunctionType)) {
+      // An origin is a value: nodes that inherited the same origin share it in memory, the bytes keep a copy each.
+      if (left is not (IrType or IrFunctionType or Origin)) {
         var seen = this._forward.TryGetValue(left, out var partner);
         if (seen || this._backward.ContainsKey(right))
           return seen && ReferenceEquals(partner, right) ? null : $"{path}: the objects are shared differently";

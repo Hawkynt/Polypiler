@@ -335,8 +335,8 @@ public sealed class CrossLanguageRunnerTests {
           using var client = await listener.AcceptTcpClientAsync();
           Interlocked.Increment(ref accepted);
         }
-      } catch (Exception exception) when (exception is SocketException or ObjectDisposedException) {
-        // The listener was stopped.
+      } catch (Exception exception) when (exception is SocketException or ObjectDisposedException or InvalidOperationException) {
+        // The listener was stopped: during an accept, or before the loop asked for the next one ("Not listening").
       }
     });
     var port = ((IPEndPoint)listener.LocalEndpoint).Port.ToString(System.Globalization.CultureInfo.InvariantCulture);

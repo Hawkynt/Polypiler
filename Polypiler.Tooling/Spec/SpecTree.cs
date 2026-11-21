@@ -20,6 +20,12 @@ public sealed class SpecTree {
   /// </summary>
   public static IReadOnlyList<string> DataFolders { get; } = ["adapters"];
 
+  /// <summary>
+  /// The file names that are checked data wherever they lie: <c>cost.yaml</c>, the cost profile beside a
+  /// target document, which the cost model's loader checks against <c>schemas/cost-profile.schema.json</c>.
+  /// </summary>
+  public static IReadOnlyList<string> DataFiles { get; } = ["cost.yaml"];
+
   private SpecTree(string root, string repositoryRoot, IReadOnlyList<SpecDocument> documents, IReadOnlyList<Diagnostic> unreadable) {
     this.Root = root;
     this.RepositoryRoot = repositoryRoot;
@@ -71,6 +77,7 @@ public sealed class SpecTree {
     var paths = Directory.EnumerateDirectories(full)
       .Where(folder => !DataFolders.Contains(Path.GetFileName(folder)))
       .SelectMany(folder => Directory.EnumerateFiles(folder, "*.yaml", SearchOption.AllDirectories))
+      .Where(file => !DataFiles.Contains(Path.GetFileName(file)))
       .Select(file => Path.GetRelativePath(full, file).Replace(Path.DirectorySeparatorChar, '/'))
       .Order(StringComparer.Ordinal);
     foreach (var path in paths)
