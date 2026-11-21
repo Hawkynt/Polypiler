@@ -72,6 +72,8 @@ public static class IrOperators {
       return number;
     if (EnumOperations.Accepts(op, result, arguments) is { } named)
       return named;
+    if (RegexOperations.Accepts(op, result, arguments) is { } matched)
+      return matched;
 
     bool Are(params Func<IrType, bool>[] rules) => arguments.Count == rules.Length && !rules.Where((rule, index) => !rule(arguments[index])).Any();
     bool Table(IrType type) => type.IsArray && type.IsStorable;

@@ -75,7 +75,7 @@ public static partial class CSharpEmitter {
       }
 
       var name = this.DelegateName(signature) + this.TypeArguments(signature);
-      return this._inClass ? $"{this._class}.{name}" : name;
+      return this._inClass ? $"{this._outer}.{name}" : name;
     }
 
     /// <summary>

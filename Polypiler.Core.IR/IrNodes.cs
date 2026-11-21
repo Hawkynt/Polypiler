@@ -1077,7 +1077,15 @@ public enum IrIntrinsicOp {
   /// it. A span outside the array traps as an index out of range before any byte is read; a polynomial
   /// of 0 traps as an invalid operation.
   /// </summary>
-  CrcUpdate
+  CrcUpdate,
+
+  /// <summary>
+  /// <c>(str subject, str pattern, str flags) → bool</c>: ECMA-262's <c>RegExp.prototype.test</c> of a
+  /// regular expression without the flags <c>g</c> and <c>y</c> (#1399) - whether the pattern matches
+  /// anywhere in the subject. Pattern and flags are string constants as ECMAScript writes them, within
+  /// the subset <see cref="RegexOperations"/> converts.
+  /// </summary>
+  RegexTest
 
 }
 

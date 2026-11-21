@@ -41,6 +41,23 @@ public static class CSharpCollectionClasses {
   /// <summary>The name of <see cref="SingleKeys"/>.</summary>
   public const string SingleKeysName = "SingleKeys";
 
+  /// <summary>The name of <see cref="Uninitialized"/>.</summary>
+  public const string UninitializedName = "Uninitialized";
+
+  /// <summary>
+  /// The type of the parameter of the constructors that run no code (#1388): a class whose constructor
+  /// skips its base classes (<c>IrConstructor.SkipsBase</c>) reaches every base class through one of
+  /// them, which C# requires and which leaves the fields at their defaults. No value of it exists.
+  /// </summary>
+  public const string Uninitialized = """
+    public sealed class Uninitialized {
+
+      private Uninitialized() {
+      }
+
+    }
+    """;
+
   /// <summary>
   /// A map - a set is one whose values nothing reads - whose entries stand in slots in the order they
   /// are enumerated. With <c>reuse</c> a new key takes the slot freed last, or the next one, and

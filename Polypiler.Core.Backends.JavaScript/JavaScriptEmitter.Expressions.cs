@@ -47,6 +47,9 @@ public static partial class JavaScriptEmitter {
           return this.BinaryBig(big);
         case IrIntrinsic intrinsic:
           return this.Intrinsic(intrinsic);
+        case IrLocalRef reference when reference.Local == this._receiver && this._detached:
+          // The constructor that skips its base classes makes its object itself (#1388).
+          return (Id(Self), true);
         case IrLocalRef reference when reference.Local == this._receiver && this._functionDepth > 0 && !this.Arrows:
           // A function expression has a this of its own; the method's is kept in a variable.
           this._self = true;
@@ -152,6 +155,12 @@ public static partial class JavaScriptEmitter {
         return this.NumberText(intrinsic);
       if (EnumOperations.IsEnum(intrinsic.Op))
         return this.EnumOperation(intrinsic);
+      if (RegexOperations.IsRegex(intrinsic.Op)) {
+        // The literal as the source wrote it, which every level of ECMAScript reads alike (#1399).
+        var (pattern, flags) = RegexOperations.Of(intrinsic);
+        this.Native(".test");
+        return (new JsCall(new JsMember(new JsRegExp(pattern, flags), "test"), [this.Text(arguments[0])]), true);
+      }
 
       // An operation the profile has only as a helper of the library reaches the writer only where the module was not legalized.
       if (JavaScriptLibrary.Covers(intrinsic, this._profile, this._capabilities)) {

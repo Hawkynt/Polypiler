@@ -111,15 +111,19 @@ public static partial class JavaScriptFrontend {
   public static readonly DiagnosticDescriptor NonErrorThrowDescriptor = new(NonErrorThrow, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct, "{0}", "javascript.non-error-throw");
 
   /// <summary>
-  /// The caveat of a module that accesses array elements: at anything but the index of an element
-  /// JavaScript reads <c>undefined</c>, the imported code traps or drops the fraction.
+  /// The caveat of a module that accesses array elements where the imported code does not do what
+  /// JavaScript does outside the array: at anything but the index of an element JavaScript reads
+  /// <c>undefined</c>, the imported code traps or drops the fraction. A read whose value meets
+  /// <c>ToInt32</c>, <c>ToUint32</c> or <c>ToNumber</c> directly and a store into a typed array do what
+  /// JavaScript does and need no caveat (#1367).
   /// </summary>
   public const string OutOfRangeAccess = "js-oob-read";
 
   /// <summary>
-  /// The caveat of a module that divides integers: by zero JavaScript yields infinity or <c>NaN</c>,
-  /// which a coercion turns into 0, and the one quotient that does not fit wraps; the imported code
-  /// traps. A division of doubles has no such difference.
+  /// The caveat of a module that divides integers where the imported code traps: by zero JavaScript
+  /// yields infinity or <c>NaN</c>, and the one quotient that does not fit wraps. A division of doubles
+  /// has no such difference, and nor has a quotient or remainder of 32-bit integers under a coercion
+  /// whose divisor is evaluated after an operand without an effect (#1367): it is 0 for a divisor of 0.
   /// </summary>
   public const string DivisionByZero = "js-div-zero";
 
@@ -138,9 +142,11 @@ public static partial class JavaScriptFrontend {
 
   private static readonly ImportCaveat _outOfRangeAccess = new(
     OutOfRangeAccess,
-    "at an index that is not the integer of an element JavaScript reads undefined (0 once coerced), ignores a write into a typed "
-    + "array and lets an Array grow, and an element of new Array(n) that was never stored is undefined; the imported code traps "
-    + "with 'index out of range' or 'integer overflow', takes an index that is a double without its fraction and reads 0");
+    "at an index that is not the integer of an element JavaScript reads undefined, lets an Array grow, and an element of new Array(n) "
+    + "that was never stored is undefined; where such a value is returned, stored into an Array or computed with before a coercion, "
+    + "and where an element is stepped or compounded, the imported code traps with 'index out of range' or 'integer overflow', takes "
+    + "an index that is a double without its fraction and reads 0 (a read directly under ToInt32, ToUint32 or ToNumber and a store "
+    + "into a typed array behave as in JavaScript)");
 
   /// <summary>The caveat of a module whose sort comparator returns a double, which a NaN makes inconsistent.</summary>
   public const string SortOrder = "js-sort-order";
@@ -152,14 +158,38 @@ public static partial class JavaScriptFrontend {
     ThrowsTextCaveat,
     "a string thrown out of a function reaches its caller as the string itself in JavaScript; the imported code throws an Error, whose message is the string");
 
+  /// <summary>
+  /// The caveat of a module that stores a whole double - <c>parseInt</c> of a short text of proven
+  /// digits - where JSDoc states integers (#1413): a NaN, which an Array keeps, traps instead.
+  /// </summary>
+  public const string NaNStore = "js-nan-store";
+
+  private static readonly ImportCaveat _nanStore = new(
+    NaNStore,
+    "a value proven a NaN or an integer, such as parseInt of an empty text of digits, is stored where JSDoc states integers: JavaScript "
+    + "keeps the NaN, the imported code traps with 'integer overflow'");
+
+  /// <summary>
+  /// The caveat of a module that stores an exact integer - a sum, a difference, a product of integers,
+  /// <c>Math.min</c> or <c>max</c> of them - where JSDoc states an integer type that may not hold it (#1416):
+  /// JavaScript keeps the value as it is, the translation traps.
+  /// </summary>
+  public const string StatedInteger = "js-stated-integer";
+
+  private static readonly ImportCaveat _statedInteger = new(
+    StatedInteger,
+    "an integer computed with +, -, * or Math.min/max is stored or passed where JSDoc states an integer type: JavaScript "
+    + "keeps a value outside that type as it is, the imported code traps with 'integer overflow'");
+
   private static readonly ImportCaveat _sortOrder = new(
     SortOrder,
     "a sort comparator returns a double: for inputs that make it inconsistent, such as a NaN, ECMA-262 leaves the order to the engine, the translation fixes the one of its stable merge sort");
 
   private static readonly ImportCaveat _divisionByZero = new(
     DivisionByZero,
-    "an integer division or remainder under a coercion by zero is Infinity or NaN in JavaScript (0 once coerced), -2147483648 / -1 "
-    + "wraps and a BigInt division by zero throws; the imported code traps with 'divide by zero' and 'integer overflow'");
+    "an integer division or remainder by zero is Infinity or NaN in JavaScript, -2147483648 / -1 wraps and a BigInt division by zero "
+    + "throws a RangeError; where the remainder of two non-negative integers is no operand of a coercion, where the dividend under a "
+    + "coercion has an effect, and for BigInts, the imported code traps with 'divide by zero' and 'integer overflow'");
 
   /// <summary>Imports one JavaScript source file, a script or a module.</summary>
   /// <param name="path">The name of the file, used in diagnostics; its stem names the module.</param>
@@ -225,7 +255,8 @@ public static partial class JavaScriptFrontend {
       Classes = classes.GroupBy(owner => owner.Name).Select(group => group.First())
         .Concat(errors.ByName.Values.Where(error => classes.All(owner => owner.Name != error.Name))).ToDictionary(owner => owner.Name),
       Redirects = redirects,
-      Enums = enums.ToDictionary(named => named.Name)
+      Enums = enums.ToDictionary(named => named.Name),
+      Typedefs = Typedefs.Read(program, source, comments)
     };
     var globals = collector.Globals;
     inference.DeclareGlobals(globals, program);
@@ -263,10 +294,14 @@ public static partial class JavaScriptFrontend {
         inference.Shapes.Prefer(variable.Type, variable.Name, elements);
 
     inference.Shapes.Seal();
+    // The classes synthesized for literals and extended objects are classes of the module (#1388).
+    classes = [.. classes, .. inference.Shapes.Classes.Made];
     // The signatures of the function values name the structs of their records, which exist from here on (#1377).
     inference.Sign(models);
+    // The class of every typedef JSDoc names is a class of the module (#1409).
+    classes = [.. classes, .. inference.Typedefs.Used];
     Classes.Declare(classes, inference, diagnostics);
-    var lowering = new Lowering(inference);
+    var lowering = new Lowering(inference) { ModuleInitializer = collector.Initializer };
     // What the module does when it is loaded runs only where its functions have state it could change; otherwise it is not looked at.
     var initializer = collector.Initializer;
     if (initializer is not null && !classes.Any(owner => owner.Statics.Count > 0)
@@ -295,6 +330,7 @@ public static partial class JavaScriptFrontend {
 
     lowered.AddRange(Classes.Define(classes, inference));
     ModuleState.CheckInitializers(state, lowered, lowering, diagnostics);
+    ModuleState.CheckOrder(state, initializer is null ? null : functions.GetValueOrDefault(initializer), lowered, classes.Select(owner => owner.Ir), lowering.ModuleSites, lowering, diagnostics);
     if (diagnostics.Count > 0)
       return Refused(diagnostics);
 
@@ -331,6 +367,12 @@ public static partial class JavaScriptFrontend {
 
     if (lowering.ThrowsText)
       caveats.Add(_throwsText);
+
+    if (lowering.TrapsNaN)
+      caveats.Add(_nanStore);
+
+    if (lowering.TrapsRange)
+      caveats.Add(_statedInteger);
 
     var ordered = models.Where(model => !model.Candidate.IsNested).OrderBy(model => model.Candidate.Anchor.Start).ToList();
     var integers = Signatures(ordered, parameter => parameter.IsIntegerByUse && parameter.Parameter!.Type.IsWord);

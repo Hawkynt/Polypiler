@@ -573,7 +573,10 @@ public sealed class CSharpCapabilities {
 
     // The arbitrary-precision integer of #494, which .NET Framework 4.0 brought, and its conversion to double that rounds.
     CSharpCapability.OfApi(BigIntegerApi, CSharpProfile.Net46),
-    CSharpCapability.OfApi("BigInteger to double, rounded to nearest", CSharpProfile.Net46, CSharpBigIntegerHelpers.BigToDouble)
+    CSharpCapability.OfApi("BigInteger to double, rounded to nearest", CSharpProfile.Net46, CSharpBigIntegerHelpers.BigToDouble),
+
+    // The test of a regular expression of #1399: IsMatch of a static Regex field per pattern, which the emitter writes; every framework has it.
+    CSharpCapability.OfOperation("Regex.IsMatch(String)", CSharpProfile.Net20, IrIntrinsicOp.RegexTest, [IrTypeKind.String], new CSharpForm("IsMatch"))
   ]) { RemainderFromQuotient = true };
 
   /// <summary>The name of the row of the arbitrary-precision integer.</summary>

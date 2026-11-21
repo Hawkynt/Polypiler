@@ -86,6 +86,44 @@ internal sealed record JsType {
   /// <summary>Whether the range comes from literals only, which fit any type that holds them.</summary>
   public bool IsLiteral { get; private init; }
 
+  /// <summary>
+  /// Whether a double is proven whole (#1413): every value but a NaN is an integer from <see cref="Low"/>
+  /// to <see cref="High"/> - what <c>parseInt</c> yields of a text of a bounded length and proven digits.
+  /// </summary>
+  public bool IsWhole { get; private init; }
+
+  /// <summary>
+  /// Whether an integer element JSDoc states as <c>T[]</c> takes a whole double of its range (#1413): the
+  /// store converts it, trapping on a NaN, which the Array JavaScript fills would keep.
+  /// </summary>
+  public bool AdmitsWhole { get; private init; }
+
+  /// <summary>A double whose every value but a NaN is an integer of a range (#1413).</summary>
+  /// <param name="low">The smallest integer.</param>
+  /// <param name="high">The largest integer.</param>
+  /// <returns>The type.</returns>
+  /// <param name="mayBeNaN">Whether a NaN is among the values; an exact integer by construction - a sum, a difference, a product of integers below 2^53 (#1416) - is never one.</param>
+  public static JsType Whole(Int128 low, Int128 high, bool mayBeNaN = true) => new(JsKind.Number) { Float = 64, Low = low, High = high, IsWhole = true, MayBeNaN = mayBeNaN };
+
+  /// <summary>Whether a whole double may be a NaN; one that is never a NaN is an integer a double holds exactly (#1416).</summary>
+  public bool MayBeNaN { get; private init; }
+
+  /// <summary>The type of a value read from a place: an integer that takes no whole double of its own (#1416).</summary>
+  public JsType Read => this.AdmitsWhole ? this with { AdmitsWhole = false } : this;
+
+  /// <summary>
+  /// Whether the values are integers and no NaN (#1416): an integer, or a whole double that is never a NaN -
+  /// a sum, a difference, a product of integers, which a double computes as JavaScript does, past 2^53 too.
+  /// </summary>
+  public bool IsExactInteger => this.IsInteger || (this.IsWhole && !this.MayBeNaN && !this.IsAbsent);
+
+  /// <summary>A stated integer as one that takes an exact integer of any range and a whole double of its own, converted with a check (#1416); any other type as it is.</summary>
+  public JsType Admitting() => this is { IsInteger: true, IsAbsent: false, Enum: null } ? this with { AdmitsWhole = true } : this;
+
+  /// <summary>The stated array as one whose integer elements take whole doubles of their range (#1413); any other type as it is.</summary>
+  public JsType AdmittingWhole()
+    => this.Element is { IsInteger: true } element ? this with { Element = element with { AdmitsWhole = true } } : this;
+
   /// <summary>Whether a <c>BigInt</c> has no bound, so that no type of the IR holds it.</summary>
   public bool IsUnbounded { get; private init; }
 
@@ -98,22 +136,30 @@ internal sealed record JsType {
   /// <summary>
   /// Whether JSDoc states the array as <c>T[]</c> of numbers, which says what its elements are but not
   /// whether it is an <c>Array</c> or a typed array (#1374): the calls of the file say that, and where
-  /// none passes one, whether the function itself requires an <c>Array</c>.
+  /// none passes one, whether the function itself requires an <c>Array</c>. Of a <c>BigInt</c>, whether
+  /// JSDoc states <c>int64</c> or <c>uint64</c>, which says the range but not whether the place holds
+  /// Numbers or BigInts (#1401): the values that reach it say that, and where none does, it is a <c>BigInt</c>.
   /// </summary>
   public bool IsStated { get; private init; }
 
-  /// <summary>The array of the elements JSDoc states, of no kind decided yet: a typed array until something decides.</summary>
+  /// <summary>The array of the elements JSDoc states, of no kind decided yet: a typed array until something decides; the 64-bit integer JSDoc states, a <c>BigInt</c> until something decides.</summary>
   public JsType AsStated() => this with { IsStated = true };
+
+  /// <summary>The stated type as the one it is where nothing else decides: a typed array, a <c>BigInt</c> of the stated range.</summary>
+  public JsType Decided => this with { IsStated = false };
 
   /// <summary>
   /// The stated array as the kind of array an argument is: an <c>Array</c> - a list where the argument
   /// is one - or a typed array, of the stated elements, decided; <see langword="null"/> for an argument that is no array.
+  /// The stated 64-bit integer as the kind of integer an argument is: the Number it is, or the stated <c>BigInt</c>.
   /// </summary>
   public JsType? ShapedAs(JsType argument)
+    // A stated 64-bit integer is a Number where a Number is passed, the stated BigInt where a BigInt is (#1401), which the call then keeps or is refused for.
+    => this.Kind == JsKind.BigInt ? (argument.Kind == JsKind.Number ? argument : argument.Kind == JsKind.BigInt ? this.Decided : null)
     // An argument that is a stated array nothing has decided either decides nothing.
-    => argument.Kind != JsKind.Array || argument.IsView || argument.IsStated ? null
+    : argument.Kind != JsKind.Array || argument.IsView || argument.IsStated ? null
       : argument.IsGrowable ? ListOf(this.Element!)
-      : argument.IsPlain ? ArrayOf(this.Element!, true) : this with { IsStated = false };
+      : argument.IsPlain ? ArrayOf(this.Element!, true) : this.Decided;
 
   /// <summary>The keys and value types of a record.</summary>
   public RecordShape? Shape { get; private init; }
@@ -132,6 +178,13 @@ internal sealed record JsType {
 
   /// <summary>The type without its absent values: what ToNumber or a test leaves of a value that is present.</summary>
   public JsType Present => this with { MayBeNull = false, MayBeUndefined = false };
+
+  /// <summary>
+  /// The type of an optional key of a typedef (#1409): its stated type, or <c>undefined</c> where a value
+  /// leaves the key out. An integer stays one: an operator that computes with it unchecked sees a NaN
+  /// where it is undefined, a test that proves it present the integer.
+  /// </summary>
+  public JsType OrUndefined() => this with { MayBeUndefined = true };
 
   /// <summary>The type with the absent values that reach another place.</summary>
   public JsType AbsentAs(JsType other) => this with { MayBeNull = other.MayBeNull, MayBeUndefined = other.MayBeUndefined };
@@ -304,7 +357,7 @@ internal sealed record JsType {
       JsKind.BigInt when !this.IsUnbounded => _longs.FirstOrDefault(this.Within),
       JsKind.String => IrType.String,
       JsKind.Array when this.IsView => this.IsMemory ? IrType.Memory(this.ViewedElement) : IrType.Span(this.ViewedElement),
-      JsKind.Array when this.IsGrowable => IrType.List(this.Element!.Ir is { } listed && (listed.IsNumeric || listed.IsStruct || listed.IsString || listed.IsObject || listed.IsCollection || listed.IsArray) ? listed : IrType.F64),
+      JsKind.Array when this.IsGrowable => IrType.List(this.Element!.Ir is { } listed && (listed.IsNumeric || listed.IsStruct || listed.IsString || listed.IsObject || listed.IsCollection || listed.IsArray || listed.IsFunction) ? listed : IrType.F64),
       JsKind.Array => IrType.Array(this.Element!.Ir is { } element && (element.IsNumeric || element.IsStruct || element.IsString || element.IsFunction) ? element : IrType.F64),
       JsKind.Function => this.Callable!.Signature,
       JsKind.Record => IrType.Struct(this.Shape!.Registry.Declare(this.Shape)),
@@ -330,7 +383,8 @@ internal sealed record JsType {
     JsKind.Record => this.Shape!.ToString(),
     JsKind.Map => $"a Map of {this.Key!.Describe()} to {this.Element!.Describe()}",
     JsKind.Set => $"a Set of {this.Element!.Describe()}",
-    JsKind.Object => this.Class!.Name,
+    // An object of the class made for a literal is named as the literal is (#1388).
+    JsKind.Object => this.Class!.RecordKeys is { } keys ? $"{{ {string.Join(", ", keys)} }}" : this.Class.Name,
     JsKind.Null => Absence(this),
     JsKind.Function => "a function",
     JsKind.Sequence => $"a generator of {this.Element!.Describe()}",
@@ -387,7 +441,9 @@ internal sealed record JsType {
     }
 
     if (first.Kind != second.Kind)
-      return Conflict(first, second);
+      return first.Kind == JsKind.Record && second.Kind == JsKind.Object ? Meet(first, second)
+        : second.Kind == JsKind.Record && first.Kind == JsKind.Object ? Meet(second, first)
+        : Conflict(first, second);
 
     switch (first.Kind) {
       case JsKind.Number when (first.Enum ?? second.Enum) is { } named:
@@ -397,16 +453,35 @@ internal sealed record JsType {
           ? new(JsKind.Number) { Low = Int128.Min(first.Low, second.Low), High = Int128.Max(first.High, second.High), IsLiteral = first.IsLiteral && second.IsLiteral, Enum = named }
           : Join(first.Plain, second.Plain);
       case JsKind.Number:
-        if (first.Float != 0 || second.Float != 0)
+        // An integer element JSDoc states holds a whole double or an integer of its range as it is (#1413).
+        if (first.AdmitsWhole || second.AdmitsWhole) {
+          var (admitting, other) = first.AdmitsWhole ? (first, second) : (second, first);
+          // An exact integer of a wider range as well: the store checks it (#1416).
+          return (other.IsWhole || other.IsInteger) && other.Enum is null && (other.Within(admitting.Ir!) || (other.IsWhole && other.IsExactInteger))
+            ? admitting : Join(admitting with { AdmitsWhole = false }, other with { AdmitsWhole = false });
+        }
+
+        if (first.Float != 0 || second.Float != 0) {
+          // Whole doubles and integers join to the whole doubles of both ranges.
+          if ((first.IsWhole || second.IsWhole) && (first.IsWhole || first.IsInteger) && (second.IsWhole || second.IsInteger))
+            return Whole(Int128.Min(first.Low, second.Low), Int128.Max(first.High, second.High), first.MayBeNaN || second.MayBeNaN);
+
           return first.Float == 32 && second.Float == 32 ? F32 : F64;
+        }
 
         return Hull(first, second, _words) ?? F64;
       case JsKind.BigInt:
         return first.IsUnbounded || second.IsUnbounded ? UnboundedBigInt : Hull(first, second, _longs) ?? UnboundedBigInt;
       case JsKind.Array:
-        // An array JSDoc states and nothing has decided yet is whatever array the program gives it (#1374).
-        if (first.IsStated != second.IsStated && !first.IsView && !second.IsView)
-          return first.IsStated ? second : first;
+        // An array JSDoc states and nothing has decided yet is whatever array the program gives it (#1374);
+        // one of elements no value has reached yet - new Array(n), [] - takes the stated elements (#1406).
+        // One of whole doubles the stated integer elements hold takes them as well (#1413).
+        if (first.IsStated != second.IsStated && !first.IsView && !second.IsView) {
+          var (stated, given) = first.IsStated ? (first, second) : (second, first);
+          var fits = given.IsPlain && given.Element!.IsWhole && stated.Element!.AdmitsWhole && Join(stated.Element, given.Element) == stated.Element;
+          return given.Element!.Kind != JsKind.Unknown && !fits ? given
+            : (given.IsGrowable ? ListOf(stated.Element!) : ArrayOf(stated.Element!, true)) with { MayBeNull = given.MayBeNull, MayBeUndefined = given.MayBeUndefined };
+        }
 
         if (first.IsPlain && second.IsPlain)
           return first.IsGrowable || second.IsGrowable ? ListOf(Join(first.Element!, second.Element!)) : ArrayOf(Join(first.Element!, second.Element!), true);
@@ -456,6 +531,15 @@ internal sealed record JsType {
     var widened = isUndefined && present.Kind == JsKind.Number && present.Float == 0 ? F64 : present;
     return widened with { MayBeNull = isNull, MayBeUndefined = isUndefined };
   }
+
+  /// <summary>
+  /// A record where objects of a class are kept (#1388): the literals of its shape are objects of the
+  /// class synthesized for it, and the place holds objects of the nearest class both derive from.
+  /// </summary>
+  private static JsType Meet(JsType record, JsType instance)
+    => record.Shape!.Registry.Classes.Meet(record.Shape, instance.Class!) is { } made && made.Lineage.FirstOrDefault(instance.Class!.Lineage.Contains) is { } common
+      ? Object(common)
+      : Conflict(instance, record);
 
   private static JsType Conflict(JsType first, JsType second)
     => new(JsKind.Conflict) { Kinds = (first.Describe(), second.Describe()) };

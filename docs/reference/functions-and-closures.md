@@ -76,10 +76,21 @@ binds to (`PLY1000`); `Delegate`, `DynamicInvoke` and events are refused by thei
 | arrow function (expression and block body), function expression | `IrLambda` | supported |
 | function declaration inside a function | hoisted (ECMA-262 §10.2.11): a variable declared where its block starts, assigned its `IrLambda` once every variable of the block it captures is declared | supported |
 | a closure returned from a function, a function value in a `const`/`let`, a parameter or an array | the function type the calls through it give it | supported |
+| function values in an Array that grows (`fs.push(() => i)`, then `for (const f of fs) f()`) | a list of the function type (#1396) | supported |
 | a function of the file named as a value | `IrFunctionRef` | supported |
 | `f(x)`, `fs[0]()`, `compose(f, g)(x)` | `IrInvoke` | supported |
 | `for (let …)`, `for (const …)` whose variables a closure captures / `for (var …)` | `IrFor` with `PerIteration` / one variable | supported |
 | a nested function hiding a variable of the function around it; `this` in an arrow inside a method | the scoping of JavaScript | supported |
+| `@param {function(byte[], int):T} f` with `@template T`, `function(int)`, `function():void` | the function type the calls through the values passed give it (#1408) | supported |
+| a field holding a function value, `this._f = f; this._f(x)` - a field hides a method of its key | a field of a function type, `IrInvoke` of `IrFieldLoad` | supported |
+| `new A(64, b => this.p(b))`: an arrow capturing `this` stored by another object | `IrLambda` capturing the receiver | supported |
+| a call through a value that passes more arguments than the function has parameters | the lambda has a parameter for each, which it ignores | supported |
+| `O.f` of an object of functions named as a value | `IrFunctionRef` | supported |
+| `v => this.total += v`: a concise body assigning a variable or a field | the store, then the place read again as the result | supported |
+| `return f()` of a call that returns nothing | the call, then `return` | supported |
+| a JSDoc function type of a spelling that is no type; a stated function no call of the file passes | - | `PLY1101` |
+| a stated function that a call passes something else to | - | `PLY1105` |
+| a function of the file as a value that takes fewer parameters than its calls pass | - | `PLY1102` naming it |
 | `arguments`, `this` in a function expression, `new f()`, `f.call`/`apply`/`bind` | - | `PLY1102` naming it |
 | default and rest parameters of a nested function, a nested generator | - | `PLY1102` naming it |
 | a variable that holds a function and a number | - | `PLY1105` |
@@ -88,6 +99,18 @@ The type of a function value is the set of functions it may be (`FunctionShape`)
 value reaches share it, the arguments of a call through it reach the parameters of every member, and
 the members are inferred jointly - one signature, a parameter of a nested function a double unless
 the program proves an integer (#1137).
+
+A JSDoc function type says that a parameter is a function (#1408), as the Cipher framework's
+`BlockAbsorber` states `@param {function(byte[]):void} processBlock`, keeps it in a field and calls it
+back: the parameter takes the function values the calls of the file pass - of a method as well, whose
+calls only the types find - and its type is the signature of their shape, as for a function value
+without JSDoc. The stated parameter and result types are checked to be spellings JSDoc knows, a
+`@template` name included, but do not change the signature: what the calls through the value pass and
+what the functions return decide it, so a `T` of a template is the one result of every function the
+parameter receives (two calls passing functions of two different results are `PLY1105`). The
+positions a call passes are the signature's: an arrow of fewer parameters, `(held, pending) => …`
+called with three arguments, gets a parameter for the third, which it ignores, as JavaScript does; a
+function of the file of fewer parameters is refused as a value there.
 
 ## C# backend
 

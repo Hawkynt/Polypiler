@@ -27,6 +27,10 @@ internal sealed partial class TypeInference(string path, string source, List<Can
   private readonly Dictionary<Candidate, FunctionModel> _models = [];
   private readonly Dictionary<FunctionModel, Binder> _binders = [];
   private readonly Dictionary<(FunctionModel?, Node, Coercion), JsType> _known = [];
+  private readonly List<(Variable Place, JsType Stated, bool IsParameter)> _statedLongs = [];
+
+  /// <summary>Whether a stated type is a 64-bit integer, which the values decide to be a Number or a <c>BigInt</c> (#1401).</summary>
+  private static bool IsStatedLong(JsType stated) => stated is { Kind: JsKind.BigInt, IsStated: true };
 
   /// <summary>The copy of a function each call that the import gave one calls instead of the function, by the callee of the call.</summary>
   public IReadOnlyDictionary<Node, Candidate> Redirects { get; init; } = new Dictionary<Node, Candidate>();
@@ -56,8 +60,16 @@ internal sealed partial class TypeInference(string path, string source, List<Can
     this._models[candidate] = model;
     this._binders[model] = this.BinderOf(model);
     model.Problem = this.ReadSignature(model);
-    if (model.Problem is null)
+    if (model.Problem is null) {
       this._binders[model].Bind();
+      // A local JSDoc states an integer or an array of integers of starts as that place (#1416).
+      foreach (var local in model.Locals.Where(local => local.Spelling is not null))
+        if (JsDoc.Stated(local.Spelling!, this.Named)?.Admitting() is { } stated && (stated.AdmitsWhole || stated.Element is { AdmitsWhole: true })) {
+          local.Stated = stated;
+          local.Type = JsType.Join(local.Type, stated);
+          local.Reason = $"@type {{{local.Spelling}}}";
+        }
+    }
 
     // A generator returns its generator object, of the values it yields; a function without a return
     // returns nothing, which is known before any type is; one that returns a value and can also end
@@ -102,16 +114,18 @@ internal sealed partial class TypeInference(string path, string source, List<Can
       if (model.Parameters.Exists(earlier => earlier.Name == name))
         return Unsupported(parameter, $"a second parameter named {name}");
 
-      var (stated, type) = JsDoc.ParameterType(candidate.Documentation, name, key => this.Classes.GetValueOrDefault(key) is { IsLibrary: false } owner ? owner : null);
-      if (stated && type is null)
+      var (stated, type) = JsDoc.ParameterType(candidate.Documentation, name, this.Named);
+      var isFunction = stated && type is null && JsDoc.StatesFunction(candidate.Documentation, name, this.Named);
+      if (stated && type is null && !isFunction)
         return this.Diagnose(parameter, JavaScriptFrontend.MissingTypeDescriptor, $"parameter '{name}' of '{candidate.Name}' has no supported JSDoc type");
 
-      var variable = new Variable(name, parameter, true) { Declared = type, Default = defaultValue };
+      var variable = new Variable(name, parameter, true) { Declared = type, Default = defaultValue, StatesFunction = isFunction };
       model.Parameters.Add(variable);
       model.Bindings[parameter] = variable;
     }
 
     model.DeclaredResult = JsDoc.ResultType(candidate.Documentation);
+    model.StatedResult = JsDoc.StatedResult(candidate.Documentation, this.Named);
     return null;
   }
 
@@ -127,10 +141,17 @@ internal sealed partial class TypeInference(string path, string source, List<Can
   /// <param name="isPublic">Whether a function is visible outside the module.</param>
   /// <returns>The functions, the called ones after their callers.</returns>
   public List<FunctionModel> Solve(IEnumerable<Candidate> roots, System.Func<Candidate, bool> isPublic) {
+    this.Shapes.Classes.IsTaken = this.Classes.ContainsKey;
     // A field JSDoc states the type of holds values of it, whatever else reaches it: null alone is then that reference absent.
+    // A stated 64-bit integer is left to the values that reach it, and a BigInt only where none does (#1401).
     foreach (var field in this.Classes.Values.Distinct().SelectMany(owner => owner.Fields).Where(field => field.Stated is not null))
-      if (JsDoc.Stated(field.Stated!, key => this.Classes.GetValueOrDefault(key) is { IsLibrary: false } owner ? owner : null) is { } stated && stated.Ir is not null) {
-        field.Variable.Type = JsType.Join(field.Variable.Type, stated);
+      if (JsDoc.Stated(field.Stated!, this.Named) is { } stated && stated.Ir is not null) {
+        if (IsStatedLong(stated))
+          this._statedLongs.Add((field.Variable, stated, false));
+        else
+          // A stated integer takes an exact integer, checked where it is stored (#1416).
+          field.Variable.Type = JsType.Join(field.Variable.Type, stated.Admitting());
+
         field.Variable.Reason ??= $"@type {{{field.Stated}}}";
       }
 
@@ -149,10 +170,13 @@ internal sealed partial class TypeInference(string path, string source, List<Can
     }
 
     var called = this.Flowing(models).SelectMany(model => model.Flows).Where(flow => flow.Kind == FlowKind.Argument).Select(flow => flow.Callee).ToHashSet();
+    // A function no call of the file can pass anything: not called, no method, no function value, no nested function.
+    var values = this.Flowing(models).SelectMany(model => model.FunctionValues.Values).ToHashSet();
     // A nested function is called through its values only: its parameters take what those calls pass.
     foreach (var model in models)
       foreach (var parameter in model.Parameters)
-        this.Seed(model, parameter, !model.Candidate.IsNested && (model.IsPublic || !called.Contains(model.Candidate)));
+        this.Seed(model, parameter, !model.Candidate.IsNested && (model.IsPublic || !called.Contains(model.Candidate)),
+          model.Candidate.IsNested || model.Candidate.Class is not null || called.Contains(model.Candidate) || values.Contains(model.Candidate));
 
     do {
       for (var changed = true; changed;) {
@@ -164,6 +188,7 @@ internal sealed partial class TypeInference(string path, string source, List<Can
         }
 
         changed |= this.Unify();
+        changed |= this.RecordFields();
       }
     } while (this.Promote([.. this.Flowing(models)]));
 
@@ -176,6 +201,15 @@ internal sealed partial class TypeInference(string path, string source, List<Can
           : this.Diagnose(parameter.Declaration, JavaScriptFrontend.MissingTypeDescriptor,
             $"parameter '{parameter.Name}' of '{model.Candidate.Name}' is used as an array and needs a JSDoc type");
 
+    // A parameter JSDoc states as a function holds the functions the calls of the file pass, and nothing else: where none
+    // passes one, nothing makes a value of its type (#1408).
+    foreach (var model in models)
+      foreach (var parameter in model.Parameters.Where(parameter => parameter.StatesFunction && parameter.Entry.Kind != JsKind.Function))
+        model.Problem ??= parameter.Entry.Kind == JsKind.Unknown
+          ? this.Diagnose(parameter.Declaration, JavaScriptFrontend.MissingTypeDescriptor, $"parameter '{parameter.Name}' of '{model.Candidate.Name}' is a function that no call of the file passes")
+          : this.Diagnose(parameter.EntryEvidence ?? parameter.Declaration, JavaScriptFrontend.MixedKindsDescriptor,
+            parameter.Entry.Kind == JsKind.Conflict ? $"'{parameter.Name}' holds both {parameter.Entry.Kinds.First} and {parameter.Entry.Kinds.Second}" : $"'{parameter.Name}' holds {parameter.Entry.Describe()} where JSDoc states a function");
+
     return models;
   }
 
@@ -185,8 +219,11 @@ internal sealed partial class TypeInference(string path, string source, List<Can
   /// <c>ToUint32</c> only, or re-assigns it coerced before anything else: then it is that integer.
   /// A parameter whose callers are all known starts with nothing and takes what they pass, and so
   /// does one that is used as an array: a double it cannot be, and what array it is only a call says.
+  /// A stated <c>int64</c> or <c>uint64</c> that a call of the file may pass (<paramref name="passed"/>)
+  /// starts with nothing as well: a Number where the calls pass Numbers, a <c>BigInt</c> where they pass
+  /// BigInts or nothing (#1401); one no call of the file can pass is the <c>BigInt</c> it states.
   /// </summary>
-  private void Seed(FunctionModel model, Variable parameter, bool external) {
+  private void Seed(FunctionModel model, Variable parameter, bool external, bool passed) {
     // A parameter with a default holds that literal too; without JSDoc an exported one is of its kind (a number a double).
     if (parameter.Default is { } given) {
       var literal = given switch {
@@ -202,9 +239,15 @@ internal sealed partial class TypeInference(string path, string source, List<Can
     }
 
     if (parameter.Declared is { } declared) {
+      parameter.Reason = $"@param {{{JsType.Spell(declared.Ir!)}}}";
+      // A stated 64-bit integer that a call of the file may pass starts with nothing: those calls decide what it is (#1401).
+      if (IsStatedLong(declared) && passed) {
+        this._statedLongs.Add((parameter, declared, true));
+        return;
+      }
+
       // A stated T[] that the function tests with Array.isArray is an Array, unless a call of the file passes another (#1374).
       parameter.Type = parameter.Entry = declared is { IsStated: true } && parameter.TestedAsArray is not null ? declared.ShapedAs(JsType.ArrayOf(declared.Element!, true))! : declared;
-      parameter.Reason = $"@param {{{JsType.Spell(declared.Ir!)}}}";
       // An integer the function only coerces to 32 bits sees the low 32 bits of any integer. A 32-bit one takes the other
       // 32-bit integer wrapped; a narrower one of a function only the file calls is widened to the 32 bits the coercion sees,
       // while one called from outside keeps the contract it states.
@@ -217,6 +260,10 @@ internal sealed partial class TypeInference(string path, string source, List<Can
 
       return;
     }
+
+    // A function JSDoc states is one of the values the calls of the file pass, those of a method as well (#1408).
+    if (parameter.StatesFunction)
+      return;
 
     // A parameter only a string can be is one: it calls a method only strings have, or a for...of goes over it.
     if (external && parameter.UsedAsString is { } text) {
@@ -254,7 +301,7 @@ internal sealed partial class TypeInference(string path, string source, List<Can
   private bool Apply(FunctionModel model, Flow flow) {
     switch (flow.Kind) {
       case FlowKind.Assign:
-        return this.Reach(flow.Target!, this.Of(flow.Node), flow.Node) | this.Alias(model, flow.Node, flow.Target!.Type);
+        return this.Reach(flow.Target!, Fresh(flow.Target!.Stated, flow.Node, this.Of(flow.Node)), flow.Node) | this.Alias(model, flow.Node, flow.Target!.Type);
       case FlowKind.Grow:
         return this.Grow(flow);
       case FlowKind.FieldGrow:
@@ -276,8 +323,8 @@ internal sealed partial class TypeInference(string path, string source, List<Can
       case FlowKind.Return:
         var argument = Returned(flow);
         var result = JsType.Join(model.Result, argument is null ? JsType.UndefinedValue : this.Of(argument));
-        // A returned variable is the list the result is (#1328).
-        var aliased = argument is not null && this.Alias(model, argument, result);
+        // A returned variable is the list the result is (#1328), of the integers JSDoc states where its whole doubles fit them (#1413).
+        var aliased = argument is not null && (this.Alias(model, argument, result) | this.Fit(model, argument, model.StatedResult));
         if (result == model.Result)
           return aliased;
 
@@ -296,6 +343,8 @@ internal sealed partial class TypeInference(string path, string source, List<Can
         return this.Invoke((CallExpression)flow.Node);
       case FlowKind.Yield:
         return this.Yielded(model, flow);
+      case FlowKind.KeyedStore:
+        return this.KeyedStore(flow);
       default:
         var called = this.ModelOf(flow.Callee!).Parameters.ElementAtOrDefault(flow.Index);
         return (called is { Declared: null } parameter && this.Pass(parameter, flow.Missing ? JsType.UndefinedValue : this.Of(flow.Node), flow.Node))
@@ -378,13 +427,29 @@ internal sealed partial class TypeInference(string path, string source, List<Can
   /// itself, as the result of a recursion without an end is. Says whether there was such a place.
   /// </summary>
   private bool Promote(List<FunctionModel> models) {
+    // A stated 64-bit integer no Number and no BigInt reached is the BigInt it states, before anything it feeds is promoted.
     var promoted = false;
+    // What enters a parameter decides it, what a field holds decides the field.
+    foreach (var (place, stated, isParameter) in this._statedLongs.Where(item => (item.IsParameter ? item.Place.Entry : item.Place.Type).Kind is JsKind.Unknown or JsKind.Null)) {
+      if (isParameter)
+        place.Entry = JsType.Join(place.Entry, stated.Decided);
+
+      place.Type = JsType.Join(place.Type, stated.Decided);
+      promoted = true;
+    }
+
+    if (promoted) {
+      this._known.Clear();
+      return true;
+    }
+
     foreach (var model in models) {
+      this.Enter(model);
       foreach (var flow in model.Flows) {
         if (flow.Kind == FlowKind.Argument && this.ModelOf(flow.Callee!).Parameters.ElementAtOrDefault(flow.Index) is { Type.Kind: JsKind.Unknown } parameter)
           promoted |= this.Pass(parameter, JsType.F64, flow.Node);
         else if (flow.Kind is FlowKind.Assign or FlowKind.Compound or FlowKind.Step && flow.Target!.Type.Kind == JsKind.Unknown)
-          promoted |= this.Reach(flow.Target, JsType.F64, flow.Node);
+          promoted |= this.Reach(flow.Target, this.StatedCall(flow.Node) ?? JsType.F64, flow.Node);
         else if (flow.Kind == FlowKind.Return && model.Result.Kind == JsKind.Unknown && Returned(flow) is { } argument) {
           model.Result = JsType.F64;
           model.ResultEvidence = argument;
@@ -396,6 +461,20 @@ internal sealed partial class TypeInference(string path, string source, List<Can
 
     return promoted;
   }
+
+  /// <summary>
+  /// The type JSDoc states for the result of a call no value comes out of - of a method whose every
+  /// implementation only throws (#1389), alone or as a branch of a <c>?:</c> - or <see langword="null"/>:
+  /// a local that takes it is of that type rather than a double, which a stated place of the code
+  /// after it, never run, would refuse (#1413).
+  /// </summary>
+  private JsType? StatedCall(Node node) => node switch {
+    ConditionalExpression choice => this.StatedCall(choice.Consequent) ?? this.StatedCall(choice.Alternate),
+    CallExpression { Callee: MemberExpression { Computed: false } invoked } when this.Of(invoked.Object).Class is { } owner && Binder.KeyOf(invoked) is { } key
+      && owner.Member(MemberKind.Method, key) is { } called && this.ModelOf(called) is { Result.Kind: JsKind.Unknown, StatedResult: { Ir: not null } stated }
+      => stated.Decided,
+    _ => null
+  };
 
   /// <summary>Why every parameter, local and result of a function has its type.</summary>
   public IEnumerable<TypeExplanation> Explain(FunctionModel model) {

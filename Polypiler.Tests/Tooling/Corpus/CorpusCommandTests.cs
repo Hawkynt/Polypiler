@@ -171,7 +171,8 @@ public sealed class CorpusCommandTests {
 
   [Test]
   public void GitProcess_OutlivingItsTime_IsKilled() {
-    var result = new GitProcess("git", TimeSpan.Zero).Run(null, "--version");
+    // A git that runs for seconds: one that ends at once, like 'git --version', may be done before the zero timeout is looked at.
+    var result = new GitProcess("git", TimeSpan.Zero).Run(null, "-c", "alias.linger=!sleep 30", "linger");
     Assert.That((result.ExitCode, result.Succeeded, result.Output), Is.EqualTo((-1, false, Array.Empty<byte>())));
     Assert.That(result.Error, Does.Contain("did not end within"));
   }

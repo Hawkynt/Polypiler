@@ -82,19 +82,24 @@ negative width throws in .NET; the translation returns the string, as ECMA-262 d
 parameter or result that only strings reach is `str`: `@param {string}`, a literal, a method of a
 string, and for a parameter without JSDoc a method only strings have (`charCodeAt`, `substring`,
 `trim`, `split`, …) or a `for…of` over it. String literals and templates with string holes; `length`;
-`charCodeAt` (`NaN` outside, written out); `s[i]` and `at` (which trap outside, the `js-oob-read`
-caveat); `charAt` (`""` outside); `+`, `+=`, `concat`; `===`, `!==`, `==`, `!=` and `<`, `<=`, `>`,
+`charCodeAt` (`NaN` outside, written out); `s[i]`, `at` and `codePointAt` (which trap outside, the
+`js-oob-read` caveat); `charAt` (`""` outside); `+`, `+=`, `concat`; `===`, `!==`, `==`, `!=` and `<`, `<=`, `>`,
 `>=` between two strings; `substring` and `slice` with their clamping and swapping spelled out with
-`Min` and `Max`; `indexOf` and `lastIndexOf` with a clamped position; `includes`, `startsWith`,
+`Min` and `Max`, and the `substr(start, length)` of Annex B (B.2.2.1): a negative start counts from the
+end, the length is cut to `[0, what is left]`; `indexOf` and `lastIndexOf` with a clamped position; `includes`, `startsWith`,
 `endsWith`; `replace` and `replaceAll` with a constant replacement, whose `$$` and `$&` are
 expanded; `split` with a limit through `ToUint32`; `join` of an array of strings; `trim`,
-`trimStart`, `trimEnd` (the `Ecma` set); `padStart`, `padEnd`; `repeat`; `String.fromCharCode`;
+`trimStart`, `trimEnd` (the `Ecma` set); `padStart`, `padEnd`; `repeat`; `String.fromCharCode`, and of
+the elements of an Array, a list or a typed array `String.fromCharCode.apply(null, a)` (or
+`undefined` as the receiver) and `String.fromCharCode(...a)` (#1400): each element through
+`ToUint16` into a `u16[]` by a function of the module per type of the codes, then `StrFromCodeUnits`;
 `codePointAt` (which traps outside); `for (const ch of s)` over the code points; a `switch` on a
 string, the first of two equal labels winning. An operand that the translation reads twice has to
 be free of effects.
 
 Refused, each by name (`PLY1102`): `localeCompare` and the locale methods, `toUpperCase`,
-`toLowerCase`, `normalize`, tagged templates (`String.raw`), regular expressions, the patterns
+`toLowerCase`, `normalize`, tagged templates (`String.raw`), regular expressions but the test of a
+literal ([below](#regular-expressions)), the patterns
 `` $` ``, `$'` and `$n` and a replacement that is no constant, `replaceAll` with a needle that may be
 empty (JavaScript inserts between every two code units), `String.fromCodePoint`, `new String`, and
 a number given to a method that takes a string. A number joined to text is a [conversion between
@@ -158,3 +163,37 @@ survives the file.
   it is refused rather than given ECMA-262's limit.
 - The C# backend writes no interpolated string and the JavaScript backend no template literal; both
   forms mean the same as the concatenation they write.
+
+## Regular expressions
+
+`/pattern/flags.test(s)` of a regular-expression literal (#1399) is the operation `RegexTest(subject,
+pattern, flags) → bool`, whose pattern and flags are string constants as ECMAScript writes them; the
+subject is `s` as `test` converts it to text (a number by `Number::toString`, `null` as `"null"`).
+`RegexOperations` holds the subset and the one conversion of a pattern to .NET's syntax that the
+interpreter and the C# backend share; it writes every set of characters out, so that nothing depends
+on what .NET's classes, anchors or case folding mean:
+
+| ECMAScript | .NET | why |
+| --- | --- | --- |
+| `$` | `\z` | .NET's `$` also matches before a final `\n` |
+| `.` | every code unit but `\n`, `\r`, U+2028 and U+2029 | .NET's `.` leaves out `\n` only |
+| `\s`, `\S` | ECMAScript's `WhiteSpace` and `LineTerminator`, U+FEFF among them | .NET's are Unicode's, with U+0085 and without U+FEFF |
+| `\d`, `\w` | `[0-9]`, `[0-9A-Z_a-z]` | .NET's are Unicode's |
+| a letter under `i` | both ASCII cases, `[Kk]` | `RegexOptions.IgnoreCase` would also match the Kelvin sign U+212A |
+
+Every pattern is compiled with `RegexOptions.CultureInvariant`. The subset: literal characters, the
+escapes `\d \w \s \D \W \S \t \n \v \f \r \0 \xHH \uHHHH \cX` and those of any character that is no
+letter or digit, classes with ranges and negation (`[]` and `[^]` too), `.`, `^`, `$`,
+`* + ? {n} {n,} {n,m}` greedy and lazy, `( )`, `(?: )`, `|`, and the flag `i` where the pattern's own
+characters are ASCII. Refused by name (`PLY1102` 'a regular expression with …'): the flags `g` and
+`y` (their `lastIndex` is state), `m`, `s`, `u`, `v`, `d`; backreferences, octal escapes, lookahead,
+lookbehind, named groups, `\b`, `\B`, `\k`, `\p`, `\P`, a `{` that starts no quantifier, and `i` with a
+character outside ASCII. Any other use of a regular expression - `exec`, `match`, `replace`,
+`split`, a literal held in a variable - stays refused.
+
+The C# backend writes a `private static readonly Regex` field per pattern and flags, named
+`Pattern1`, `Pattern2`, … where no member or variable has the name, and the test as
+`PatternN.IsMatch(s)`; `System.Text.RegularExpressions` is in every profile from .NET Framework 2.0
+on. The JavaScript backend writes the literal back, a `/` outside a class escaped, every code unit
+outside printable ASCII as its `\u` escape and the empty pattern as `(?:)`. The Python backend has no
+form yet and refuses `RegexTest` by name.

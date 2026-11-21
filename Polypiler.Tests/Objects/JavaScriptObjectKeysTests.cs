@@ -72,7 +72,7 @@ public sealed class JavaScriptObjectKeysTests {
   }
 
   /// <summary>Test design 4 and what stays out: a store into a key the target lacks, a jump out of the loop, an object of no known shape, an operand with an effect.</summary>
-  [TestCase("class A { constructor() { this.x = 1; this.y = 2; } } class B { constructor() { this.x = 0; } } export function f() { const a = new A(); const b = new B(); Object.keys(a).forEach(key => { b[key] = a[key]; }); return b.x; }",
+  [TestCase("class A { constructor() { this.x = 1; this.y = 2; } } class B { constructor() { this.x = 0; } } export function f() { const a = new A(); let b = new B(); Object.keys(a).forEach(key => { b[key] = a[key]; }); return b.x; }",
     "'the property y added to B outside its constructor' is not supported yet")]
   [TestCase("class A { constructor() { this.x = 1; } } export function f() { const a = new A(); for (const key of Object.keys(a)) { if (a[key] > 0) break; } return 0; }",
     "'a return, a break or a continue in a loop over Object.keys' is not supported yet")]

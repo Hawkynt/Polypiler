@@ -79,7 +79,7 @@ public sealed class JavaScriptGlobalImportTests {
   [TestCase("var C = 1;", "")]
   [TestCase("const C = new Uint8Array(4);", "")]
   [TestCase("const C = [];", "")]
-  [TestCase("const C = [1, , 2];", "'an array literal with a hole or a spread element' is not supported yet")]
+  [TestCase("const C = [1, , 2];", "'an array literal with a hole' is not supported yet")]
   [TestCase("const C = [1, x];", "'x' is not supported yet")]
   [TestCase("const C = [1, 2n];", "'int64 where float64 is expected' is not supported yet")]
   [TestCase("const C = new Uint8Array([1n]);", "'bigint as a number' is not supported yet")]

@@ -74,9 +74,11 @@ public sealed class JavaScriptListImportTests {
   public void Construct_ComputesWhatNodeComputes(string source, string outcome)
     => Assert.That(PrototypeFixture.InterpretedOutcome(Imported(source), new PrototypeCall("f", [])), Is.EqualTo(outcome));
 
-  /// <summary>Test design 7: a write at the length appends, one beyond it traps, a read beyond it traps under the caveat of the reads of arrays.</summary>
+  /// <summary>Test design 7: a write at the length appends - spelled a.length or an index equal to it when it runs - one beyond it traps, a read beyond it traps under the caveat of the reads of arrays.</summary>
   [TestCase("a[a.length] = 4; return a.length;", "3")]
   [TestCase("a[1] = 4; return a[1];", "4")]
+  [TestCase("let i = 2; a[i] = 4; return a.length * 10 + a[2];", "34")]
+  [TestCase("for (let i = 2; i < 4; i++) a[i] = i; return a.length * 10 + a[3];", "43")]
   [TestCase("a[3] = 4; return a.length;", "trap: argument out of range")]
   [TestCase("return a[2];", "trap: argument out of range")]
   [TestCase("a[-1] = 4; return 0;", "trap: argument out of range")]
@@ -100,11 +102,11 @@ public sealed class JavaScriptListImportTests {
   [TestCase("export function f() { const a = [{ x: 1 }]; a.push({ x: 2 }); return a.indexOf(a[0]); }", "indexOf of a list of records, which compares them by identity")]
   [TestCase("export function f() { const a = [1]; a.push(2); a.y = 3; return 0; }", "a.y")]
   [TestCase("export function f() { const a = new Int32Array(2); let b = [1]; b.push(2); b = a; return 0; }", "'b' holds both")]
-  [TestCase("export function f() { const a = [1]; a.push(2); const b = [...a, 3]; return b.length; }", "an array literal with a hole or a spread element")]
+  [TestCase("export function f() { const m = new Map(); m.set(1, 2); const b = [...m]; b.push(3); return b.length; }", "a spread of a Map of")]
   [TestCase("export function f() { const a = []; a.push(new Map()); const m = a.pop(); return 0; }", "the value of pop of a list of Map<float64, float64>")]
   [TestCase("class K { constructor() { this.v = 1; } } export function f() { const a = []; a.push(new K()); const b = [...a]; b.push(new K()); return b.length; }", "of which the IR has no array")]
   [TestCase("export function f() { const b = [...\"ab\"]; b.push(\"c\"); return b.length; }", "a spread of string")]
-  [TestCase("class K { constructor() { this.v = 1; } } export function f() { const a = [new K(), , new K()]; a.push(new K()); return a.length; }", "a hole or a spread in a literal of a list of K")]
+  [TestCase("class K { constructor() { this.v = 1; } } export function f() { const a = [new K(), , new K()]; a.push(new K()); return a.length; }", "an array literal with a hole")]
   [TestCase("export function f() { const a = [1]; a.length += 1; return 0; }", "a length other than 0")]
   [TestCase("export function f() { const a = [1]; a.push(2); a[0] ||= 3; return a[0]; }", "a[0] ||= 3")]
   public void Construct_IsRefused(string source, string named)

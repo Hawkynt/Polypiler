@@ -25,6 +25,11 @@ internal static partial class JavaScriptHelpers {
       "  if (start < 0 || length < 0 || start > view.length || length > view.length - start) " + ArgumentOutOfRange,
       "  return view.subarray(start, start + length);",
       "}")),
+    Same("$slicecopy", Lines(
+      "function $slicecopy(array, start, length) {",
+      "  if (start < 0 || length < 0 || start > array.length || length > array.length - start) " + ArgumentOutOfRange,
+      "  return array.slice(start, start + length);",
+      "}")),
     Same("$vobj", Lines(
       "function $vobj(array, start, length) {",
       "  if (start === void 0) start = 0;",
@@ -111,7 +116,9 @@ internal static partial class JavaScriptHelpers {
       "  }",
       "  return true;",
       "}")),
-    Same("$vtoarray", Lines("function $vtoarray(view) {", "  return new view.constructor(view);", "}")),
+    // The array of a view of a whole array is that array, which a caller may have passed as an Array, where
+    // new Array(a) would make an Array of one element: its copy is the kind of array it is (#1404).
+    Same("$vtoarray", Lines("function $vtoarray(view) {", "  return Array.isArray(view) ? view.slice() : new view.constructor(view);", "}")),
     Same("$vtoarrayo", Lines(
       "function $vtoarrayo(view) {",
       "  @const copy = [];",

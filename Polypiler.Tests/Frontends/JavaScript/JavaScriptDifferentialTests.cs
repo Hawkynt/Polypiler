@@ -99,14 +99,19 @@ public sealed class JavaScriptDifferentialTests {
     Assert.That(result.Caveats.Select(caveat => caveat.Id), Does.Contain(difference.Caveat));
   }
 
-  /// <summary>Test design 8: the differences cover reads and writes of an empty and a one-element array at -1 and at the length.</summary>
+  /// <summary>
+  /// Test design 8: the differences and the calls the import computes as node does (#1367) together
+  /// cover reads and writes of an empty and a one-element array at -1 and at the length.
+  /// </summary>
   [Test]
   public void Differences_CoverTheEdgesOfAnArray() {
     var edges = JavaScriptCases.Differences().Where(difference => difference.Fixture == "arrays" && difference.Imported == PrototypeFixture.Trap(IrTrap.IndexOutOfRange)).ToList();
     Assert.That(edges.Select(difference => difference.Call.Method).Distinct(),
-      Is.EquivalentTo(new[] { "readByte", "readInt", "readUint", "readCoerced", "writeByte", "writeInt", "writeUint" }));
+      Is.EquivalentTo(new[] { "readByte", "readInt", "readUint", "writeByte", "writeInt", "writeUint" }));
     Assert.That(edges.Select(difference => (((Array)difference.Call.Arguments[0]).Length, (int)difference.Call.Arguments[1])).Distinct(),
       Is.EquivalentTo(new[] { (0, -1), (0, 0), (1, -1), (1, 1) }));
+    var coerced = JavaScriptCases.For("arrays").Where(call => call.Method == "readCoerced" && (int)call.Arguments[1] >= ((Array)call.Arguments[0]).Length || call.Method == "readCoerced" && (int)call.Arguments[1] < 0);
+    Assert.That(coerced.Select(call => (((Array)call.Arguments[0]).Length, (int)call.Arguments[1])), Is.EquivalentTo(new[] { (0, -1), (0, 0), (1, -1), (1, 1) }));
   }
 
   /// <summary>
@@ -157,8 +162,20 @@ public sealed class JavaScriptDifferentialTests {
     => Assert.That(JavaScriptFixture.SourceOf(fixture), Does.Not.Contain("/**").And.Not.Contain("@param").And.Not.Contain("@returns"));
 
   /// <summary>
+  /// The refusals of <c>Split64</c> and its callers alone, and what they are in the whole file, where
+  /// the BigInts that <c>fromNumber</c> and the length encoders pass decide the <c>uint64</c> it states
+  /// (#1401) while its body is first typed without them: refused there as well, as values of two kinds.
+  /// </summary>
+  private static readonly Dictionary<string, string> _decidedByTheirCallers = new() {
+    ["OpCodes.js(738,21): error PLY1103: the result of 'value & 0xFFFFFFFF' has no bounded type"] = "OpCodes.js(738,21): error PLY1105: 'low32' holds both number and bigint",
+    ["OpCodes.js(2913,43): error PLY1102: 'float64 where uint32 is expected' is not supported yet"] = "OpCodes.js(2910,21): error PLY1105: 'split' holds both { high32, low32 } and { high32, low32 }",
+    ["OpCodes.js(2934,44): error PLY1102: 'float64 where uint32 is expected' is not supported yet"] = "OpCodes.js(2927,21): error PLY1105: 'split' holds both { high32, low32 } and { high32, low32 }"
+  };
+
+  /// <summary>
   /// Test design 14: the whole file without an export list fails, with one diagnostic for every
-  /// function it refuses - the same ones the function-by-function list names.
+  /// function it refuses - the same ones the function-by-function list names, except where the calls
+  /// of the whole file decide a stated 64-bit integer that nothing decides alone.
   /// </summary>
   [Test]
   public void OpCodes_AsAWholeIsRefusedFunctionByFunction() {
@@ -168,13 +185,13 @@ public sealed class JavaScriptDifferentialTests {
     Assert.That(result.Caveats, Is.Empty);
     // Beside the functions of the list, the whole file has the functions of the object literals inside the literal.
     Assert.That(result.Diagnostics.Select(diagnostic => diagnostic.ToString()),
-      Is.SupersetOf(expected.Select(line => line.Status).Where(status => status != JavaScriptFixture.Imported).Distinct()));
+      Is.SupersetOf(expected.Select(line => line.Status).Where(status => status != JavaScriptFixture.Imported).Select(status => _decidedByTheirCallers.GetValueOrDefault(status, status)).Distinct()));
     Assert.That(result.Diagnostics.Select(diagnostic => (diagnostic.Line, diagnostic.Column)), Is.Ordered.And.Unique);
 
-    // The functions that import one by one also import together, and are all there is beside the refused ones.
+    // The functions that import one by one also import together, and are all there is beside the refused ones and the functions the lowering adds ($fill0).
     var imported = expected.Where(line => line.Status == JavaScriptFixture.Imported).Select(line => line.Function).ToList();
     var together = JavaScriptFrontend.Import("OpCodes.js", _opCodes, imported);
-    Assert.That(together.Module!.Functions.Select(function => function.Name), Is.EquivalentTo(imported));
+    Assert.That(together.Module!.Functions.Select(function => function.Name).Where(name => !name.StartsWith('$')), Is.EquivalentTo(imported));
     Assert.That(IrVerifier.Verify(together.Module), Is.Empty);
   }
 

@@ -22,6 +22,11 @@ namespace Polypiler.Core.Recognize.Rules;
 /// <c>if (i &gt;= 0 &amp;&amp; i &lt;= b.Length - n) StoreLittle(b, i, v); else { the byte stores }</c> - and
 /// the original stores keep the trap and the partial writes everywhere else.
 /// </para>
+/// <para>
+/// A byte store JavaScript's frontend guards (<see cref="Guards"/>) is made only inside a typed array,
+/// as JavaScript ignores one outside (#1367); it counts as the store it guards. Behind the test of the
+/// whole range every guard holds, and the guarded stores are what is kept for the rest.
+/// </para>
 /// </summary>
 public sealed class O0141EndianStore : IrRule {
 
@@ -50,7 +55,7 @@ public sealed class O0141EndianStore : IrRule {
     var parts = new List<(Offset Index, IrExpr Source, int Byte)>();
     IrExpr? array = null;
     foreach (var statement in stores) {
-      if (statement is not IrStore { Array: IrLocalRef { Type.Element.Kind: IrTypeKind.U8 } target } store || (array is not null && !IrShape.Same(array, target))
+      if ((statement as IrStore ?? Guards.Store(statement)) is not { Array: IrLocalRef { Type.Element.Kind: IrTypeKind.U8 } target } store || (array is not null && !IrShape.Same(array, target))
         || WeightEvaluator.Evaluate(store.Value, context) is not { Single: { } atom } value || Byte(value.Image) is not { } part)
         return null;
 

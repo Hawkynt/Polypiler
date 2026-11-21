@@ -142,6 +142,46 @@ the array - `new Array(n).fill(0)` is an array of the type of the place it goes 
 the module per element type. A list, a typed array or a single value given to `concat`, `subarray` and
 `set` of an Array and `fill` of a part as a value are refused by name.
 
+An array literal with spread elements (#1405) is a new Array, distinct from every source:
+`[...a]` copies the elements of an Array, a list, a typed array or a view, and `[x, ...a, ...b]` joins
+its parts in order through the `concat` function of the module. The copy of a typed array is an Array,
+whose element type is the join of everything the literal holds and the program stores into it, so that
+a store into the copy no longer wraps (`[...new Uint8Array([200])]` then `c[0] + 100` holds 300); a
+source of other elements is widened by a function of the module per pair of element types. A hole
+(`[1, , 2]`) is refused as 'an array literal with a hole', a spread of a string, a `Map`, a `Set`, a
+generator or a number as 'a spread of X', a spread into the elements of a typed array, a `Map` or a
+`Set`, and into a literal of a list of objects, arrays or collections, by name.
+
+`new Array(n)` is an Array of elements no value has reached yet, which take the element type of the
+place it is stored into (#1406): a field JSDoc states `T[]` of (`/** @type {uint32[]} */ this.state =
+new Array(16)`) is an array of `T` - a list where it grows - and a local the join of what the program
+stores into it (`const W = new Array(64); W[t] = …` of 32-bit words is a `uint32[64]`). An element
+never stored reads 0 where JavaScript reads undefined, which the `js-oob-read` caveat states. A local
+the program stores values of two kinds into is refused with `PLY1105` ('the elements of 'a' hold both
+string and number').
+
+An Array the program fills with computed numbers is an array of the integers JSDoc states `T[]` of
+where every value it stores is proven one of them (#1413): `x & 0xFF`, a value of a narrower stated
+type, and `parseInt(t, r)` of a text `t` of at most `n` digits of the literal radix `r`, which is a NaN
+or an integer from 0 to `r^n - 1`. The text is a string literal, or `s.substr(i, n)` of a string `s`
+- a parameter nothing assigns to, or a constant - that a statement of the function's body before the
+read proves of digits only: `if (!/^[class]*$/.test(s)) throw …` (or `return`), the class a list of
+characters and ranges without an escape or a flag. `OpCodes.Hex8ToBytes` is such a function: its
+`@returns {uint8[]}` list of `parseInt(hexString.substr(i, 2), 16)` is a list of bytes. `Math.trunc`,
+`floor`, `ceil` and `round` of a number are whole doubles of no bound, which `x % d` by an integer
+literal bounds below `|d|` with the sign of `x`, `+` and `-` of an integer shift, and the branches of
+`r < c ? … : …` (also `<=`, `>`, `>=`) of a constant `r` read as the part the test leaves them: the
+framework's `_byte(v)`, `const reduced = Math.trunc(v) % 256; return reduced < 0 ? reduced + 256 :
+reduced;`, is a NaN or an integer from 0 to 255. A new Array a field of stated integers is given -
+`new Array(n).fill(0)`, a literal - holds the stated elements where its own fit them. The places are
+a result, a parameter, a field and the result of an override of a method that states it; a local that
+takes the value of a call of a method whose every implementation only throws is of the type the method
+states. A store of such a value converts it with a check: where the text is empty, `parseInt` is a NaN,
+which the Array JavaScript fills keeps and the translation traps on with 'integer overflow' - the caveat
+**`js-nan-store`**. A value of no proven range - `x / 3`, three hexadecimal digits for a byte, a text
+no guard proves - stays a double, which the stated place refuses with `PLY1102` ('float64 list where
+uint8 list is expected').
+
 Refused with `PLY1102`: `sort()` without a comparator (it orders by the text of the elements), a
 comparator with effects - one that writes anything but its own locals, or calls a function, whose call
 order ECMA-262 leaves to the engine - and one that is no function expression, `findLast`,

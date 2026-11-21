@@ -131,7 +131,8 @@ public static partial class IrInterpreter {
     _ => element.Equals(value)
   };
 
-  private static ListValue AsList(object value) => (ListValue)value;
+  /// <summary>A list, of which a null reference (#1403) traps.</summary>
+  private static ListValue AsList(object value) => (ListValue)NotNull(value);
 
   private static TableValue AsTable(object value) => (TableValue)value;
 
@@ -257,7 +258,7 @@ public static partial class IrInterpreter {
     /// one that would end the loop included; a live one reads the length, or the slots, at every step.
     /// </summary>
     private Flow ForEachCollection(IrForEachCollection loop, Frame frame) {
-      var collection = this.Evaluate(loop.Collection, frame);
+      var collection = NotNull(this.Evaluate(loop.Collection, frame));
       var checks = loop.Mode == EnumerationMode.Checked;
       if (collection is ListValue list) {
         var version = list.Version;

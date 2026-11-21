@@ -97,8 +97,9 @@ internal sealed partial class TypeInference {
   /// </summary>
   public JsType Of(Node node, Coercion coercion = Coercion.None) {
     // A copy of a function shares its nodes with the function, so a type is known per function.
+    // A value read from a place of stated integers is the integer it is: only the place takes whole doubles (#1416).
     if (!this._known.TryGetValue((this._scope, node, coercion), out var type))
-      this._known[(this._scope, node, coercion)] = type = this.Compute(node, coercion);
+      this._known[(this._scope, node, coercion)] = type = this.Compute(node, coercion).Read;
 
     return type;
   }
@@ -124,7 +125,7 @@ internal sealed partial class TypeInference {
         return JsType.Boolean;
       case Identifier identifier:
         return this._scope!.Bindings.GetValueOrDefault(identifier) switch {
-          Variable variable => variable.Type,
+          Variable variable => this._narrowed.GetValueOrDefault(variable) ?? variable.Type,
           ModuleConstant constant => constant.Type,
           _ => identifier.Name == "undefined" ? JsType.UndefinedValue
             : this._scope.FunctionValues.TryGetValue(identifier, out var function) ? JsType.Function(function.Shape) : JsType.Unknown
@@ -154,13 +155,19 @@ internal sealed partial class TypeInference {
 
         // Values of two kinds are no value of the IR: the expression has no type, and the lowering says why.
         // a || b is a only where a counts as true, which an absent value never does (#1370).
+        if (this.Leftmost(logical) is { } leftmost)
+          return leftmost;
+
         var left = this.Of(logical.Left);
         var joined = JsType.Join(logical.Operator == Operator.LogicalOr && left.Kind != JsKind.Null ? left.Present : left, this.Of(logical.Right));
         return joined.Kind == JsKind.Conflict ? JsType.Unknown : joined;
       case BinaryExpression binary:
         return this.Decide(binary.Operator, binary.Left, binary.Right, coercion).Result;
       case ConditionalExpression choice:
-        var either = JsType.Join(this.Of(choice.Consequent), this.Of(choice.Alternate));
+        // The branch that reads what the test proves present reads it present (#1409).
+        var proven = this.PresentBranch(choice);
+        JsType Branch(Node branch) => branch == proven ? this.Of(branch).Present : this.Of(branch);
+        var either = this.Narrowed(choice, Branch);
         return either.Kind == JsKind.Conflict ? JsType.Unknown : either;
       case ThisExpression:
         return this._scope!.Candidate.ThisClass is { } owner ? JsType.Object(owner) : JsType.Unknown;
@@ -172,6 +179,8 @@ internal sealed partial class TypeInference {
         return JsType.Object(created);
       case MemberExpression member when this._scope!.Bindings.GetValueOrDefault(member) is Variable field:
         return field.Type;
+      case MemberExpression held when this._scope!.FunctionValues.TryGetValue(held, out var property):
+        return JsType.Function(property.Shape);
       case MemberExpression { Computed: false } member when this.Of(member.Object).Class is { } holder:
         return this.MemberType(holder, member);
       case MemberExpression member when this.Names.Library(member) is { } library:
@@ -274,6 +283,12 @@ internal sealed partial class TypeInference {
         return JsType.Boolean;
       case "Math.fround":
         return JsType.F32;
+      // Math.min, max and abs of whole doubles and integers are whole doubles (#1416).
+      case "Math.min" or "Math.max" or "Math.abs" when this.WholeCall(builtin, call) is { } whole:
+        return whole;
+      // A number rounded to an integer is a whole double of no bound, which % of a literal bounds (#1413).
+      case "Math.trunc" or "Math.floor" or "Math.ceil" or "Math.round" when call.Arguments is [var rounded] && this.Of(rounded).Kind == JsKind.Number:
+        return this.Quotient(rounded) ?? JsType.Whole(System.Int128.MinValue, System.Int128.MaxValue);
       case "Math.trunc" or "Math.floor" or "Math.ceil" or "Math.round" or "Math.abs" or "Math.sign" or "Math.sqrt" or "Math.min" or "Math.max":
         return JsType.F64;
       case "BigInt.asUintN":
@@ -302,7 +317,8 @@ internal sealed partial class TypeInference {
         && this.Of(member.Object) is { Kind: JsKind.Array, IsPlain: true, IsGrowable: false, IsView: false } first:
         return call.Arguments.Select(argument => this.Of(argument)).Aggregate(first, (joined, next) => joined.Kind == JsKind.Array && next is { Kind: JsKind.Array, IsPlain: true, IsGrowable: false, IsView: false }
           ? JsType.ArrayOf(JsType.Join(joined.Element!, next.Element!), true) : JsType.Unknown);
-      case null when call.Callee is MemberExpression { Computed: false } invoked && this.Of(invoked.Object).Class is { } owner:
+      // A field of the object is the function value it holds, which hides a method of the same key (#1408).
+      case null when call.Callee is MemberExpression { Computed: false } invoked && this.Of(invoked.Object).Class is { } owner && (Binder.KeyOf(invoked) is not { } field || owner.Field(field) is null):
         return Binder.KeyOf(invoked) is { } key && owner.Member(MemberKind.Method, key) is { } called ? this.ResultOf(this.ModelOf(called)) : JsType.Unknown;
       case null when this.Names.Callee(call.Callee) is { } callee:
         var model = this.ModelOf(callee);
@@ -383,7 +399,7 @@ internal sealed partial class TypeInference {
       case Operator.Remainder when a.Low >= 0 && b.Low >= 0 && Unify(a, b, IrType.I32, IrType.U32) is { } unsigned:
         return new(Plan.IntegerDivide, JsType.Of(unsigned), unsigned);
       case Operator.Addition or Operator.Subtraction or Operator.Multiplication or Operator.Division or Operator.Remainder:
-        return a.Kind == JsKind.Number && b.Kind == JsKind.Number ? new(Plan.Float, JsType.F64, IrType.F64) : new(Plan.Invalid, JsType.Unknown);
+        return a.Kind == JsKind.Number && b.Kind == JsKind.Number ? new(Plan.Float, WholeResult(op, a, b, right) ?? JsType.F64, IrType.F64) : new(Plan.Invalid, JsType.Unknown);
       case Operator.Exponentiation:
         return a.Kind == JsKind.Number && b.Kind == JsKind.Number ? new(Plan.Power, JsType.F64, IrType.F64) : new(Plan.Invalid, JsType.Unknown);
       case Operator.StrictEquality or Operator.StrictInequality when a.Kind is JsKind.Object or JsKind.Null && b.Kind is JsKind.Object or JsKind.Null:

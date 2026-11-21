@@ -40,7 +40,8 @@ internal sealed partial class Lowering {
         throw this.Unsupported(expression, "a regular expression");
       case MemberExpression member when types.Of(member.Object).Kind == JsKind.String:
         var text = this.Expression(member.Object);
-        // s[i] is undefined outside the string, which no value of the IR is: the read traps there, as reading an array does.
+        // s[i] is undefined outside the string, which no value of the IR is: the read traps there, as reading an array does (caveat js-oob-read).
+        this.AccessesElements |= member.Computed;
         return member.Computed
           ? Str(IrIntrinsicOp.StrFromCodeUnit, _str, Str(IrIntrinsicOp.StrCodeUnitAt, IrType.U16, text, this.Index(member.Property)))
           : member.Property is Identifier { Name: "length" } ? Str(IrIntrinsicOp.StrLength, IrType.I32, text) : throw this.Unsupported(member, types.Text(member));
@@ -51,6 +52,9 @@ internal sealed partial class Lowering {
 
         if (receiver.Kind == JsKind.String)
           return this.Method(call, callee, method);
+
+        if (method == "apply" && callee.Object is MemberExpression applied && types.Names.Library(applied) is "String.fromCharCode")
+          return this.FromCharCodeApply(call);
 
         return types.Names.Library(callee) is "String.fromCharCode" ? this.FromCharCode(call) : null;
       default:
@@ -212,11 +216,14 @@ internal sealed partial class Lowering {
         Takes(1, 1);
         text = this.Twice(text, call, method);
         var from = this.Twice(this.Index(arguments[0]), call, method);
-        // A negative index counts from the end; outside the string at() is undefined, and the read traps there.
+        // A negative index counts from the end; outside the string at() is undefined, and the read traps there (caveat js-oob-read).
+        this.AccessesElements = true;
         var counted = new IrConditional(new IrBinary(IrBinaryOp.Less, from, I32(0)), new IrBinary(IrBinaryOp.Add, Length(), from), from);
         return Str(IrIntrinsicOp.StrFromCodeUnit, _str, Str(IrIntrinsicOp.StrCodeUnitAt, IrType.U16, text, counted));
       case "codePointAt":
         Takes(1, 1);
+        // Outside the string codePointAt is undefined, and the read traps there (caveat js-oob-read, #1367).
+        this.AccessesElements = true;
         return Str(IrIntrinsicOp.StrCodePointAt, IrType.I32, text, this.Index(arguments[0]));
       case "substring":
         Takes(1, 2);
@@ -240,6 +247,16 @@ internal sealed partial class Lowering {
         var first = this.Twice(Relative(arguments[0]), call, method);
         var last = arguments.Count == 1 ? Length() : Relative(arguments[1]);
         return Str(IrIntrinsicOp.StrSubstring, _str, text, first, Max(new IrBinary(IrBinaryOp.Subtract, last, first), I32(0)));
+      case "substr":
+        // Annex B (B.2.2.1): the start counts from the end where it is negative, the length is cut to what the string has left.
+        Takes(1, 2);
+        text = this.Twice(text, call, method);
+        var begin = this.StringPosition(arguments[0]);
+        begin = this.Twice(new IrConditional(new IrBinary(IrBinaryOp.Less, this.Twice(begin, call, method), I32(0)),
+          Max(new IrBinary(IrBinaryOp.Add, Length(), begin), I32(0)), Min(begin, Length())), call, method);
+        var left = new IrBinary(IrBinaryOp.Subtract, Length(), begin);
+        var taken = arguments.Count == 1 ? left : Min(Max(this.StringPosition(arguments[1]), I32(0)), left);
+        return Str(IrIntrinsicOp.StrSubstring, _str, text, begin, taken);
       case "indexOf":
         Takes(1, 2);
         var needle = Needle(0);
@@ -368,9 +385,11 @@ internal sealed partial class Lowering {
     return Str(IrIntrinsicOp.StrJoin, _str, separator, parts);
   }
 
-  /// <summary><c>String.fromCharCode</c>: each argument through ToUint16, the code units joined.</summary>
+  /// <summary><c>String.fromCharCode</c>: each argument through ToUint16, a spread one each of its elements (#1400), the code units joined.</summary>
   private IrExpr FromCharCode(CallExpression call) {
-    var units = call.Arguments.Select(argument => (IrExpr)Str(IrIntrinsicOp.StrFromCodeUnit, _str, new IrConvert(IrType.U16, this.Uint32(argument)))).ToList();
+    var units = call.Arguments.Select(argument => argument is SpreadElement spread
+      ? this.CharCodes(spread.Argument)
+      : (IrExpr)Str(IrIntrinsicOp.StrFromCodeUnit, _str, new IrConvert(IrType.U16, this.Uint32(argument)))).ToList();
     return units.Count switch {
       0 => new IrStrConst(""),
       1 => units[0],

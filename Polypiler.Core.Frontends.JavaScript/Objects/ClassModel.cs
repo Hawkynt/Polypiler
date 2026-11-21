@@ -37,6 +37,25 @@ internal sealed record ClassField(string Key, Variable Variable, Node? Initializ
   /// <summary>Whether the field is private, <c>#name</c>.</summary>
   public bool IsPrivate => this.Key.StartsWith('#');
 
+  /// <summary>Whether a field declaration of the class body declares the field, which defines it on the object rather than storing through the prototype.</summary>
+  public bool IsDeclared { get; init; }
+
+  /// <summary>
+  /// The getters and setters derived classes declare over the field (#1402). Where there are any, the
+  /// field is a virtual property of its class, whose accessors read and write <see cref="Ir"/>, a private
+  /// field of its own; every read and store of the key runs the accessor of the object's class.
+  /// </summary>
+  public List<Candidate> Accessors { get; } = [];
+
+  /// <summary>Whether derived classes declare accessors over the field, so that it is a virtual property.</summary>
+  public bool IsVirtual => this.Accessors.Count > 0;
+
+  /// <summary>The getter of the virtual property of the field in the IR, once the types are known; <see langword="null"/> for a field that is no property.</summary>
+  public IrMethod? Getter { get; set; }
+
+  /// <summary>The setter of the virtual property of the field in the IR, once the types are known; <see langword="null"/> for a field that is no property.</summary>
+  public IrMethod? Setter { get; set; }
+
   /// <summary>The field in the IR, once the types are known.</summary>
   public IrField? Ir { get; set; }
 
@@ -99,6 +118,35 @@ internal sealed class ClassModel(string name, Node declaration, IrClassType? lib
   /// and its constructor takes one parameter per field.
   /// </summary>
   public IReadOnlyDictionary<string, IReadOnlyList<Expression>>? Frozen { get; init; }
+
+  /// <summary>
+  /// For a class synthesized for the object literals of one record shape that meet objects of a class
+  /// (#1388), the keys of the shape in source order - the order <c>Object.keys</c> gives them;
+  /// <see langword="null"/> for any other class. Its constructor runs none of its lineage, as a literal
+  /// runs none, and <c>instanceof</c> of a class it derives from is false for its objects.
+  /// </summary>
+  public IReadOnlyList<string>? RecordKeys { get; init; }
+
+  /// <summary>
+  /// Whether the class is synthesized for the object one <c>new C(…)</c> makes and that properties the
+  /// class lacks are then added to (#1388): a genuine <c>C</c> with those properties as fields of its own.
+  /// </summary>
+  public bool IsExtension { get; init; }
+
+  /// <summary>Whether the file declares no such class: it is synthesized for a record or an extension.</summary>
+  public bool IsSynthesized => this.RecordKeys is not null || this.IsExtension;
+
+  /// <summary>The keys of an object of the class in the order <c>Object.keys</c> gives them: a record's in its order, otherwise the fields that are no private ones, the base class first.</summary>
+  public IReadOnlyList<string> Keys => this.RecordKeys ?? [.. this.Lineage.Reverse().SelectMany(ancestor => ancestor.Fields).Where(item => !item.IsPrivate).Select(item => item.Key)];
+
+  /// <summary>
+  /// Whether the class is that of a <c>@typedef {Object}</c> (#1409): its fields are read-only, its
+  /// constructor takes one parameter per field, and an object literal where it is stated is a new object of it.
+  /// </summary>
+  public bool IsTypedef { get; init; }
+
+  /// <summary>Whether the fields are read-only and the constructor takes one value per field: the class of a frozen object's members or of a typedef.</summary>
+  public bool IsValue => this.Frozen is not null || this.IsTypedef;
 
   /// <summary>Why the class cannot be imported whatever its members are, or <see langword="null"/>.</summary>
   public string? Problem { get; set; }

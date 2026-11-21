@@ -77,27 +77,19 @@ internal sealed partial class Lowering {
     }
   }
 
-  /// <summary>A literal as a new list: its elements, or the elements of the one array it spreads.</summary>
+  /// <summary>A literal as a new list: its elements and the elements of the arrays it spreads, in order.</summary>
   private IrExpr ListLiteral(ArrayExpression literal, IrType list) {
     var element = list.Element!;
-    if (literal.Elements is [SpreadElement spread]) {
-      var source = this.Expression(spread.Argument);
-      if (source.Type.IsList && !IrType.Array(element).IsStorable)
-        throw this.Unsupported(literal, $"a copy of {types.Of(spread.Argument).Describe()}, of which the IR has no array");
-
-      if (source.Type.IsList)
-        source = ListOp(IrCollectionOp.ListCopyToArray, source.Type, source);
-
-      return source.Type == IrType.Array(element) ? ListOp(IrCollectionOp.ListFromArray, list, source) : throw this.Unsupported(literal, $"a spread of {types.Of(spread.Argument).Describe()}");
-    }
-
     if (literal.Elements.Count == 0)
       return ListOp(IrCollectionOp.ListNew, list);
 
     // Objects, arrays and collections, which no array holds, are the elements of a list of their own (#1365).
     if (element.IsCollection || element.IsObject || element.IsArray) {
-      if (literal.Elements.Any(item => item is null or SpreadElement))
-        throw this.Unsupported(literal, $"a hole or a spread in a literal of a list of {types.Of(literal).Element!.Describe()}");
+      if (literal.Elements.Any(item => item is null))
+        throw this.Unsupported(literal, "an array literal with a hole");
+
+      if (literal.Elements.Any(item => item is SpreadElement))
+        throw this.Unsupported(literal, $"a spread in a literal of a list of {types.Of(literal).Element!.Describe()}, of which the IR has no array");
 
       return new IrCollection(IrCollectionOp.ListOf, list, [.. literal.Elements.Select(item => this.Value(item!, element))]);
     }
@@ -181,8 +173,9 @@ internal sealed partial class Lowering {
   }
 
   /// <summary>
-  /// A write of an element of a list: at <c>a.length</c> an append, anywhere else a write that traps
-  /// outside the list - JavaScript would leave holes - read once for a compound assignment.
+  /// A write of an element of a list: at <c>a.length</c> an append - spelled so, or an index equal to the
+  /// length when it runs - anywhere else a write that traps outside the list - JavaScript would leave
+  /// holes - read once for a compound assignment.
   /// </summary>
   private void ListStore(AssignmentExpression assignment, MemberExpression element, IrType list, List<IrStmt> into) {
     var target = this.Expression(element.Object);
@@ -209,7 +202,13 @@ internal sealed partial class Lowering {
       return;
     }
 
-    into.Add(new IrExprStmt(ListOp(IrCollectionOp.ListSet, list, target, index, this.Value(assignment.Right, type))));
+    // At the length of the list a write appends, as JavaScript grows the Array (#1365); anywhere else it is a write that traps outside.
+    target = this.Once(target, into);
+    index = this.Once(index, into);
+    var stored = this.Once(this.Value(assignment.Right, type), into);
+    into.Add(new IrIf(new IrBinary(IrBinaryOp.Equal, index, ListOp(IrCollectionOp.ListCount, list, target)),
+      new IrBlock([new IrExprStmt(ListOp(IrCollectionOp.ListAdd, list, target, stored))]),
+      new IrBlock([new IrExprStmt(ListOp(IrCollectionOp.ListSet, list, target, index, stored))])));
   }
 
   /// <summary>

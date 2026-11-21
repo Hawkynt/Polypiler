@@ -30,6 +30,9 @@ internal sealed partial class TypeInference {
       return false;
 
     var changed = false;
+    for (var index = 0; index < call.Arguments.Count; ++index)
+      changed |= callee.Callable!.Pass(index, this.Of(call.Arguments[index]));
+
     foreach (var member in callee.Callable!.Members.ToList()) {
       var parameters = this.ModelOf(member).Parameters;
       for (var index = 0; index < call.Arguments.Count && index < parameters.Count; ++index)
@@ -96,7 +99,9 @@ internal sealed partial class TypeInference {
         if (part.Callable is { } named)
           this.Sign(named.Root, visiting);
 
-    var parameters = model.Parameters.Select(parameter => parameter.Entry.Ir is { IsStorable: true } type ? type : IrType.F64).ToList();
+    // A position the calls pass an argument at that the function has no parameter for is one it ignores (#1408).
+    var parameters = model.Parameters.Select(parameter => parameter.Entry).Concat(shape.Arguments.Skip(model.Parameters.Count))
+      .Select(entry => entry.Ir is { IsStorable: true } type ? type : IrType.F64).ToList();
     var result = model.ReturnType;
     shape.Signature = IrType.Function(new IrFunctionType(parameters, result.IsStorable || result == IrType.Void ? result : IrType.F64));
   }

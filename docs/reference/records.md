@@ -82,6 +82,7 @@ differently.
 | `p.z = v` | — | `PLY1102`: a new property of an object literal |
 | `delete p.x`, `p === q`, `p != q`, computed keys, spread, methods, getters, setters, string keys | — | `PLY1102` naming it |
 | one variable reached by two shapes | — | `PLY1105` |
+| a literal whose shape reaches a place that objects of a class reach (#1388) | an object of a class made for the shape - see below | supported |
 
 Each distinct shape - the keys in source order and the IR type of each value - is one struct, named
 after the first variable or parameter in source order that holds it, in PascalCase (`point` becomes
@@ -89,6 +90,46 @@ after the first variable or parameter in source order that holds it, in PascalCa
 a name already taken gets a number (`P2`). Every field is read-only. A literal whose values have
 narrower types than the place it goes to (`{ x: 1 }` where `{ x: number }` is held) is converted key
 by key.
+
+### Records where objects of a class are kept (#1388)
+
+The Cipher framework keeps its test vectors as `TestCase` objects, and most algorithms write them as
+literals (`this.tests = [{ text, uri, key, input, expected }]`) that `RegisterAlgorithm` turns into
+`TestCase` objects, copying the keys the class lacks onto them. A place such literals and objects of a
+class both reach is no record: the literals of that shape are objects of a class made for it.
+
+| Construct | IR | Status |
+| --- | --- | --- |
+| a shape that meets objects of `C` at one place | a class `CLiteral` derived from the nearest class of the file every class of the place derives from; its own fields are the keys that class lacks, in the literal's order; the keys it has are its inherited fields, their types joined | supported |
+| the literal | `IrNew` of a constructor that `SkipsBase`: it runs no constructor of the lineage, as a literal runs none, and stores the values in the literal's order, then `undefined` into each field the literal lacks | supported |
+| `x instanceof C` where `x` may be such a literal | `IrTypeTest` of `C` and not of any class made for literals below it: false for a literal | supported for a variable |
+| `Object.keys(o)` of a value that may be such a literal | the keys of the class `o` is of: the literal's in its order, otherwise the fields base first; a loop over them is written once per class | supported for a variable |
+| `r[key] = o[key]` in a loop over `Object.keys(o)`, of keys `C` lacks, where `r` is a `const` of one `new C(…)` | the `new` makes an object of a class `CExtended` derived from `C`, with the keys copied as fields - one per list of keys, chosen by the class of `o`: a genuine `C` | supported where `o` is a `const` or a parameter never assigned and every key is copied on every pass |
+| one shape whose key holds values of two kinds | — | `PLY1105` |
+| a literal meeting a class of the library (`Error`) or of a frozen object | — | `PLY1105` |
+| `instanceof` or `Object.keys` of an expression that may be such a literal and is no variable; keys copied from a variable assigned again, or only under a condition | — | `PLY1102` naming it |
+
+### JSDoc typedef records (#1409)
+
+A `@typedef {Object} Name` with `@property {T} key` tags, as the Cipher framework's
+`MerkleDamgardOptions`, is a type JSDoc can name wherever it names a class: `@param {Name} options`.
+It is a class of read-only fields, one per `@property` in source order, not a struct: an optional key,
+`[key]` or `[key=default]`, may be missing, and a struct has no field that may be absent. An optional
+key is its stated type or `undefined` (`int?` in C#, `null` in the JavaScript written back); the
+default JSDoc writes down documents what the function does, it is not stored. An integer stays one: an
+operator that reads it unchecked sees a NaN where it is undefined.
+
+| Construct | IR | Status |
+| --- | --- | --- |
+| `f({ blockSize: 64, lengthBytes: 8 })` where `@param {Name}` | `IrNew` of the typedef's class, none for each optional key left out | supported |
+| `options \|\| {}` of an object that is never absent | `options`: an object counts as true, `{}` is never evaluated | supported |
+| `options \|\| {}` of `@param {Name\|null}` | the object, or one of every key `undefined` | supported |
+| `s.key === undefined ? d : s.key`, `!==`, `==`, `!=`, `null` | the branch reads the value present (`IrUnwrap`) | supported |
+| `s.flag === true`, `s.flag !== false` | `undefined` equals no truth value | supported |
+| a literal that leaves out a required key, or has a key the typedef lacks | — | `PLY1105` naming the key |
+| keys in another order than the `@property` tags with values that have an effect | — | `PLY1102` |
+| `s.key = v` | — | `PLY1102`: a write into the field of the typedef |
+| `@typedef {Array}`, unions, a property of no supported type or of the typedef itself | — | `PLY1101`: no supported JSDoc type |
 
 ## C# backend
 

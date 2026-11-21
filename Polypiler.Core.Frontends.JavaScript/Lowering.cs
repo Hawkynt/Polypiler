@@ -26,14 +26,31 @@ internal sealed partial class Lowering(TypeInference types) {
   private FunctionModel _model = null!;
   private IrType _returnType = IrType.Void;
 
-  /// <summary>Whether a lowered function reads or writes an array element.</summary>
-  public bool AccessesElements { get; private set; }
+  /// <summary>Whether a lowered function reads or writes an array element where the imported code traps and JavaScript does not.</summary>
+  public bool AccessesElements { get => this._accessesElements || this._trappingReads.Count > 0; private set => this._accessesElements = value; }
+
+  private bool _accessesElements;
 
   /// <summary>Whether a lowered function divides integers, which traps where JavaScript does not.</summary>
   public bool Divides { get; private set; }
 
+  /// <summary>Whether a lowered function stores a whole double into a place of integers JSDoc states, which traps on a NaN (#1413).</summary>
+  public bool TrapsNaN { get; private set; }
+
+  /// <summary>Whether a lowered function stores an exact integer where JSDoc states an integer type that may not hold it, which traps there (#1416).</summary>
+  public bool TrapsRange { get; private set; }
+
   /// <summary>Whether a lowered function throws a string out to its caller, which receives an Error of that message instead (#1365).</summary>
   public bool ThrowsText { get; private set; }
+
+  /// <summary>How many blocks the lowering is inside of.</summary>
+  private int _depth;
+
+  /// <summary>The function of the statements the module runs when it is loaded, or <see langword="null"/>.</summary>
+  public Candidate? ModuleInitializer { get; init; }
+
+  /// <summary>Every statement of the body of <see cref="ModuleInitializer"/> as lowered, with the statement of the source it comes from.</summary>
+  public Dictionary<IrStmt, Node> ModuleSites { get; } = new(ReferenceEqualityComparer.Instance);
 
   /// <summary>The constants of the enclosing scope that the lowered functions use.</summary>
   public HashSet<ModuleConstant> Constants { get; } = [];
@@ -44,13 +61,14 @@ internal sealed partial class Lowering(TypeInference types) {
     this._locals.Clear();
     this._assigned = [];
     this._receiver = null;
+    this._diverged = false;
     types.Enter(model);
     try {
       if (model.Problem is { } problem)
         throw new Refusal(problem);
 
       foreach (var variable in model.Parameters.Concat(model.Locals))
-        this.CheckType(variable.Type, variable.Name, variable.Evidence ?? variable.Declaration);
+        this.CheckType(variable.Type, variable.Name, variable.Evidence ?? variable.Declaration, true);
 
       this.CheckType(model.Result, model.Candidate.Name, model.ResultEvidence ?? model.Candidate.Anchor);
       // A parameter has the type it is called with. Where the body assigns it something else, the body
@@ -99,11 +117,18 @@ internal sealed partial class Lowering(TypeInference types) {
     }
   }
 
-  /// <summary>Refuses a place that values of two kinds reach, and a <c>BigInt</c> that nothing bounds.</summary>
-  private void CheckType(JsType type, string name, Node evidence) {
+  /// <summary>
+  /// Refuses a place that values of two kinds reach, and a <c>BigInt</c> that nothing bounds; for a
+  /// variable also an Array the program stores values of two kinds into.
+  /// </summary>
+  private void CheckType(JsType type, string name, Node evidence, bool variable = false) {
 
     if (type.Kind == JsKind.Conflict)
       throw this.Refuse(evidence, JavaScriptFrontend.MixedKindsDescriptor, $"'{name}' holds both {type.Kinds.First} and {type.Kinds.Second}");
+
+    // An Array the program stores values of two kinds into - new Array(n), then a string and a number (#1406).
+    if (variable && type is { Kind: JsKind.Array, Element.Kind: JsKind.Conflict })
+      throw this.Refuse(evidence, JavaScriptFrontend.MixedKindsDescriptor, $"the elements of '{name}' hold both {type.Element.Kinds.First} and {type.Element.Kinds.Second}");
 
     if (type.Kind == JsKind.BigInt && type.Ir is null)
       throw this.Unbounded(evidence);
@@ -159,8 +184,26 @@ internal sealed partial class Lowering(TypeInference types) {
     var list = statements.ToList();
     var hoisted = this.Hoisted(list, into);
     var start = into.Count;
-    foreach (var statement in list.Where(statement => statement is not FunctionDeclaration))
-      this.Statement(statement, into);
+    // The statements of the module's initializer are noted with the statement of the source each comes from (#1410).
+    var sites = this._model.Candidate == this.ModuleInitializer && this._depth == 0 ? this.ModuleSites : null;
+    ++this._depth;
+    try {
+      foreach (var statement in list.Where(statement => statement is not FunctionDeclaration)) {
+        var before = into.Count;
+        this.Statement(statement, into);
+        if (sites is not null)
+          foreach (var lowered in into.Skip(before))
+            sites[lowered] = statement;
+
+        // What follows a call of no value is never run (#1389).
+        if (this._diverged) {
+          this._diverged = false;
+          break;
+        }
+      }
+    } finally {
+      --this._depth;
+    }
 
     this.Assign(hoisted, into, start);
     return new IrBlock(into);
@@ -171,6 +214,8 @@ internal sealed partial class Lowering(TypeInference types) {
 
   private void Statement(Statement statement, List<IrStmt> into) {
     switch (statement) {
+      case Acornima.Ast.Statement when this.Diverging(statement, into):
+        break;
       case ExpressionStatement or ForOfStatement when this.KeyLoop(statement, into):
         break;
       case BlockStatement block:
@@ -225,7 +270,7 @@ internal sealed partial class Lowering(TypeInference types) {
         into.Add(new IrContinue());
         break;
       case ReturnStatement result:
-        into.Add(this.Return(result));
+        this.Return(result, into);
         break;
       default:
         if (this.ExceptionStatement(statement, into))
@@ -275,18 +320,25 @@ internal sealed partial class Lowering(TypeInference types) {
   internal static bool Contains(Node node, Func<Node, bool> matches)
     => matches(node) || (node is not IFunction && node.ChildNodes.Any(child => Contains(child, matches)));
 
-  private IrReturn Return(ReturnStatement result) {
-    if (result.Argument is null || (this._returnType == IrType.Void && types.Names.IsAbsentLiteral(result.Argument) && result.Argument is not NullLiteral))
-      return new IrReturn(this._returnType.IsOptional ? new IrNone(this._returnType) : this._returnType.IsNullable ? new IrNull(this._returnType) : null);
+  private void Return(ReturnStatement result, List<IrStmt> into) {
+    if (result.Argument is null || (this._returnType == IrType.Void && types.Names.IsAbsentLiteral(result.Argument) && result.Argument is not NullLiteral)) {
+      into.Add(new IrReturn(this._returnType.IsOptional ? new IrNone(this._returnType) : this._returnType.IsNullable ? new IrNull(this._returnType) : null));
+      return;
+    }
 
-    if (this._returnType != IrType.Void)
-      return new IrReturn(this.Value(result.Argument, this._returnType));
+    if (this._returnType != IrType.Void) {
+      into.Add(new IrReturn(this.Value(result.Argument, this._returnType)));
+      return;
+    }
 
-    // The value has no type: the expression is refused for what it is, or it is a call that returns nothing.
-    if (this.Expression(result.Argument) is IrNull)
+    // The value has no type: the expression is refused for what it is, or it is a call that returns nothing, which
+    // runs before the function returns nothing itself (#1408: return finalize(…) of a finalizer that returns nothing).
+    var value = this.Expression(result.Argument);
+    if (value is IrNull)
       throw this.Unsupported(result.Argument, "null");
 
-    throw this.Unsupported(result.Argument, "void as the value returned");
+    into.Add(new IrExprStmt(value));
+    into.Add(new IrReturn(null));
   }
 
   /// <summary>
@@ -307,7 +359,14 @@ internal sealed partial class Lowering(TypeInference types) {
 
     var before = this._assigned;
     var condition = loop.Test is null ? new IrConst(IrType.Bool, 1) : this.Condition(loop.Test);
+    var bounding = this.Bounding(loop);
+    if (bounding is { } bound)
+      this._inRange.Add(bound);
+
     var body = this.Body(loop.Body);
+    if (bounding is not null)
+      this._inRange.RemoveAt(this._inRange.Count - 1);
+
     this._assigned = before;
     var step = new List<IrStmt>();
     if (loop.Update is not null)
@@ -317,7 +376,8 @@ internal sealed partial class Lowering(TypeInference types) {
     var renewed = PerIteration(perPass, condition, body, step);
     statements.Add(renewed.Count > 0 ? new IrFor(condition, body, new IrBlock(step)) { PerIteration = renewed }
       : Contains(loop.Body, node => node is ContinueStatement) ? new IrFor(condition, body, new IrBlock(step))
-      : new IrWhile(condition, new IrBlock([.. body.Statements, .. step])));
+      // A body that never reaches its end - it returns or throws on every path - never reaches the update either.
+      : new IrWhile(condition, AlwaysReturns(body) ? body : new IrBlock([.. body.Statements, .. step])));
     return new IrBlock(statements);
   }
 
@@ -514,6 +574,8 @@ internal sealed partial class Lowering(TypeInference types) {
         var index = this.Index(element.Property);
         var elementType = array.Type.Element!;
         var coercion = holder.IsPlain || !elementType.IsInteger || elementType.IsLong ? Coercion.None : Coercion.Int32;
+        // A typed array ignores a store outside it; an Array grows, and a stated T[] may be either (#1374).
+        var typed = !holder.IsPlain && !holder.IsStated;
         Typed stored;
         if (compound is { } combining) {
           // What a compound assignment reads and writes is evaluated once, as JavaScript evaluates it once.
@@ -523,11 +585,19 @@ internal sealed partial class Lowering(TypeInference types) {
           stored = this.Binary(combining, element, assignment.Right, coercion, assignment);
           this._substitutes.Remove(element);
         } else {
-          stored = this.Evaluate(assignment.Right, coercion);
+          // A typed array stores what ToNumber makes of the element read outside an array (#1367).
+          stored = (typed ? this.Element(assignment.Right, coercion) : null) ?? this.Evaluate(assignment.Right, coercion);
         }
 
-        this.AccessesElements = true;
-        into.Add(new IrStore(array, index, this.Stored(stored, elementType, holder.IsPlain, assignment.Right)));
+        var storedValue = this.Stored(stored, elementType, holder.IsPlain, assignment.Right);
+        if (this.Inside(element, new IrArrayLoad(array, index))) {
+          into.Add(new IrStore(array, index, storedValue));
+        } else if (!typed || compound is not null) {
+          this.AccessesElements = true;
+          into.Add(new IrStore(array, index, storedValue));
+        } else {
+          this.TypedStore(array, index, storedValue, into);
+        }
         break;
       default:
         throw this.Unsupported(assignment.Left, types.Text(assignment.Left));

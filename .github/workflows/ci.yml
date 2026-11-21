@@ -85,7 +85,9 @@ jobs:
   coverage-gate:
     name: coverage gate
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Run 44892885160 passed 33,299 tests and both 95% gates, but its report hit the 20-minute
+    # deadline (#1460). Leave headroom for collection, report generation and artifact upload.
+    timeout-minutes: 30
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
       MIN_LINE: '95'
@@ -345,6 +347,14 @@ jobs:
         run: node tooling/cipher/record-kats.mjs --corpus "$FRAMEWORK" --out tests/fixtures/corpus/cipher --check --only checksum/adler.js --only hash/sha256.js --only stream/chacha20.js
       - name: Check the translations of the sample
         run: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build -- cipher kat checksum/adler.js hash/sha256.js stream/chacha20.js --jobs 3 --report cipher-kat.md
+      # The round trip JavaScript -> IR -> JavaScript computes what the original computes, on the Arrays the corpus passes (#1404).
+      - name: Check the JavaScript round trip of the sample
+        run: |
+          for file in checksum/adler checksum/isbn hash/sha256 stream/chacha20; do
+            dotnet Polypiler.Cli/bin/Release/net10.0/polypiler.dll translate "$(dirname "$FRAMEWORK")/algorithms/$file.js" --from javascript --to javascript --output "js-round-trip/$file"
+            echo "$file:"
+            node tooling/cipher/run-js-kats.mjs "js-round-trip/$file/$(basename "$file").mjs" "tests/fixtures/corpus/cipher/$file.kat.json"
+          done
       - name: Publish the table
         if: always()
         uses: actions/upload-artifact@v4

@@ -320,6 +320,10 @@ internal sealed partial class Binder(FunctionModel model, List<Candidate> candid
       switch (declarator.Id) {
         case Identifier id when this.Declare(id, declaration, declarator.Init) is { } variable && declarator.Init is not null:
           model.Flows.Add(new Flow(FlowKind.Assign, declarator.Init, variable));
+          // The one object a const made by new holds is what properties copied into it extend (#1388).
+          if (variable.IsConstant && declarator.Init is NewExpression creation)
+            variable.Creation = creation;
+
           break;
         case ObjectPattern pattern when declarator.Init is not null:
           // const { x, y } = p declares x and y, each with the value of its key; anything else in the pattern the lowering refuses.
@@ -333,8 +337,22 @@ internal sealed partial class Binder(FunctionModel model, List<Candidate> candid
   }
 
   /// <summary>Declares a local, or records that the scoping rules refuse a second declaration of its name.</summary>
-  private Variable? Declare(Identifier id, VariableDeclaration declaration, Node? initializer)
-    => this.Declare(id, declaration.Kind == VariableDeclarationKind.Const, initializer is null);
+  private Variable? Declare(Identifier id, VariableDeclaration declaration, Node? initializer) {
+    var variable = this.Declare(id, declaration.Kind == VariableDeclarationKind.Const, initializer is null);
+    // The type a /** @type {T} */ before a declaration of one name states (#1416).
+    if (variable is not null && declaration.Declarations.Count == 1 && this.Documentation(declaration) is { } comment)
+      variable.Spelling = JsDoc.TypeSpelling(comment);
+
+    return variable;
+  }
+
+  /// <summary>The <c>/** … */</c> comment that ends right before a node, with nothing but white space between the two, or <see langword="null"/>.</summary>
+  private string? Documentation(Node node) {
+    var before = source[..node.Start].TrimEnd();
+    var open = before.LastIndexOf("/**", System.StringComparison.Ordinal);
+    return before.EndsWith("*/", System.StringComparison.Ordinal) && open >= 0 && before.IndexOf("*/", open + 3, System.StringComparison.Ordinal) == before.Length - 2
+      ? before[open..] : null;
+  }
 
   /// <summary>
   /// Declares a local, or records that the scoping rules refuse a second declaration of its name. A
@@ -455,6 +473,13 @@ internal sealed partial class Binder(FunctionModel model, List<Candidate> candid
         this.Expression(binary.Left, left, binary);
         this.Expression(binary.Right, right, binary);
         break;
+      case MemberExpression { Computed: false } held when !ReferenceEquals(held, this._callee) && this.Callee(held) is { IsProperty: true } property:
+        // A function of an object of functions named where no call is: the function as a value (#1408).
+        model.FunctionValues[held] = property;
+        if (!model.Callees.Contains(property))
+          model.Callees.Add(property);
+
+        break;
       case MemberExpression member:
         this.Expression(member.Object);
         // An element or the length is taken; the name of the property is read from the source, whatever kind of name it is.
@@ -571,6 +596,10 @@ internal sealed partial class Binder(FunctionModel model, List<Candidate> candid
         // A store at the key of a key loop is the store into the field of that name, which the lowering checks (#1373).
         this.Expression(keyed);
         this.Expression(assignment.Right);
+        if (keyed.Object is Identifier { Name: var stored } && this.Lookup(stored, out var copiedInto) && ((Identifier)keyed.Property).Name is var name
+            && this._scope.TryGetValue(name, out var key) && key.KeysOf is { } source)
+          model.Flows.Add(new Flow(FlowKind.KeyedStore, assignment, copiedInto, Source: source));
+
         break;
       case MemberExpression element:
         this.Expression(element);
@@ -693,8 +722,9 @@ internal sealed partial class Binder(FunctionModel model, List<Candidate> candid
       for (var index = 0; index < call.Arguments.Count; ++index)
         model.Flows.Add(new Flow(FlowKind.MethodArgument, call.Arguments[index], null, null, index, call));
 
-    // A call of anything else that is no method is a call of a function value, whose functions the types say.
-    if (builtin is null && this.Callee(call.Callee) is null && call.Callee is not MemberExpression { Computed: false })
+    // A call of anything else that is no method is a call of a function value, whose functions the types say;
+    // so is a call of a field that holds one, this._f(x), which only the types tell from a method (#1408).
+    if (builtin is null && this.Callee(call.Callee) is null)
       model.Flows.Add(new Flow(FlowKind.Invoke, call));
 
     if (builtin is not null || this.Callee(call.Callee) is not { } callee)
@@ -747,7 +777,7 @@ internal sealed partial class Binder(FunctionModel model, List<Candidate> candid
       case Identifier { Name: var name } identifier when !model.Bindings.ContainsKey(identifier):
         return this.Redirects.GetValueOrDefault(identifier) ?? candidates.Find(candidate => !candidate.IsProperty && candidate.Name == name);
       case MemberExpression { Computed: false, Property: Identifier { Name: var property } } member when Path(member.Object) is { } path && !model.Bindings.ContainsKey(path.Root):
-        return candidates.Find(candidate => candidate.IsProperty && candidate.Owner == path.Text && candidate.Name == property);
+        return this.Redirects.GetValueOrDefault(member) ?? candidates.Find(candidate => candidate.IsProperty && candidate.Owner == path.Text && candidate.Name == property);
       default:
         return null;
     }

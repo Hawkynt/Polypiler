@@ -34,6 +34,8 @@ internal sealed partial class Lowering {
     if (this.KeysValue(node) is { } keys)
       return keys;
 
+    if (this.RegexExpression(node) is { } matched)
+      return matched;
     if (this.StringExpression(node) is { } text)
       return text;
     if (this.NumberTextExpression(node) is { } converted)
@@ -70,7 +72,7 @@ internal sealed partial class Lowering {
       case ConditionalExpression choice:
         return this.Conditional(choice);
       case MemberExpression member:
-        return this.Member(member);
+        return this.FunctionValue(member) ?? this.Member(member);
       case CallExpression call:
         return this.Call(call);
       case AwaitExpression awaited:
@@ -81,6 +83,8 @@ internal sealed partial class Lowering {
         return this.ArrayLiteral(literal, types.Of(literal).Ir!.Element!);
       case ArrowFunctionExpression or FunctionExpression when this._model.Nested.TryGetValue(node, out var nested):
         return this.Lambda(nested);
+      case ObjectExpression literal when types.Of(literal) is { Kind: JsKind.Object, Class.RecordKeys: not null } made:
+        return this.RecordObject(literal, made.Class!);
       case ObjectExpression literal when types.Of(literal).Kind == JsKind.Record:
         return this.ObjectLiteral(literal, types.Of(literal).Ir!);
       case ObjectExpression literal:
@@ -135,6 +139,9 @@ internal sealed partial class Lowering {
   /// array stores, which is not what JavaScript's prefix form yields, so that form is refused.
   /// </summary>
   private IrExpr StepValue(UpdateExpression step) {
+    if (step.Argument is MemberExpression member && this.FieldStepValue(step, member) is { } field)
+      return field;
+
     if (step.Argument is not Identifier target)
       return step.Prefix ? throw this.Unsupported(step, "a prefix ++ or -- on an array element inside an expression") : Read(this.StepElement(step));
 
@@ -191,6 +198,10 @@ internal sealed partial class Lowering {
     if (left.Kind == JsKind.Boolean && right.Kind == JsKind.Boolean)
       return new IrBinary(or ? IrBinaryOp.LogicalOr : IrBinaryOp.LogicalAnd, this.Expression(logical.Left), this.Expression(logical.Right));
 
+    // An object that is never absent counts as true: a || b is a, and b is never evaluated (#1409).
+    if (!left.IsAbsent && types.Leftmost(logical) is not null)
+      return this.Expression(logical.Left);
+
     if (types.Of(logical).Ir is not { IsStorable: true } type) {
       this.Expression(logical.Left);
       this.Expression(logical.Right);
@@ -215,6 +226,9 @@ internal sealed partial class Lowering {
 
   /// <summary>Applies a binary operator the way <see cref="TypeInference.Decide"/> says it is computed; a compound assignment comes here as well.</summary>
   private Typed Binary(Operator op, Node left, Node right, Coercion coercion, Node whole) {
+    if (new[] { left, right }.FirstOrDefault(this.Diverges) is { } nothing)
+      throw this.NoValue(nothing);
+
     if (this.AbsentTest(op, left, right) is { } absent)
       return new Typed(absent, JsType.Boolean);
 
@@ -238,10 +252,12 @@ internal sealed partial class Lowering {
         expression = new IrBinary(Operation(op), this.Word(left, coercion, operand), this.Word(right, coercion, operand));
         break;
       case Plan.IntegerDivide or Plan.BigDivide or Plan.BigShiftRight:
-        this.Divides |= operation.Plan != Plan.BigShiftRight;
         var dividend = this.To(this.Evaluate(left), operand, left);
         var divisor = operation.Plan == Plan.BigShiftRight ? Count(right) : this.To(this.Evaluate(right), operand, right);
-        expression = Convert(new IrBinary(Operation(op), dividend, divisor), operation.Result.Ir!);
+        // Under a coercion a quotient of integers is what JavaScript's quotient of doubles becomes (#1367).
+        var quotient = operation.Plan == Plan.IntegerDivide && coercion is Coercion.Int32 or Coercion.Uint32 ? this.Quotient(op, dividend, divisor, left, right) : null;
+        this.Divides |= operation.Plan != Plan.BigShiftRight && quotient is null;
+        expression = Convert(quotient ?? new IrBinary(Operation(op), dividend, divisor), operation.Result.Ir!);
         break;
       case Plan.Float or Plan.CompareFloat:
         expression = new IrBinary(Operation(op), this.Float(left), this.Float(right));
@@ -256,7 +272,7 @@ internal sealed partial class Lowering {
         expression = new IrIntrinsic(IrIntrinsicOp.PowEcma, IrType.F64, [this.Float(left), this.Float(right)]);
         break;
       case Plan.Compare:
-        expression = new IrBinary(Operation(op), this.To(this.Evaluate(left), operand, left), this.To(this.Evaluate(right), operand, right));
+        expression = this.AbsentOperandEquality(op, left, right, operand) ?? new IrBinary(Operation(op), this.To(this.Evaluate(left), operand, left), this.To(this.Evaluate(right), operand, right));
         break;
       case Plan.Big:
         expression = new IrBinary(Operation(op), this.Big(left, coercion, operand), op == Operator.LeftShift ? Count(right) : this.Big(right, coercion, operand));
@@ -303,6 +319,9 @@ internal sealed partial class Lowering {
   private static IrConst Count(Node count) => new(IrType.I32, (long)((BigIntLiteral)count).Value);
 
   private IrExpr Conditional(ConditionalExpression choice) {
+    if (this.Diverges(choice.Consequent) || this.Diverges(choice.Alternate))
+      throw this.NoValue(choice);
+
     var condition = this.Condition(choice.Test);
     if (types.Of(choice).Ir is not { IsStorable: true } type) {
       this.Expression(choice.Consequent);
@@ -311,8 +330,18 @@ internal sealed partial class Lowering {
     }
 
     var (whenTrue, whenFalse) = this.Narrowed(choice.Test);
-    var consequent = this.Within(whenTrue, choice.Consequent, () => this.Value(choice.Consequent, type));
-    var alternate = this.Within(whenFalse, choice.Alternate, () => this.Value(choice.Alternate, type));
+    // The branch that reads what the test proves present reads it present (#1409).
+    var proven = types.PresentBranch(choice);
+    IrExpr Branch(Node branch) {
+      if (branch != proven)
+        return this.Value(branch, type);
+
+      var read = this.Evaluate(branch);
+      return read.Expr.Type.IsOptional ? this.To(new Typed(new IrUnwrap(read.Expr) { IsTested = true }, read.Type.Present), type, branch) : this.To(read, type, branch);
+    }
+
+    var consequent = this.Within(whenTrue, choice.Consequent, () => Branch(choice.Consequent));
+    var alternate = this.Within(whenFalse, choice.Alternate, () => Branch(choice.Alternate));
     return consequent.Type == alternate.Type ? new IrConditional(condition, consequent, alternate)
       : throw this.Unsupported(choice, "a conditional expression whose branches are objects of two classes");
   }
@@ -327,8 +356,11 @@ internal sealed partial class Lowering {
     if (member.Computed) {
       var array = this.Array(member.Object);
       var index = this.Index(member.Property);
-      this.AccessesElements = true;
-      return Read(new IrArrayLoad(array, index));
+      var load = new IrArrayLoad(array, index);
+      if (!this.Inside(member, load))
+        this._trappingReads.Add(load);
+
+      return Read(load);
     }
 
     if (types.Names.Library(member) is { } library)
@@ -529,15 +561,23 @@ internal sealed partial class Lowering {
 
   /// <summary>An array literal as an array of the given element type.</summary>
   private IrExpr ArrayLiteral(ArrayExpression literal, IrType element) {
-    // [...list] where an array goes: the elements of the list, copied into a new array (#1329).
-    if (literal.Elements is [SpreadElement spread] && this.Expression(spread.Argument) is { Type: { IsList: true } list } copied && list.Element == element)
-      return ListOp(IrCollectionOp.ListCopyToArray, list, copied);
+    if (literal.Elements.Any(item => item is null))
+      throw this.Unsupported(literal, "an array literal with a hole");
+
+    // [x, ...a]: the parts joined, each spread copied (#1405).
+    if (literal.Elements.Any(item => item is SpreadElement))
+      return this.Spread(literal, element);
 
     return new IrIntrinsic(IrIntrinsicOp.ArrayOf, IrType.Array(element), this.Elements(literal).Select(item => this.Value(item, element)).ToList());
   }
 
+  /// <summary>The elements of a literal that has neither a hole nor a spread element, which a typed array and a <c>Map</c> or a <c>Set</c> are made of.</summary>
   private List<Node> Elements(ArrayExpression literal)
-    => literal.Elements.Select(item => item is null or SpreadElement ? throw this.Unsupported(literal, "an array literal with a hole or a spread element") : (Node)item).ToList();
+    => literal.Elements.Select(item => item switch {
+      null => throw this.Unsupported(literal, "an array literal with a hole"),
+      SpreadElement spread => throw this.Unsupported(spread, "a spread element in the elements of a typed array, a Map or a Set"),
+      _ => (Node)item
+    }).ToList();
 
   /// <summary>
   /// A condition. A truth value is one; a number counts as true unless it is a zero or a NaN, a
@@ -575,10 +615,10 @@ internal sealed partial class Lowering {
       case JsKind.String:
         var (text, again) = this.Bound(value.Expr);
         return new IrBinary(IrBinaryOp.LogicalAnd, new IrUnary(IrUnaryOp.LogicalNot, new IrIsNull(text)), new IrBinary(IrBinaryOp.NotEqual, Str(IrIntrinsicOp.StrLength, IrType.I32, again), I32(0)));
-      // An object, an array or a function counts as true unless it is null (#1365).
-      case JsKind.Object or JsKind.Array or JsKind.Function when value.Expr.Type.IsNullable:
+      // An object, an array or a function counts as true unless it is null (#1365); a list only where an absent value reaches it (#1403).
+      case JsKind.Object or JsKind.Array or JsKind.Function when value.Expr.Type.IsNullable && !(value.Expr.Type.IsList && !value.Type.IsAbsent):
         return new IrUnary(IrUnaryOp.LogicalNot, new IrIsNull(value.Expr));
-      // A list, a map or a set is never null in the IR: present, it counts as true; read without an effect, it is nothing but that.
+      // A list nothing absent reaches, a map or a set is never null in the IR: present, it counts as true; read without an effect, it is nothing but that.
       case JsKind.Array or JsKind.Map or JsKind.Set when value.Expr.Type.IsCollection && !IrTree.Nodes(value.Expr).Any(part => part is IrCall or IrStep or IrMethodCall or IrNew or IrCollection):
         return new IrConst(IrType.Bool, 1);
       default:
@@ -593,7 +633,7 @@ internal sealed partial class Lowering {
   /// </summary>
   private IrExpr IsArray(Node node) {
     var value = this.Evaluate(node);
-    if (value.Type.Kind == JsKind.Array && value.Type.IsPlain && value.Expr.Type.IsNullable)
+    if (value.Type.Kind == JsKind.Array && value.Type.IsPlain && value.Expr.Type.IsNullable && !(value.Expr.Type.IsList && !value.Type.IsAbsent))
       return new IrUnary(IrUnaryOp.LogicalNot, new IrIsNull(value.Expr));
 
     if (IrTree.Nodes(value.Expr).Any(part => part is IrCall or IrStep or IrMethodCall or IrNew or IrCollection))
@@ -615,7 +655,7 @@ internal sealed partial class Lowering {
     return Convert(value.Expr, IrType.F64);
   }
 
-  private IrExpr Float(Node node) => this.Float(this.Evaluate(node), node);
+  private IrExpr Float(Node node) => this.Float(this.Element(node, Coercion.None) ?? this.Evaluate(node), node);
 
   /// <summary><c>ToInt32</c> of a number: of a proven integer its value modulo 2^32, of a double the operation ECMA-262 defines.</summary>
   private IrExpr Int32(Typed value, Node node) {
@@ -623,11 +663,11 @@ internal sealed partial class Lowering {
     return value.Type.IsInteger ? Convert(value.Expr, IrType.I32) : new IrIntrinsic(IrIntrinsicOp.ToInt32, IrType.I32, [this.Float(value, node)]);
   }
 
-  private IrExpr Int32(Node node) => this.Int32(this.Evaluate(node, Coercion.Int32), node);
+  private IrExpr Int32(Node node) => this.Int32(this.Element(node, Coercion.Int32) ?? this.Evaluate(node, Coercion.Int32), node);
 
   /// <summary><c>ToUint32</c> of a number.</summary>
   private IrExpr Uint32(Node node) {
-    var value = this.Present(this.Evaluate(node, Coercion.Uint32), node);
+    var value = this.Present(this.Element(node, Coercion.Uint32) ?? this.Evaluate(node, Coercion.Uint32), node);
     return value.Type.IsInteger ? Convert(value.Expr, IrType.U32) : new IrIntrinsic(IrIntrinsicOp.ToUint32, IrType.U32, [this.Float(value, node)]);
   }
 
@@ -659,6 +699,9 @@ internal sealed partial class Lowering {
   }
 
   private IrExpr Value(Node node, IrType type) {
+    if (this.Diverges(node))
+      throw this.NoValue(node);
+
     // new Array(n).fill(v) where an array of a type is expected is an array of that type (#1385).
     if (type.IsArray && node is CallExpression { Callee: MemberExpression { Computed: false, Property: Identifier { Name: "fill" }, Object: var filled } } fill
         && types.Of(filled) is { Kind: JsKind.Array, IsGrowable: false, IsView: false } && !this._substitutes.ContainsKey(node))
@@ -666,6 +709,10 @@ internal sealed partial class Lowering {
 
     if (type.IsStruct && node is ObjectExpression record && types.Of(record).Kind == JsKind.Record)
       return this.ObjectLiteral(record, type);
+
+    // An object literal where a typedef is stated is a new object of its class (#1409).
+    if (node is ObjectExpression typed && types.Typedefs.Of(type.ClassType) is { } typedef)
+      return this.TypedefLiteral(typed, typedef);
 
     // A new empty Map or Set takes the key and value types of the place it goes to (#1328).
     if (type.Kind is IrTypeKind.Map or IrTypeKind.Set && node is NewExpression { Callee: Identifier { Name: "Map" or "Set" } keyed, Arguments.Count: 0 } && !this._model.Bindings.ContainsKey(keyed))
@@ -709,6 +756,14 @@ internal sealed partial class Lowering {
 
     if (type.IsStruct && this.Reshaped(value, type, node) is { } reshaped)
       return reshaped;
+
+    // A whole double where JSDoc states an integer that holds its range is that integer; a NaN traps (#1413).
+    // An exact integer of a wider range is that integer where it fits and traps where it does not (#1416).
+    if (value.Type is { IsWhole: true, IsAbsent: false } whole && type.IsInteger && !type.IsLong && !type.IsEnum && (whole.Within(type) || whole.IsExactInteger)) {
+      this.TrapsNaN |= whole.MayBeNaN;
+      this.TrapsRange |= !whole.Within(type);
+      return new IrConvert(type, value.Expr, IrConversion.Trap);
+    }
 
     var exact = value.Type.Kind is JsKind.Number or JsKind.BigInt && type.IsNumeric && (type.IsInteger
       ? value.Type.Float == 0 && !value.Type.IsUnbounded && value.Type.Within(type) && from.IsLong == type.IsLong

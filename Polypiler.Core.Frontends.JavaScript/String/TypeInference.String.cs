@@ -22,6 +22,9 @@ internal sealed partial class TypeInference {
           : iterated is { Kind: JsKind.Array, Element: { } element } ? (element.Float == 32 ? JsType.F64 : element)
           : iterated is { Kind: JsKind.Sequence, Element: { } produced } ? produced
           : this.Iterated(loop.Right) ?? JsType.Unknown;
+      case CallExpression { Callee: MemberExpression { Computed: false, Object: RegExpLiteral, Property: Identifier { Name: "test" } } }:
+        // The test of a regular-expression literal (#1399).
+        return JsType.Boolean;
       case MemberExpression member when this.Of(member.Object).Kind == JsKind.String:
         return member.Computed ? JsType.String : member.Property is Identifier { Name: "length" } ? JsType.I32 : JsType.Unknown;
       case CallExpression { Callee: MemberExpression { Computed: false, Property: Identifier { Name: var method } } callee }:
@@ -31,6 +34,10 @@ internal sealed partial class TypeInference {
 
         if (receiver.Kind == JsKind.String)
           return StringResult(method);
+
+        // String.fromCharCode.apply(null, codes) (#1400).
+        if (method == "apply" && callee.Object is MemberExpression applied && this.Names.Library(applied) == "String.fromCharCode")
+          return JsType.String;
 
         return this.Names.Library(callee) == "String.fromCharCode" ? JsType.String : null;
       default:
@@ -44,7 +51,7 @@ internal sealed partial class TypeInference {
     "codePointAt" or "indexOf" or "lastIndexOf" => JsType.I32,
     "includes" or "startsWith" or "endsWith" => JsType.Boolean,
     "split" => JsType.ArrayOf(JsType.String, true),
-    "charAt" or "at" or "substring" or "slice" or "concat" or "replace" or "replaceAll" or "trim" or "trimStart" or "trimEnd"
+    "charAt" or "at" or "substring" or "substr" or "slice" or "concat" or "replace" or "replaceAll" or "trim" or "trimStart" or "trimEnd"
       or "padStart" or "padEnd" or "repeat" => JsType.String,
     _ => JsType.Unknown
   };

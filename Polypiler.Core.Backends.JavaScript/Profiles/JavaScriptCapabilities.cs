@@ -187,6 +187,7 @@ public sealed class JavaScriptCapabilities {
     // The lists of #1328, which are arrays.
     new("Array", 5),
     new("Array.prototype", 5),
+    new("Array.isArray", 5),
     new(".slice", 5),
     new(".map", 5),
     new(".push", 5),
@@ -231,7 +232,9 @@ public sealed class JavaScriptCapabilities {
     new("Promise.all", 2015),
     new(".then", 2015),
     new("async function", 2017, "$async"),
-    new("Promise.allSettled", 2020, "Promise.all")
+    new("Promise.allSettled", 2020, "Promise.all"),
+    // The test of a regular-expression literal (#1399), which ECMAScript 5 has with every construct of the subset.
+    new(".test", 5)
   ]);
 
   /// <summary>The entries, in the order they were given.</summary>

@@ -185,6 +185,7 @@ public static partial class IrModuleFormat {
           this._constructors.Add(constructor, this._constructors.Count);
           writer.Write(constructor.Function);
           this.Count((int)constructor.Visibility);
+          writer.Write(constructor.SkipsBase);
         }
 
         this.Properties(type.Properties);
@@ -1149,7 +1150,7 @@ public static partial class IrModuleFormat {
       var constructors = new Dictionary<IrClassType, IReadOnlyList<IrConstructor>>(ReferenceEqualityComparer.Instance);
       foreach (var type in classes) {
         constructors[type] = this.List(() => {
-          var constructor = new IrConstructor(reader.ReadString()) { Visibility = this.Enum<IrVisibility>() };
+          var constructor = new IrConstructor(reader.ReadString()) { Visibility = this.Enum<IrVisibility>(), SkipsBase = reader.ReadBoolean() };
           this._constructors.Add(constructor);
           return constructor;
         });

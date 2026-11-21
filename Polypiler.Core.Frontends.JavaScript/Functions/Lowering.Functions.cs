@@ -37,7 +37,7 @@ internal sealed partial class Lowering {
         throw new Refusal(problem);
 
       foreach (var variable in model.Parameters.Concat(model.Locals))
-        this.CheckType(variable.Type, variable.Name, variable.Evidence ?? variable.Declaration);
+        this.CheckType(variable.Type, variable.Name, variable.Evidence ?? variable.Declaration, true);
 
       this.CheckType(model.Result, candidate.Name, model.ResultEvidence ?? candidate.Anchor);
       var entry = new List<IrStmt>();
@@ -55,10 +55,15 @@ internal sealed partial class Lowering {
       this._returnType = model.ReturnType;
       var statements = new List<IrStmt>(entry);
       if (candidate.Function.Body is Expression concise) {
-        if (this._returnType == IrType.Void)
+        if (this._returnType == IrType.Void) {
           this.Effect(concise, statements);
-        else
+        } else if (concise is AssignmentExpression { Left: var place } && this.Rereadable(place)) {
+          // v => this.total += v yields what it stores, which the place it stores into then holds (#1408).
+          this.Effect(concise, statements);
+          statements.Add(new IrReturn(this.Value(place, this._returnType)));
+        } else {
           statements.Add(new IrReturn(this.Value(concise, this._returnType)));
+        }
       } else {
         statements.AddRange(this.Block(((FunctionBody)candidate.Function.Body).Body).Statements);
       }
@@ -67,7 +72,13 @@ internal sealed partial class Lowering {
       if (this._returnType != IrType.Void && !AlwaysReturns(body))
         throw this.Unsupported(candidate.Anchor, "a function that can end without returning its value");
 
-      return IrLambda.Of([.. model.Parameters.Select(parameter => parameter.Parameter!)], this._returnType, [.. this._locals], body);
+      // A call through the value may pass more arguments than the function has parameters: it ignores them (#1408).
+      var parameters = model.Parameters.Select(parameter => parameter.Parameter!).ToList();
+      var signature = candidate.Shape.Signature!.Signature!;
+      for (var index = parameters.Count; index < signature.Parameters.Count; ++index)
+        parameters.Add(new IrLocal($"ignored${index}", signature.Parameters[index]));
+
+      return IrLambda.Of(parameters, this._returnType, [.. this._locals], body);
     } finally {
       this._model = outerModel;
       this._locals.Clear();
@@ -76,6 +87,17 @@ internal sealed partial class Lowering {
       types.Enter(outerModel);
     }
   }
+
+  /// <summary>
+  /// Whether a place holds exactly the value an assignment to it yields, so that reading it again is that
+  /// value: a variable, or a field of an object - not an element, which a typed array converts, nor a
+  /// setter, whose getter may answer anything.
+  /// </summary>
+  private bool Rereadable(Node place) => place switch {
+    Identifier name => this._model.Bindings.GetValueOrDefault(name) is Variable,
+    MemberExpression { Computed: false, Object: ThisExpression or Identifier } member => Binder.KeyOf(member) is { } key && types.Of(member.Object).Class?.Field(key) is not null,
+    _ => false
+  };
 
   /// <summary>
   /// The function declarations of a block: each a variable declared where the block starts, which
@@ -115,9 +137,16 @@ internal sealed partial class Lowering {
     }
   }
 
-  /// <summary>A function of the file named as a value; <see langword="null"/> for any other name.</summary>
-  private IrExpr? FunctionValue(Identifier identifier)
-    => this._model.FunctionValues.TryGetValue(identifier, out var function) ? new IrFunctionRef(function.Shape.Signature!, function.Name) : null;
+  /// <summary>A function of the file named as a value, <c>f</c> or <c>O.f</c> of an object of functions (#1408); <see langword="null"/> for any other name.</summary>
+  private IrExpr? FunctionValue(Node identifier) {
+    if (!this._model.FunctionValues.TryGetValue(identifier, out var function))
+      return null;
+
+    // typeof f asks for no signature: a value that nothing calls through has none yet.
+    var signature = function.Shape.Signature;
+    return signature?.Signature is not { } called || called.Parameters.Count == function.Function.Params.Count ? new IrFunctionRef(signature!, function.Name)
+      : throw this.Unsupported(identifier, $"the function {function.Name} as a value that calls pass {called.Parameters.Count} arguments, of which it takes {function.Function.Params.Count}");
+  }
 
   /// <summary>A call of a function value: the callee, then the arguments, each in the type of its parameter in the value's signature.</summary>
   private IrExpr Invocation(CallExpression call) {

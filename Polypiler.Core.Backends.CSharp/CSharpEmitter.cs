@@ -632,6 +632,12 @@ public static partial class CSharpEmitter {
     private readonly CSharpCapabilities _table;
     private readonly FloatMode _mode;
     private readonly string _class;
+
+    /// <summary>
+    /// The class as a member of another class reaches it: its name, or <c>global::</c> and its name where
+    /// a class of the module has a member of that name, which would hide it there.
+    /// </summary>
+    private readonly string _outer;
     /// <summary>The functions legalization copied in from the libraries, which the target passes treat as helpers.</summary>
     private HashSet<string> _copied = [];
 
@@ -688,8 +694,11 @@ public static partial class CSharpEmitter {
       var taken = this._members.Values.Select(member => member.TrimStart('@')).Append(this.ClassName).ToList();
       this._helpers = Names(helpers.Select(helper => helper.Name), taken);
       this._taken = [.. taken, .. this._helpers.Values];
+      this.NameRegexes(module);
+      this._outer = module.Types.OfType<IrClassType>().Any(type => type.Fields.Select(field => field.Name).Concat(type.Methods.Select(method => method.Name))
+        .Concat(type.Properties.Select(property => property.Name)).Contains(this.ClassName)) ? "global::" + this._class : this._class;
       // The nested classes of the collections give way to every name of the module and its helpers.
-      this._nested = Names([CSharpCollectionClasses.KeyedSlotsName, CSharpCollectionClasses.FloatKeysName, CSharpCollectionClasses.SingleKeysName, CSharpCollectionClasses.AssertionExceptionName],
+      this._nested = Names([CSharpCollectionClasses.KeyedSlotsName, CSharpCollectionClasses.FloatKeysName, CSharpCollectionClasses.SingleKeysName, CSharpCollectionClasses.AssertionExceptionName, CSharpCollectionClasses.UninitializedName],
         [.. this._taken, .. this._typeNames.Values]);
     }
 
@@ -706,7 +715,7 @@ public static partial class CSharpEmitter {
       this._used.Add(helper);
       var name = this._helpers.GetValueOrDefault(helper.Name, helper.Name);
       // A class of the module reaches a helper as a member of the static class.
-      return this._inClass ? $"{this._class}.{name}" : name;
+      return this._inClass ? $"{this._outer}.{name}" : name;
     }
 
     /// <summary>
@@ -767,6 +776,8 @@ public static partial class CSharpEmitter {
       foreach (var constant in this._module.Constants)
         members.Add(this.Constant(constant));
 
+      // The regular expressions come before the variables of the module, whose initializers may test them: static fields start in the order they stand.
+      members.AddRange(this.RegexFields());
       foreach (var global in this._module.Globals.Where(global => !this.IsOwned(global)))
         members.Add(this.Global(global));
 
@@ -1406,6 +1417,9 @@ public static partial class CSharpEmitter {
 
       if (intrinsic.Op == IrIntrinsicOp.ArrayOf)
         return (new CsArrayCreation(new CsType(this.TypeName(intrinsic.Type.Element!)), null, new CsArrayInitializer([.. intrinsic.Arguments.Select(this.Stored)])), Unary);
+
+      if (RegexOperations.IsRegex(intrinsic.Op))
+        return this.RegexTest(intrinsic);
 
       if (this.Rewritten(intrinsic) is { } rewritten)
         return this.Expression(rewritten);

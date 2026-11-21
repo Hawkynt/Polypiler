@@ -208,11 +208,18 @@ public static partial class IrVerifier {
       if (this.Self is not { IsConstructor: true } self)
         return;
 
-      if (self.Owner.Base is { } @base)
+      if (self.Owner.Constructors.FirstOrDefault(constructor => constructor.Function == function.Name) is { SkipsBase: true }) {
+        // A constructor that runs none of its lineage begins with no call of another and stands in no class of the library's (#1388).
+        this.Require(!(function.Body.Statements is [IrExprStmt { Expression: IrCall first }, ..] && this.Members.TryGetValue(first.Function, out var chained) && chained.IsConstructor),
+          "the constructor that skips its base classes calls a constructor");
+        this.Require(!self.Owner.Lineage.Any(type => type.IsLibrary), $"the constructor of {self.Owner.Name} skips the constructor of a class of the library");
+        this.Require(self.Owner.Constructors.Count == 1, $"the class {self.Owner.Name} has a constructor that skips its base classes beside another");
+      } else if (self.Owner.Base is { } @base) {
         this.Require(function.Body.Statements is [IrExprStmt { Expression: IrCall first }, ..]
           && ((this.Members.TryGetValue(first.Function, out var called) && called.IsConstructor && (called.Owner == self.Owner || called.Owner == @base))
             || (IrExceptionClass.ConstructorOf(first.Function) is { } library && @base.Constructors.Contains(library))),
           $"the constructor does not begin with the call of a constructor of {@base.Name} or of {self.Owner.Name}");
+      }
 
       if (this.Chains(function.Body, self.Owner))
         return;

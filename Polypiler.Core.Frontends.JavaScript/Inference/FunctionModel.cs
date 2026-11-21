@@ -51,6 +51,12 @@ internal sealed class Variable(string name, Node declaration, bool isParameter) 
   /// <summary>Whether the variable is declared without a value, so that an assignment must precede every read.</summary>
   public bool IsUninitialized { get; init; }
 
+  /// <summary>The spelling of the type a <c>@type</c> tag states before the declaration of a local, or <see langword="null"/> (#1416).</summary>
+  public string? Spelling { get; set; }
+
+  /// <summary>The integer or the array of integers JSDoc states for a local, which takes exact integers, checked; <see langword="null"/> for any other local (#1416).</summary>
+  public JsType? Stated { get; set; }
+
   /// <summary>The type JSDoc states for a parameter, or <see langword="null"/>.</summary>
   public JsType? Declared { get; set; }
 
@@ -101,6 +107,9 @@ internal sealed class Variable(string name, Node declaration, bool isParameter) 
   /// </summary>
   public bool IsCoercedOnly { get; set; }
 
+  /// <summary>For a <c>const</c> declared with <c>new C(…)</c>, that expression: the one object the variable holds (#1388); <see langword="null"/> for any other variable.</summary>
+  public NewExpression? Creation { get; set; }
+
   /// <summary>For the key of a loop over <c>Object.keys(o)</c>, the object <c>o</c> (#1373); <see langword="null"/> for any other variable.</summary>
   public Node? KeysOf { get; set; }
 
@@ -115,6 +124,13 @@ internal sealed class Variable(string name, Node declaration, bool isParameter) 
   /// as an array: its type is then the type of the arrays the file itself passes to it.
   /// </summary>
   public bool IsArrayByCall { get; set; }
+
+  /// <summary>
+  /// Whether JSDoc states a parameter as a function, <c>function(byte[]):void</c> (#1408): it takes the
+  /// function values the calls of the file pass, and a function whose callers are not all known cannot
+  /// be imported, since nothing makes a value of the type.
+  /// </summary>
+  public bool StatesFunction { get; init; }
 
   /// <summary>Whether the function compares the variable with <c>null</c>, or reads it through <c>??</c>: a parameter is then one null may reach.</summary>
   public bool ComparedWithNull { get; set; }
@@ -198,7 +214,14 @@ internal enum FlowKind {
   Invoke,
 
   /// <summary>The node is the value a generator yields - with <see cref="Flow.Index"/> 1 the iterable of a <c>yield*</c>, whose values it yields (#1327).</summary>
-  Yield
+  Yield,
+
+  /// <summary>
+  /// The node is <c>r[key] = v</c> of the key of a loop over <c>Object.keys(o)</c>, <see cref="Flow.Source"/>
+  /// the object <c>o</c>, <see cref="Flow.Target"/> the variable <c>r</c>: a key the class of <c>r</c> lacks
+  /// becomes a field of the class synthesized for the object <c>r</c> holds (#1388).
+  /// </summary>
+  KeyedStore
 
 }
 
@@ -253,11 +276,18 @@ internal sealed class FunctionModel(Candidate candidate) {
   /// <summary>The functions nested in the body - arrows, function expressions, function declarations - by their node.</summary>
   public Dictionary<Node, Candidate> Nested { get; } = [];
 
-  /// <summary>The names of functions of the file the body uses as values, by the identifier.</summary>
+  /// <summary>The names of functions of the file the body uses as values, by the identifier or the member expression of an object of functions.</summary>
   public Dictionary<Node, Candidate> FunctionValues { get; } = [];
 
   /// <summary>The type JSDoc states for the result, or <see langword="null"/>.</summary>
   public IrType? DeclaredResult { get; set; }
+
+  /// <summary>
+  /// The type JSDoc states for the result as the values it admits, or that of the method it overrides or
+  /// that overrides it, or <see langword="null"/>: a list returned where it states integer elements takes
+  /// them where its whole doubles fit (#1413).
+  /// </summary>
+  public JsType? StatedResult { get; set; }
 
   /// <summary>The type of every value the function returns; undefined when it returns none.</summary>
   public JsType Result { get; set; } = JsType.Unknown;
@@ -272,6 +302,7 @@ internal sealed class FunctionModel(Candidate candidate) {
   public IrType ReturnType {
     get {
       var inferred = this.Result.Ir ?? IrType.Void;
+      // A result keeps its own type whatever @returns states: an uncoerced sum is the double node returns (#1416).
       return this.DeclaredResult is { } declared && Holds(declared, inferred) ? declared : inferred;
     }
   }

@@ -53,7 +53,16 @@ internal sealed partial class Lowering {
     switch (node) {
       case BinaryExpression { Operator: Operator.InstanceOf } test when types.Names.ClassNamed(test.Right) is { } tested:
         var value = this.Expression(test.Left);
-        return value.Type.IsObject ? new IrTypeTest(value, IrType.Object(tested.Ir)) : throw this.Unsupported(test, $"instanceof of {types.Text(test.Left)}, which is no object of a class");
+        if (!value.Type.IsObject)
+          throw this.Unsupported(test, $"instanceof of {types.Text(test.Left)}, which is no object of a class");
+
+        // An object of a class made for literals is none of the classes it derives from (#1388).
+        var records = types.Shapes.Classes.RecordsBelow(tested).ToList();
+        if (records.Count > 0 && value is not IrLocalRef)
+          throw this.Unsupported(test, $"instanceof of {types.Text(test.Left)}, which may be an object literal and is no variable");
+
+        return records.Aggregate((IrExpr)new IrTypeTest(value, IrType.Object(tested.Ir)),
+          (both, record) => new IrBinary(IrBinaryOp.LogicalAnd, both, new IrUnary(IrUnaryOp.LogicalNot, new IrTypeTest(value, IrType.Object(record.Ir)))));
       case MemberExpression { Object: Super } read:
         var ancestor = this._model.Candidate.Class?.Base ?? throw this.Unsupported(read, "super outside a derived class");
         return Binder.KeyOf(read) is { } name && ancestor.Member(MemberKind.Getter, name) is { } getter
@@ -66,7 +75,9 @@ internal sealed partial class Lowering {
         // null takes the type of the place it goes to (see To) or of what it is compared with.
         return new IrNull(IrType.Void);
       case NewExpression creation when types.Names.ClassNamed(creation.Callee) is { } created:
-        return new IrNew(IrType.Object(created.Ir), created.Creator!, this.Arguments(creation, creation.Arguments, created.Initial));
+        return types.Shapes.Classes.ExtensionsOf(creation) is { } extension
+          ? this.Extended(extension)
+          : new IrNew(IrType.Object(created.Ir), created.Creator!, this.Arguments(creation, creation.Arguments, created.Initial));
       case MemberExpression { Object: ThisExpression self } when this._receiver is null:
         throw this.Unsupported(self, "this");
       case CallExpression { Callee: CallExpression called }:
@@ -84,6 +95,10 @@ internal sealed partial class Lowering {
       case CallExpression { Callee: MemberExpression callee } call when types.Names.Callee(callee) is { Class: { } owner, IsStatic: true } method:
         return new IrMethodCall(types.ModelOf(method).ReturnType, owner.Methods[method], null, this.Arguments(call, call.Arguments, method));
       case CallExpression { Callee: MemberExpression { Computed: false } callee } call when types.Of(callee.Object).Class is { } owner:
+        // A field holds a function value, which the call calls; it hides a method of the same key (#1408).
+        if (Binder.KeyOf(callee) is { } held && owner.Field(held) is not null)
+          return this.Invocation(call);
+
         if (Binder.KeyOf(callee) is not { } key || owner.Member(MemberKind.Method, key) is not { } invoked)
           throw this.Unsupported(callee, $"the method {types.Text(callee.Property)} of {owner.Name}, which it does not have");
 
@@ -97,6 +112,29 @@ internal sealed partial class Lowering {
       default:
         return null;
     }
+  }
+
+  /// <summary>
+  /// A <c>new C(…)</c> that the keys of an object are copied into (#1388): an object of the class made
+  /// for the keys of the class that object is of, chosen by its class, or a <c>C</c> where it copies
+  /// none. The object is a variable that nothing assigns again, so it is the one whose keys are copied.
+  /// </summary>
+  private IrExpr Extended(RecordClasses.Extension extension) {
+    var created = extension.Created;
+    if (extension.Source is not Identifier || this._model.Bindings.GetValueOrDefault(extension.Source) is not Variable source
+        || !(source.IsConstant || source.IsParameter && !this._model.Flows.Exists(flow => flow.Target == source && flow.Kind is FlowKind.Assign or FlowKind.Compound or FlowKind.Step))
+        || types.Of(extension.Source) is not { Kind: JsKind.Object, Class: { } holder })
+      throw this.Unsupported(extension.Creation, $"keys copied into new {created.Name} from {types.Text(extension.Source)}, which is no variable that keeps its object");
+
+    var target = this.Expression(extension.Source);
+    IrExpr Made(ClassModel type) {
+      var made = new IrNew(IrType.Object(type.Ir), type.Creator!, this.Arguments(extension.Creation, extension.Creation.Arguments, type.Initial));
+      return type == created ? made : new IrCast(IrType.Object(created.Ir), made);
+    }
+
+    return types.Shapes.Classes.Below(holder).Reverse().Aggregate(Made(created), (rest, from) => extension.Made.TryGetValue(from, out var type)
+      ? new IrConditional(new IrTypeTest(target, IrType.Object(from.Ir)), Made(type), rest)
+      : rest);
   }
 
   /// <summary>The arguments of a call of a member, each in the type of its parameter.</summary>
@@ -119,6 +157,10 @@ internal sealed partial class Lowering {
   /// <summary>A property read of an object: a field, or the call of a getter.</summary>
   private IrExpr Property(MemberExpression member, ClassModel owner) {
     var key = Binder.KeyOf(member) ?? throw this.Unsupported(member, "a computed member name");
+    // A field derived classes declare accessors over is read through the getter of the object's class (#1402).
+    if (owner.Field(key) is { Getter: { } virtualGetter } read)
+      return this.Site(new IrMethodCall(read.Ir!.Type, virtualGetter, this.Expression(member.Object), []) { Kind = IrMethodCallKind.Virtual }, member);
+
     if (owner.Field(key) is { } field)
       return Read(new IrFieldLoad(this.Expression(member.Object), field.Ir!));
 
@@ -154,8 +196,13 @@ internal sealed partial class Lowering {
     if (owner.Frozen is not null)
       throw this.Unsupported(assignment, $"a write into a member of the frozen object {owner.Name}");
 
+    if (owner.IsTypedef)
+      throw this.Unsupported(assignment, $"a write into the field {key} of the @typedef {owner.Name}");
+
     var field = owner.Field(key);
     var setter = owner.Member(MemberKind.Setter, key);
+    // A field derived classes declare accessors over is stored through the setter of the object's class (#1402).
+    var property = field?.Setter;
     if (field is null && setter is null)
       throw this.Unsupported(assignment, owner.HasInstanceMember(key) ? $"an assignment to the method or getter {key}" : "a property added outside the constructor");
 
@@ -165,14 +212,16 @@ internal sealed partial class Lowering {
     IrExpr value;
     if (compound is { } combining) {
       target = this.Once(target, into);
-      this._substitutes[member] = field is not null ? Read(new IrFieldLoad(target, field.Ir!)) : this.Property(member, owner);
+      this._substitutes[member] = field is not null && property is null ? Read(new IrFieldLoad(target, field.Ir!)) : this.Property(member, owner);
       value = this.To(this.Binary(combining, member, assignment.Right, Coercion.None, assignment), type, assignment);
       this._substitutes.Remove(member);
     } else {
       value = this.Value(assignment.Right, type);
     }
 
-    into.Add(field is not null ? new IrFieldStore(target, field.Ir!, value) : new IrExprStmt(this.Site(new IrMethodCall(IrType.Void, ClassModel.MethodOf(setter!), target, [value]) { Kind = Dispatch(ClassModel.MethodOf(setter!)) }, assignment)));
+    into.Add(property is not null ? new IrExprStmt(this.Site(new IrMethodCall(IrType.Void, property, target, [value]) { Kind = IrMethodCallKind.Virtual }, assignment))
+      : field is not null ? new IrFieldStore(target, field.Ir!, value)
+      : new IrExprStmt(this.Site(new IrMethodCall(IrType.Void, ClassModel.MethodOf(setter!), target, [value]) { Kind = Dispatch(ClassModel.MethodOf(setter!)) }, assignment)));
     return true;
   }
 
@@ -215,7 +264,7 @@ internal sealed partial class Lowering {
     if (types.Of(member.Object).Class is not { } owner)
       return false;
 
-    if (Binder.KeyOf(member) is not { } key || owner.Field(key) is not { } field)
+    if (Binder.KeyOf(member) is not { } key || owner.Field(key) is not { IsVirtual: false } field)
       throw this.Unsupported(step, $"{(step.Operator == Operator.Increment ? "++" : "--")} of {types.Text(member)}, which is no field");
 
     var target = this.Once(this.Expression(member.Object), into);
