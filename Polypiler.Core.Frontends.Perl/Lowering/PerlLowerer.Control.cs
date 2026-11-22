@@ -26,6 +26,12 @@ internal sealed partial class PerlLowerer {
       var label = pendingLabel;
       pendingLabel = null;
 
+      if (this.TryLowerBlessStatement(node, statements))
+        continue;
+
+      if (this.TryLowerMooseSetterStmt(node, statements))
+        continue;
+
       if (this.TryLowerControlStatement(node, label, statements))
         continue;
 

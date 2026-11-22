@@ -12,11 +12,12 @@ namespace Polypiler.Core.Frontends.Perl.Lowering;
 internal sealed partial class PerlLowerer {
 
   private static readonly HashSet<string> _allowedPragmas = new(StringComparer.Ordinal) {
-    "strict", "warnings", "integer", "feature", "constant", "Exporter", "List::Util", "POSIX", "Carp", "Test::More"
+    "strict", "warnings", "integer", "feature", "constant", "Exporter", "List::Util", "POSIX", "Carp", "Test::More",
+    "Scalar::Util", "Hash::Util::FieldHash", "Moose", "Moose::Role", "base", "parent", "vars"
   };
 
   private static readonly HashSet<string> _objectModules = new(StringComparer.Ordinal) {
-    "parent", "base", "overload", "Moo", "Moose", "Mouse", "Object::Pad"
+    "overload", "Moo", "Mouse", "Object::Pad"
   };
 
   private static readonly HashSet<string> _magicGlobals = new(StringComparer.Ordinal) {
@@ -62,9 +63,15 @@ internal sealed partial class PerlLowerer {
 
   public static PerlImportResult LowerTree(string file, PerlTree tree, PerlImportOptions options) {
     try {
-      var contracts = PerlContracts.Parse(options.Contracts, msg => new Refusal(PerlFrontend.CompileFailed, msg, 1));
+      var shells = PreScanClassShells(tree);
+      IrType? ResolveNamed(string name) {
+        if (shells.TryGetValue(name, out var decl))
+          return decl is IrClassType c ? IrType.Object(c) : IrType.Object((IrInterfaceType)decl);
+        return null;
+      }
+      var contracts = PerlContracts.Parse(options.Contracts, msg => new Refusal(PerlFrontend.CompileFailed, msg, 1), ResolveNamed);
       var lowerer = new PerlLowerer(tree, contracts, options);
-      var module = lowerer.BuildModule(file);
+      var module = lowerer.BuildModule(file, shells);
       var problems = IrVerifier.Verify(module);
       return problems.Count == 0
         ? new(module, [], contracts.Recorded, lowerer._exports, lowerer._testFunctions)
@@ -79,12 +86,19 @@ internal sealed partial class PerlLowerer {
     }
   }
 
-  private IrModule BuildModule(string file) {
+  private IrModule BuildModule(string file, Dictionary<string, IrTypeDeclaration> shells) {
     this.ValidateBeginBlocks();
-    this.CollectPackages();
+    var packages = this._tree.Packages.Count > 0
+      ? this._tree.Packages
+      : new Dictionary<string, PerlPackage> {
+          ["main"] = new PerlPackage { Functions = this._tree.Functions }
+        };
+    var functions = new List<IrFunction>();
+    this.InitializeClassesAndInterfaces(shells, packages, functions);
+    this.CollectPackages(packages);
     this.ValidateAndLowerTopLevel(file);
 
-    if (this._subs.Count == 0 && this._testFunctions.Count == 0)
+    if (this._subs.Count == 0 && this._testFunctions.Count == 0 && functions.Count == 0)
       throw new Refusal(PerlFrontend.SubUnsupported, "a file without subroutines", 1);
 
     // Pre-register signatures so mutual recursion and forward calls resolve cleanly.
@@ -93,7 +107,6 @@ internal sealed partial class PerlLowerer {
       this._signatures[key] = (ret, []);
     }
 
-    var functions = new List<IrFunction>();
     foreach (var (_, entry) in this._subs.OrderBy(e => e.Key, StringComparer.Ordinal)) {
       var fn = this.LowerSubroutine(entry.Package, entry.Name, entry.Sub, entry.IsPublic);
       this._loweredFunctions[entry.Name] = fn;
@@ -127,7 +140,7 @@ internal sealed partial class PerlLowerer {
       var significant = stmts.Where(s => s.Name is not ("nextstate" or "null")).ToArray();
       if (significant is [
         { Name: "require", Children: [{ Name: "const", Constant: { Kind: "string", Value: var reqFile } }] },
-        { Name: "lineseq", Children: [.., { Name: "entersub", Children: var callKids }] }
+        { Name: "lineseq", Children: [.., { Name: "entersub" or "stub" } tailOp] }
       ]) {
         var modName = reqFile.EndsWith(".pm", StringComparison.Ordinal)
           ? reqFile[..^3].Replace("/", "::", StringComparison.Ordinal)
@@ -141,7 +154,14 @@ internal sealed partial class PerlLowerer {
         if (!_allowedPragmas.Contains(modName))
           throw new Refusal(PerlFrontend.UnresolvedModule, modName, 1);
 
-        _ = callKids;
+        if (modName is "base" or "parent" && tailOp.Name == "entersub") {
+          var targets = tailOp.Children.SelectMany(Descendants)
+            .Where(o => o is { Name: "const", Constant: { Kind: "string", Value: var s } } && s != modName && s != "-norequire")
+            .Select(o => o.Constant!.Value);
+          foreach (var parentPkg in targets)
+            if (parentPkg != "Exporter" && !this._tree.Packages.ContainsKey(parentPkg))
+              throw new Refusal(PerlFrontend.ObjectSystemUnsupported, $"use {modName} '{parentPkg}'", 1, cause: "OBJ-CLASSES");
+        }
         continue;
       }
 
@@ -153,22 +173,20 @@ internal sealed partial class PerlLowerer {
     }
   }
 
-  private void CollectPackages() {
+  private void CollectPackages(Dictionary<string, PerlPackage> packages) {
     var runtimeExports = this.CollectRuntimeExports();
-    var packages = this._tree.Packages.Count > 0
-      ? this._tree.Packages
-      : new Dictionary<string, PerlPackage> {
-          ["main"] = new PerlPackage { Functions = this._tree.Functions }
-        };
 
     foreach (var (pkgName, pkg) in packages) {
-      if (pkg.Isa.Length > 0)
+      var nonExporterIsa = pkg.Isa.Concat(this._directives.Isa.GetValueOrDefault(pkgName) ?? []).Any(i => i != "Exporter");
+      if (!this._classesByPkg.ContainsKey(pkgName) && nonExporterIsa)
         throw new Refusal(PerlFrontend.ObjectSystemUnsupported, $"@{pkgName}::ISA", 1, cause: "OBJ-VIRTUAL");
 
       var explicitExports = pkg.Export.Concat(pkg.ExportOk).ToHashSet(StringComparer.Ordinal);
       if (runtimeExports.TryGetValue(pkgName, out var extra))
         explicitExports.UnionWith(extra);
       foreach (var (subName, sub) in pkg.Functions) {
+        if (this._classSubKeys.Contains($"{pkgName}::{subName}"))
+          continue;
         if (subName is "AUTOLOAD" or "DESTROY")
           throw new Refusal(PerlFrontend.SubUnsupported, subName, 1);
         if (sub.Prototype is { Length: > 0 })
@@ -196,14 +214,12 @@ internal sealed partial class PerlLowerer {
       return;
     }
 
-    // Top-level statements allowed: `package`, `our @EXPORT...`, `our $X = CONST`, trailing `1;`, `nextstate`, `enter`, `leave`.
+    // Top-level statements allowed: `package`, `our @EXPORT...`, `our @ISA = ...` (validated by package/class check), `our $X = CONST`, trailing `1;`, `nextstate`, `enter`, `leave`.
     foreach (var op in allOps) {
       if (op.Name is "print" or "say" or "system" or "exec" or "open")
         throw new Refusal(PerlFrontend.SubUnsupported, $"top-level {op.Name}", Math.Max(1, op.Line));
       if (op.Name == "tie")
         throw new Refusal(PerlFrontend.MagicUnsupported, "tie", Math.Max(1, op.Line));
-      if (op.Name == "gv" && op.Symbol == "ISA")
-        throw new Refusal(PerlFrontend.ObjectSystemUnsupported, "@ISA", Math.Max(1, op.Line), cause: "OBJ-VIRTUAL");
     }
   }
 
@@ -451,12 +467,10 @@ internal sealed partial class PerlLowerer {
     => slot > 0 && slot < this._currentSub.Lexicals.Length && this._currentSub.Lexicals[slot] is { Length: > 0 } raw ? raw[0] : '\0';
 
   private IrExpr LowerCall(PerlOp call) {
-    // Check for method call (`method_named` / `method`) -> PLY1740 (#439)
+    // Method call (`method_named` / `method_super` / `method`)
     var children = UnwrapList(call.Children);
-    if (children.Any(c => c.Name is "method_named" or "method")) {
-      var m = children.First(c => c.Name is "method_named" or "method");
-      throw this.Fail(PerlFrontend.ObjectSystemUnsupported, $"->{m.Symbol ?? "method"}", cause: "OBJ-CLASSES");
-    }
+    if (children.LastOrDefault() is { Name: "method_named" or "method_super" or "method" } methodOp)
+      return this.LowerMethodCall(children, methodOp);
 
     // Closure invocation `$f->(ARGS)` where last child is `null` -> `padsv` holding an anonymous sub.
     if (children.Length >= 1 && children[^1] is { Name: "null", Children: [{ Name: "padsv", Target: var fnSlot }] } &&

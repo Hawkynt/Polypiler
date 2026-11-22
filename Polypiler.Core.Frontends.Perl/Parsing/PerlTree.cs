@@ -10,9 +10,28 @@ internal sealed record PerlTree {
   public int IterReversed { get; init; }
   public Dictionary<string, PerlSubroutine> Functions { get; init; } = [];
   public Dictionary<string, PerlPackage> Packages { get; init; } = [];
+  public Dictionary<string, PerlMoosePackage> Moose { get; init; } = [];
   public PerlSubroutine[] Begin { get; init; } = [];
   public PerlOp? Program { get; init; }
   public string?[] ProgramLexicals { get; init; } = [];
+}
+
+internal sealed record PerlMoosePackage {
+  public string Kind { get; init; } = "class";
+  public string[] Extends { get; init; } = [];
+  public string[] With { get; init; } = [];
+  public string[] Requires { get; init; } = [];
+  public PerlMooseAttribute[] Attributes { get; init; } = [];
+}
+
+internal sealed record PerlMooseAttribute {
+  public string Name { get; init; } = "";
+  public string Is { get; init; } = "rw";
+  public string Isa { get; init; } = "";
+  public string Writer { get; init; } = "";
+  public string Reader { get; init; } = "";
+  public string DefaultKind { get; init; } = "none";
+  public string DefaultValue { get; init; } = "";
 }
 
 internal sealed record PerlPackage {

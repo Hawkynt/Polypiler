@@ -57,7 +57,7 @@ internal sealed partial class PerlLowerer {
 
   private IrExpr BuildHashRead(IrExpr target, PerlDerefStep step, PerlOp[] exprKids, ref int exprIdx) {
     if (target.Type.ClassType is { } cls && step.IndexKind == "const" && step.IndexValue is { } key) {
-      var field = cls.Field(key);
+      var field = cls.AllFields.FirstOrDefault(f => f.Name == key);
       if (field is not null)
         return new IrFieldLoad(target, field);
       return new IrNone(IrType.Optional(IrType.I64));
@@ -70,6 +70,9 @@ internal sealed partial class PerlLowerer {
   }
 
   private IrExpr LowerHashElemRead(PerlOp op) {
+    if (this.TryLowerInsideOutRead(op, out var insideOut))
+      return insideOut;
+
     var hash = this.LiftExpr(op.Children[0]);
     if (hash.Type.Kind == IrTypeKind.Map) {
       var k = this.ToType(this.LiftExpr(op.Children[1]), hash.Type.Key!);
@@ -80,7 +83,7 @@ internal sealed partial class PerlLowerer {
 
   private void EmitHashStore(IrExpr target, PerlDerefStep step, PerlOp[] exprKids, ref int exprIdx, IrExpr value, List<IrStmt> statements) {
     if (target.Type.ClassType is { } cls && step.IndexKind == "const" && step.IndexValue is { } key) {
-      var field = cls.Field(key) ?? throw this.Fail(PerlFrontend.HashOrderUnsupported, $"unknown record field '{key}'");
+      var field = cls.AllFields.FirstOrDefault(f => f.Name == key) ?? throw this.Fail(PerlFrontend.HashOrderUnsupported, $"unknown record field '{key}'");
       statements.Add(new IrFieldStore(target, field, this.ToType(value, field.Type)));
       return;
     }

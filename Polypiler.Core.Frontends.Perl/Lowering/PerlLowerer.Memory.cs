@@ -294,6 +294,9 @@ internal sealed partial class PerlLowerer {
   }
 
   private IrExpr LowerMultiDerefRead(PerlOp op) {
+    if (this.TryLowerInsideOutRead(op, out var insideOut))
+      return insideOut;
+
     var exprIdx = 0;
     var exprKids = op.Children.Where(c => c.Name != "null" || c.Children.Length > 0).ToArray();
     IrExpr? current = null;
@@ -321,6 +324,9 @@ internal sealed partial class PerlLowerer {
   }
 
   private void LowerIndexedStore(PerlOp lhsOp, IrExpr value, List<IrStmt> statements) {
+    if (this.TryLowerInsideOutStore(lhsOp, value, statements))
+      return;
+
     if (lhsOp is { Name: "multideref", Deref: { Length: > 0 } steps }) {
       var exprIdx = 0;
       var exprKids = lhsOp.Children.Where(c => c.Name != "null").ToArray();

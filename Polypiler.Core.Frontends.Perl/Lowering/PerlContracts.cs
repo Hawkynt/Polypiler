@@ -19,7 +19,7 @@ internal sealed class PerlContracts {
   public IReadOnlyList<string> Recorded => this._recorded;
   public IReadOnlyList<IrTypeDeclaration> Declarations => this._declarations;
 
-  public static PerlContracts Parse(string text, Func<string, Exception> fail) {
+  public static PerlContracts Parse(string text, Func<string, Exception> fail, Func<string, IrType?>? namedTypeResolver = null) {
     var result = new PerlContracts();
     var recordIndex = 0;
     foreach (var raw in text.Split('\n')) {
@@ -41,7 +41,7 @@ internal sealed class PerlContracts {
         continue;
       }
 
-      var type = result.ParseType(value, ref recordIndex, fail);
+      var type = result.ParseType(value, ref recordIndex, fail, namedTypeResolver);
       if (!result._types.TryAdd(key, type))
         throw fail($"duplicate contract '{key}'");
     }
@@ -68,32 +68,36 @@ internal sealed class PerlContracts {
     ["bool"] = IrType.Bool, ["str"] = IrType.String, ["string"] = IrType.String, ["void"] = IrType.Void
   };
 
-  private IrType ParseType(string spec, ref int recordIndex, Func<string, Exception> fail) {
+  private IrType ParseType(string spec, ref int recordIndex, Func<string, Exception> fail, Func<string, IrType?>? namedTypeResolver) {
     spec = spec.Trim();
-    return _primitiveTypes.TryGetValue(spec, out var prim) ? prim : this.ParseCompoundType(spec, ref recordIndex, fail);
+    if (_primitiveTypes.TryGetValue(spec, out var prim))
+      return prim;
+    if (namedTypeResolver?.Invoke(spec) is { } named)
+      return named;
+    return this.ParseCompoundType(spec, ref recordIndex, fail, namedTypeResolver);
   }
 
-  private IrType ParseCompoundType(string spec, ref int recordIndex, Func<string, Exception> fail) {
+  private IrType ParseCompoundType(string spec, ref int recordIndex, Func<string, Exception> fail, Func<string, IrType?>? namedTypeResolver) {
     if (spec.StartsWith("seq<", StringComparison.Ordinal) && spec.EndsWith('>'))
-      return IrType.Array(this.ParseType(spec[4..^1], ref recordIndex, fail));
+      return IrType.Array(this.ParseType(spec[4..^1], ref recordIndex, fail, namedTypeResolver));
 
     if (spec.StartsWith("list<", StringComparison.Ordinal) && spec.EndsWith('>'))
-      return IrType.List(this.ParseType(spec[5..^1], ref recordIndex, fail));
+      return IrType.List(this.ParseType(spec[5..^1], ref recordIndex, fail, namedTypeResolver));
 
     if (spec.StartsWith("nullable(", StringComparison.Ordinal) && spec.EndsWith(')')) {
-      var inner = this.ParseType(spec[9..^1], ref recordIndex, fail);
+      var inner = this.ParseType(spec[9..^1], ref recordIndex, fail, namedTypeResolver);
       return inner.IsOptionalValue ? IrType.Optional(inner) : inner;
     }
 
     if (spec.StartsWith("optional<", StringComparison.Ordinal) && spec.EndsWith('>')) {
-      var inner = this.ParseType(spec[9..^1], ref recordIndex, fail);
+      var inner = this.ParseType(spec[9..^1], ref recordIndex, fail, namedTypeResolver);
       return inner.IsOptionalValue ? IrType.Optional(inner) : inner;
     }
 
     if (spec.StartsWith("map<", StringComparison.Ordinal) && spec.EndsWith('>')) {
       var parts = SplitTopLevel(spec[4..^1], ',');
       if (parts.Count == 2)
-        return IrType.Map(this.ParseType(parts[0], ref recordIndex, fail), this.ParseType(parts[1], ref recordIndex, fail), MapOrder.Insertion);
+        return IrType.Map(this.ParseType(parts[0], ref recordIndex, fail, namedTypeResolver), this.ParseType(parts[1], ref recordIndex, fail, namedTypeResolver), MapOrder.Insertion);
     }
 
     if (spec.StartsWith("record{", StringComparison.Ordinal) && spec.EndsWith('}')) {
@@ -104,7 +108,7 @@ internal sealed class PerlContracts {
         if (colon <= 0)
           throw fail($"malformed record field '{item}'");
         var fname = item[..colon].Trim();
-        var ftype = this.ParseType(item[(colon + 1)..], ref recordIndex, fail);
+        var ftype = this.ParseType(item[(colon + 1)..], ref recordIndex, fail, namedTypeResolver);
         fields.Add(new(fname, ftype, false));
       }
       var shapeKey = string.Join("|", fields.Select(f => $"{f.Name}:{f.Type}"));

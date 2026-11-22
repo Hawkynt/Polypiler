@@ -49,6 +49,10 @@ internal static class PerlOpTreeHelper {
       var dumpDir = Path.Combine(temp.FullName, "B");
       Directory.CreateDirectory(dumpDir);
       File.WriteAllBytes(Path.Combine(dumpDir, "PolypilerDump.pm"), ParserSource);
+      var mooseDir = Path.Combine(temp.FullName, "Moose");
+      Directory.CreateDirectory(mooseDir);
+      File.WriteAllText(Path.Combine(temp.FullName, "Moose.pm"), MooseCollectorSource, new UTF8Encoding(false));
+      File.WriteAllText(Path.Combine(mooseDir, "Role.pm"), MooseRoleCollectorSource, new UTF8Encoding(false));
       var inputPath = Path.Combine(temp.FullName, "polypiler_input.pl");
       File.WriteAllBytes(inputPath, new UTF8Encoding(false).GetBytes(source));
 
@@ -97,5 +101,115 @@ internal static class PerlOpTreeHelper {
     stream.CopyTo(copy);
     return copy.ToArray();
   }
+
+  private const string MooseCollectorSource = """
+    package Moose;
+    use strict;
+    use warnings;
+
+    sub _entry {
+        my ($pkg, $kind) = @_;
+        $B::PolypilerDump::MOOSE{$pkg} ||= {
+            kind => $kind,
+            extends => [],
+            with => [],
+            requires => [],
+            attributes => [],
+        };
+        return $B::PolypilerDump::MOOSE{$pkg};
+    }
+
+    sub _install_stub {
+        my ($pkg, $name) = @_;
+        no strict 'refs';
+        $B::PolypilerDump::GENERATED_SUBS{"${pkg}::$name"} = 1;
+        *{"${pkg}::$name"} = sub { } unless defined &{"${pkg}::$name"};
+    }
+
+    sub _record_has {
+        my ($pkg, $kind, $names, %spec) = @_;
+        my $entry = _entry($pkg, $kind);
+        my @list = ref($names) eq 'ARRAY' ? @$names : ($names);
+        for my $name (@list) {
+            my ($def_kind, $def_val) = ('none', '');
+            if (exists $spec{default}) {
+                my $d = ref($spec{default}) eq 'CODE' ? eval { $spec{default}->() } : $spec{default};
+                if (!defined $d) {
+                    $def_kind = 'undef';
+                } elsif (ref($d) eq 'ARRAY') {
+                    $def_kind = 'array';
+                } elsif (ref($d) eq 'HASH') {
+                    $def_kind = 'hash';
+                } elsif ($d =~ /\A-?[0-9]+\z/) {
+                    $def_kind = 'integer';
+                    $def_val = "$d";
+                } elsif ($d =~ /\A-?(?:[0-9]+\.[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?\z/) {
+                    $def_kind = 'float';
+                    $def_val = "$d";
+                } else {
+                    $def_kind = 'string';
+                    $def_val = "$d";
+                }
+            }
+            push @{$entry->{attributes}}, {
+                name => $name,
+                is => (defined $spec{is} ? $spec{is} : 'rw'),
+                isa => (defined $spec{isa} ? $spec{isa} : ''),
+                writer => (defined $spec{writer} ? $spec{writer} : ''),
+                reader => (defined $spec{reader} ? $spec{reader} : ''),
+                defaultKind => $def_kind,
+                defaultValue => $def_val,
+            };
+            _install_stub($pkg, $name);
+            _install_stub($pkg, $spec{writer}) if defined $spec{writer} && length($spec{writer});
+            _install_stub($pkg, $spec{reader}) if defined $spec{reader} && length($spec{reader});
+        }
+    }
+
+    sub import {
+        my $caller = caller;
+        strict->import;
+        warnings->import;
+        _entry($caller, 'class');
+        no strict 'refs';
+        for my $kw (qw(has extends with requires meta new)) {
+            $B::PolypilerDump::GENERATED_SUBS{"${caller}::$kw"} = 1;
+        }
+        *{"${caller}::has"} = sub { _record_has($caller, 'class', @_); };
+        *{"${caller}::extends"} = sub { push @{_entry($caller, 'class')->{extends}}, @_; };
+        *{"${caller}::with"} = sub { push @{_entry($caller, 'class')->{with}}, @_; };
+        *{"${caller}::requires"} = sub { push @{_entry($caller, 'class')->{requires}}, @_; };
+        *{"${caller}::meta"} = sub { bless {}, 'Moose::_Meta'; };
+        *{"${caller}::new"} = sub { bless {}, $_[0]; } unless defined &{"${caller}::new"};
+    }
+
+    package Moose::_Meta;
+    sub make_immutable { return 1; }
+
+    1;
+    """;
+
+  private const string MooseRoleCollectorSource = """
+    package Moose::Role;
+    use strict;
+    use warnings;
+    use Moose ();
+
+    sub import {
+        my $caller = caller;
+        strict->import;
+        warnings->import;
+        Moose::_entry($caller, 'role');
+        no strict 'refs';
+        for my $kw (qw(has with requires)) {
+            $B::PolypilerDump::GENERATED_SUBS{"${caller}::$kw"} = 1;
+        }
+        *{"${caller}::has"} = sub { Moose::_record_has($caller, 'role', @_); };
+        *{"${caller}::with"} = sub { push @{Moose::_entry($caller, 'role')->{with}}, @_; };
+        *{"${caller}::requires"} = sub { push @{Moose::_entry($caller, 'role')->{requires}}, @_; };
+    }
+
+    1;
+    """;
 
 }

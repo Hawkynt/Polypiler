@@ -171,7 +171,7 @@ sub operation {
             $node->{symbol} = $glob->NAME;
             $node->{stash} = $glob->STASH->NAME if $glob->STASH && $glob->STASH->isa('B::HV');
         }
-    } elsif ($name eq 'method_named') {
+    } elsif ($name eq 'method_named' || $name eq 'method_super') {
         my $method = $op->meth_sv;
         $method = pad_value($pad, $op->targ) if $method && $method->isa('B::SPECIAL');
         $node->{symbol} = $method->PV if $method && $method->isa('B::PV');
@@ -249,11 +249,13 @@ sub collect_packages {
         if ($name =~ /\A([A-Za-z_][A-Za-z0-9_]*)::\z/) {
             my $sub_pkg = $prefix eq 'main' ? $1 : "${prefix}::$1";
             next if $sub_pkg eq 'main' || $sub_pkg eq 'B' || $sub_pkg eq 'B::PolypilerDump'
-                 || $sub_pkg eq 'JSON' || $sub_pkg eq 'JSON::PP' || $sub_pkg eq 'CORE';
+                 || $sub_pkg eq 'JSON' || $sub_pkg eq 'JSON::PP' || $sub_pkg eq 'CORE'
+                 || $sub_pkg eq 'Moose' || $sub_pkg eq 'Moose::Role';
             collect_packages($sub_pkg, $seen, $packages, $file_pkgs);
             next;
         }
         next unless $name =~ /\A[A-Za-z_][A-Za-z0-9_]*\z/;
+        next if $B::PolypilerDump::GENERATED_SUBS{"${prefix}::$name"};
         my $subroutine = *{"${prefix}::$name"}{CODE} or next;
         my $cv = B::svref_2object($subroutine);
         next unless $cv->isa('B::CV');
@@ -288,7 +290,8 @@ sub compile {
             wire => 1,
             functions => \%main_functions,
             packages => \%packages,
-            program => operation(B::main_root(), B::main_cv(), $pad),
+            moose => \%B::PolypilerDump::MOOSE,
+            program => scalar(operation(B::main_root(), B::main_cv(), $pad)),
             programLexicals => pad_names($names),
             begin => \@begin,
             stacked => B::OPf_STACKED,
