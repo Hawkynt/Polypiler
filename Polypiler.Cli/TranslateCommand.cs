@@ -91,6 +91,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   private const string AllowUnsafe = "--allow-unsafe";
   private const string PerlContractOption = "--perl-contract";
   private const string ByteStorageOption = "--byte-storage";
+  private const string ObjectModelOption = "--object-model";
 
   /// <summary>The caveat that records the overflow mode of a Rust import and where it came from.</summary>
   public const string RustOverflowCaveat = "rs-overflow-checks";
@@ -126,7 +127,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     [AllowUnsafe] = "Rust: allow the one unsafe lowering, a mutable overlay view, which the crate then has to pass Miri with; refused with PLY1567 otherwise",
     [Bind] = "JavaScript: the binding module or global object of a native library, repeatable",
     [PerlContractOption] = "Perl: file holding source contract lines for exported subroutines",
-    [ByteStorageOption] = "Perl: how u8[] byte buffers are stored (array or string)"
+    [ByteStorageOption] = "Perl: how u8[] byte buffers are stored (array or string)",
+    [ObjectModelOption] = "Perl: object representation for classes and interfaces (blessed, moose or inside-out)"
   };
 
   private readonly Backend[] _backendsOfThis;
@@ -665,12 +667,12 @@ public sealed partial class TranslateCommand : ICliCommand {
     (module, options) => CSharpEmitter.Check(module, CSharpProfileOf(options), capabilities),
     (module, options, passes, _) => CSharpEmitter.Emit(module, CSharpProfileOf(options), FloatModeOf(options), options.GetValueOrDefault(Namespace), capabilities, passes));
 
-  /// <summary>The Perl backend; <c>--profile</c> accepts <c>perl/5</c> and <c>--byte-storage</c> chooses <c>array</c> or <c>string</c>.</summary>
+  /// <summary>The Perl backend; <c>--profile</c> accepts <c>perl/5.6</c>, <c>perl/5.8</c> or <c>perl/5</c>, <c>--byte-storage</c> chooses <c>array</c> or <c>string</c>, and <c>--object-model</c> chooses <c>blessed</c>, <c>moose</c> or <c>inside-out</c>.</summary>
   private static Backend Perl(Func<IrModule> implementations) => new("perl",
     PerlEmitter.Runtime,
     options => PerlProfileOf(options).Profile!.ToString(),
     RuleTarget.Neutral,
-    [new(Profile, Choice(PerlProfile.Names)), new(ByteStorageOption, Choice(PerlProfile.ByteStorageNames)), new(Float, FloatChoice)],
+    [new(Profile, Choice(PerlProfile.Names)), new(ByteStorageOption, Choice(PerlProfile.ByteStorageNames)), new(ObjectModelOption, Choice(PerlProfile.ObjectModelNames)), new(Float, FloatChoice)],
     options => FloatMisuse(options) ?? PerlProfileOf(options).Error,
     (module, options) => PerlEmitter.Legalize(module, implementations, PerlProfileOf(options).Profile!, FloatModeOf(options)),
     (module, options) => PerlEmitter.Check(module, PerlProfileOf(options).Profile!),
@@ -680,7 +682,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     }));
 
   private static (PerlProfile? Profile, string? Error) PerlProfileOf(IReadOnlyDictionary<string, string> options) {
-    PerlProfile.TryParse(options.GetValueOrDefault(Profile), options.GetValueOrDefault(ByteStorageOption), out var profile, out var error);
+    PerlProfile.TryParse(options.GetValueOrDefault(Profile), options.GetValueOrDefault(ByteStorageOption), options.GetValueOrDefault(ObjectModelOption), out var profile, out var error);
     return (profile, error);
   }
 
