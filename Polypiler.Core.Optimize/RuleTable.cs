@@ -19,6 +19,7 @@ public sealed class RuleTable {
     new O0101PopCountLoop(),
     new O0102PopCountSwar(),
     new O0103ZeroCountLoop(),
+    new O0104ZeroCountDeBruijn(),
     new O0105BitReverse(),
     new O0106ByteSwap(),
     new O0108SingleBit(),

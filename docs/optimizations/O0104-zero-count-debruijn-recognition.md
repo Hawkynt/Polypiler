@@ -1,74 +1,145 @@
 # O0104 — Recognize trailing zero count and floor-log2 from de Bruijn multiply-and-lookup
 
-<!-- status: planned -->
-> **Status: planned.** Not implemented yet — tracked in [#583](https://github.com/Hawkynt/Polypiler/issues/583). Once implemented it is switched off with `--disable-opt O0104`.
+<!-- status: implemented -->
+> **Status: implemented and proof-gated.** `O0104ZeroCountDeBruijn` recognizes the de Bruijn bit scans at 32 and 64 bits in the current structured IR. Every replacement requires an SMT proof that includes the table. Disable it with `--disable-opt O0104`.
 
 ## What it does
 
-The fastest portable bit scan isolates the lowest set bit, multiplies by a de Bruijn constant and
-indexes a small table. Chess engines, allocators and entropy coders ship it; so do compilers for CPUs
-without a bit-scan instruction. The table and the multiply are dead weight on a target with `TZCNT`, and
-a 32-bit multiply is the wrong tool on an 8-bit CPU. The idiom also differs from the intrinsic at zero,
-where it returns the table's first entry. PRD §4.5, §19.2 (expression and algorithm level).
+The fastest portable bit scan isolates the lowest set bit, multiplies it by a de
+Bruijn constant and looks the top `log2 w` bits of the product up in a table of
+`w` entries. The same lookup of the smear of `x` — `x` or-ed with its right
+shifts by 1, 2, 4, …, `w/2` — gives the floor of the base-2 logarithm. The rule
+replaces the lookup by `TrailingZeroCount` or by `(w - 1) - LeadingZeroCount`,
+which the backends write as `BitOperations.TrailingZeroCount`, `Math.clz32` or a
+helper, and the table usually becomes dead.
 
-## Example
+For `x = 0` both lookups read the table's first entry, which no zero count
+returns: `TrailingZeroCount(0)` is `w`. The replacement keeps that value with a
+selection on `x == 0`.
 
-### Before
+The method is Leiserson, Prokop and Randall, "Using de Bruijn Sequences to Index
+a 1 in a Computer Word" (1998); the constants in the fixtures are the
+public-domain ones of Sean Anderson's *Bit Twiddling Hacks* (sourcing rung 3).
+The [fixture provenance](../../tests/fixtures/recognize/o0104/README.md) records
+where each table comes from.
+
+## Before and after
+
+Save this as `Scan.cs`:
+
+```csharp
+public static class Scan {
+  private static readonly byte[] Table = { 0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8, 31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9 };
+
+  public static int TrailingZeros(uint x) => Table[((x & (uint)-x) * 0x077CB531u) >> 27];
+}
+```
+
+```sh
+polypiler translate Scan.cs --from csharp --to csharp --profile net10.0 --output out --explain-opt
+```
+
+In IR notation, before recognition:
 
 ```
-%n = Neg.u32 %x
-%l = And.u32 %x, %n
-%m = Mul.u32 %l, 0x077CB531
-%i = LShr.u32[strict] %m, 27
-%p = ElementAddr @table, %i
-%r = Load.u8 %p
+%r = Load.u8 @Table[LShr.u32(Mul.u32(And.u32(%x, Neg.u32 %x), 0x077CB531), 27)]
 ```
 
-### After
+After:
 
 ```
-%t = TrailingZeroCount.u32 %x
-%z = ICmp.eq.u32 %x, 0
-%r8 = Trunc.u8 %t
-%r = Select.u8 %z, 0, %r8      ; 0 is table[0]
+%r = Select.u8 Eq(%x, 0), 0, Trunc.u8(TrailingZeroCount.u32 %x)
 ```
 
-## When it applies
+The proof report is `O0104 applied: TrailingZeroCount.u32 from de Bruijn lookup [proof: smt-bitvector]`.
+The C# backend writes
+`(x == 0u) ? (byte)0 : (byte)global::System.Numerics.BitOperations.TrailingZeroCount(x)`
+and drops the table; the JavaScript backend writes
+`(x === 0) ? 0 : (TrailingZeroCount32(x) & 0xFF)`.
 
-(1) the load's base is a constant array of exactly `w` elements whose
-initializer is known and for which [#93](https://github.com/Hawkynt/Polypiler/issues/93) proves that no store can reach it; (2) the index
-is `LShr(Mul(l, C), w - log2 w)` with constant `C`; (3) `l` is `And(x, Neg(x))` (trailing-zero form)
-or the smear of `x` followed by the form's own post-step (`l - (l >>> 1)` or none, as the table
-requires); (4) *table check*: for every `i` in `0..w-1`, `table[((2^i * C) mod 2^w) >>> (w - log2 w)]
-== i` for the trailing-zero form, and the analogous check with `2^(i+1) - 1` for the smear form. The
-check is complete because `l` takes only these `w` values for non-zero `x`. (5) For `x = 0` the
-original reads `table[0]`; the replacement reproduces that value by a `Select` unless a fact `x ≠ 0`
-removes the case.
+## Matched forms and widths
 
-## How it is proven
+- **trailing zeros:** `table[((x & -x) * C) >> (w - log2 w)]`, the negation
+  written `-x`, `0 - x` or through a wider type, the operands of `&` and `*` in
+  either order.
+- **floor-log2:** `table[(smear(x) * C) >> (w - log2 w)]`, the smear's steps
+  `v | v >> s` in either order, in one expression or — as it is usually written
+  — as a run of assignments to one variable, which the rule reads as one value.
+- Any constant `C` with any table of exactly `w` entries that passes the check
+  below; the check is on the pair, not on a list of known constants.
+- Widths 32 and 64 (shift 27 or 58); the element type of the table is the type
+  of the result, converted as the lookup was.
 
-`exhaustive` over the `w` reachable indices (the table check) plus `smt-bitvector`
-for step 3 (`x & -x` is zero or a power of two; the smear is `2^(k+1) - 1`) and for the zero case; the
-provenance of the table is an `AliasFact`/`EffectFact` obligation. A failed, unknown or timed-out
-obligation (budget 5 s each) leaves the IR unchanged and reports `not applied: proof timeout` or the
-failing precondition.
+The table must be a constant of the module. The frontends make one of an array
+that nothing writes; an array written anywhere is a global and is refused, since
+its contents at the time of the load are unknown.
+
+**The table check** is complete: for a non-zero `x`, `x & -x` takes only the `w`
+powers of two `2^i`, and the smear only the `w` values `2^(i+1) - 1`. The table
+must hold `i` at the index each of them reaches; the first table index that
+holds anything else is reported. The C# frontend takes array indices of at most
+32 bits, so a 64-bit scan converts its index, which the rule looks through.
+
+## Proof and library-host contract
+
+`translate` supplies `SmtRecognitionProver`; a library host enables the rule with
+`OptimizerOptions.Prover = new SmtRecognitionProver()`. The adapter encodes the
+actual lookup — the isolation or smear, the multiplication, the shift and the
+table itself, as the choice among its entries by the index — against its
+independent definitions of the zero counts. The one obligation covers the zero
+case and every non-zero input, so the table check is the reporting step and the
+proof is the decision.
+
+A load from a constant table is total when its index cannot pass the table's
+end: a logical right shift of a `w`-bit value by `k` leaves at most `2^(w-k)`
+values, a mask with a non-negative constant at most the mask, and a conversion
+keeps the bound when it fits below the target's sign bit. `IrShape.IsTrapFree`
+counts such a load as total, and only such a load is encoded.
+
+Each obligation has a five-second solver budget. Missing, unsupported, refuted,
+unknown, unavailable or timed-out proofs leave the lookup unchanged, and
+successful proof notes are published only after the optimizer commits the
+replacement.
 
 ## When it must not fire
 
-- Zero input: the Before IR returns `table[0] = 0` for `x = 0`; `TrailingZeroCount.u32 0` is 32. A
-  rewrite without the `Select` is wrong.
-- A table with one wrong entry (index 2 holds 27): `x = 0x10000000` yields 27, the intrinsic 28.
-- A table that is written elsewhere: its contents at the time of the load are unknown.
-- `x & (x - 1)` instead of `x & -x` (clears the lowest bit instead of isolating it): `x = 0x00000001`
-  gives index 0 → 0, but `x = 0x00000003` gives `table[(2 * C) >>> 27] = 1`, not 0.
+- A table with a wrong entry: `O0104 not applied: table check failed at index 2`
+  for the trailing-zero table with entry 2 changed from 28 to 27; `x = 0x10000000`
+  reads that entry.
+- A table of another length:
+  `O0104 not applied: table check failed: 31 entries for 32 positions`.
+- A table that is written anywhere: `O0104 not applied: table not constant`.
+- `x & (x - 1)`, which clears the lowest bit instead of isolating it:
+  `O0104 not applied: operand is not an isolated bit`.
+- A shift other than `w - log2 w`: `O0104 not applied: index is not multiply-shift`.
+- A 16-bit scan, which the IR computes at 32 bits and cuts to 16 before the
+  shift: `O0104 not applied: unsupported width`.
+- An operand that may trap or act: `O0104 not applied: operand may trap or have effects`.
+- Any other table lookup — a mask, a multiplicative hash, a product of two
+  variables, an or that is no smear: silent.
 
-## Switching it off
+## What is left
 
-`--disable-opt O0104`; active at `--opt balanced`, `speed`, `size` and `memory`, off at
-`--opt none`.
+- A fact that `x` is non-zero would let the selection go; the rule always keeps
+  it. The tree IR has no range analysis to supply the fact at an expression, and
+  the backends write the selection as one comparison.
+- 8- and 16-bit de Bruijn scans are not planned (see above).
 
-## Interactions with other passes
+## Verification and interaction
 
-runs in phase `recognize` after global constant propagation has attached
-initializers to constant arrays; after the rewrite the table is dead and is removed by global
-dead-code elimination of [#157](https://github.com/Hawkynt/Polypiler/issues/157).
+[ZeroCountDeBruijnRecognitionTests](../../Polypiler.Tests/Recognize/ZeroCountDeBruijnRecognitionTests.cs)
+checks both forms at both widths on zero, every single bit and the values just
+below, above and around it, against the BCL's `BitOperations`; 10,000 seeded
+inputs per form (seed 104) spread over every bit position; another de Bruijn
+constant with its own table; and every refusal.
+[TableReadTrapTests](../../Polypiler.Tests/Recognize/TableReadTrapTests.cs)
+checks which table loads are total, and the
+[proof-adapter tests](../../Polypiler.Tests/Verification/Proofs/SmtRecognitionProverTests.cs)
+the table encoding. The [acceptance feature](../../tests/features/recognize/rec-zerocount-debruijn.feature)
+imports executable source and checks proof reports, the zero case, the
+counterexamples, disabling and timeout.
+
+The rule runs after O0103 in the pass pipeline of `translate`. The optimizer
+visits expressions before their operands, taking the largest matched idiom
+first. Target cost selection remains a backend concern. `--opt none` and
+`--disable-opt O0104` disable matching, proof requests and reports.

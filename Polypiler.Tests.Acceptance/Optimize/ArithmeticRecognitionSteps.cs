@@ -12,7 +12,7 @@ using Reqnroll;
 namespace Polypiler.Tests.Acceptance.Optimize;
 
 /// <summary>Arithmetic recognition contracts on executable source imported into the current tree IR.</summary>
-[Binding, Scope(Feature = "Proved wrapping absolute value recognition"), Scope(Feature = "Proved zero-count loop recognition"), Scope(Feature = "Proved SWAR population count recognition"), Scope(Feature = "Proved parity recognition"), Scope(Feature = "Proved shift-add multiplication recognition"), Scope(Feature = "Proved single-bit recognition"), Scope(Feature = "Proved minimum and maximum recognition"), Scope(Feature = "Proved signum recognition")]
+[Binding, Scope(Feature = "Proved wrapping absolute value recognition"), Scope(Feature = "Proved zero-count loop recognition"), Scope(Feature = "Proved SWAR population count recognition"), Scope(Feature = "Proved parity recognition"), Scope(Feature = "Proved shift-add multiplication recognition"), Scope(Feature = "Proved single-bit recognition"), Scope(Feature = "Proved minimum and maximum recognition"), Scope(Feature = "Proved signum recognition"), Scope(Feature = "Proved de Bruijn zero-count recognition")]
 public sealed class ArithmeticRecognitionSteps {
 
   private IrModule _before = null!;
