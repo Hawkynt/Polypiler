@@ -92,6 +92,15 @@ loop symbolically into the chain of its passes' exit values (`c0 ? (c1 ? … : v
 position. A loop that does not end for zero is proved only under the non-zero
 fact a dominating `if (x == 0) return` or an enclosing `if (x != 0)` supplies.
 
+O0104 de Bruijn bit scans read a constant table, which the frontends make of an
+array nothing writes. A load from such a table is total when its index cannot
+pass the table's end (a logical shift, a non-negative mask, or a conversion that
+keeps the bound), and `IrShape.IsTrapFree` says so; the prover encodes the load
+as the choice among the table's entries by the index. The one obligation covers
+the multiply, the shift, the table and the zero case, which the replacement
+keeps with a selection on `x == 0`; the rule's table check only names the first
+wrong entry.
+
 O0102 SWAR population count is recognition by proof: a structural gate (a final
 fold at the root and the `0x55…`, `0x33…`, `0x0F…` mask families) selects the
 candidate, and the proof against an independent bit-by-bit `PopCount` decides.

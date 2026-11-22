@@ -407,7 +407,7 @@ example before and after, the conditions under which it applies, the cases in wh
 fire, and a switch to turn it off.
 
 **[The optimization checklist](docs/optimizations/README.md)** lists all of them with their state:
-32 of 294 are implemented today in the pipeline of `translate`; reciprocal division (O0126) is accepted on an exact certificate; SWAR population count (O0102), zero-count loops (O0103), bit reversal (O0105), byte swap (O0106), single-bit operations (O0108), parity (O0110), minimum and maximum (O0120), wrapping magnitude (O0121), signum (O0122) and shift-add multiplication (O0125) require SMT equivalence proofs before rewriting. The families from "Loop transformations" on are borrowed from
+33 of 294 are implemented today in the pipeline of `translate`; reciprocal division (O0126) is accepted on an exact certificate; SWAR population count (O0102), zero-count loops (O0103), de Bruijn bit scans (O0104), bit reversal (O0105), byte swap (O0106), single-bit operations (O0108), parity (O0110), minimum and maximum (O0120), wrapping magnitude (O0121), signum (O0122) and shift-add multiplication (O0125) require SMT equivalence proofs before rewriting. The families from "Loop transformations" on are borrowed from
 [PB-Compiler](https://github.com/Hawkynt/PB-Compiler); the
 [catalog](docs/optimizations/pb-compiler-catalog.md) maps each of its 424 optimization documents to the
 page here that covers it.

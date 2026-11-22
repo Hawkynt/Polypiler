@@ -317,4 +317,23 @@ public sealed class SmtRecognitionProverTests {
     var sign = new IrIntrinsic(IrIntrinsicOp.Sign, IrType.I32, [d]);
     Assert.That(new SmtRecognitionProver().Prove("O0122", sign, sign, _context), Is.EqualTo(new RecognitionProof(false, "unsupported proof expression")));
   }
+
+  [Test]
+  public void AConstantTableRead_IsTheChoiceAmongItsEntries() {
+    var table = new IrModuleConst("Squares", IrType.Array(IrType.U8), [0, 1, 4, 9, 16, 25, 36, 49]);
+    var index = new IrBinary(IrBinaryOp.And, _value, new IrConst(IrType.I32, 7));
+    var read = new IrArrayLoad(new IrConstRef(table), index);
+    var low = new IrConvert(IrType.U8, index);
+    var square = new IrConvert(IrType.U8, new IrBinary(IrBinaryOp.Multiply, index, index));
+    var prover = new SmtRecognitionProver();
+    Assert.That(prover.Prove("O0104", read, square, _context).Proved, Is.True);
+    Assert.That(prover.Prove("O0104", read, low, _context), Is.EqualTo(new RecognitionProof(false, "not equivalent")));
+  }
+
+  [Test]
+  public void ATableReadThatMayTrap_IsNotEncoded() {
+    var table = new IrModuleConst("Short", IrType.Array(IrType.U8), [0, 1, 2]);
+    var read = new IrArrayLoad(new IrConstRef(table), new IrBinary(IrBinaryOp.And, _value, new IrConst(IrType.I32, 7)));
+    Assert.That(new SmtRecognitionProver().Prove("O0104", read, read, _context), Is.EqualTo(new RecognitionProof(false, "unsupported proof expression")));
+  }
 }

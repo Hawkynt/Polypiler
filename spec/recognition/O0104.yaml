@@ -1,0 +1,78 @@
+id: RECOGNITION.O0104
+title: Recognize trailing zero count and floor-log2 from de Bruijn multiply-and-lookup
+version: 1
+status: normative
+owner: Hawkynt
+issue: "#583"
+tests:
+  - Polypiler.Tests/Recognize/ZeroCountDeBruijnRecognitionTests.cs
+  - Polypiler.Tests/Recognize/TableReadTrapTests.cs
+  - Polypiler.Tests/Verification/Proofs/SmtRecognitionProverTests.cs
+  - tests/features/recognize/rec-zerocount-debruijn.feature
+  - Polypiler.Tests.Acceptance/Optimize/ArithmeticRecognitionSteps.cs
+  - tests/fixtures/recognize/o0104/debruijn.cs
+introducedIn: P2
+compatibility: none
+reviewedRevision: 1
+normative: >-
+  O0104 MUST recognize the de Bruijn bit scans at widths 32 and 64 in the
+  structured tree IR of ADR 0009: table[((x & -x) * C) >> (w - log2 w)] as
+  TrailingZeroCount of x, and the same lookup of the smear of x, in one
+  expression or as a run of assignments, as (w - 1) - LeadingZeroCount of x,
+  for any constant C and any table of exactly w entries that passes the table
+  check. The table MUST be a constant of the module; an array written anywhere
+  is a global and MUST be refused as "table not constant". The table check
+  MUST require entry i at the index reached by 2^i (trailing zeros) or
+  2^(i+1) - 1 (floor-log2) for every i below w and MUST report the first table
+  index that fails. For x = 0 the replacement MUST keep the table's first
+  entry with a selection on x == 0. A load from a constant table is total
+  when its index is provably below the table's length, and only such a load
+  is encoded. The host-supplied IRecognitionProver MUST prove the actual
+  lookup, table included, equivalent to its replacement; the CLI supplies
+  SmtRecognitionProver, whose zero-count definitions and table encoding share
+  no code with the rule. An operand that is an and isolating no bit, a shift
+  other than w - log2 w, a scan cut below 32 bits and an operand that may
+  trap or act MUST be refused with their reasons; other table lookups stay
+  silent. The solver budget is five seconds. Missing, unknown, unsupported,
+  unavailable, refuted and timed-out proofs MUST leave the lookup unchanged.
+  Successful proof notes MUST be emitted only after the replacement is
+  committed. --opt none and --disable-opt O0104 disable matching, proof
+  requests and reports.
+spec:
+  optimization: O0104
+  level: typed-tree
+  pattern:
+    before: "%r = Load.u8 @table[LShr.u32(Mul.u32(And.u32(%x, Neg.u32 %x), 0x077CB531), 27)]"
+    bindings:
+      - {name: x, role: "scanned value"}
+      - {name: table, role: "constant de Bruijn table of w entries"}
+  replacement:
+    after: "%r = Select.u8 Eq(%x, 0), table[0], Trunc.u8(TrailingZeroCount.u32 %x)"
+    introduces: [INTRINSICS.TrailingZeroCount, INTRINSICS.LeadingZeroCount]
+  preconditions:
+    - {id: constant-table, text: "the table is a constant of the module, which no store can reach", fact: alias}
+    - {id: multiply-shift, text: "the index is the product of the operand with a constant, shifted right by w - log2 w", fact: none}
+    - {id: isolated-bit, text: "the operand is x & -x or the smear of x", fact: known-bits}
+    - {id: table-check, text: "the table holds i at the index reached by 2^i, or by 2^(i+1) - 1, for every i below w", fact: none}
+    - {id: zero-case, text: "for x = 0 the replacement selects the table's first entry", fact: none}
+    - {id: in-bounds, text: "the index cannot pass the table's end, so the load is total", fact: range}
+    - {id: trap-free, text: "the operand has no effect and cannot trap: the replacement evaluates it once", fact: effect}
+  proofObligations:
+    - {id: debruijn-constant-table, class: alias-facts, widths: [32, 64]}
+    - {id: debruijn-actual-lookup, class: smt-bitvector, widths: [32, 64], budgetSeconds: 5}
+  counterexamples:
+    - description: "zero input without the selection"
+      input: "x = 0, u32, Table[((x & -x) * 0x077CB531) >> 27]"
+      naive: "TrailingZeroCount(x) = 32"
+      correct: "original = Table[0] = 0"
+    - description: "a table with one wrong entry"
+      input: "x = 0x10000000, u32, entry 2 changed from 28 to 27"
+      naive: "TrailingZeroCount(x) = 28"
+      correct: "original = 27"
+    - description: "clearing the lowest bit instead of isolating it"
+      input: "x = 0x00000003, u32, Table[((x & (x - 1)) * 0x077CB531) >> 27]"
+      naive: "TrailingZeroCount(x) = 0"
+      correct: "original = Table[(2 * 0x077CB531) >> 27] = 1"
+  switch: "--disable-opt O0104"
+  optLevels: [default]
+  document: docs/optimizations/O0104-zero-count-debruijn-recognition.md

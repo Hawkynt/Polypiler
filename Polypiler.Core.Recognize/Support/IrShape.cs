@@ -154,7 +154,41 @@ public static class IrShape {
   /// </summary>
   /// <param name="expression">The expression.</param>
   /// <returns><see langword="true"/> when it is pure and total.</returns>
-  public static bool IsTrapFree(IrExpr expression) => Nodes(expression).All(IsTrapFreeNode);
+  public static bool IsTrapFree(IrExpr expression) => expression is IrArrayLoad { Array: IrConstRef } load && IsTableRead(load)
+    ? IsTrapFree(load.Index)
+    : IsTrapFreeNode(expression) && Operands(expression).All(IsTrapFree);
+
+  /// <summary>
+  /// Whether a load reads a constant table of the module at an index that is always inside it: the
+  /// table cannot change and the index cannot reach past its end, so the load is total. The reference to
+  /// the table itself is no value a rule may duplicate, which is why only the load as a whole counts.
+  /// </summary>
+  /// <param name="load">The load.</param>
+  /// <returns><see langword="true"/> when the index is provably below the table's length.</returns>
+  public static bool IsTableRead(IrArrayLoad load)
+    => load.Array is IrConstRef { Constant: { Type.IsArray: true } table } && UpperBound(load.Index) is { } bound && bound < (ulong)table.Values.Count;
+
+  /// <summary>
+  /// The largest value an integer index can have, where its shape bounds it: a non-negative constant, a
+  /// non-negative mask, a logical right shift by a constant, or a widening or value-keeping conversion of
+  /// one of these; <see langword="null"/> otherwise.
+  /// </summary>
+  private static ulong? UpperBound(IrExpr index) {
+    switch (index) {
+      case IrConst { Type.IsInteger: true } constant when IrOperators.Number(constant.Type, constant.Value) >= 0:
+        return (ulong)IrOperators.Number(constant.Type, constant.Value);
+      case IrBinary { Op: IrBinaryOp.And, Type.IsInteger: true } and:
+        return UpperBound(and.Right) is { } right && and.Right is IrConst ? right : UpperBound(and.Left) is { } left && and.Left is IrConst ? left : null;
+      case IrBinary { Op: IrBinaryOp.ShiftRight or IrBinaryOp.ShiftRightLogical, Right: IrConst { Type.IsInteger: true } count } shift
+        when (shift.Op == IrBinaryOp.ShiftRightLogical || !shift.Type.IsSigned) && count.Value > 0 && count.Value < shift.Type.Bits:
+        return (1UL << (shift.Type.Bits - (int)count.Value)) - 1;
+      case IrConvert { Contract: IrConversion.Wrap, Operand.Type.IsInteger: true, Type.IsInteger: true } conversion:
+        // The value survives when it fits the target below its sign bit.
+        return UpperBound(conversion.Operand) is { } inner && inner < 1UL << (conversion.Type.Bits - 1) ? inner : null;
+      default:
+        return null;
+    }
+  }
 
   /// <summary>Whether one node of an expression, its operands aside, never traps: <see cref="IsTrapFree"/> holds where it holds for every node.</summary>
   /// <param name="node">The node.</param>

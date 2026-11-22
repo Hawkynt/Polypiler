@@ -114,6 +114,7 @@ public sealed class SmtRecognitionProver : IRecognitionProver {
         IrBinary binary when Operator(binary) is { } op => this.Binary(binary, op),
         IrBinary { Left.Type.IsInteger: true } comparison when Predicate(comparison) is { } predicate => this.Compare(comparison.Left, comparison.Right, predicate),
         IrConditional choice => this.Emit("Select", choice, this.Value(choice.Condition), this.Value(choice.WhenTrue), this.Value(choice.WhenFalse)),
+        IrArrayLoad { Array: IrConstRef { Constant: var table }, Type.IsInteger: true, Index.Type.IsInteger: true } load when IrShape.IsTableRead(load) => this.Table(load, table),
         IrIntrinsic { Op: IrIntrinsicOp.AbsWrap } absolute => this.Absolute(absolute),
         IrIntrinsic { Op: IrIntrinsicOp.MulHigh, Type.Bits: <= 32, Arguments: [var left, var right] } high => this.High(high, left, right),
         IrIntrinsic { Op: IrIntrinsicOp.TrailingZeroCount or IrIntrinsicOp.LeadingZeroCount, Arguments: [{ Type.IsInteger: true } input] } count => this.ZeroCount(count, input),
@@ -303,6 +304,23 @@ public sealed class SmtRecognitionProver : IRecognitionProver {
       }
 
       return this.Emit("Select", sign, positive, "1", rest);
+    }
+
+    /// <summary>
+    /// A load from a constant table as the choice among its entries by the index, element by element.
+    /// The index is always inside the table, which the trap check before encoding requires, so the
+    /// last entry needs no comparison.
+    /// </summary>
+    private string Table(IrArrayLoad load, IrModuleConst table) {
+      var index = this.Value(load.Index);
+      string Entry(int position) => "0x" + ((ulong)table.Values[position] & Mask(load.Type.Bits)).ToString("X", CultureInfo.InvariantCulture);
+      var result = Entry(table.Values.Count - 1);
+      for (var position = table.Values.Count - 2; position >= 0; --position) {
+        var chosen = this.Emit("Eq", load.Index, index, position.ToString(CultureInfo.InvariantCulture));
+        result = this.Emit("Select", load, chosen, Entry(position), result);
+      }
+
+      return result;
     }
 
     private string Binary(IrBinary binary, string op) {
