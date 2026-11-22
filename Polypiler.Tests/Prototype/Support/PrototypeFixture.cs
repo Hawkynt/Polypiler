@@ -211,7 +211,9 @@ internal static class PrototypeFixture {
     NullReferenceException => IrTrap.NullReference,
     InvalidCastException => IrTrap.InvalidCast,
     System.Collections.Generic.KeyNotFoundException => IrTrap.KeyNotFound,
-    ArgumentOutOfRangeException when exception.StackTrace?.Contains("System.Collections.Generic.List", StringComparison.Ordinal) == true => IrTrap.ArgumentOutOfRange,
+    // An inlined List<T> indexer still supplies the parameter name without a List stack frame.
+    ArgumentOutOfRangeException range when range.ParamName == "index"
+      || range.StackTrace?.Contains("System.Collections.Generic.List", StringComparison.Ordinal) == true => IrTrap.ArgumentOutOfRange,
     ArgumentException when exception.Message.StartsWith("An item with the same key", StringComparison.Ordinal) => IrTrap.DuplicateKey,
     ArgumentException when exception.StackTrace?.Contains("System.Enum.", StringComparison.Ordinal) == true => IrTrap.UnknownName,
     InvalidOperationException when exception.Message.StartsWith("Collection was modified", StringComparison.Ordinal) => IrTrap.CollectionModified,
