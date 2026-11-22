@@ -212,9 +212,11 @@ public sealed class PerlFrontendCoverageTests {
   public void AllRefusals_ReportExpectedDiagnosticCodes() {
     var cases = new (string Source, string Contracts, string ExpectedCode)[] {
       ("use bigint;\nsub f { return 1; }", "", "PLY1702"),
-      ("use parent 'Exporter';\nsub f { return 1; }", "", "PLY1740"),
+      ("use parent -norequire, 'UnknownExternal';\nsub f { return 1; }", "", "PLY1740"),
+      ("use overload '+' => sub { 1 };\nsub f { return 1; }", "", "PLY1740"),
       ("our @ISA = ('Foo');\nsub f { return 1; }", "", "PLY1740"),
       ("sub f { my ($x) = @_; return $x->foo(); }", "f.x: i32\nf.return: i32", "PLY1740"),
+      ("sub f { my ($x, $m) = @_; return $x->$m(); }", "f.x: i32\nf.m: str\nf.return: i32", "PLY1740"),
       ("sub AUTOLOAD { return 1; }", "", "PLY1730"),
       ("sub f ($) { return 1; }", "", "PLY1730"),
       ("BEGIN { my $x = 1; }\nsub f { return 1; }", "", "PLY1730"),

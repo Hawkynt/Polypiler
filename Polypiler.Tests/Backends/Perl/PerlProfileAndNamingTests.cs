@@ -13,28 +13,58 @@ public sealed class PerlProfileAndNamingTests {
 
   [Test]
   public void Profiles_HaveExpectedDefaultsAndParsing() {
-    Assert.That(PerlProfile.Names, Is.EqualTo(new[] { "perl/5" }));
+    Assert.That(PerlProfile.Names, Is.EqualTo(new[] { "perl/5.6", "perl/5.8", "perl/5" }));
     Assert.That(PerlProfile.ByteStorageNames, Is.EqualTo(new[] { "array", "string" }));
+    Assert.That(PerlProfile.ObjectModelNames, Is.EqualTo(new[] { "blessed", "moose", "inside-out" }));
     Assert.That(PerlProfile.Default.Name, Is.EqualTo("perl/5"));
+    Assert.That(PerlProfile.Default.Dialect, Is.EqualTo(PerlDialect.Perl5));
     Assert.That(PerlProfile.Default.ByteStorage, Is.EqualTo(PerlByteStorage.Array));
+    Assert.That(PerlProfile.Default.ObjectModel, Is.EqualTo(PerlObjectModel.Blessed));
     Assert.That(PerlProfile.Default.ToString(), Is.EqualTo("perl/5"));
     Assert.That(PerlProfile.Parse(null), Is.EqualTo(PerlProfile.Default));
     Assert.That(PerlProfile.Parse("perl/5"), Is.EqualTo(PerlProfile.Default));
-    Assert.That(PerlProfile.TryParse("perl/5", "string", out var strProf, out var err), Is.True);
+    Assert.That(PerlProfile.Parse("perl/5.6"), Is.EqualTo(PerlProfile.Perl56));
+    Assert.That(PerlProfile.Parse("perl/5.8"), Is.EqualTo(PerlProfile.Perl58));
+
+    Assert.That(PerlProfile.Perl56.HasDefinedOr, Is.False);
+    Assert.That(PerlProfile.Perl56.HasConstantHashRef, Is.False);
+    Assert.That(PerlProfile.Perl56.HasUtf8Downgrade, Is.False);
+    Assert.That(PerlProfile.Perl56.HasScalarUtil, Is.False);
+    Assert.That(PerlProfile.Perl56.SupportsMoose, Is.False);
+    Assert.That(PerlProfile.Perl56.VersionPragma, Is.EqualTo("use 5.006;"));
+
+    Assert.That(PerlProfile.Perl58.HasDefinedOr, Is.False);
+    Assert.That(PerlProfile.Perl58.HasConstantHashRef, Is.True);
+    Assert.That(PerlProfile.Perl58.HasUtf8Downgrade, Is.True);
+    Assert.That(PerlProfile.Perl58.HasScalarUtil, Is.True);
+    Assert.That(PerlProfile.Perl58.SupportsMoose, Is.True);
+    Assert.That(PerlProfile.Perl58.HasFieldHash, Is.False);
+    Assert.That(PerlProfile.Perl58.VersionPragma, Is.EqualTo("use 5.008;"));
+
+    Assert.That(PerlProfile.TryParse("perl/5", "string", "inside-out", out var ioProf, out var err), Is.True);
     Assert.That(err, Is.Null);
-    Assert.That(strProf!.ByteStorage, Is.EqualTo(PerlByteStorage.String));
-    Assert.That(strProf.ToString(), Is.EqualTo("perl/5;byteStorage=string"));
+    Assert.That(ioProf!.ByteStorage, Is.EqualTo(PerlByteStorage.String));
+    Assert.That(ioProf.ObjectModel, Is.EqualTo(PerlObjectModel.InsideOut));
+    Assert.That(ioProf.ToString(), Is.EqualTo("perl/5;byteStorage=string;objects=inside-out"));
+
+    Assert.That(PerlProfile.TryParse("perl/5.8", "array", "moose", out var mooseProf, out err), Is.True);
+    Assert.That(err, Is.Null);
+    Assert.That(mooseProf!.ObjectModel, Is.EqualTo(PerlObjectModel.Moose));
+    Assert.That(mooseProf.ToString(), Is.EqualTo("perl/5.8;objects=moose"));
+
     Assert.That(PerlProfile.TryParse(null, "array", out var arrProf, out _), Is.True);
     Assert.That(arrProf!.ByteStorage, Is.EqualTo(PerlByteStorage.Array));
   }
 
-  [TestCase("perl/6", null, "unknown Perl profile 'perl/6'; the profiles are perl/5")]
-  [TestCase("perl5", null, "unknown Perl profile 'perl5'; the profiles are perl/5")]
-  [TestCase("perl/5", "vec", "unknown Perl byte storage 'vec'; the modes are array and string")]
-  public void Profiles_RejectUnknownNamesAndStorage(string name, string? storage, string expected) {
-    Assert.That(PerlProfile.TryParse(name, storage, out var profile, out var error), Is.False);
+  [TestCase("perl/6", null, null, "unknown Perl profile 'perl/6'; the profiles are perl/5.6, perl/5.8 and perl/5")]
+  [TestCase("perl5", null, null, "unknown Perl profile 'perl5'; the profiles are perl/5.6, perl/5.8 and perl/5")]
+  [TestCase("perl/5", "vec", null, "unknown Perl byte storage 'vec'; the modes are array and string")]
+  [TestCase("perl/5", null, "corinna", "unknown Perl object model 'corinna'; the modes are blessed, moose and inside-out")]
+  [TestCase("perl/5.6", null, "moose", "the Moose object model requires Perl 5.8 or later; use profile 'perl/5.8' or 'perl/5', or choose 'blessed' or 'inside-out'")]
+  public void Profiles_RejectUnknownNamesStorageAndIncompatibleObjectModels(string name, string? storage, string? objectModel, string expected) {
+    Assert.That(PerlProfile.TryParse(name, storage, objectModel, out var profile, out var error), Is.False);
     Assert.That((profile, error), Is.EqualTo(((PerlProfile?)null, expected)));
-    if (storage is null)
+    if (storage is null && objectModel is null)
       Assert.That(() => PerlProfile.Parse(name), Throws.ArgumentException);
   }
 

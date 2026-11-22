@@ -82,6 +82,10 @@ internal static class PerlIr {
           if (trying.Finally is { } cleanup)
             Collect(cleanup);
           break;
+        case IrUsing @using:
+          AddLocal(@using.Resource);
+          Collect(@using.Body);
+          break;
       }
     }
 

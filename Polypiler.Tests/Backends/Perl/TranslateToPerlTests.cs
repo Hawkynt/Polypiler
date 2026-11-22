@@ -49,15 +49,17 @@ public sealed class TranslateToPerlTests {
   }
 
   [Test]
-  public void ToPerl_AcceptsProfileByteStorageAndFloat() {
-    var (exitCode, _, error) = this.Translate("public static byte First(byte[] b) => b[0];", "--profile", "perl/5", "--byte-storage", "string", "--float", "strict");
+  public void ToPerl_AcceptsProfileByteStorageObjectModelAndFloat() {
+    var (exitCode, _, error) = this.Translate("public static byte First(byte[] b) => b[0];", "--profile", "perl/5.8", "--byte-storage", "string", "--object-model", "inside-out", "--float", "strict");
     Assert.That(exitCode, Is.Zero, error);
     var text = File.ReadAllText(Path.Combine(this._out, "lib", "Snippet.pm"));
-    Assert.That(text, Does.Contain("vec("));
+    Assert.That(text, Does.Contain("use 5.008;").And.Contain("vec("));
   }
 
   [TestCase(new[] { "--profile", "perl/6" }, "unknown Perl profile 'perl/6'")]
   [TestCase(new[] { "--byte-storage", "packed" }, "unknown Perl byte storage 'packed'")]
+  [TestCase(new[] { "--object-model", "corinna" }, "unknown Perl object model 'corinna'")]
+  [TestCase(new[] { "--profile", "perl/5.6", "--object-model", "moose" }, "Moose object model requires Perl 5.8 or later")]
   [TestCase(new[] { "--namespace", "N" }, "the option '--namespace' does not apply to the target language 'perl'")]
   [TestCase(new[] { "--float", "fast" }, "unknown floating-point mode 'fast'")]
   public void InvalidOptions_AreUsageErrors(string[] options, string message) {

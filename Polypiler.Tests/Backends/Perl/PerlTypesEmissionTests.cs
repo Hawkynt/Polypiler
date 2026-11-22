@@ -113,16 +113,108 @@ public sealed class PerlTypesEmissionTests {
   }
 
   [Test]
-  public void Interfaces_AndExportedFunctionRefs_AreRefused() {
+  public void Interfaces_EmitAcrossObjectModels_AndExportedFunctionRefsAreRefused() {
     var iface = new IrInterfaceType("IShape");
-    iface.DefineMembers([], [], []);
-    var modIface = new IrModule("BadIface", [Function("f", IrType.I32, [], new IrReturn(I(0)))]) { Types = [iface] };
-    Assert.That(Problems(modIface), Has.Some.Contains("PLY1782"));
+    var mAreaSig = new IrMethod("Area", "IShape__area", false) { Dispatch = IrDispatch.Abstract };
+    iface.DefineMembers([mAreaSig], [], []);
+
+    var cls = new IrClassType("Square");
+    var fSide = new IrField("Side", IrType.I32, true) { Visibility = IrVisibility.Private };
+    cls.Inherit(null, [iface]);
+    cls.Define([fSide]);
+    var ctor = new IrConstructor("Square__ctor");
+    var mArea = new IrMethod("Area", "Square__area", false) { Dispatch = IrDispatch.Virtual, Implements = [mAreaSig] };
+    cls.DefineMembers([ctor], [mArea], [], []);
+
+    var self = L("self", IrType.Object(cls));
+    var s = L("s", IrType.I32);
+    var ifaceSelf = L("self", IrType.Object(iface));
+    var shapeParam = L("shape", IrType.Object(iface));
+    var mod = new IrModule("Shapes", [
+      Function("IShape__area", false, IrType.I32, [ifaceSelf]),
+      Function("Square__ctor", false, IrType.Void, [self, s], new IrFieldStore(R(self), fSide, R(s)), new IrReturn(null)),
+      Function("Square__area", false, IrType.I32, [self], new IrReturn(Bin(IrBinaryOp.Multiply, new IrFieldLoad(R(self), fSide), new IrFieldLoad(R(self), fSide)))),
+      Function("measure", IrType.I32, [shapeParam],
+        new IrDeclare(L("isSq", IrType.Bool), new IrTypeTest(R(shapeParam), IrType.Object(cls))),
+        new IrDeclare(L("isSh", IrType.Bool), new IrTypeTest(R(shapeParam), IrType.Object(iface))),
+        new IrDeclare(L("asSq", IrType.Object(cls)), new IrAsCast(IrType.Object(cls), R(shapeParam))),
+        new IrDeclare(L("castSq", IrType.Object(cls)), new IrCast(IrType.Object(cls), R(shapeParam))),
+        new IrReturn(new IrMethodCall(IrType.I32, mAreaSig, R(shapeParam), []) { Kind = IrMethodCallKind.Interface }))
+    ]) { Types = [iface, cls] };
+
+    var blessedSrc = Emit(mod, PerlProfile.Default);
+    Assert.That(blessedSrc, Does.Contain("package Shapes::Square;").And.Contain("sub _ply_does_i_shape").And.Contain("bless {"));
+
+    var mooseSrc = Emit(mod, PerlProfile.Default with { ObjectModel = PerlObjectModel.Moose });
+    Assert.That(mooseSrc, Does.Contain("use Moose::Role;").And.Contain("requires 'area';").And.Contain("use Moose;").And.Contain("with 'Shapes::IShape';").And.Contain("->does('Shapes::IShape')").And.Contain("make_immutable"));
+
+    var insideOutSrc = Emit(mod, PerlProfile.Default with { ObjectModel = PerlObjectModel.InsideOut });
+    Assert.That(insideOutSrc, Does.Contain("fieldhash my %_f_side;").And.Contain("bless \\(my $_id), $class").And.Not.Contain("sub side {"));
 
     var fnType = IrType.Function(IrType.I32, IrType.I32);
     var cb = L("cb", fnType);
     var badExport = Returning(IrType.I32, [cb], new IrInvoke(IrType.I32, R(cb), [I(1)]));
     Assert.That(Problems(badExport), Has.Some.Contains("PLY1775"));
+  }
+
+  [Test]
+  public void Dialects56And58_AvoidModernSyntaxAndEmitCompatibleHelpers() {
+    var color = new IrEnumType("Color", IrType.I32, [new("Red", 0), new("Green", 1)]) { IsPublic = true };
+    var opt = L("opt", IrType.Optional(IrType.I32));
+    var f = L("f", IrType.F64);
+    var g = L("g", IrType.F64);
+    var buf = L("buf", IrType.Array(IrType.U8));
+    var t = L("t", IrType.F64);
+
+    var fn = Function("compat", IrType.F64, [opt, f, g, buf],
+      new IrDeclare(L("c", IrType.I32), new IrCoalesce(R(opt), I(7))),
+      new IrDeclare(L("lu16", IrType.U16), new IrIntrinsic(IrIntrinsicOp.LoadLittle, IrType.U16, [R(buf), I(0)])),
+      new IrDeclare(L("bu16", IrType.U16), new IrIntrinsic(IrIntrinsicOp.LoadBig, IrType.U16, [R(buf), I(0)])),
+      new IrDeclare(L("le16", IrType.I16), new IrIntrinsic(IrIntrinsicOp.LoadLittle, IrType.I16, [R(buf), I(0)])),
+      new IrDeclare(L("be16", IrType.I16), new IrIntrinsic(IrIntrinsicOp.LoadBig, IrType.I16, [R(buf), I(0)])),
+      new IrDeclare(L("lu32", IrType.U32), new IrIntrinsic(IrIntrinsicOp.LoadLittle, IrType.U32, [R(buf), I(0)])),
+      new IrDeclare(L("be32", IrType.U32), new IrIntrinsic(IrIntrinsicOp.LoadBig, IrType.U32, [R(buf), I(0)])),
+      new IrDeclare(L("li32", IrType.I32), new IrIntrinsic(IrIntrinsicOp.LoadLittle, IrType.I32, [R(buf), I(0)])),
+      new IrDeclare(L("bi32", IrType.I32), new IrIntrinsic(IrIntrinsicOp.LoadBig, IrType.I32, [R(buf), I(0)])),
+      new IrDeclare(L("le64", IrType.U64), new IrIntrinsic(IrIntrinsicOp.LoadLittle, IrType.U64, [R(buf), I(0)])),
+      new IrDeclare(L("bi64", IrType.I64), new IrIntrinsic(IrIntrinsicOp.LoadBig, IrType.I64, [R(buf), I(0)])),
+      new IrDeclare(L("lf32", IrType.F32), new IrIntrinsic(IrIntrinsicOp.LoadLittle, IrType.F32, [R(buf), I(0)])),
+      new IrDeclare(L("beD", IrType.F64), new IrIntrinsic(IrIntrinsicOp.LoadBig, IrType.F64, [R(buf), I(0)])),
+      new IrExprStmt(new IrIntrinsic(IrIntrinsicOp.StoreLittle, IrType.Void, [R(buf), I(0), new IrConst(IrType.I16, 1)])),
+      new IrExprStmt(new IrIntrinsic(IrIntrinsicOp.StoreBig, IrType.Void, [R(buf), I(0), new IrConst(IrType.U16, 1)])),
+      new IrExprStmt(new IrIntrinsic(IrIntrinsicOp.StoreLittle, IrType.Void, [R(buf), I(0), I(2)])),
+      new IrExprStmt(new IrIntrinsic(IrIntrinsicOp.StoreBig, IrType.Void, [R(buf), I(0), new IrConst(IrType.U32, 2)])),
+      new IrExprStmt(new IrIntrinsic(IrIntrinsicOp.StoreLittle, IrType.Void, [R(buf), I(0), new IrConvert(IrType.F32, R(f))])),
+      new IrExprStmt(new IrIntrinsic(IrIntrinsicOp.StoreBig, IrType.Void, [R(buf), I(0), R(f)])),
+      new IrDeclare(t, new IrIntrinsic(IrIntrinsicOp.Truncate, IrType.F64, [R(f)])),
+      new IrDeclare(L("re", IrType.F64), new IrIntrinsic(IrIntrinsicOp.RoundEven, IrType.F64, [R(f)])),
+      new IrDeclare(L("ra", IrType.F64), new IrIntrinsic(IrIntrinsicOp.RoundAway, IrType.F64, [R(f)])),
+      new IrDeclare(L("cs", IrType.F64), new IrIntrinsic(IrIntrinsicOp.CopySign, IrType.F64, [R(f), R(g)])),
+      new IrDeclare(L("sq", IrType.F64), new IrIntrinsic(IrIntrinsicOp.Sqrt, IrType.F64, [R(f)])),
+      new IrDeclare(L("mn", IrType.F64), new IrIntrinsic(IrIntrinsicOp.Min, IrType.F64, [R(f), R(g)])),
+      new IrDeclare(L("mx", IrType.F64), new IrIntrinsic(IrIntrinsicOp.Max, IrType.F64, [R(f), R(g)])),
+      new IrDeclare(L("b1", IrType.Bool), new IrIntrinsic(IrIntrinsicOp.IsNaN, IrType.Bool, [R(f)])),
+      new IrDeclare(L("b2", IrType.Bool), new IrIntrinsic(IrIntrinsicOp.IsInfinity, IrType.Bool, [R(f)])),
+      new IrDeclare(L("b3", IrType.Bool), new IrIntrinsic(IrIntrinsicOp.IsFinite, IrType.Bool, [R(f)])),
+      new IrDeclare(L("b4", IrType.Bool), new IrIntrinsic(IrIntrinsicOp.IsNegative, IrType.Bool, [R(f)])),
+      new IrDeclare(L("b5", IrType.Bool), new IrIntrinsic(IrIntrinsicOp.IsNormal, IrType.Bool, [R(f)])),
+      new IrDeclare(L("b6", IrType.Bool), new IrIntrinsic(IrIntrinsicOp.IsSubnormal, IrType.Bool, [R(f)])),
+      new IrDeclare(L("b7", IrType.Bool), new IrIntrinsic(IrIntrinsicOp.IsInteger, IrType.Bool, [R(f)])),
+      new IrReturn(Bin(IrBinaryOp.Remainder, Bin(IrBinaryOp.Divide, R(f), R(g)), R(t))));
+
+    var mod = new IrModule("Compat", [fn]) { Types = [color] };
+
+    var p56 = Emit(mod, PerlProfile.Perl56);
+    Assert.That(p56, Does.Contain("use 5.006;").And.Contain("our @ISA = qw(Exporter);").And.Contain("use constant RED => 0;"));
+    Assert.That(p56, Does.Not.Contain(" // ").And.Not.Contain("POSIX::isnan").And.Not.Contain("utf8::downgrade").And.Not.Contain("d>").And.Not.Contain("Q<"));
+    Assert.That(p56, Does.Contain("_ply_fdiv_f64_56").And.Contain("_ply_frem_f64_56").And.Contain("_ply_endian_bytes"));
+
+    var p58 = Emit(mod, PerlProfile.Perl58);
+    Assert.That(p58, Does.Contain("use 5.008;").And.Contain("our @ISA = qw(Exporter);").And.Contain("use constant {"));
+    Assert.That(p58, Does.Not.Contain(" // ").And.Not.Contain("POSIX::isnan").And.Not.Contain("d>"));
+
+    var p56Str = Emit(mod, PerlProfile.Perl56 with { ByteStorage = PerlByteStorage.String });
+    Assert.That(p56Str, Does.Not.Contain("s<").And.Not.Contain("l>").And.Not.Contain("d>"));
   }
 
 }

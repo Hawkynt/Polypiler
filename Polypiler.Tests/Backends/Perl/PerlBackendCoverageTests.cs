@@ -98,34 +98,88 @@ public sealed class PerlBackendCoverageTests {
     var src = Emit(mod);
     Assert.That(src, Does.Contain("sub _eq_outer"));
     Assert.That(src, Does.Contain("sub _eq_inner"));
-    Assert.That(src, Does.Contain("_box__ctor"));
-    Assert.That(src, Does.Contain("_box__get"));
-    Assert.That(src, Does.Contain("_box__zero"));
+    Assert.That(src, Does.Contain("package Objs::Box;"));
+    Assert.That(src, Does.Contain("sub _ctor_0"));
+    Assert.That(src, Does.Contain("sub get"));
+    Assert.That(src, Does.Contain("sub zero"));
 
-    // Virtual class & inheritance refusals -> PLY1782
-    var baseCls = new IrClassType("Base");
-    baseCls.Define([]);
-    var virtMethod = new IrMethod("Run", "Base__run", false) { Dispatch = IrDispatch.Virtual };
-    baseCls.DefineMembers([], [virtMethod], [], []);
+    // Inheritance, virtual/override/base calls, protected/private/readonly fields, multi-ctor, record equality, bound methods, using, generic equals/compare across all object models & dialects
+    var (iDisp, mDispSig, dispSigFn) = IrDisposable.Declare();
+    var baseCls = new IrClassType("Base") { IsRecord = true };
+    baseCls.Inherit(null, [iDisp]);
+    var fPriv = new IrField("Secret", IrType.I32, false) { Visibility = IrVisibility.Private };
+    var fProt = new IrField("Tag", IrType.I32, false) { Visibility = IrVisibility.Protected };
+    var fRo = new IrField("Id", IrType.I32, true) { Visibility = IrVisibility.Public };
+    var fPub = new IrField("Label", IrType.I32, false) { Visibility = IrVisibility.Public };
+    var fFlt = new IrField("Score", IrType.F64, false) { Visibility = IrVisibility.Public };
+    baseCls.Define([fPriv, fProt, fRo, fPub, fFlt]);
+    var bCtor0 = new IrConstructor("Base__ctor0");
+    var bCtor1 = new IrConstructor("Base__ctor1");
+    var mRun = new IrMethod("Run", "Base__run", false) { Dispatch = IrDispatch.Virtual };
+    var mHelper = new IrMethod("Help", "Base__help", false) { Visibility = IrVisibility.Private };
+    var mDispose = new IrMethod("Dispose", "Base__dispose", false) { Dispatch = IrDispatch.Virtual, Implements = [mDispSig] };
+    baseCls.DefineMembers([bCtor0, bCtor1], [mRun, mHelper, mDispose], [], []);
+
     var derived = new IrClassType("Derived");
     derived.Inherit(baseCls, []);
     derived.Define([]);
-    derived.DefineMembers([], [], [], []);
-    var iface = new IrInterfaceType("Iface");
-    iface.DefineMembers([], [], []);
-    var implCls = new IrClassType("Impl");
-    implCls.Inherit(null, [iface]);
-    implCls.Define([]);
-    implCls.DefineMembers([], [], [], []);
+    var dCtor = new IrConstructor("Derived__ctor");
+    var mRunOver = new IrMethod("Run", "Derived__run", false) { Dispatch = IrDispatch.Override, Overrides = mRun };
+    derived.DefineMembers([dCtor], [mRunOver], [], []);
+
+    var bSelf = L("self", IrType.Object(baseCls));
+    var dSelf = L("self", IrType.Object(derived));
+    var xP = L("x", IrType.I32);
     var sParam = L("s", IrType.Object(baseCls));
-    var badMod = new IrModule("BadOO", [
-      Function("Base__run", false, IrType.I32, [L("self", IrType.Object(baseCls))], new IrReturn(I(0))),
-      Function("f", IrType.I32, [sParam],
-        new IrDeclare(L("t", IrType.Bool), new IrTypeTest(R(sParam), IrType.Object(derived))),
-        new IrReturn(new IrMethodCall(IrType.I32, virtMethod, R(sParam), []) { Kind = IrMethodCallKind.Virtual }))
-    ]) { Types = [baseCls, derived, iface, implCls] };
-    var probs = Problems(badMod);
-    Assert.That(probs, Has.Some.Contains("PLY1782"));
+    var sParam2 = L("s2", IrType.Object(baseCls));
+    var resLoc = L("res", IrType.Object(baseCls));
+    var fullMod = new IrModule("FullOO", [
+      dispSigFn,
+      Function("Base__ctor0", false, IrType.Void, [bSelf],
+        new IrFieldStore(R(bSelf), fPriv, I(1)),
+        new IrFieldStore(R(bSelf), fProt, I(2)),
+        new IrFieldStore(R(bSelf), fRo, I(3)),
+        new IrFieldStore(R(bSelf), fPub, I(4)),
+        new IrFieldStore(R(bSelf), fFlt, F64(1.0)),
+        new IrReturn(null)),
+      Function("Base__ctor1", false, IrType.Void, [bSelf, xP],
+        new IrExprStmt(new IrCall("Base__ctor0", IrType.Void, [R(bSelf)])),
+        new IrFieldStore(R(bSelf), fPriv, R(xP)),
+        new IrReturn(null)),
+      Function("Base__help", false, IrType.I32, [bSelf], new IrReturn(new IrFieldLoad(R(bSelf), fPriv))),
+      Function("Base__run", false, IrType.I32, [bSelf],
+        new IrReturn(Bin(IrBinaryOp.Add, new IrMethodCall(IrType.I32, mHelper, R(bSelf), []), new IrFieldLoad(R(bSelf), fProt)))),
+      Function("Base__dispose", false, IrType.Void, [bSelf], new IrReturn(null)),
+      Function("Derived__ctor", false, IrType.Void, [dSelf, xP],
+        new IrExprStmt(new IrCall("Base__ctor1", IrType.Void, [R(dSelf), R(xP)])),
+        new IrFieldStore(R(dSelf), fProt, I(9)),
+        new IrReturn(null)),
+      Function("Derived__run", false, IrType.I32, [dSelf],
+        new IrReturn(Bin(IrBinaryOp.Add,
+          new IrMethodCall(IrType.I32, mRun, R(dSelf), []) { Kind = IrMethodCallKind.Base },
+          new IrFieldLoad(R(dSelf), fProt)))),
+      Function("work", IrType.I32, [sParam, sParam2],
+        new IrDeclare(L("eq", IrType.Bool), new IrStructEquals(R(sParam), R(sParam2))),
+        new IrDeclare(L("ge2", IrType.Bool), new IrGenericEquals(F64(1.0), F64(1.0))),
+        new IrDeclare(L("ge3", IrType.Bool), new IrGenericEquals(I(1), I(2))),
+        new IrDeclare(L("gc2", IrType.I32), new IrGenericCompare(F64(1.0), F64(2.0))),
+        new IrDeclare(L("gc3", IrType.I32), new IrGenericCompare(I(1), I(2))),
+        new IrDeclare(L("bm", IrType.Function(IrType.I32)), new IrBoundMethod(IrType.Function(IrType.I32), R(sParam), mRun) { Kind = IrMethodCallKind.Virtual }),
+        new IrUsing(resLoc, new IrNew(IrType.Object(derived), dCtor, [I(5)]), mDispSig,
+          Block(new IrFieldStore(R(resLoc), fPub, I(8)))),
+        new IrReturn(new IrInvoke(IrType.I32, R(L("bm", IrType.Function(IrType.I32))), [])))
+    ]) { Types = [iDisp, baseCls, derived] };
+
+    foreach (var prof in new[] {
+      PerlProfile.Default,
+      PerlProfile.Default with { ObjectModel = PerlObjectModel.Moose },
+      PerlProfile.Default with { ObjectModel = PerlObjectModel.InsideOut },
+      PerlProfile.Perl58 with { ObjectModel = PerlObjectModel.InsideOut },
+      PerlProfile.Perl56 with { ObjectModel = PerlObjectModel.InsideOut }
+    }) {
+      var emitted = Emit(fullMod, prof);
+      Assert.That(emitted, Does.Contain("package FullOO::Base;").And.Contain("package FullOO::Derived;"));
+    }
   }
 
   [Test]
@@ -539,6 +593,60 @@ public sealed class PerlBackendCoverageTests {
       new IrDeclare(L("ll", IrType.U32), new IrIntrinsic(IrIntrinsicOp.LoadLittle, IrType.U32, [R(ibuf), I(0)])),
       new IrReturn(Bin(IrBinaryOp.Add, R(L("hw2", IrType.U32)), R(L("ll", IrType.U32)))));
     Legalized(new IrModule("LibCovers", [libCoversFn]));
+
+    // Extra OOP + catch filter + generic equality/compare + interface inheritance + getter/setter + static bound method
+    var baseIface = new IrInterfaceType("IBase");
+    var mPing = new IrMethod("Ping", "IBase__ping", false) { Dispatch = IrDispatch.Abstract };
+    baseIface.DefineMembers([mPing], [], []);
+    var subIface = new IrInterfaceType("ISub");
+    var mPong = new IrMethod("Pong", "ISub__pong", false) { Dispatch = IrDispatch.Abstract };
+    subIface.DefineMembers([mPong], [], [baseIface]);
+
+    var gizmo = new IrClassType("Gizmo");
+    var gVal = new IrField("Val", IrType.I32, false) { Visibility = IrVisibility.Public };
+    gizmo.Inherit(null, [subIface]);
+    gizmo.Define([gVal]);
+    var gCtor = new IrConstructor("Gizmo__ctor");
+    var gGet = new IrMethod("Val", "Gizmo__get_val", false) { Kind = IrMethodKind.Getter };
+    var gSetter = new IrMethod("Val", "Gizmo__set_val", false) { Kind = IrMethodKind.Setter };
+    var gStatic = new IrMethod("Helper", "Gizmo__helper", true);
+    var gPing = new IrMethod("Ping", "Gizmo__ping", false) { Dispatch = IrDispatch.Virtual, Implements = [mPing] };
+    var gPong = new IrMethod("Pong", "Gizmo__pong", false) { Dispatch = IrDispatch.Virtual, Implements = [mPong] };
+    gizmo.DefineMembers([gCtor], [gGet, gSetter, gStatic, gPing, gPong], [], []);
+
+    var gSelf = L("self", IrType.Object(gizmo));
+    var gArg = L("v", IrType.I32);
+    var gObjVar = L("gz", IrType.Object(gizmo));
+    var exCatch1 = L("ec1", IrType.Object(IrExceptionClass.Exception));
+    var oopExtrasFn = Function("oop_extras", IrType.I32, [gArg],
+      new IrDeclare(gObjVar, new IrNew(IrType.Object(gizmo), gCtor, [])),
+      new IrExprStmt(new IrMethodCall(IrType.Void, gSetter, R(gObjVar), [R(gArg)])),
+      new IrDeclare(L("sfn", IrType.Function(IrType.I32, IrType.I32)), new IrBoundMethod(IrType.Function(IrType.I32, IrType.I32), null, gStatic)),
+      new IrDeclare(L("exTest", IrType.Bool), new IrTypeTest(new IrNew(IrType.Object(IrExceptionClass.OverflowException), IrExceptionClass.Constructor(IrExceptionClass.OverflowException, 0), []), IrType.Object(IrExceptionClass.OverflowException))),
+      new IrDeclare(L("geqI", IrType.Bool), new IrGenericEquals(R(gArg), I(5))),
+      new IrDeclare(L("gcmpI", IrType.I32), new IrGenericCompare(R(gArg), I(5))),
+      new IrTry(
+        Block(new IrThrow(new IrNew(IrType.Object(IrExceptionClass.Exception), IrExceptionClass.Constructor(IrExceptionClass.Exception, 1), [new IrStrConst("boom")]))),
+        [
+          new IrCatch(IrExceptionClass.Exception, exCatch1, Bin(IrBinaryOp.Equal, R(gArg), I(1)), Block(new IrReturn(I(1)))),
+          new IrCatch(IrExceptionClass.Exception, null, Bin(IrBinaryOp.Equal, R(gArg), I(2)), Block(new IrReturn(I(2))))
+        ],
+        null),
+      new IrReturn(new IrMethodCall(IrType.I32, gGet, R(gObjVar), [])));
+
+    var oopExtrasMod = new IrModule("OopExtras", [
+      Function("IBase__ping", false, IrType.I32, [L("self", IrType.Object(baseIface))]),
+      Function("ISub__pong", false, IrType.I32, [L("self", IrType.Object(subIface))]),
+      Function("Gizmo__ctor", false, IrType.Void, [gSelf], new IrReturn(null)),
+      Function("Gizmo__get_val", false, IrType.I32, [gSelf], new IrReturn(new IrFieldLoad(R(gSelf), gVal))),
+      Function("Gizmo__set_val", false, IrType.Void, [gSelf, gArg], new IrFieldStore(R(gSelf), gVal, R(gArg)), new IrReturn(null)),
+      Function("Gizmo__helper", false, IrType.I32, [gArg], new IrReturn(R(gArg))),
+      Function("Gizmo__ping", false, IrType.I32, [gSelf], new IrReturn(I(1))),
+      Function("Gizmo__pong", false, IrType.I32, [gSelf], new IrReturn(I(2))),
+      oopExtrasFn
+    ]) { Types = [stWithStr, baseIface, subIface, gizmo] };
+    Emit(oopExtrasMod, PerlProfile.Default with { ObjectModel = PerlObjectModel.Moose });
+    Emit(oopExtrasMod, PerlProfile.Default with { ObjectModel = PerlObjectModel.InsideOut });
   }
 
 }
