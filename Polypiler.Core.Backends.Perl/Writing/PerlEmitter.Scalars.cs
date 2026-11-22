@@ -43,20 +43,52 @@ public static partial class PerlEmitter {
         IrSome some => this.EmitExpr(some.Value),
         IrIsNone isNone => $"(!defined({this.EmitExpr(isNone.Value)}) ? 1 : 0)",
         IrUnwrap unwrap => this.EmitUnwrap(unwrap),
-        IrCoalesce coalesce => $"({this.EmitExpr(coalesce.Value)} // {this.EmitExpr(coalesce.Fallback)})",
+        IrCoalesce coalesce => this.EmitCoalesce(coalesce),
         IrIsNull isNull => $"(!defined({this.EmitExpr(isNull.Value)}) ? 1 : 0)",
         IrCollection collection => this.EmitCollection(collection),
         IrLambda lambda => this.EmitLambda(lambda),
-        IrFunctionRef funcRef => "\\&" + this.FunctionPerlName(funcRef.Function),
+        IrFunctionRef funcRef => "\\&" + this.EmitQualifyCall(funcRef.Function),
+        IrBoundMethod bound => this.EmitBoundMethod(bound),
         IrInvoke invoke => this.EmitInvoke(invoke),
         IrThrowExpression throwExpr => $"do {{ die {this.EmitExceptionValue(throwExpr.Exception)}; }}",
-        IrTypeTest or IrCast or IrAsCast => this.UnsupportedTypeConstruct(expression.GetType().Name, "OBJ-VIRTUAL"),
+        IrTypeTest typeTest => this.EmitTypeTest(typeTest),
+        IrCast cast => this.EmitCast(cast),
+        IrAsCast asCast => this.EmitAsCast(asCast),
+        IrGenericEquals genEq => this.EmitGenericEquals(genEq),
+        IrGenericCompare genCmp => this.EmitGenericCompare(genCmp),
         _ => this.UnsupportedOp(expression.GetType().Name)
       };
     }
 
+    private string EmitCoalesce(IrCoalesce coalesce) {
+      var val = this.EmitExpr(coalesce.Value);
+      var fallback = this.EmitExpr(coalesce.Fallback);
+      return this._profile.HasDefinedOr
+        ? $"({val} // {fallback})"
+        : $"do {{ my $_c = {val}; defined($_c) ? $_c : {fallback} }}";
+    }
+
+    private string EmitGenericEquals(IrGenericEquals genEq) {
+      var l = this.EmitExpr(genEq.Left);
+      var r = this.EmitExpr(genEq.Right);
+      var t = genEq.Left.Type;
+      if (t.IsFloat)
+        return $"do {{ my ($_l, $_r) = ({l}, {r}); (($_l != $_l && $_r != $_r) || $_l == $_r) ? 1 : 0 }}";
+      if (t.IsStruct)
+        return this.EmitStructEquals(new IrStructEquals(genEq.Left, genEq.Right));
+      return $"(({l} == {r}) ? 1 : 0)";
+    }
+
+    private string EmitGenericCompare(IrGenericCompare genCmp) {
+      var l = this.EmitExpr(genCmp.Left);
+      var r = this.EmitExpr(genCmp.Right);
+      if (genCmp.Left.Type.IsFloat)
+        return $"do {{ my ($_l, $_r) = ({l}, {r}); $_l != $_l ? ($_r != $_r ? 0 : -1) : $_r != $_r ? 1 : ($_l <=> $_r) }}";
+      return $"({l} <=> {r})";
+    }
+
     private string EmitCall(IrCall call) {
-      var target = this.FunctionPerlName(call.Function);
+      var target = this.EmitQualifyCall(call.Function);
       var args = string.Join(", ", call.Arguments.Select(this.EmitExpr));
       return $"{target}({args})";
     }
@@ -127,20 +159,19 @@ public static partial class PerlEmitter {
     };
 
     private string EmitFloatDivide(IrType type, string left, string right) {
-      this.UseHelper(PerlHelpers.FloatDivide);
-      return this.RoundFloat(type, $"{PerlHelpers.FloatDivide}({left}, {right})");
+      var helper = this._profile.HasC99Posix ? PerlHelpers.FloatDivide : PerlHelpers.FloatDivide56;
+      return this.RoundFloat(type, $"{this.HelperCall(helper)}({left}, {right})");
     }
 
     private string EmitFloatRemainder(IrType type, string left, string right) {
-      this.UseHelper(PerlHelpers.FloatRemainder);
-      return this.RoundFloat(type, $"{PerlHelpers.FloatRemainder}({left}, {right})");
+      var helper = this._profile.HasC99Posix ? PerlHelpers.FloatRemainder : PerlHelpers.FloatRemainder56;
+      return this.RoundFloat(type, $"{this.HelperCall(helper)}({left}, {right})");
     }
 
     private string RoundFloat(IrType type, string expr) {
       if (type != IrType.F32)
         return expr;
-      this.UseHelper(PerlHelpers.RoundF32);
-      return $"{PerlHelpers.RoundF32}({expr})";
+      return $"{this.HelperCall(PerlHelpers.RoundF32)}({expr})";
     }
 
     private bool ArithmeticFits(IrBinary binary) {
@@ -249,10 +280,8 @@ public static partial class PerlEmitter {
       if (target == source)
         return operand;
 
-      if (target == IrType.F32 && source.IsLong) {
-        this.UseHelper(PerlHelpers.IntToF32);
-        return $"{PerlHelpers.IntToF32}({operand})";
-      }
+      if (target == IrType.F32 && source.IsLong)
+        return $"{this.HelperCall(PerlHelpers.IntToF32)}({operand})";
       if (target == IrType.F32)
         return this.RoundFloat(IrType.F32, $"({operand} + 0.0)");
       if (target == IrType.F64)
@@ -260,15 +289,15 @@ public static partial class PerlEmitter {
 
       if (source.IsFloat) {
         var upper = target.IsSigned
-          ? (1UL << (target.Bits - 1)).ToString(CultureInfo.InvariantCulture)
-          : target.IsLong ? "18446744073709551616.0" : (1UL << target.Bits).ToString(CultureInfo.InvariantCulture);
+          ? (target.IsLong ? "9223372036854775808.0" : (1UL << (target.Bits - 1)).ToString(CultureInfo.InvariantCulture) + ".0")
+          : target.IsLong ? "18446744073709551616.0" : (1UL << target.Bits).ToString(CultureInfo.InvariantCulture) + ".0";
         var trap = convert.Contract == IrConversion.Trap;
         var fail = $"die(\"Overflow: conversion outside {target}\\n\")";
         var nanVal = trap ? fail : "0";
         var lowVal = trap ? fail : Minimum(target);
         var highVal = trap ? fail : Maximum(target);
         var norm = target == IrType.U64 ? "unpack('Q', pack('Q', $_v))" : Wrap(target, "$_v");
-        return $"do {{ my $_v = int({operand}); $_v != $_v ? {nanVal} : $_v < {Minimum(target)} ? {lowVal} : $_v >= {upper} ? {highVal} : {norm} }}";
+        return $"do {{ no integer; my $_v = int({operand}); $_v != $_v ? {nanVal} : $_v < {Minimum(target)} ? {lowVal} : $_v >= {upper} ? {highVal} : {norm} }}";
       }
 
       if (ValueRange.Of(target).Covers(ValueRange.Of(source)))
@@ -328,20 +357,31 @@ public static partial class PerlEmitter {
         case IrIntrinsicOp.Max when !type.IsFloat:
           return BindBinary(args[0], args[1], "($_l > $_r ? $_l : $_r)");
         case IrIntrinsicOp.Min:
-          this._usesPosix = true;
+          if (this._profile.HasC99Posix) {
+            this._usesPosix = true;
+            return this.RoundFloat(type, BindBinary(args[0], args[1],
+              "(POSIX::isnan($_l) ? $_l : POSIX::isnan($_r) ? $_r : $_l < $_r ? $_l : $_r < $_l ? $_r : POSIX::signbit($_l) ? $_l : $_r)"));
+          }
           return this.RoundFloat(type, BindBinary(args[0], args[1],
-            "(POSIX::isnan($_l) ? $_l : POSIX::isnan($_r) ? $_r : $_l < $_r ? $_l : $_r < $_l ? $_r : POSIX::signbit($_l) ? $_l : $_r)"));
+            $"($_l != $_l ? $_l : $_r != $_r ? $_r : $_l < $_r ? $_l : $_r < $_l ? $_r : {this.HelperCall(PerlHelpers.FloatSignBit)}($_l) ? $_l : $_r)"));
         case IrIntrinsicOp.Max:
-          this._usesPosix = true;
+          if (this._profile.HasC99Posix) {
+            this._usesPosix = true;
+            return this.RoundFloat(type, BindBinary(args[0], args[1],
+              "(POSIX::isnan($_l) ? $_l : POSIX::isnan($_r) ? $_r : $_l > $_r ? $_l : $_r > $_l ? $_r : POSIX::signbit($_r) ? $_l : $_r)"));
+          }
           return this.RoundFloat(type, BindBinary(args[0], args[1],
-            "(POSIX::isnan($_l) ? $_l : POSIX::isnan($_r) ? $_r : $_l > $_r ? $_l : $_r > $_l ? $_r : POSIX::signbit($_r) ? $_l : $_r)"));
+            $"($_l != $_l ? $_l : $_r != $_r ? $_r : $_l > $_r ? $_l : $_r > $_l ? $_r : {this.HelperCall(PerlHelpers.FloatSignBit)}($_r) ? $_l : $_r)"));
         case IrIntrinsicOp.Sign when intrinsic.Arguments[0].Type.IsFloat:
           return $"do {{ my $_v = {args[0]}; die \"ArithmeticException: NaN has no sign\\n\" if $_v != $_v; $_v < 0 ? -1 : $_v > 0 ? 1 : 0 }}";
         case IrIntrinsicOp.Sign:
           return $"do {{ my $_v = {args[0]}; $_v < 0 ? -1 : $_v > 0 ? 1 : 0 }}";
         case IrIntrinsicOp.Sqrt:
-          this._usesPosix = true;
-          return this.RoundFloat(type, $"do {{ my $_v = {args[0]}; POSIX::isnan($_v) || $_v < 0 ? POSIX::NAN() : sqrt($_v) }}");
+          if (this._profile.HasC99Posix) {
+            this._usesPosix = true;
+            return this.RoundFloat(type, $"do {{ my $_v = {args[0]}; POSIX::isnan($_v) || $_v < 0 ? POSIX::NAN() : sqrt($_v) }}");
+          }
+          return this.RoundFloat(type, $"do {{ my $_v = {args[0]}; $_v != $_v || $_v < 0 ? unpack('d', pack('Q', 9221120237041090560)) : sqrt($_v) }}");
         case IrIntrinsicOp.Floor:
           this._usesPosix = true;
           return this.RoundFloat(type, $"POSIX::floor({args[0]})");
@@ -349,14 +389,23 @@ public static partial class PerlEmitter {
           this._usesPosix = true;
           return this.RoundFloat(type, $"POSIX::ceil({args[0]})");
         case IrIntrinsicOp.Truncate:
-          this._usesPosix = true;
-          return this.RoundFloat(type, $"POSIX::trunc({args[0]})");
+          if (this._profile.HasC99Posix) {
+            this._usesPosix = true;
+            return this.RoundFloat(type, $"POSIX::trunc({args[0]})");
+          }
+          return this.RoundFloat(type, $"{this.HelperCall(PerlHelpers.FloatTrunc)}({args[0]})");
         case IrIntrinsicOp.RoundEven:
-          this._usesPosix = true;
-          return this.RoundFloat(type, $"POSIX::rint({args[0]})");
+          if (this._profile.HasC99Posix) {
+            this._usesPosix = true;
+            return this.RoundFloat(type, $"POSIX::rint({args[0]})");
+          }
+          return this.RoundFloat(type, $"{this.HelperCall(PerlHelpers.FloatRoundEven)}({args[0]})");
         case IrIntrinsicOp.RoundAway:
-          this._usesPosix = true;
-          return this.RoundFloat(type, $"POSIX::round({args[0]})");
+          if (this._profile.HasC99Posix) {
+            this._usesPosix = true;
+            return this.RoundFloat(type, $"POSIX::round({args[0]})");
+          }
+          return this.RoundFloat(type, $"{this.HelperCall(PerlHelpers.FloatRoundAway)}({args[0]})");
         case IrIntrinsicOp.FloatBits:
           return intrinsic.Arguments[0].Type == IrType.F32
             ? $"unpack('l', pack('f', {args[0]}))"
@@ -366,29 +415,53 @@ public static partial class PerlEmitter {
             ? $"unpack('f', pack('l', {args[0]}))"
             : $"unpack('d', pack('q', {args[0]}))";
         case IrIntrinsicOp.IsNaN:
-          this._usesPosix = true;
-          return $"(POSIX::isnan({args[0]}) ? 1 : 0)";
+          if (this._profile.HasC99Posix) {
+            this._usesPosix = true;
+            return $"(POSIX::isnan({args[0]}) ? 1 : 0)";
+          }
+          return $"do {{ my $_v = {args[0]}; ($_v != $_v) ? 1 : 0 }}";
         case IrIntrinsicOp.IsInfinity:
-          this._usesPosix = true;
-          return $"(POSIX::isinf({args[0]}) ? 1 : 0)";
+          if (this._profile.HasC99Posix) {
+            this._usesPosix = true;
+            return $"(POSIX::isinf({args[0]}) ? 1 : 0)";
+          }
+          return $"do {{ my $_v = {args[0]}; ($_v == $_v && ($_v == 9**9**9 || $_v == -9**9**9)) ? 1 : 0 }}";
         case IrIntrinsicOp.IsFinite:
-          this._usesPosix = true;
-          return $"(POSIX::isfinite({args[0]}) ? 1 : 0)";
+          if (this._profile.HasC99Posix) {
+            this._usesPosix = true;
+            return $"(POSIX::isfinite({args[0]}) ? 1 : 0)";
+          }
+          return $"do {{ my $_v = {args[0]}; ($_v == $_v && $_v != 9**9**9 && $_v != -9**9**9) ? 1 : 0 }}";
         case IrIntrinsicOp.IsNegative:
-          this._usesPosix = true;
-          return $"(POSIX::signbit({args[0]}) ? 1 : 0)";
+          if (this._profile.HasC99Posix) {
+            this._usesPosix = true;
+            return $"(POSIX::signbit({args[0]}) ? 1 : 0)";
+          }
+          return $"{this.HelperCall(PerlHelpers.FloatSignBit)}({args[0]})";
         case IrIntrinsicOp.IsNormal:
-          this._usesPosix = true;
-          return $"(POSIX::isnormal({args[0]}) ? 1 : 0)";
+          if (this._profile.HasC99Posix) {
+            this._usesPosix = true;
+            return $"(POSIX::isnormal({args[0]}) ? 1 : 0)";
+          }
+          return $"{this.HelperCall(PerlHelpers.FloatIsNormal)}({args[0]})";
         case IrIntrinsicOp.IsSubnormal:
-          this._usesPosix = true;
-          return $"do {{ my $_v = {args[0]}; (POSIX::isfinite($_v) && $_v != 0 && !POSIX::isnormal($_v)) ? 1 : 0 }}";
+          if (this._profile.HasC99Posix) {
+            this._usesPosix = true;
+            return $"do {{ my $_v = {args[0]}; (POSIX::isfinite($_v) && $_v != 0 && !POSIX::isnormal($_v)) ? 1 : 0 }}";
+          }
+          return $"do {{ my $_v = {args[0]}; ($_v == $_v && $_v != 9**9**9 && $_v != -9**9**9 && $_v != 0 && !{this.HelperCall(PerlHelpers.FloatIsNormal)}($_v)) ? 1 : 0 }}";
         case IrIntrinsicOp.IsInteger:
-          this._usesPosix = true;
-          return $"do {{ my $_v = {args[0]}; (POSIX::isfinite($_v) && POSIX::trunc($_v) == $_v) ? 1 : 0 }}";
+          if (this._profile.HasC99Posix) {
+            this._usesPosix = true;
+            return $"do {{ my $_v = {args[0]}; (POSIX::isfinite($_v) && POSIX::trunc($_v) == $_v) ? 1 : 0 }}";
+          }
+          return $"do {{ my $_v = {args[0]}; ($_v == $_v && $_v != 9**9**9 && $_v != -9**9**9 && {this.HelperCall(PerlHelpers.FloatTrunc)}($_v) == $_v) ? 1 : 0 }}";
         case IrIntrinsicOp.CopySign:
-          this._usesPosix = true;
-          return this.RoundFloat(type, $"POSIX::copysign({args[0]}, {args[1]})");
+          if (this._profile.HasC99Posix) {
+            this._usesPosix = true;
+            return this.RoundFloat(type, $"POSIX::copysign({args[0]}, {args[1]})");
+          }
+          return this.RoundFloat(type, $"{this.HelperCall(PerlHelpers.FloatCopySign)}({args[0]}, {args[1]})");
         case IrIntrinsicOp.HighWord:
           return $"((unpack('Q', pack('q', {args[0]})) >> 32) & 0xFFFFFFFF)";
         case IrIntrinsicOp.JoinWords:
@@ -419,7 +492,7 @@ public static partial class PerlEmitter {
         return expr;
       if (type == IrType.U64)
         return $"unpack('Q', pack('Q', {expr}))";
-      var masked = $"({expr} & {Mask(type)})";
+      var masked = $"(({expr}) & {Mask(type)})";
       if (!type.IsSigned)
         return masked;
       var sign = $"0x{1UL << (type.Bits - 1):X}";

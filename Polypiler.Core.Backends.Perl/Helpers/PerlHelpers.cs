@@ -5,14 +5,23 @@ namespace Polypiler.Core.Backends.Perl;
 
 /// <summary>
 /// Private runtime support subs emitted into a Perl module only when the emitted code references them.
-/// All helpers rely solely on Perl 5 core modules.
+/// All helpers rely solely on Perl 5 core modules and include Perl 5.6/5.8-compatible implementations.
 /// </summary>
 internal static class PerlHelpers {
 
   public const string OriginFolder = "Polypiler.Core.Backends.Perl/Helpers";
 
   public const string FloatDivide = "_ply_fdiv_f64";
+  public const string FloatDivide56 = "_ply_fdiv_f64_56";
   public const string FloatRemainder = "_ply_frem_f64";
+  public const string FloatRemainder56 = "_ply_frem_f64_56";
+  public const string FloatSignBit = "_ply_signbit";
+  public const string FloatTrunc = "_ply_trunc";
+  public const string FloatRoundAway = "_ply_round";
+  public const string FloatRoundEven = "_ply_rint";
+  public const string FloatCopySign = "_ply_copysign";
+  public const string FloatIsNormal = "_ply_isnormal";
+  public const string SwapEndian = "_ply_endian_bytes";
   public const string RoundF32 = "_ply_round_f32";
   public const string IntToF32 = "_ply_int_to_f32";
   public const string ArrayCopy = "_ply_array_copy";
@@ -27,12 +36,19 @@ internal static class PerlHelpers {
   public const string StrPad = "_ply_str_pad";
 
   public static IReadOnlyList<string> Order { get; } = [
-    FloatDivide, FloatRemainder, RoundF32, IntToF32, ArrayCopy, ArrayEq,
+    FloatSignBit, FloatDivide, FloatDivide56, FloatRemainder, FloatRemainder56,
+    FloatTrunc, FloatRoundAway, FloatRoundEven, FloatCopySign, FloatIsNormal,
+    SwapEndian, RoundF32, IntToF32, ArrayCopy, ArrayEq,
     ViewSlice, ViewCopy, ViewEqual, TrapKind, TrapMessage, TrapMatches,
     StrTrim, StrPad
   ];
 
   public static IReadOnlyDictionary<string, string> Bodies { get; } = new Dictionary<string, string> {
+    [FloatSignBit] = """
+      sub _ply_signbit {
+          return (unpack('Q', pack('d', $_[0])) >> 63) & 1;
+      }
+      """,
     [FloatDivide] = """
       sub _ply_fdiv_f64 {
           my ($left, $right) = @_;
@@ -42,12 +58,76 @@ internal static class PerlHelpers {
           return POSIX::signbit($left) != POSIX::signbit($right) ? -POSIX::HUGE_VAL() : POSIX::HUGE_VAL();
       }
       """,
+    [FloatDivide56] = """
+      sub _ply_fdiv_f64_56 {
+          my ($left, $right) = @_;
+          return $left / $right if $right != 0;
+          return $left if $left != $left;
+          return unpack('d', pack('Q', 9221120237041090560)) if $left == 0;
+          return _ply_signbit($left) != _ply_signbit($right) ? -(9**9**9) : (9**9**9);
+      }
+      """,
     [FloatRemainder] = """
       sub _ply_frem_f64 {
           my ($left, $right) = @_;
           return POSIX::NAN() if POSIX::isnan($left) || POSIX::isnan($right) || $right == 0 || POSIX::isinf($left);
           return $left if POSIX::isinf($right);
           return POSIX::fmod($left, $right);
+      }
+      """,
+    [FloatRemainder56] = """
+      sub _ply_frem_f64_56 {
+          my ($left, $right) = @_;
+          return unpack('d', pack('Q', 9221120237041090560))
+              if $left != $left || $right != $right || $right == 0 || $left == 9**9**9 || $left == -9**9**9;
+          return $left if $right == 9**9**9 || $right == -9**9**9;
+          return POSIX::fmod($left, $right);
+      }
+      """,
+    [FloatTrunc] = """
+      sub _ply_trunc {
+          my ($v) = @_;
+          return $v if $v != $v || $v == 9**9**9 || $v == -9**9**9 || $v == 0;
+          return $v > 0 ? POSIX::floor($v) : POSIX::ceil($v);
+      }
+      """,
+    [FloatRoundAway] = """
+      sub _ply_round {
+          my ($v) = @_;
+          return $v if $v != $v || $v == 9**9**9 || $v == -9**9**9 || $v == 0;
+          return $v > 0 ? POSIX::floor($v + 0.5) : POSIX::ceil($v - 0.5);
+      }
+      """,
+    [FloatRoundEven] = """
+      sub _ply_rint {
+          my ($v) = @_;
+          return $v if $v != $v || $v == 9**9**9 || $v == -9**9**9 || $v == 0;
+          my $f = POSIX::floor($v);
+          my $diff = $v - $f;
+          return $f if $diff < 0.5;
+          return $f + 1.0 if $diff > 0.5;
+          return (POSIX::fmod($f, 2.0) == 0) ? $f : $f + 1.0;
+      }
+      """,
+    [FloatCopySign] = """
+      sub _ply_copysign {
+          my ($mag, $sgn) = @_;
+          my $mb = unpack('Q', pack('d', $mag)) & 9223372036854775807;
+          my $sb = unpack('Q', pack('d', $sgn)) & 9223372036854775808;
+          return unpack('d', pack('Q', $mb | $sb));
+      }
+      """,
+    [FloatIsNormal] = """
+      sub _ply_isnormal {
+          my $e = (unpack('Q', pack('d', $_[0])) >> 52) & 0x7FF;
+          return ($e > 0 && $e < 2047) ? 1 : 0;
+      }
+      """,
+    [SwapEndian] = """
+      sub _ply_endian_bytes {
+          my ($bytes, $want_little) = @_;
+          my $host_little = (unpack('C', pack('S', 1)) == 1) ? 1 : 0;
+          return ($host_little == $want_little) ? $bytes : scalar reverse($bytes);
       }
       """,
     [RoundF32] = """
@@ -139,7 +219,7 @@ internal static class PerlHelpers {
     [TrapMessage] = """
       sub _trap_message {
           my ($err) = @_;
-          return $err->{message} // '' if ref($err) eq 'HASH';
+          return (defined $err->{message} ? $err->{message} : '') if ref($err) eq 'HASH';
           if ($err =~ /\A[A-Za-z_][A-Za-z0-9_]*:\s*(.*)\z/s) {
               my $msg = $1;
               $msg =~ s/\r?\n\z//;

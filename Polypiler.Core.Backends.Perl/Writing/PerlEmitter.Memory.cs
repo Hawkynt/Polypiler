@@ -70,8 +70,7 @@ public static partial class PerlEmitter {
         case IrIntrinsicOp.ArrayCopy:
           if (this.IsStringBytes(intrinsic.Arguments[0].Type))
             return $"do {{ my ($_s, $_si, $_d, $_di, $_n) = ({args[0]}, {args[1]}, {args[2]}, {args[3]}, {args[4]}); die \"IndexOutOfRange: invalid copy range\\n\" if $_n < 0 || $_si < 0 || $_di < 0 || $_si + $_n > length($$_s) || $_di + $_n > length($$_d); substr($$_d, $_di, $_n, substr($$_s, $_si, $_n)) if $_n > 0; }}";
-          this.UseHelper(PerlHelpers.ArrayCopy);
-          return $"{PerlHelpers.ArrayCopy}({string.Join(", ", args)})";
+          return $"{this.HelperCall(PerlHelpers.ArrayCopy)}({string.Join(", ", args)})";
 
         case IrIntrinsicOp.ArrayFill:
           if (this.IsStringBytes(intrinsic.Arguments[0].Type))
@@ -92,18 +91,14 @@ public static partial class PerlEmitter {
         case IrIntrinsicOp.ViewOf:
           if (intrinsic.Arguments.Count == 1)
             return $"do {{ my $_s = {args[0]}; [$_s, 0, scalar(@$_s)] }}";
-          if (intrinsic.Arguments.Count == 2) {
-            this.UseHelper(PerlHelpers.ViewSlice);
-            return $"do {{ my $_s = {args[0]}; {PerlHelpers.ViewSlice}([$_s, 0, scalar(@$_s)], {args[1]}, undef) }}";
-          }
-          this.UseHelper(PerlHelpers.ViewSlice);
-          return $"do {{ my $_s = {args[0]}; {PerlHelpers.ViewSlice}([$_s, 0, scalar(@$_s)], {args[1]}, {args[2]}) }}";
+          if (intrinsic.Arguments.Count == 2)
+            return $"do {{ my $_s = {args[0]}; {this.HelperCall(PerlHelpers.ViewSlice)}([$_s, 0, scalar(@$_s)], {args[1]}, undef) }}";
+          return $"do {{ my $_s = {args[0]}; {this.HelperCall(PerlHelpers.ViewSlice)}([$_s, 0, scalar(@$_s)], {args[1]}, {args[2]}) }}";
 
         case IrIntrinsicOp.Slice:
-          this.UseHelper(PerlHelpers.ViewSlice);
           return intrinsic.Arguments.Count == 2
-            ? $"{PerlHelpers.ViewSlice}({args[0]}, {args[1]}, undef)"
-            : $"{PerlHelpers.ViewSlice}({args[0]}, {args[1]}, {args[2]})";
+            ? $"{this.HelperCall(PerlHelpers.ViewSlice)}({args[0]}, {args[1]}, undef)"
+            : $"{this.HelperCall(PerlHelpers.ViewSlice)}({args[0]}, {args[1]}, {args[2]})";
 
         case IrIntrinsicOp.ViewLength:
           return $"({args[0]})->[2]";
@@ -112,19 +107,16 @@ public static partial class PerlEmitter {
           return $"do {{ my $_n = {args[0]}; die \"Overflow: negative stackalloc\\n\" if $_n < 0; [[({this.DefaultValue(intrinsic.Type.Element!)}) x $_n], 0, $_n] }}";
 
         case IrIntrinsicOp.ViewCopy:
-          this.UseHelper(PerlHelpers.ViewCopy);
-          return $"{PerlHelpers.ViewCopy}({args[0]}, {args[1]}, 0)";
+          return $"{this.HelperCall(PerlHelpers.ViewCopy)}({args[0]}, {args[1]}, 0)";
 
         case IrIntrinsicOp.ViewTryCopy:
-          this.UseHelper(PerlHelpers.ViewCopy);
-          return $"{PerlHelpers.ViewCopy}({args[0]}, {args[1]}, 1)";
+          return $"{this.HelperCall(PerlHelpers.ViewCopy)}({args[0]}, {args[1]}, 1)";
 
         case IrIntrinsicOp.ViewFill:
           return $"do {{ my ($_v, $_x) = ({args[0]}, {args[1]}); my ($_b, $_o, $_l) = @$_v; @$_b[$_o .. $_o + $_l - 1] = ($_x) x $_l if $_l > 0; }}";
 
         case IrIntrinsicOp.ViewEqual:
-          this.UseHelper(PerlHelpers.ViewEqual);
-          return $"{PerlHelpers.ViewEqual}({args[0]}, {args[1]})";
+          return $"{this.HelperCall(PerlHelpers.ViewEqual)}({args[0]}, {args[1]})";
 
         case IrIntrinsicOp.ViewToArray:
           return $"do {{ my ($_b, $_o, $_l) = @{{{args[0]}}}; $_l > 0 ? [@$_b[$_o .. $_o + $_l - 1]] : [] }}";
@@ -193,10 +185,9 @@ public static partial class PerlEmitter {
 
     private string EmitEndianLoad(bool little, IrType valueType, IrType bufferType, string buf, string offset) {
       var width = valueType.Size;
-      var letter = PackLetter(valueType, little);
-      if (this.IsStringBytes(bufferType)) {
-        return $"do {{ my ($_b, $_o) = ({buf}, {offset}); die \"IndexOutOfRange: offset $_o\\n\" if $_o < 0 || $_o + {width} > length($$_b); unpack('{letter}', substr($$_b, $_o, {width})) }}";
-      }
+      var unpackExpr = this.FormatUnpackExpr(valueType, little, "substr($$_b, $_o, " + width + ")");
+      if (this.IsStringBytes(bufferType))
+        return $"do {{ my ($_b, $_o) = ({buf}, {offset}); die \"IndexOutOfRange: offset $_o\\n\" if $_o < 0 || $_o + {width} > length($$_b); {unpackExpr} }}";
 
       if (valueType is { IsInteger: true, IsLong: false }) {
         // Explicit shift-or for 16/32-bit integers in array storage (#432).
@@ -211,17 +202,49 @@ public static partial class PerlEmitter {
         return $"do {{ my ($_b, $_o) = ({buf}, {offset}); die \"IndexOutOfRange: offset $_o\\n\" if $_o < 0 || $_o + {width} > scalar(@$_b); {expr} }}";
       }
 
-      return $"do {{ my ($_b, $_o) = ({buf}, {offset}); die \"IndexOutOfRange: offset $_o\\n\" if $_o < 0 || $_o + {width} > scalar(@$_b); unpack('{letter}', pack('C{width}', @{{$_b}}[$_o .. $_o + {width - 1}])) }}";
+      var packedBytes = $"pack('C{width}', @{{$_b}}[$_o .. $_o + {width - 1}])";
+      return $"do {{ my ($_b, $_o) = ({buf}, {offset}); die \"IndexOutOfRange: offset $_o\\n\" if $_o < 0 || $_o + {width} > scalar(@$_b); {this.FormatUnpackExpr(valueType, little, packedBytes)} }}";
     }
 
     private string EmitEndianStore(bool little, IrType valueType, IrType bufferType, string buf, string offset, string value) {
       var width = valueType.Size;
-      var letter = PackLetter(valueType, little);
+      var packExpr = this.FormatPackExpr(valueType, little, "$_v");
       if (this.IsStringBytes(bufferType))
-        return $"do {{ my ($_b, $_o, $_v) = ({buf}, {offset}, {value}); die \"IndexOutOfRange: offset $_o\\n\" if $_o < 0 || $_o + {width} > length($$_b); substr($$_b, $_o, {width}, pack('{letter}', $_v)); }}";
+        return $"do {{ my ($_b, $_o, $_v) = ({buf}, {offset}, {value}); die \"IndexOutOfRange: offset $_o\\n\" if $_o < 0 || $_o + {width} > length($$_b); substr($$_b, $_o, {width}, {packExpr}); }}";
 
-      return $"do {{ my ($_b, $_o, $_v) = ({buf}, {offset}, {value}); die \"IndexOutOfRange: offset $_o\\n\" if $_o < 0 || $_o + {width} > scalar(@$_b); @{{$_b}}[$_o .. $_o + {width - 1}] = unpack('C{width}', pack('{letter}', $_v)); }}";
+      return $"do {{ my ($_b, $_o, $_v) = ({buf}, {offset}, {value}); die \"IndexOutOfRange: offset $_o\\n\" if $_o < 0 || $_o + {width} > scalar(@$_b); @{{$_b}}[$_o .. $_o + {width - 1}] = unpack('C{width}', {packExpr}); }}";
     }
+
+    private string FormatUnpackExpr(IrType type, bool little, string bytesExpr) {
+      if (this._profile.HasEndianPackModifiers)
+        return $"unpack('{PackLetter(type, little)}', {bytesExpr})";
+
+      return type.Kind switch {
+        IrTypeKind.U16 => $"unpack('{(little ? "v" : "n")}', {bytesExpr})",
+        IrTypeKind.I16 => Wrap(IrType.I16, $"unpack('{(little ? "v" : "n")}', {bytesExpr})"),
+        IrTypeKind.U32 => $"unpack('{(little ? "V" : "N")}', {bytesExpr})",
+        IrTypeKind.I32 => Wrap(IrType.I32, $"unpack('{(little ? "V" : "N")}', {bytesExpr})"),
+        _ => $"unpack('{NativePackLetter(type)}', {this.HelperCall(PerlHelpers.SwapEndian)}({bytesExpr}, {(little ? 1 : 0)}))"
+      };
+    }
+
+    private string FormatPackExpr(IrType type, bool little, string valExpr) {
+      if (this._profile.HasEndianPackModifiers)
+        return $"pack('{PackLetter(type, little)}', {valExpr})";
+
+      return type.Kind switch {
+        IrTypeKind.U16 or IrTypeKind.I16 => $"pack('{(little ? "v" : "n")}', ({valExpr}) & 0xFFFF)",
+        IrTypeKind.U32 or IrTypeKind.I32 => $"pack('{(little ? "V" : "N")}', ({valExpr}) & 0xFFFFFFFF)",
+        _ => $"{this.HelperCall(PerlHelpers.SwapEndian)}(pack('{NativePackLetter(type)}', {valExpr}), {(little ? 1 : 0)})"
+      };
+    }
+
+    private static string NativePackLetter(IrType type) => type.Kind switch {
+      IrTypeKind.U64 => "Q",
+      IrTypeKind.I64 => "q",
+      IrTypeKind.F32 => "f",
+      _ => "d"
+    };
 
     private static string PackLetter(IrType type, bool little) => (type.Kind, little) switch {
       (IrTypeKind.U16, true) => "v",
@@ -308,20 +331,15 @@ public static partial class PerlEmitter {
         case IrIntrinsicOp.StrJoin:
           return $"join({args[0]}, @{{{args[1]}}})";
         case IrIntrinsicOp.StrTrim:
-          this.UseHelper(PerlHelpers.StrTrim);
-          return $"{PerlHelpers.StrTrim}({args[0]}, 0)";
+          return $"{this.HelperCall(PerlHelpers.StrTrim)}({args[0]}, 0)";
         case IrIntrinsicOp.StrTrimStart:
-          this.UseHelper(PerlHelpers.StrTrim);
-          return $"{PerlHelpers.StrTrim}({args[0]}, 1)";
+          return $"{this.HelperCall(PerlHelpers.StrTrim)}({args[0]}, 1)";
         case IrIntrinsicOp.StrTrimEnd:
-          this.UseHelper(PerlHelpers.StrTrim);
-          return $"{PerlHelpers.StrTrim}({args[0]}, 2)";
+          return $"{this.HelperCall(PerlHelpers.StrTrim)}({args[0]}, 2)";
         case IrIntrinsicOp.StrPadStart:
-          this.UseHelper(PerlHelpers.StrPad);
-          return $"{PerlHelpers.StrPad}({args[0]}, {args[1]}, {args[2]}, 1)";
+          return $"{this.HelperCall(PerlHelpers.StrPad)}({args[0]}, {args[1]}, {args[2]}, 1)";
         case IrIntrinsicOp.StrPadEnd:
-          this.UseHelper(PerlHelpers.StrPad);
-          return $"{PerlHelpers.StrPad}({args[0]}, {args[1]}, {args[2]}, 0)";
+          return $"{this.HelperCall(PerlHelpers.StrPad)}({args[0]}, {args[1]}, {args[2]}, 0)";
         default:
           return this.UnsupportedOp(intrinsic.Op.ToString());
       }

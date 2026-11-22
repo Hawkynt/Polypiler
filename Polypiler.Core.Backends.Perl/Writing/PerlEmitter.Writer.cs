@@ -42,7 +42,9 @@ public static partial class PerlEmitter {
       var taken = new HashSet<string>(StringComparer.Ordinal);
       var publicOwners = new Dictionary<string, string>(StringComparer.Ordinal);
       foreach (var function in module.Functions) {
-        if (this._options.TestFunctions.Contains(function.Name))
+        if (this._options.TestFunctions.Contains(function.Name)
+            || this._classFunctionOwners.ContainsKey(function.Name)
+            || this._interfaceFunctionNames.Contains(function.Name))
           continue;
 
         var mapped = PerlNaming.Function(function.Name, function.IsPublic);
@@ -73,17 +75,22 @@ public static partial class PerlEmitter {
     public IReadOnlyList<GeneratedFile> EmitModule(IrModule module) {
       this._module = module;
       var package = this._options.PackageName is { Length: > 0 } custom ? custom : PerlNaming.Package(module.Name);
+      this.PrepareClassesAndInterfaces(module, package);
       this.AssignFunctionNames(module);
       this.AssignEnums(module);
       this.AssignConstantsAndGlobals(module);
-      this.ValidateTypes(module);
 
       var testFunctions = module.Functions.Where(f => this._options.TestFunctions.Contains(f.Name)).ToList();
-      var codeFunctions = module.Functions.Where(f => !this._options.TestFunctions.Contains(f.Name)).ToList();
+      var codeFunctions = module.Functions.Where(f =>
+        !this._options.TestFunctions.Contains(f.Name)
+        && !this._classFunctionOwners.ContainsKey(f.Name)
+        && !this._interfaceFunctionNames.Contains(f.Name)).ToList();
 
       var subBodies = new List<string>(codeFunctions.Count);
       foreach (var function in codeFunctions)
         subBodies.Add(this.EmitFunction(function));
+
+      var classPackages = this.EmitClassAndInterfacePackages(module);
 
       var initCode = new StringBuilder();
       foreach (var global in module.Globals) {
@@ -109,8 +116,13 @@ public static partial class PerlEmitter {
         text.Append("# ").Append(header).Append('\n');
 
       text.Append("package ").Append(package).Append(";\n");
+      if (this._profile.VersionPragma is { } pragma)
+        text.Append(pragma).Append('\n');
       text.Append("use strict;\nuse warnings;\n");
-      text.Append("use Exporter 'import';\n");
+      if (this._profile.HasExporterImport)
+        text.Append("use Exporter 'import';\n");
+      else
+        text.Append("use Exporter ();\nour @ISA = qw(Exporter);\n");
       if (this._usesCarp)
         text.Append("use Carp ();\n");
       if (this._usesPosix)
@@ -137,6 +149,9 @@ public static partial class PerlEmitter {
 
       foreach (var body in subBodies)
         text.Append(body).Append('\n');
+
+      if (classPackages.Length > 0)
+        text.Append(classPackages);
 
       text.Append("1;\n");
       this.AppendPod(text, package, codeFunctions, module);
@@ -166,21 +181,6 @@ public static partial class PerlEmitter {
       }
 
       return files;
-    }
-
-    private void ValidateTypes(IrModule module) {
-      foreach (var declaration in module.Types) {
-        if (declaration is IrInterfaceType iface) {
-          this.Problems.Add(Diagnostic.Create(TypesUnsupported, null, iface.Name) with { Cause = "OBJ-INTERFACES" });
-        } else if (declaration is IrClassType cls) {
-          if (cls.Base is not null && !IrExceptionClass.IsException(cls))
-            this.Problems.Add(Diagnostic.Create(TypesUnsupported, null, cls.Name) with { Cause = "OBJ-VIRTUAL" });
-          if (cls.Interfaces.Count > 0)
-            this.Problems.Add(Diagnostic.Create(TypesUnsupported, null, cls.Name) with { Cause = "OBJ-INTERFACES" });
-          if (cls.Methods.Any(m => m.IsVirtual))
-            this.Problems.Add(Diagnostic.Create(TypesUnsupported, null, cls.Name) with { Cause = "OBJ-VIRTUAL" });
-        }
-      }
     }
 
     private void AssignEnums(IrModule module) {
@@ -237,11 +237,18 @@ public static partial class PerlEmitter {
       foreach (var @enum in module.Types.OfType<IrEnumType>()) {
         if (@enum.Members.Count == 0)
           continue;
-        text.Append("use constant {\n");
-        foreach (var member in @enum.Members)
-          text.Append("    ").Append(this._enumMembers[@enum][member]).Append(" => ")
-            .Append(FormatIntConstant(@enum.Underlying, member.Value)).Append(",\n");
-        text.Append("};\n\n");
+        if (this._profile.HasConstantHashRef) {
+          text.Append("use constant {\n");
+          foreach (var member in @enum.Members)
+            text.Append("    ").Append(this._enumMembers[@enum][member]).Append(" => ")
+              .Append(FormatIntConstant(@enum.Underlying, member.Value)).Append(",\n");
+          text.Append("};\n\n");
+        } else {
+          foreach (var member in @enum.Members)
+            text.Append("use constant ").Append(this._enumMembers[@enum][member]).Append(" => ")
+              .Append(FormatIntConstant(@enum.Underlying, member.Value)).Append(";\n");
+          text.Append('\n');
+        }
       }
     }
 
@@ -331,7 +338,10 @@ public static partial class PerlEmitter {
             var pvar = this._locals[parameter];
             text.Append("    if (defined(").Append(pvar).Append(") && ref(").Append(pvar).Append(") ne 'ARRAY') {\n");
             text.Append("        my $_s = ").Append(pvar).Append(";\n");
-            text.Append("        utf8::downgrade($_s, 1) or Carp::croak('wide character in octet string');\n");
+            if (this._profile.HasUtf8Downgrade)
+              text.Append("        utf8::downgrade($_s, 1) or Carp::croak('wide character in octet string');\n");
+            else
+              text.Append("        $_s =~ /[^\\x00-\\xFF]/ and Carp::croak('wide character in octet string');\n");
             text.Append("        ").Append(pvar).Append(" = [ unpack('C*', $_s) ];\n");
             text.Append("    }\n");
           }
@@ -420,10 +430,18 @@ public static partial class PerlEmitter {
 
     private void UseHelper(string name) {
       this._usedHelpers.Add(name);
-      if (name is PerlHelpers.FloatDivide or PerlHelpers.FloatRemainder)
+      if (name is PerlHelpers.FloatDivide or PerlHelpers.FloatRemainder or PerlHelpers.FloatRemainder56
+          or PerlHelpers.FloatTrunc or PerlHelpers.FloatRoundAway or PerlHelpers.FloatRoundEven)
         this._usesPosix = true;
+      if (name == PerlHelpers.FloatDivide56)
+        this._usedHelpers.Add(PerlHelpers.FloatSignBit);
       if (name == PerlHelpers.TrapMatches)
         this._usedHelpers.Add(PerlHelpers.TrapKind);
+    }
+
+    private string HelperCall(string name) {
+      this.UseHelper(name);
+      return this._currentClass is not null ? $"{this._package}::{name}" : name;
     }
 
     private string Temp(string prefix = "_t")

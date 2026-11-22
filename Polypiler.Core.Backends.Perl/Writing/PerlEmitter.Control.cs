@@ -117,6 +117,10 @@ public static partial class PerlEmitter {
         case IrForEachCollection each:
           this.EmitForEachCollection(each, text, indent);
           break;
+
+        case IrUsing @using:
+          this.EmitUsing(@using, text, indent);
+          break;
       }
     }
 

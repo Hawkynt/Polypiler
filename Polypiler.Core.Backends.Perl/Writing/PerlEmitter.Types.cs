@@ -43,35 +43,33 @@ public static partial class PerlEmitter {
     }
 
     private string EmitFieldLoad(IrFieldLoad load) {
+      if (load.Target.Type.IsObject)
+        return this.EmitClassFieldLoad(load);
       var key = PerlNaming.HashKey(load.Field.Name);
       var target = this.EmitExpr(load.Target);
-      if (load.Target.Type.IsObject) {
-        if (load.Field == IrExceptionClass.Message) {
-          this.UseHelper(PerlHelpers.TrapMessage);
-          return $"{PerlHelpers.TrapMessage}({target})";
-        }
-        return $"do {{ my $_o = {target}; die \"NullReference: null object\\n\" unless defined $_o; {this.CopyIfStruct(load.Type, $"$_o->{{{key}}}")} }}";
-      }
       return this.CopyIfStruct(load.Type, $"({target})->{{{key}}}");
     }
 
     private void EmitFieldStoreStatement(IrFieldStore store, StringBuilder text, int indent) {
+      if (store.Target.Type.IsObject) {
+        this.EmitClassFieldStore(store, text, indent);
+        return;
+      }
       var pad = Indent(indent);
       var key = PerlNaming.HashKey(store.Field.Name);
       var target = this.EmitExpr(store.Target);
       var value = this.CopyIfStruct(store.Field.Type, this.EmitExpr(store.Value));
-      if (store.Target.Type.IsObject) {
-        text.Append(pad).Append("do { my ($_o, $_v) = (").Append(target).Append(", ").Append(value)
-          .Append("); die \"NullReference: null object\\n\" unless defined $_o; $_o->{").Append(key).Append("} = $_v; };\n");
-        return;
-      }
       text.Append(pad).Append('(').Append(target).Append(")->{").Append(key).Append("} = ").Append(value).Append(";\n");
     }
 
     private string EmitStructEquals(IrStructEquals equals) {
+      if (equals.Left.Type.IsObject)
+        return this.EmitClassRecordEquals(equals);
       var st = equals.Left.Type.StructType!;
       this._equatableStructs.Add(st);
-      return $"_eq_{PerlNaming.Snake(st.Name)}({this.EmitExpr(equals.Left)}, {this.EmitExpr(equals.Right)})";
+      var fn = $"_eq_{PerlNaming.Snake(st.Name)}";
+      var qualified = this._currentClass is not null ? $"{this._package}::{fn}" : fn;
+      return $"{qualified}({this.EmitExpr(equals.Left)}, {this.EmitExpr(equals.Right)})";
     }
 
     private string EmitStructEqualsHelper(IrStructType st) {
@@ -96,17 +94,7 @@ public static partial class PerlEmitter {
       return text.ToString();
     }
 
-    private string EmitObjectNew(IrNew objNew) {
-      var cls = objNew.Type.ClassType!;
-      if (IrExceptionClass.IsException(cls))
-        return this.EmitExceptionConstruction(cls, objNew.Arguments);
-
-      var fields = cls.Fields.Select(f => $"{PerlNaming.HashKey(f.Name)} => {this.DefaultValue(f.Type)}");
-      var initHash = "{ " + string.Join(", ", fields) + " }";
-      var ctorFn = this.FunctionPerlName(objNew.Constructor.Function);
-      var args = string.Join(", ", objNew.Arguments.Select(this.EmitExpr).Prepend("$_obj"));
-      return $"do {{ my $_obj = {initHash}; {ctorFn}({args}); $_obj }}";
-    }
+    private string EmitObjectNew(IrNew objNew) => this.EmitClassObjectNew(objNew);
 
     private string EmitExceptionConstruction(IrClassType cls, IReadOnlyList<IrExpr> arguments) {
       var kind = ExceptionKindName(cls);
@@ -115,9 +103,10 @@ public static partial class PerlEmitter {
         return $"\"{kind}: \" . {def} . \"\\n\"";
       }
       var msg = this.EmitExpr(arguments[0]);
+      var safeMsg = this._profile.HasDefinedOr ? $"({msg} // '')" : $"do {{ my $_m = {msg}; defined($_m) ? $_m : '' }}";
       if (IrExceptionClass.IsLibrary(cls))
-        return $"\"{kind}: \" . ({msg} // '') . \"\\n\"";
-      return $"{{ kind => '{kind}', message => ({msg} // '') }}";
+        return $"\"{kind}: \" . {safeMsg} . \"\\n\"";
+      return $"{{ kind => '{kind}', message => {safeMsg} }}";
     }
 
     private string EmitExceptionValue(IrExpr exception) {
@@ -145,19 +134,7 @@ public static partial class PerlEmitter {
     private static string ExceptionKindName(IrClassType cls)
       => _exceptionKinds.GetValueOrDefault(cls.Name, cls.Name);
 
-    private string EmitMethodCall(IrMethodCall call) {
-      if (call.Kind is IrMethodCallKind.Virtual or IrMethodCallKind.Interface)
-        return this.UnsupportedTypeConstruct(call.Method.Name, call.Kind == IrMethodCallKind.Interface ? "OBJ-INTERFACES" : "OBJ-VIRTUAL");
-
-      var targetFn = this.FunctionPerlName(call.Method.Function);
-      var evalArgs = call.Arguments.Select(this.EmitExpr).ToList();
-      if (call.Target is null)
-        return $"{targetFn}({string.Join(", ", evalArgs)})";
-
-      var receiver = this.EmitExpr(call.Target);
-      var allArgs = string.Join(", ", evalArgs.Prepend("$_r"));
-      return $"do {{ my $_r = {receiver}; die \"NullReference: null receiver\\n\" unless defined $_r; {targetFn}({allArgs}) }}";
-    }
+    private string EmitMethodCall(IrMethodCall call) => this.EmitClassMethodCall(call);
 
     private string EmitReferenceEquals(IrReferenceEquals refEq) {
       var l = this.EmitExpr(refEq.Left);
@@ -326,7 +303,7 @@ public static partial class PerlEmitter {
 
       var rethrowVar = this.Temp("_rethrow");
       if (@try.Catches.Count > 0) {
-        this.UseHelper(PerlHelpers.TrapMatches);
+        var trapMatchFn = this.HelperCall(PerlHelpers.TrapMatches);
         text.Append(pad).Append("my ").Append(rethrowVar).Append(" = 0;\n");
         text.Append(pad).Append("if (!").Append(okVar).Append(") {\n");
         text.Append(innerPad).Append("my $_e = ").Append(errVar).Append(";\n");
@@ -337,7 +314,11 @@ public static partial class PerlEmitter {
         var first = true;
         foreach (var @catch in @try.Catches) {
           var targetKind = @catch.Class == IrExceptionClass.Exception ? "Exception" : ExceptionKindName(@catch.Class);
-          var matchExpr = $"{PerlHelpers.TrapMatches}($_e, '{targetKind}')";
+          var matchExpr = $"{trapMatchFn}($_e, '{targetKind}')";
+          if (@catch.Filter is { } filter) {
+            var bind = @catch.Local is not null ? $"my {this.LocalName(@catch.Local)} = $_e; " : "";
+            matchExpr = $"({matchExpr} && do {{ {bind}{this.EmitExpr(filter)} }})";
+          }
           var clausePad = Indent(indent + 2);
           text.Append(clausePad).Append(first ? "if (" : "} elsif (").Append(matchExpr).Append(") {\n");
           if (@catch.Local is not null)
@@ -387,11 +368,6 @@ public static partial class PerlEmitter {
 
     private static bool ContainsReturn(IrBlock block)
       => AllStatements(block).Any(s => s is IrReturn);
-
-    private string UnsupportedTypeConstruct(string construct, string cause) {
-      this.Problems.Add(Diagnostic.Create(TypesUnsupported, null, construct) with { Cause = cause });
-      return "0";
-    }
 
   }
 
