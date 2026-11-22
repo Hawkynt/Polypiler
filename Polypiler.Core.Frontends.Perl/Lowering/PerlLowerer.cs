@@ -91,8 +91,8 @@ internal sealed partial class PerlLowerer {
     var packages = this._tree.Packages.Count > 0
       ? this._tree.Packages
       : new Dictionary<string, PerlPackage> {
-          ["main"] = new PerlPackage { Functions = this._tree.Functions }
-        };
+        ["main"] = new PerlPackage { Functions = this._tree.Functions }
+      };
     var functions = new List<IrFunction>();
     this.InitializeClassesAndInterfaces(shells, packages, functions);
     this.CollectPackages(packages);
@@ -367,11 +367,8 @@ internal sealed partial class PerlLowerer {
     var first = nonState[0];
 
     // Form 1: `my ($a, $b) = @_;`
-    if (first is { Name: "aassign", Children: [
-      { Name: "null", Children: [{ Name: "padrange" }, { Name: "rv2av", Children: [{ Name: "gv", Symbol: "_" }] }] },
-      { Name: "null", Children: var targets }
-    ] } && targets.Length >= 2 && targets[0].Name == "pushmark") {
-      consumed.Add(first);
+    if (MatchParamUnpack(nodes, out var assignOp) is { } targets) {
+      consumed.Add(assignOp);
       foreach (var target in targets.Skip(1)) {
         if (target.Name is "padsv" or "padav") {
           var lex = this.LexicalName(target.Target);

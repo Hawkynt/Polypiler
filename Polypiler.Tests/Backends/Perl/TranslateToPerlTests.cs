@@ -41,7 +41,7 @@ public sealed class TranslateToPerlTests {
     var (exitCode, output, error) = this.Translate("public static int AddOne(int a) => a + 1;");
     Assert.That(exitCode, Is.Zero, error);
     var pmPath = Path.Combine(this._out, "lib", "Snippet.pm");
-    Assert.That(output.Trim(), Is.EqualTo(pmPath));
+    Assert.That(Path.GetFullPath(output.Trim()), Is.EqualTo(Path.GetFullPath(pmPath)));
     var text = File.ReadAllText(pmPath);
     Assert.That(text, Does.Contain("package Snippet;").And.Contain("use strict;").And.Contain("sub add_one"));
     var manifest = File.ReadAllText(Path.Combine(this._out, "polypiler.manifest.json"));

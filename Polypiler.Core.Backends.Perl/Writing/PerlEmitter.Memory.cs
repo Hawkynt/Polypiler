@@ -125,8 +125,8 @@ public static partial class PerlEmitter {
           this.Problems.Add(Diagnostic.Create(OverlayUnsupported, null,
             intrinsic.Arguments[0].Type.Element?.ToString() ?? intrinsic.Arguments[0].Type.ToString(),
             intrinsic.Type.Element?.ToString() ?? intrinsic.Type.ToString()) with {
-              Cause = this._currentFunction is { } f ? $"function {f.Name}" : this._module.Name
-            });
+            Cause = this._currentFunction is { } f ? $"function {f.Name}" : this._module.Name
+          });
           return "0";
 
         case IrIntrinsicOp.Pin:

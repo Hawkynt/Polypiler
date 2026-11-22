@@ -10,6 +10,7 @@ using Polypiler.Core.Backends.Perl;
 using Polypiler.Core.Frontends.CSharp;
 using Polypiler.Core.Frontends.Perl;
 using Polypiler.Core.IR;
+using Polypiler.Tests.Acceptance.Infra;
 
 namespace Polypiler.Tests.Acceptance.Perl;
 
@@ -17,7 +18,7 @@ namespace Polypiler.Tests.Acceptance.Perl;
 /// End-to-end acceptance tests for the Perl 5 frontend and backend executed against the host Perl 5
 /// interpreter under <c>use strict; use warnings FATAL =&gt; 'all';</c>.
 /// </summary>
-[TestFixture]
+[TestFixture, Layer("pyperl")]
 [Category("EndToEnd")]
 public sealed class PerlAcceptanceTests {
 
