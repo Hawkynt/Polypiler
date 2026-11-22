@@ -1,0 +1,16 @@
+Origin: https://github.com/Hawkynt/PB-Compiler/tree/0d73acbea185a2597357d53f7ce9acb44758ba76/PowerBasic.Compiler/Ir/Analysis
+Licence: LGPL-3.0-or-later
+
+ScalarEvolution.cs is converted from PB-Compiler, part of Hawkynt/PB-Compiler
+(https://github.com/Hawkynt/PB-Compiler), commit 0d73acbea185a2597357d53f7ce9acb44758ba76:
+
+  PowerBasic.Compiler/Ir/Analysis/IrScalarEvolution.cs
+  PowerBasic.Compiler/Ir/Analysis/IrLoopAnalysis.cs
+  PowerBasic.Compiler.Tests/Ir/IrScalarEvolutionTests.cs (the cases ported to ScalarEvolutionTests)
+
+PB-Compiler recognizes the additive recurrences of the header phis of its SSA IR and simulates exact
+trip counts of constant header tests. The conversion carries the model across to the structured loops
+of the tree IR and adds affine values, symbolic and bounded counts and no-wrap flags; counts are
+computed in closed form rather than simulated. PB-Compiler is licensed under the GNU Lesser General
+Public License, version 3 or later. Terminology after Bachmann, Wang and Zima, "Chains of recurrences"
+(ISSAC 1994).
