@@ -8,10 +8,12 @@ using System.Text;
 using Polypiler.Core;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
+using Polypiler.Core.Backends.Perl;
 using Polypiler.Core.Backends.Python;
 using Polypiler.Core.Backends.Rust;
 using Polypiler.Core.Frontends.CSharp;
 using Polypiler.Core.Frontends.JavaScript;
+using Polypiler.Core.Frontends.Perl;
 using Polypiler.Core.Frontends.Python;
 using Polypiler.Core.Frontends.Rust;
 using Polypiler.Core.Frontends.Rust.Cargo;
@@ -87,6 +89,9 @@ public sealed partial class TranslateCommand : ICliCommand {
   private const string DebugAssertionsOption = "--debug-assertions";
   private const string TrapPolicyOption = "--trap-policy";
   private const string AllowUnsafe = "--allow-unsafe";
+  private const string PerlContractOption = "--perl-contract";
+  private const string ByteStorageOption = "--byte-storage";
+  private const string ObjectModelOption = "--object-model";
 
   /// <summary>The caveat that records the overflow mode of a Rust import and where it came from.</summary>
   public const string RustOverflowCaveat = "rs-overflow-checks";
@@ -120,7 +125,10 @@ public sealed partial class TranslateCommand : ICliCommand {
     [RustVersion] = "Rust: the minimum supported Rust version, above the one of the edition",
     [TrapPolicyOption] = "Rust: what a trap is: a panic (the default) or an error value, every function a trap can leave returning a Result (ADR 0008)",
     [AllowUnsafe] = "Rust: allow the one unsafe lowering, a mutable overlay view, which the crate then has to pass Miri with; refused with PLY1567 otherwise",
-    [Bind] = "JavaScript: the binding module or global object of a native library, repeatable"
+    [Bind] = "JavaScript: the binding module or global object of a native library, repeatable",
+    [PerlContractOption] = "Perl: file holding source contract lines for exported subroutines",
+    [ByteStorageOption] = "Perl: how u8[] byte buffers are stored (array or string)",
+    [ObjectModelOption] = "Perl: object representation for classes and interfaces (blessed, moose or inside-out)"
   };
 
   private readonly Backend[] _backendsOfThis;
@@ -145,7 +153,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     new("csharp", [new(Instantiate, "<method[type,...]>")], InstantiateMisuse, ImportCSharp),
     new("javascript", [new(Export, "<name>[,<name>...]"), new(ExplainTypes, null)], ExportMisuse, ImportJavaScript),
     new("python", [], _ => null, ImportPython),
-    new("rust", [new(OverflowChecksOption, "<panic|wrap>"), new(CargoProfileOption, "<name>"), new(DebugAssertionsOption, "<on|off>")], OverflowChecksMisuse, ImportRust)
+    new("rust", [new(OverflowChecksOption, "<panic|wrap>"), new(CargoProfileOption, "<name>"), new(DebugAssertionsOption, "<on|off>")], OverflowChecksMisuse, ImportRust),
+    new("perl", [new(PerlContractOption, "<file-or-line>")], _ => null, ImportPerl)
   ];
 
   /// <summary>The target languages; another one is another entry.</summary>
@@ -153,7 +162,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     JavaScript(JavaScriptCapabilities.Standard, Implementations),
     CSharp(CSharpCapabilities.Default, Implementations),
     Python(PythonCapabilities.Standard, Implementations),
-    Rust(RustCapabilities.Default, Implementations)
+    Rust(RustCapabilities.Default, Implementations),
+    Perl(Implementations)
   ];
 
   /// <summary>
@@ -184,7 +194,7 @@ public sealed partial class TranslateCommand : ICliCommand {
       return new Option<bool>(option.Name) { Description = description };
 
     var helpName = option.Value[1..option.Value.IndexOf('>')];
-    return option.Name is DisableOpt or Export or Instantiate or Bind
+    return option.Name is DisableOpt or Export or Instantiate or Bind or PerlContractOption
       ? new Option<string[]>(option.Name) { Description = description, HelpName = helpName }
       : new Option<string>(option.Name) { Description = description, HelpName = helpName, Required = _required.Contains(option.Name) };
   }
@@ -204,7 +214,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// <param name="capabilities">The table the JavaScript backend chooses its constructs from.</param>
   /// <returns>The process exit code.</returns>
   public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, JavaScriptCapabilities capabilities)
-    => Run(arguments, output, error, [JavaScript(capabilities, Implementations), CSharp(CSharpCapabilities.Default, Implementations), Python(PythonCapabilities.Standard, Implementations), Rust(RustCapabilities.Default, Implementations)]);
+    => Run(arguments, output, error, [JavaScript(capabilities, Implementations), CSharp(CSharpCapabilities.Default, Implementations), Python(PythonCapabilities.Standard, Implementations), Rust(RustCapabilities.Default, Implementations), Perl(Implementations)]);
 
   /// <summary>Runs the command with portable floating-point implementations of the caller's in place of the precomputed ones.</summary>
   /// <param name="arguments">The arguments after the word <c>translate</c>.</param>
@@ -216,7 +226,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// </param>
   /// <returns>The process exit code.</returns>
   public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Func<IrModule> implementations)
-    => Run(arguments, output, error, [JavaScript(JavaScriptCapabilities.Standard, implementations), CSharp(CSharpCapabilities.Default, implementations), Python(PythonCapabilities.Standard, implementations), Rust(RustCapabilities.Default, implementations)]);
+    => Run(arguments, output, error, [JavaScript(JavaScriptCapabilities.Standard, implementations), CSharp(CSharpCapabilities.Default, implementations), Python(PythonCapabilities.Standard, implementations), Rust(RustCapabilities.Default, implementations), Perl(implementations)]);
 
   /// <summary>Runs <c>polypiler translate</c> with the arguments, the command made with the given backends.</summary>
   private static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Backend[] backends) {
@@ -237,7 +247,7 @@ public sealed partial class TranslateCommand : ICliCommand {
       if (parse.GetResult(option) is { Implicit: false })
         options[option.Name] = option switch {
           Option<bool> => "",
-          Option<string[]> list => string.Join(',', parse.GetValue(list)!),
+          Option<string[]> list => string.Join(option.Name == PerlContractOption ? '\n' : ',', parse.GetValue(list)!),
           _ => parse.GetValue((Option<string>)option)!
         };
 
@@ -490,6 +500,33 @@ public sealed partial class TranslateCommand : ICliCommand {
     return (imported.Module, failure, [.. imported.Caveats.Select(caveat => new ManifestMessage(caveat.Id, caveat.Description))]);
   }
 
+  private static (IrModule? Module, int ExitCode, IReadOnlyList<ManifestMessage> Caveats) ImportPerl(string file, string source, IReadOnlyDictionary<string, string> options, CliContext context) {
+    var contractLines = new StringBuilder();
+    if (options.TryGetValue(PerlContractOption, out var rawContracts)) {
+      foreach (var item in rawContracts.Split('\n', StringSplitOptions.RemoveEmptyEntries)) {
+        var resolved = context.Resolve(item);
+        if (File.Exists(resolved)) {
+          contractLines.AppendLine(File.ReadAllText(resolved));
+        } else if (item.Contains(':')) {
+          contractLines.AppendLine(item);
+        } else {
+          if (!CliPaths.RequireInput(item, context))
+            return (null, (int)ExitCode.EnvironmentError, []);
+        }
+      }
+    }
+
+    var imported = PerlFrontend.Import(file, source, new PerlImportOptions { Contracts = contractLines.ToString() });
+    foreach (var diagnostic in imported.Diagnostics)
+      context.Report(diagnostic);
+
+    if (imported.TestFunctions.Count > 0)
+      context.Layout = new CrateLayout(null, new Dictionary<string, string>(), imported.TestFunctions);
+
+    var failure = imported.Diagnostics.Any(diagnostic => diagnostic.Code == PerlFrontend.CompileFailedCode) ? InvalidSource : UnsupportedConstruct;
+    return (imported.Module, failure, []);
+  }
+
   /// <summary>
   /// Imports Python, parsed by the installed CPython. What the imported code is known to do
   /// differently from the original is written as a note, as it is for JavaScript.
@@ -629,6 +666,25 @@ public sealed partial class TranslateCommand : ICliCommand {
     (module, options) => CSharpEmitter.Legalize(module, implementations, CSharpProfileOf(options), FloatModeOf(options), capabilities),
     (module, options) => CSharpEmitter.Check(module, CSharpProfileOf(options), capabilities),
     (module, options, passes, _) => CSharpEmitter.Emit(module, CSharpProfileOf(options), FloatModeOf(options), options.GetValueOrDefault(Namespace), capabilities, passes));
+
+  /// <summary>The Perl backend; <c>--profile</c> accepts <c>perl/5.6</c>, <c>perl/5.8</c> or <c>perl/5</c>, <c>--byte-storage</c> chooses <c>array</c> or <c>string</c>, and <c>--object-model</c> chooses <c>blessed</c>, <c>moose</c> or <c>inside-out</c>.</summary>
+  private static Backend Perl(Func<IrModule> implementations) => new("perl",
+    PerlEmitter.Runtime,
+    options => PerlProfileOf(options).Profile!.ToString(),
+    RuleTarget.Neutral,
+    [new(Profile, Choice(PerlProfile.Names)), new(ByteStorageOption, Choice(PerlProfile.ByteStorageNames)), new(ObjectModelOption, Choice(PerlProfile.ObjectModelNames)), new(Float, FloatChoice)],
+    options => FloatMisuse(options) ?? PerlProfileOf(options).Error,
+    (module, options) => PerlEmitter.Legalize(module, implementations, PerlProfileOf(options).Profile!, FloatModeOf(options)),
+    (module, options) => PerlEmitter.Check(module, PerlProfileOf(options).Profile!),
+    (module, options, _, layout) => PerlEmitter.EmitTarget(module, PerlProfileOf(options).Profile!, new PerlEmitOptions {
+      PackageName = layout?.Package,
+      TestFunctions = layout?.Tests is { Count: > 0 } tests ? tests.ToHashSet(StringComparer.Ordinal) : new HashSet<string>(StringComparer.Ordinal)
+    }));
+
+  private static (PerlProfile? Profile, string? Error) PerlProfileOf(IReadOnlyDictionary<string, string> options) {
+    PerlProfile.TryParse(options.GetValueOrDefault(Profile), options.GetValueOrDefault(ByteStorageOption), options.GetValueOrDefault(ObjectModelOption), out var profile, out var error);
+    return (profile, error);
+  }
 
   /// <summary>The Python backend with a capability table; <c>--profile</c> names the version of Python.</summary>
   private static Backend Python(PythonCapabilities capabilities, Func<IrModule> implementations) => new("python",

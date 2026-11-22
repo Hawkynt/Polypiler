@@ -1467,6 +1467,222 @@ codes:
     area: rust
     owner: "#468"
     surfaces: "the diagnostics of RustRunner.ExecuteAsync: a signature that does not fit the declaration or has no pairing, an unknown export, an answer that is no output image"
+  - code: PLY1700
+    severity: error
+    exit: InvalidSource
+    title: Perl compilation or op-tree helper failed
+    message: "Perl compilation failed: <detail>"
+    rule: perl.frontend.compile
+    area: perl
+    owner: "#438"
+    surfaces: "standard error of polypiler translate --from perl: syntax errors reported by perl, missing or 32-bit interpreter, or wire-format mismatch"
+  - code: PLY1702
+    severity: error
+    exit: UnsupportedConstruct
+    title: Perl scalar construct not supported
+    message: "'<construct>' is not supported by the Perl frontend"
+    rule: perl.frontend.scalar
+    area: perl
+    owner: "#438"
+    surfaces: "standard error of polypiler translate --from perl for scalar expressions outside the supported subset"
+  - code: PLY1710
+    severity: error
+    exit: UnsupportedConstruct
+    title: Perl control-flow construct not supported
+    message: "'<construct>' is not supported by the Perl frontend"
+    rule: perl.frontend.control
+    area: perl
+    owner: "#435"
+    surfaces: "standard error of polypiler translate --from perl for goto, redo, continue blocks, string ranges, flip-flops and non-lexical loop variables"
+  - code: PLY1711
+    severity: error
+    exit: UnsupportedConstruct
+    title: dynamic Perl loop control not supported
+    message: "'<construct>' does not target a loop that lexically encloses it in the same sub; dynamic loop control is not imported"
+    rule: perl.frontend.loop-control
+    area: perl
+    owner: "#435"
+    surfaces: "standard error of polypiler translate --from perl for last or next inside do-while or targeting an unknown label"
+  - code: PLY1720
+    severity: error
+    exit: UnsupportedConstruct
+    title: Perl array or list operation not supported
+    message: "array or list operation '<construct>' is not supported by the Perl frontend"
+    rule: perl.frontend.array
+    area: perl
+    owner: "#437"
+    surfaces: "standard error of polypiler translate --from perl for splice, non-numeric sort, array length mutation and unsupported list forms"
+  - code: PLY1721
+    severity: error
+    exit: UnsupportedConstruct
+    title: Perl reference construct not supported
+    message: "reference construct '<construct>' is not supported by the Perl frontend"
+    rule: perl.frontend.reference
+    area: perl
+    owner: "#437"
+    surfaces: "standard error of polypiler translate --from perl for symbolic references, ref() and reference arithmetic"
+  - code: PLY1722
+    severity: error
+    exit: UnsupportedConstruct
+    title: Perl string operation not supported
+    message: "string operation '<construct>' is not supported; the Perl subset handles byte strings only"
+    rule: perl.frontend.string
+    area: perl
+    owner: "#437"
+    surfaces: "standard error of polypiler translate --from perl for regular expressions, sprintf, split and wide characters above 255"
+  - code: PLY1723
+    severity: error
+    exit: UnsupportedConstruct
+    title: Perl pack or unpack template not supported
+    message: "pack/unpack template '<template>' is not supported: <reason>"
+    rule: perl.frontend.pack
+    area: perl
+    owner: "#437"
+    surfaces: "standard error of polypiler translate --from perl for host-endian or non-constant pack/unpack templates"
+  - code: PLY1730
+    severity: error
+    exit: UnsupportedConstruct
+    title: Perl sub or module construct not supported
+    message: "'<construct>' is not supported for subs and modules by the Perl frontend"
+    rule: perl.frontend.sub
+    area: perl
+    owner: "#436"
+    surfaces: "standard error of polypiler translate --from perl for writes to @_, prototypes, local, AUTOLOAD, nested named subs and user BEGIN blocks"
+  - code: PLY1732
+    severity: error
+    exit: UnsupportedConstruct
+    title: escaping Perl code reference not supported
+    message: "the code reference '<name>' escapes; only anonymous subs called through the lexical they are assigned to are imported"
+    rule: perl.frontend.closure
+    area: perl
+    owner: "#436"
+    surfaces: "standard error of polypiler translate --from perl for returned, stored or reassigned code references and \\&sub"
+  - code: PLY1733
+    severity: error
+    exit: UnsupportedConstruct
+    title: unknown Perl module or unresolved sub
+    message: "'<name>' is neither part of this import nor in the Perl call map"
+    rule: perl.frontend.module
+    area: perl
+    owner: "#436"
+    surfaces: "standard error of polypiler translate --from perl for unknown modules and unresolved subroutine calls"
+  - code: PLY1740
+    severity: error
+    exit: UnsupportedConstruct
+    title: Perl object-system construct not supported
+    message: "'<construct>' uses Perl's object system, which is outside the first Perl subset"
+    rule: perl.frontend.object
+    area: perl
+    owner: "#439"
+    surfaces: "standard error of polypiler translate --from perl for bless, method calls, @ISA, parent/base and Moo/Moose"
+  - code: PLY1741
+    severity: error
+    exit: UnsupportedConstruct
+    title: order-dependent Perl hash operation not supported
+    message: "'<construct>' observes the order of a hash, which Perl leaves unspecified; sort the keys"
+    rule: perl.frontend.hash
+    area: perl
+    owner: "#439"
+    surfaces: "standard error of polypiler translate --from perl for unsorted keys, values, each, hashes in list context and hash slices"
+  - code: PLY1742
+    severity: error
+    exit: UnsupportedConstruct
+    title: Perl error-handling construct not supported
+    message: "error-handling construct '<construct>' is not supported by the Perl frontend"
+    rule: perl.frontend.error
+    area: perl
+    owner: "#439"
+    surfaces: "standard error of polypiler translate --from perl for string eval, die with a reference, warn, local $@ and signal handlers"
+  - code: PLY1743
+    severity: error
+    exit: UnsupportedConstruct
+    title: Perl tie, typeglob or magic variable not supported
+    message: "'<construct>' relies on tie, typeglob or special-variable behaviour that is not imported"
+    rule: perl.frontend.magic
+    area: perl
+    owner: "#439"
+    surfaces: "standard error of polypiler translate --from perl for tie, typeglobs and magic variables such as %ENV, @ARGV and $0"
+  - code: PLY1750
+    severity: error
+    exit: UnsupportedConstruct
+    title: type has no Perl representation
+    message: "type '<type>' has no Perl representation in profile '<profile>'"
+    rule: perl.backend.type
+    area: perl
+    owner: "#433"
+    surfaces: "standard error of polypiler translate --to perl for types the Perl profile cannot represent"
+  - code: PLY1751
+    severity: error
+    exit: UnsupportedConstruct
+    title: operation cannot be emitted as Perl
+    message: "operation '<operation>' cannot be emitted as Perl"
+    rule: perl.backend.operation
+    area: perl
+    owner: "#433"
+    surfaces: "standard error of polypiler translate --to perl for operations without a Perl lowering"
+  - code: PLY1758
+    severity: error
+    exit: UnsupportedConstruct
+    title: control construct has no Perl form
+    message: "control construct '<construct>' has no Perl form"
+    rule: perl.backend.control
+    area: perl
+    owner: "#430"
+    surfaces: "standard error of polypiler translate --to perl for unsupported control-flow shapes"
+  - code: PLY1766
+    severity: error
+    exit: UnsupportedConstruct
+    title: pointer construct cannot be represented in Perl
+    message: "pointer '<construct>' cannot be represented in Perl"
+    rule: perl.backend.pointer
+    area: perl
+    owner: "#432"
+    surfaces: "standard error of polypiler translate --to perl for raw or unsupported pointer operations"
+  - code: PLY1767
+    severity: error
+    exit: UnsupportedConstruct
+    title: live reinterpreting view not supported by Perl backend
+    message: "a live view of '<source>' as '<target>' is not supported by the Perl backend; use explicit loads and stores"
+    rule: perl.backend.overlay
+    area: perl
+    owner: "#432"
+    surfaces: "standard error of polypiler translate --to perl for reinterpreting overlay views"
+  - code: PLY1774
+    severity: error
+    exit: UnsupportedConstruct
+    title: Perl export name collision or empty name
+    message: "<reason>"
+    rule: perl.backend.names
+    area: perl
+    owner: "#431"
+    surfaces: "standard error of polypiler translate --to perl when two exports map to one Perl name or a name is empty"
+  - code: PLY1775
+    severity: error
+    exit: UnsupportedConstruct
+    title: Perl export signature not supported
+    message: "the signature of export '<export>' uses '<construct>', which the Perl backend cannot expose"
+    rule: perl.backend.export
+    area: perl
+    owner: "#431"
+    surfaces: "standard error of polypiler translate --to perl for exports exposing function pointers or async/coroutine contracts"
+  - code: PLY1782
+    severity: error
+    exit: UnsupportedConstruct
+    title: construct beyond plain Perl subset
+    message: "'<construct>' is beyond the Perl backend's plain-Perl subset (hash records, constants, undef, die/eval)"
+    rule: perl.backend.types
+    area: perl
+    owner: "#434"
+    surfaces: "standard error of polypiler translate --to perl for virtual/interface dispatch, nested optionals or unsupported map/set forms"
+  - code: PLY1783
+    severity: error
+    exit: UnsupportedConstruct
+    title: trap kind has no Perl mapping
+    message: "trap kind '<kind>' has no Perl mapping"
+    rule: perl.backend.traps
+    area: perl
+    owner: "#434"
+    surfaces: "standard error of polypiler translate --to perl for unmapped exception or trap kinds"
   - code: PLY1800
     severity: error
     exit: InvalidSource
