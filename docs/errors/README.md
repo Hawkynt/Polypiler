@@ -130,6 +130,9 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY0805](PLY0805.md) | error | 3 (UnsupportedConstruct) | `<reason>` | PERM-HIERARCHY |
 | [PLY0806](PLY0806.md) | error | 3 (UnsupportedConstruct) | `input <hex> is outside the declared input domain` | PERM-HIERARCHY |
 | [PLY0807](PLY0807.md) | error | 3 (UnsupportedConstruct) | `truth table of <inputs> inputs exceeds the limit of 16` | PERM-HIERARCHY |
+| [PLY0810](PLY0810.md) | error | 3 (UnsupportedConstruct) | `network step <n> (<op>): <problem>` | PERM-NETWORK |
+| [PLY0811](PLY0811.md) | error | 4 (InvalidSource) | `primitive '<primitive>' is not available in cost table '<table>'` | PERM-NETWORK |
+| [PLY0812](PLY0812.md) | error | 4 (InvalidSource) | `primitive '<primitive>' does not support width <width>` | PERM-NETWORK |
 
 ## PLY0900–PLY0999 · catalog
 
