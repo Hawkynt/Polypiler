@@ -86,6 +86,20 @@ entry of that branch. Points compare by the identity of the block node, not by r
   `False` when every possible pointer leaves its region. A pointer bumped in a loop keeps its site but
   loses its offset to widening: narrowing by the loop's trip count is not done yet. The IR stores no
   pointer to memory and has no integer-to-pointer conversion, so those sources of the issue do not arise.
+- `ScalarEvolution` (`Polypiler.Core.Analysis.Scev`, #350) describes the loops of a function: an
+  induction variable is one a loop writes exactly once, by `v = v ± s` or `v++` with an invariant `s`,
+  directly in its body before any `continue`, or in an `IrFor`'s step. Read where a pass starts, it is an
+  `Evolution.AddRec(start, step)`; sums, differences, negations, products with an invariant and constant
+  left shifts of such values, single definitions in the body (`At` reads them at a point after the steps
+  that ran) and truncations stay recurrences, an extension only with its no-wrap flag. `TripCountOf`
+  gives `Exact`, `Symbolic(value, offset)`, `Max` or `Unknown` for a `while` or `for` test comparing a
+  recurrence with an invariant, or a conjunction of such tests, from the constant and range facts at the
+  point before the loop: a count only where no value the test reads can wrap first, an `!=` test only when
+  the step divides the distance, a bound when the body can also `break`, `return` or `throw`. The no-wrap
+  flags come from such a count or from a checked step - never from the source language. A `do`-`while`
+  has recurrences but no count. `ValueFacts.EvolutionOf` and `TripCountOf` ask through the facade. The
+  tests hold the analysis against the iteration traces of 2 000 seeded loops (seed 315) in the
+  interpreter, and the PB-Compiler cases it is converted from.
 - `FactChecker` holds every answered query against runs of the interpreter, which reports each point it
   reaches to an `IIrObserver`; a value a run observes outside its fact is PLY0302. The tests check the
   constant domain on 10 000 seeded random functions (`RandomIr`, seed 300) and on loops, switches and

@@ -19,6 +19,9 @@ notices:
   - path: Polypiler.Cli/THIRD_PARTY_NOTICES.md
     components:
       - { name: 'System.CommandLine 2.0.15', licence: MIT }
+  - path: Polypiler.Core.Analysis/Scev/THIRD-PARTY-NOTICE.PB-Compiler.txt
+    components:
+      - { name: 'PB-Compiler IrScalarEvolution (Hawkynt/PB-Compiler 0d73acbea185a2597357d53f7ce9acb44758ba76)', licence: LGPL-3.0-or-later }
   - path: Polypiler.Core.Backends.CSharp/Helpers/String/THIRD-PARTY-NOTICE.Ryu.txt
     components:
       - { name: 'Ryu (ulfjack/ryu 4c0618b0e44f7ef027ebae05d2cc7812048f7c8f)', licence: Apache-2.0 }
