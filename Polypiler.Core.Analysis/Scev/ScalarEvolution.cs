@@ -522,14 +522,20 @@ public sealed class ScalarEvolution {
       case Evolution.AddRec recurrence when to.Bits <= from.Bits:
         var same = to.Bits == from.Bits;
         return recurrence with {
-          Start = Convert(recurrence.Start, from, to), Step = Convert(recurrence.Step, from, to), Type = to,
-          NoUnsignedWrap = same && recurrence.NoUnsignedWrap, NoSignedWrap = same && recurrence.NoSignedWrap
+          Start = Convert(recurrence.Start, from, to),
+          Step = Convert(recurrence.Step, from, to),
+          Type = to,
+          NoUnsignedWrap = same && recurrence.NoUnsignedWrap,
+          NoSignedWrap = same && recurrence.NoSignedWrap
         };
       case Evolution.AddRec { Step: Evolution.Invariant step } recurrence when step.IsConstant(out _) && (from.IsSigned ? recurrence.NoSignedWrap : recurrence.NoUnsignedWrap):
         var delta = Signed(step, from);
         return recurrence with {
-          Start = Convert(recurrence.Start, from, to), Step = new Evolution.Invariant(Constant(to, (Int128)delta)), Type = to,
-          NoUnsignedWrap = !from.IsSigned, NoSignedWrap = true
+          Start = Convert(recurrence.Start, from, to),
+          Step = new Evolution.Invariant(Constant(to, (Int128)delta)),
+          Type = to,
+          NoUnsignedWrap = !from.IsSigned,
+          NoSignedWrap = true
         };
       default:
         return Evolution.Unknown;
