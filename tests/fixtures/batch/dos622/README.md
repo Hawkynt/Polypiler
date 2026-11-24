@@ -1,0 +1,21 @@
+# MS-DOS 6.22 COMMAND.COM oracle
+
+The guest tests boot QEMU 11.1.3 and use GNU mtools 4.0.50 to stage two floppy images.
+Set `POLYPILER_MSDOS622_BOOT_IMAGE` to the licensed English boot floppy image with
+SHA-256 `b88030401122d234ea6aafba3cfed7de2b7b1782700a67be5498edca6f9fec5d`.
+Set `POLYPILER_MSDOS622_QEMU_DATA` if your QEMU installation needs an explicit firmware search path.
+
+```sh
+dotnet test Polypiler.Tests.Acceptance -c Release --filter FullyQualifiedName~DosCommandOracleTests
+```
+
+The runner writes a bootstrap into a temporary boot image copy. The guest reads that
+copy through drive A and writes the probe trace to a fresh drive B. The tests compare
+the original COMMAND.COM hash, the complete trace, and the timeout trace.
+
+The `tree` case stages its two data files under `DATA` in the order `TWO.TXT`, `ONE.TXT`.
+The runner accepts explicit relative 8.3 destinations and creates parent directories on drive B.
+The guest's wildcard trace tests both the paths and the order.
+
+The fixtures in this folder are LGPL-3.0-or-later. `PLYRC.COM` is five bytes
+(`B8 2A 4C CD 21`) and exits through DOS interrupt 21h with status 42.

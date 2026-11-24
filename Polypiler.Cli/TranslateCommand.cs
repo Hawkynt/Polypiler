@@ -11,6 +11,7 @@ using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.Backends.Perl;
 using Polypiler.Core.Backends.Python;
 using Polypiler.Core.Backends.Rust;
+using Polypiler.Core.Frontends.Batch;
 using Polypiler.Core.Frontends.CSharp;
 using Polypiler.Core.Frontends.JavaScript;
 using Polypiler.Core.Frontends.Perl;
@@ -154,7 +155,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     new("javascript", [new(Export, "<name>[,<name>...]"), new(ExplainTypes, null)], ExportMisuse, ImportJavaScript),
     new("python", [], _ => null, ImportPython),
     new("rust", [new(OverflowChecksOption, "<panic|wrap>"), new(CargoProfileOption, "<name>"), new(DebugAssertionsOption, "<on|off>")], OverflowChecksMisuse, ImportRust),
-    new("perl", [new(PerlContractOption, "<file-or-line>")], _ => null, ImportPerl)
+    new("perl", [new(PerlContractOption, "<file-or-line>")], _ => null, ImportPerl),
+    new("batch", [], _ => null, ImportBatch)
   ];
 
   /// <summary>The target languages; another one is another entry.</summary>
@@ -541,6 +543,14 @@ public sealed partial class TranslateCommand : ICliCommand {
 
     var failure = imported.Diagnostics.Any(diagnostic => diagnostic.Code == PythonFrontend.SyntaxError) ? InvalidSource : UnsupportedConstruct;
     return (imported.Module, failure, [.. imported.Caveats.Select(caveat => new ManifestMessage(caveat.Id, caveat.Description))]);
+  }
+
+  private static (IrModule? Module, int ExitCode, IReadOnlyList<ManifestMessage> Caveats) ImportBatch(
+    string file, string source, IReadOnlyDictionary<string, string> options, CliContext context) {
+    var imported = BatchFrontend.Import(file, source);
+    foreach (var diagnostic in imported.Diagnostics)
+      context.Report(diagnostic);
+    return (imported.Module, imported.Diagnostics.FirstOrDefault()?.ExitCode is { } code ? (int)code : InvalidSource, []);
   }
 
   /// <summary>The text of a file a JavaScript module requires, or <see langword="null"/> when there is none.</summary>
