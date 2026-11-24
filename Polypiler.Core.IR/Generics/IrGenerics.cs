@@ -466,6 +466,7 @@ public static class IrGenerics {
       IrStore store => new IrStore(this.Expression(store.Array), this.Expression(store.Index), this.Expression(store.Value)),
       IrFieldStore store => new IrFieldStore(this.Expression(store.Target), this.Field(store.Field), this.Expression(store.Value)),
       IrExprStmt expression => new IrExprStmt(this.Expression(expression.Expression)),
+      IrWriteLine write => write with { Value = this.Expression(write.Value) },
       IrIf conditional => new IrIf(this.Expression(conditional.Condition), this.Block(conditional.Then), conditional.Else is null ? null : this.Block(conditional.Else)),
       IrWhile loop => new IrWhile(this.Expression(loop.Condition), this.Block(loop.Body)),
       IrDoWhile loop => new IrDoWhile(this.Block(loop.Body), this.Expression(loop.Condition)),

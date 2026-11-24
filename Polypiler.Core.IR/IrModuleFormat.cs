@@ -61,7 +61,7 @@ public static partial class IrModuleFormat {
     Sequence,
     Await, Async,
     ForeignCall, LastError,
-    BigConst
+    BigConst, WriteLine
   }
 
   /// <summary>The kinds of declaration, as the byte after the name of a declaration says.</summary>
@@ -803,6 +803,7 @@ public static partial class IrModuleFormat {
       IrStore => Tag.Store,
       IrFieldStore => Tag.FieldStore,
       IrExprStmt => Tag.ExprStmt,
+      IrWriteLine => Tag.WriteLine,
       IrIf => Tag.If,
       IrWhile => Tag.While,
       IrDoWhile => Tag.DoWhile,
@@ -1031,6 +1032,9 @@ public static partial class IrModuleFormat {
           break;
         case IrExprStmt expression:
           this.Node(expression.Expression);
+          break;
+        case IrWriteLine write:
+          this.Node(write.Value);
           break;
         case IrIf conditional:
           this.Node(conditional.Condition);
@@ -1479,7 +1483,7 @@ public static partial class IrModuleFormat {
         return Of(this._nodes, index, "node") as T ?? throw new InvalidDataException($"The node {index} is no {typeof(T).Name}.");
       }
 
-      if (tag > Tag.BigConst)
+      if (tag > Tag.WriteLine)
         throw new InvalidDataException($"{(int)tag} is no kind of node.");
 
       var slot = this._nodes.Count;
@@ -1579,6 +1583,7 @@ public static partial class IrModuleFormat {
       Tag.Store => new IrStore(this.Node<IrExpr>(), this.Node<IrExpr>(), this.Node<IrExpr>()),
       Tag.FieldStore => this.FieldStore(),
       Tag.ExprStmt => new IrExprStmt(this.Node<IrExpr>()),
+      Tag.WriteLine => new IrWriteLine(this.Node<IrExpr>()),
       Tag.If => new IrIf(this.Node<IrExpr>(), this.Node<IrBlock>(), this.OptionalNode<IrBlock>()),
       Tag.While => new IrWhile(this.Node<IrExpr>(), this.Node<IrBlock>()),
       Tag.DoWhile => new IrDoWhile(this.Node<IrBlock>(), this.Node<IrExpr>()),

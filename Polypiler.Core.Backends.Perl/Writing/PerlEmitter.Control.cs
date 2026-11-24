@@ -70,6 +70,10 @@ public static partial class PerlEmitter {
           text.Append(pad).Append(this.EmitExpr(exprStmt.Expression)).Append(";\n");
           break;
 
+        case IrWriteLine:
+          this.UnsupportedOp(nameof(IrWriteLine));
+          break;
+
         case IrIf @if:
           this.EmitIf(@if, text, indent);
           break;

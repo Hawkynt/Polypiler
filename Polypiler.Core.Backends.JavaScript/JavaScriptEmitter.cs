@@ -680,6 +680,11 @@ public static partial class JavaScriptEmitter {
           // An object literal at the start of a statement would be read as a block; the printer puts it in parentheses.
           statements.Add(new JsExpressionStatement(this.Text(expression.Expression)));
           break;
+        case IrWriteLine:
+          if (this._refused.Add(nameof(IrWriteLine)))
+            this._problems.Add(InexpressibleDescriptor.At($"'WriteLine' cannot be expressed in JavaScript profile '{this._profile.LevelName}'"));
+
+          break;
         case IrIf conditional when this.CoalescingAssignment(conditional) is { } assigned:
           statements.Add(new JsExpressionStatement(assigned));
           break;

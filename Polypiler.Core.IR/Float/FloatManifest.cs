@@ -108,6 +108,9 @@ public static class FloatManifest {
       case IrExprStmt expression:
         Collect(expression.Expression, found);
         break;
+      case IrWriteLine write:
+        Collect(write.Value, found);
+        break;
       case IrFieldStore store:
         Collect(store.Target, found);
         Collect(store.Value, found);

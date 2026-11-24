@@ -125,11 +125,16 @@ Canonical intrinsic names permit recognition and late target-specific decomposit
 | Load/Store | Typed access to an allocation and offset; may trap or be volatile |
 | Region/AddressSpace | RAM, device, executable, stack, foreign, near/far, banked |
 | ExternalCall | Symbol + ABI + unknown or declared effects |
+| `IrWriteLine` | Ordered standard output of one typed string |
 | MachineInstruction | Decoded register/flag/memory effects |
 | OpaqueInstruction | Preserved bytes/text plus worst-case effects and target requirement |
 | AbiMaterialize | Create exact external layout at a boundary |
 | ResourceScope | Deterministic cleanup across all relevant exits |
 | Suspend/Resume | Coroutine or async continuation state |
+
+Bind an interpreter output sink with `IrInterpreter.Instantiate(module, sink)`. The sink receives
+each string as one record. The target runtime determines the line ending and encoding. Initializers
+and nested calls use the same instance sink. Earlier records remain available if a later operation traps.
 
 An example IR fragment is illustrative, **not** a proposed parser grammar:
 

@@ -19,6 +19,7 @@ internal static class IrPassSupport {
     IrStore store => new IrStore(expression(store.Array), expression(store.Index), expression(store.Value)),
     IrFieldStore store => store with { Target = expression(store.Target), Value = expression(store.Value) },
     IrExprStmt statementExpression => new IrExprStmt(expression(statementExpression.Expression)),
+    IrWriteLine write => write with { Value = expression(write.Value) },
     IrIf conditional => new IrIf(expression(conditional.Condition), block(conditional.Then), conditional.Else is null ? null : block(conditional.Else)),
     IrWhile loop => new IrWhile(expression(loop.Condition), block(loop.Body)),
     IrDoWhile loop => new IrDoWhile(block(loop.Body), expression(loop.Condition)),
