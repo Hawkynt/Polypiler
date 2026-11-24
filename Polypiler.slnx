@@ -11,6 +11,7 @@
   <Project Path="Polypiler.Core.Backends.Python/Polypiler.Core.Backends.Python.csproj" />
   <Project Path="Polypiler.Core.Backends.Rust/Polypiler.Core.Backends.Rust.csproj" />
   <Project Path="Polypiler.Core.BinaryFormats/Polypiler.Core.BinaryFormats.csproj" />
+  <Project Path="Polypiler.Core.Frontends.Batch/Polypiler.Core.Frontends.Batch.csproj" />
   <Project Path="Polypiler.Core.Frontends.CSharp/Polypiler.Core.Frontends.CSharp.csproj" />
   <Project Path="Polypiler.Core.Frontends.JavaScript/Polypiler.Core.Frontends.JavaScript.csproj" />
   <Project Path="Polypiler.Core.Frontends.Perl/Polypiler.Core.Frontends.Perl.csproj" />

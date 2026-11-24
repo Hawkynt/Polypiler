@@ -146,11 +146,12 @@ jobs:
   # test slows every test beside it. The full target sweep (category Sweep) runs once, in
   # target-sweep; its representative slice runs here.
   layer-core:
-    name: layer-core ${{ matrix.os }} ${{ matrix.part }}
+    # Keep the Windows check names required by main's branch protection.
+    name: layer-core ${{ matrix.os == 'windows-2025' && 'windows-latest' || matrix.os }} ${{ matrix.part }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-2025]
         part: [unit, acceptance, acceptance-prototype, acceptance-load]
         include:
           - part: unit
@@ -198,7 +199,7 @@ jobs:
       - name: toolchains
         run: |
           $TOOLING toolchains validate
-          $TOOLING toolchains probe --only dotnet-sdk,node
+          $TOOLING toolchains probe --only dotnet-sdk,node,cmd
       - name: build
         run: dotnet build Polypiler.slnx -c Release -warnaserror
       - name: format
