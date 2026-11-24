@@ -36,6 +36,9 @@ public sealed class BatchFrontendTests {
   [TestCase("set /a \"x=2147483647\"\nset /a \"X=x+1\"\nexit /b %x%", int.MinValue)]
   [TestCase("set /a \"n=6\"\nset /a \"x=-(2+3)*n+4\"\nexit /b %x%", -26)]
   [TestCase("goto finish\nset /a \"x=y+1\"\n:finish\nexit /b 2147483647", int.MaxValue)]
+  [TestCase("set /a \"x=-2147483647\"\nexit /b %x%", int.MinValue + 1)]
+  [TestCase("set /a \"x=-2147483647-1\"\nexit /b %x%", int.MinValue)]
+  [TestCase("exit /b -2147483648", int.MinValue)]
   [TestCase("exit /b 0", 0)]
   public void InterpretsClosedScalarScripts(string body, int expected) {
     var lifted = BatchFrontend.Import("fixture.bat", _prologue + body);
@@ -68,7 +71,7 @@ public sealed class BatchFrontendTests {
   [TestCase("exit /b %n%", 8184, int.MinValue, false)]
   public void BoundsCommandLengthAfterExpansion(string command, int length, int expected, bool accepted) {
     var padded = command.Insert(command.IndexOf(' '), new string(' ', length - command.Length));
-    var body = $"set /a \"n=-2147483648\"\nset /a \"m=n\"\n{padded}\nexit /b 0\n:done\nexit /b 42";
+    var body = $"set /a \"n=-2147483647-1\"\nset /a \"m=n\"\n{padded}\nexit /b 0\n:done\nexit /b 42";
     var lifted = BatchFrontend.Import("fixture.bat", _prologue + body);
 
     if (accepted) {
@@ -115,6 +118,8 @@ public sealed class BatchFrontendTests {
   [TestCase("set /a \"x=08\"\nexit /b %x%", "PLY2800", 2)]
   [TestCase("set /a \"x=(1\"\nexit /b %x%", "PLY2800", 2)]
   [TestCase("set /a \"x=2147483648\"\nexit /b %x%", "PLY2800", 2)]
+  [TestCase("set /a \"x=-2147483648\"\nexit /b %x%", "PLY2800", 2)]
+  [TestCase("set /a \"x=-(2147483648)\"\nexit /b %x%", "PLY2800", 2)]
   [TestCase("exit /b !x!", "PLY2802", 2)]
   [TestCase("exit /b 0 & echo unexpected", "PLY2802", 2)]
   [TestCase("exit /b 0 é", "PLY2800", 2)]

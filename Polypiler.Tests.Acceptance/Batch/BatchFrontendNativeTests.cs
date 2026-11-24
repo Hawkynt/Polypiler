@@ -19,7 +19,7 @@ public sealed class BatchFrontendNativeTests {
     Compare(File.ReadAllText(path), 42);
   }
 
-  [TestCase("set /a \"x=-2147483648\"\r\nexit /b %x%", int.MinValue)]
+  [TestCase("set /a \"x=-2147483647-1\"\r\nexit /b %x%", int.MinValue)]
   [TestCase("set /a \"x=2147483647\"\r\nset /a \"x=x+1\"\r\nexit /b %x%", int.MinValue)]
   [TestCase("set /a \"negative=-2\"\r\nif %negative% LSS -1 goto yes\r\nexit /b 0\r\n:yes\r\nexit /b 2147483647", int.MaxValue)]
   [TestCase("set /a \"n=0\"\r\n:again\r\nif %n% LEQ 0 goto done\r\nset /a \"n=n-1\"\r\ngoto again\r\n:done\r\nexit /b %n%", 0)]

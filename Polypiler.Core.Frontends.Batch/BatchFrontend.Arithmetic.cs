@@ -55,7 +55,10 @@ public static partial class BatchFrontend {
         while (this._position < text.Length && char.IsAsciiDigit(text[this._position]))
           ++this._position;
         var digits = text[start..this._position];
-        return Constant(negative ? "-" + digits : digits, line);
+        var literal = Constant(negative ? "-" + digits : digits, line);
+        if (literal.Value == int.MinValue)
+          throw new Refusal(line, "SET /A decimal magnitude exceeds 2147483647", malformed: true);
+        return literal;
       }
       if (char.IsAsciiLetter(text[start]) || text[start] == '_') {
         ++this._position;
