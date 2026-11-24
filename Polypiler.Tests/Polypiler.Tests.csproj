@@ -53,6 +53,7 @@
     <ProjectReference Include="..\Polypiler.Cli\Polypiler.Cli.csproj" />
     <ProjectReference Include="..\Polypiler.Core\Polypiler.Core.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Analysis\Polypiler.Core.Analysis.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Backends.Batch\Polypiler.Core.Backends.Batch.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Backends.CSharp\Polypiler.Core.Backends.CSharp.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Backends.JavaScript\Polypiler.Core.Backends.JavaScript.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Backends.Perl\Polypiler.Core.Backends.Perl.csproj" />

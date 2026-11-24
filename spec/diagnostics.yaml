@@ -1936,6 +1936,15 @@ codes:
     area: batch
     owner: "#1455"
     surfaces: standard error of polypiler translate --from batch; stops import
+  - code: PLY2850
+    severity: error
+    exit: UnsupportedConstruct
+    title: construct outside the cmd Batch target profile
+    message: "'<construct>' cannot be emitted for the cmd Batch profile"
+    rule: batch.backend.profile
+    area: batch
+    owner: "#1456"
+    surfaces: standard error of polypiler translate --to batch; stops emission
   - code: PLY3935
     severity: error
     exit: OracleFailure

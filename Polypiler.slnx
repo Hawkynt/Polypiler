@@ -5,6 +5,7 @@
   <Project Path="Polypiler.Cli/Polypiler.Cli.csproj" />
   <Project Path="Polypiler.Core/Polypiler.Core.csproj" />
   <Project Path="Polypiler.Core.Analysis/Polypiler.Core.Analysis.csproj" />
+  <Project Path="Polypiler.Core.Backends.Batch/Polypiler.Core.Backends.Batch.csproj" />
   <Project Path="Polypiler.Core.Backends.CSharp/Polypiler.Core.Backends.CSharp.csproj" />
   <Project Path="Polypiler.Core.Backends.JavaScript/Polypiler.Core.Backends.JavaScript.csproj" />
   <Project Path="Polypiler.Core.Backends.Perl/Polypiler.Core.Backends.Perl.csproj" />
