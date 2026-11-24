@@ -1,0 +1,4 @@
+@ECHO OFF
+ECHO START>B:\TRACE.TXT
+:again
+GOTO again
