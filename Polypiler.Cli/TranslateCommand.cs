@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Polypiler.Core;
+using Polypiler.Core.Backends.Batch;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.Backends.Perl;
@@ -165,7 +166,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     CSharp(CSharpCapabilities.Default, Implementations),
     Python(PythonCapabilities.Standard, Implementations),
     Rust(RustCapabilities.Default, Implementations),
-    Perl(Implementations)
+    Perl(Implementations),
+    Batch()
   ];
 
   /// <summary>
@@ -216,7 +218,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// <param name="capabilities">The table the JavaScript backend chooses its constructs from.</param>
   /// <returns>The process exit code.</returns>
   public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, JavaScriptCapabilities capabilities)
-    => Run(arguments, output, error, [JavaScript(capabilities, Implementations), CSharp(CSharpCapabilities.Default, Implementations), Python(PythonCapabilities.Standard, Implementations), Rust(RustCapabilities.Default, Implementations), Perl(Implementations)]);
+    => Run(arguments, output, error, [JavaScript(capabilities, Implementations), CSharp(CSharpCapabilities.Default, Implementations), Python(PythonCapabilities.Standard, Implementations), Rust(RustCapabilities.Default, Implementations), Perl(Implementations), Batch()]);
 
   /// <summary>Runs the command with portable floating-point implementations of the caller's in place of the precomputed ones.</summary>
   /// <param name="arguments">The arguments after the word <c>translate</c>.</param>
@@ -228,7 +230,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// </param>
   /// <returns>The process exit code.</returns>
   public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Func<IrModule> implementations)
-    => Run(arguments, output, error, [JavaScript(JavaScriptCapabilities.Standard, implementations), CSharp(CSharpCapabilities.Default, implementations), Python(PythonCapabilities.Standard, implementations), Rust(RustCapabilities.Default, implementations), Perl(implementations)]);
+    => Run(arguments, output, error, [JavaScript(JavaScriptCapabilities.Standard, implementations), CSharp(CSharpCapabilities.Default, implementations), Python(PythonCapabilities.Standard, implementations), Rust(RustCapabilities.Default, implementations), Perl(implementations), Batch()]);
 
   /// <summary>Runs <c>polypiler translate</c> with the arguments, the command made with the given backends.</summary>
   private static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Backend[] backends) {
@@ -676,6 +678,13 @@ public sealed partial class TranslateCommand : ICliCommand {
     (module, options) => CSharpEmitter.Legalize(module, implementations, CSharpProfileOf(options), FloatModeOf(options), capabilities),
     (module, options) => CSharpEmitter.Check(module, CSharpProfileOf(options), capabilities),
     (module, options, passes, _) => CSharpEmitter.Emit(module, CSharpProfileOf(options), FloatModeOf(options), options.GetValueOrDefault(Namespace), capabilities, passes));
+
+  private static Backend Batch() => new("batch", "cmd", _ => BatchEmitter.Profile, RuleTarget.Neutral,
+    [new(Profile, "<cmd>")],
+    options => options.GetValueOrDefault(Profile) is null or BatchEmitter.Profile ? null : $"unknown Batch profile '{options[Profile]}'",
+    (module, _) => module,
+    (module, _) => BatchEmitter.Check(module),
+    (module, _, _, _) => new(BatchEmitter.Emit(module), []));
 
   /// <summary>The Perl backend; <c>--profile</c> accepts <c>perl/5.6</c>, <c>perl/5.8</c> or <c>perl/5</c>, <c>--byte-storage</c> chooses <c>array</c> or <c>string</c>, and <c>--object-model</c> chooses <c>blessed</c>, <c>moose</c> or <c>inside-out</c>.</summary>
   private static Backend Perl(Func<IrModule> implementations) => new("perl",
