@@ -60,6 +60,7 @@ public static class IrTree {
     IrStore store => [store.Array, store.Index, store.Value],
     IrFieldStore store => [store.Target, store.Value],
     IrExprStmt expression => [expression.Expression],
+    IrWriteLine write => [write.Value],
     IrIf conditional => [conditional.Condition],
     IrWhile loop => [loop.Condition],
     IrDoWhile loop => [loop.Condition],
@@ -167,6 +168,8 @@ public static class IrTree {
         return store with { Target = expressions[0], Value = expressions[1] };
       case IrExprStmt evaluated:
         return evaluated with { Expression = expressions[0] };
+      case IrWriteLine write:
+        return write with { Value = expressions[0] };
       case IrIf conditional:
         return conditional with { Condition = expressions[0], Then = blocks[0], Else = blocks.Count > 1 ? blocks[1] : null };
       case IrWhile loop:

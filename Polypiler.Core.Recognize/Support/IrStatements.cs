@@ -10,28 +10,7 @@ public static class IrStatements {
   /// <summary>The expressions a statement evaluates itself, in order, without those of its blocks.</summary>
   /// <param name="statement">The statement.</param>
   /// <returns>The expressions.</returns>
-  public static IReadOnlyList<IrExpr> Expressions(IrStmt statement) => statement switch {
-    IrDeclare { Initializer: { } value } => [value],
-    IrAssign assign => [assign.Value],
-    IrGlobalAssign assign => [assign.Value],
-    IrStore store => [store.Array, store.Index, store.Value],
-    IrFieldStore store => [store.Target, store.Value],
-    IrExprStmt expression => [expression.Expression],
-    IrIf conditional => [conditional.Condition],
-    IrWhile loop => [loop.Condition],
-    IrDoWhile loop => [loop.Condition],
-    IrFor loop => [loop.Condition],
-    IrSwitch choice => [choice.Value],
-    IrReturn { Value: { } value } => [value],
-    IrThrow thrown => [thrown.Exception],
-    IrTry attempt => [.. attempt.Catches.Select(clause => clause.Filter).OfType<IrExpr>()],
-    IrUsing scope => [scope.Initializer],
-    IrForEachCollection loop => [loop.Collection],
-    IrYield produced => [produced.Value],
-    IrYieldFrom delegated => [delegated.Sequence],
-    IrForEachSequence loop => [loop.Sequence],
-    _ => []
-  };
+  public static IReadOnlyList<IrExpr> Expressions(IrStmt statement) => IrTree.Expressions(statement);
 
   /// <summary>The blocks a statement holds directly.</summary>
   /// <param name="statement">The statement.</param>

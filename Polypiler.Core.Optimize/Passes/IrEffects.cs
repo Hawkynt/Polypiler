@@ -436,7 +436,7 @@ public sealed class IrEffectTable {
         case IrWhile or IrDoWhile or IrFor when !Bounded(statement):
           this._mayNotTerminate = true;
           break;
-        case IrForEachCollection or IrForEachSequence or IrUsing or IrYield or IrYieldFrom:
+        case IrWriteLine or IrForEachCollection or IrForEachSequence or IrUsing or IrYield or IrYieldFrom:
           this.Worst();
           break;
       }

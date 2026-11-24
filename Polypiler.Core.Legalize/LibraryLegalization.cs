@@ -227,6 +227,7 @@ public static class LibraryLegalization {
       IrFieldStore store => store with { Target = this.Expression(store.Target), Value = this.Expression(store.Value) },
       IrExprStmt { Expression: IrStep { Target: IrLocalRef or IrGlobalRef } step } => this.Stepped(step),
       IrExprStmt expression => new IrExprStmt(this.Expression(expression.Expression)),
+      IrWriteLine write => write with { Value = this.Expression(write.Value) },
       IrIf conditional => new IrIf(this.Expression(conditional.Condition), this.Block(conditional.Then), conditional.Else is null ? null : this.Block(conditional.Else)),
       IrWhile loop => new IrWhile(this.Expression(loop.Condition), this.Block(loop.Body)),
       IrDoWhile loop => new IrDoWhile(this.Block(loop.Body), this.Expression(loop.Condition)),

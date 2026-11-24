@@ -187,6 +187,9 @@ public static partial class IrVerifier {
         case IrExprStmt expression:
           this.Expression(expression.Expression);
           break;
+        case IrWriteLine write:
+          this.Value(write.Value, IrType.String, "the text written to standard output");
+          break;
         case IrFieldStore store:
           this.Expression(store.Target);
           this.Require(store.Target.Type.IsObject || IsPlace(store.Target), $"a field is written of a {store.Target.GetType().Name}, which is no place");
