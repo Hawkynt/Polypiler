@@ -155,9 +155,12 @@ public static partial class IrInterpreter {
   /// <returns>The value returned, or <see langword="null"/> for a function that returns nothing.</returns>
   /// <exception cref="ArgumentException">The function does not exist or the arguments do not fit it.</exception>
   /// <exception cref="IrTrapException">An operation trapped, also one of an initializer.</exception>
+  /// <exception cref="InvalidOperationException">A write ran without an output sink. Bind one with <see cref="Instantiate(IrModule, Action{string})"/>.</exception>
   public static object? Call(IrModule module, string function, object[] arguments)
-    // A module without globals has no state to keep apart, and the many calls of the equivalence tests need no instance each.
-    => module.Globals.Count == 0 ? Call(_programs.GetValue(module, Index), [], module, function, arguments) : Instantiate(module).Call(function, arguments);
+    // A module without globals or an initializer needs no instance for each call.
+    => module.Globals.Count == 0 && module.Initializer is null
+      ? Call(_programs.GetValue(module, Index), [], module, function, arguments)
+      : Instantiate(module).Call(function, arguments);
 
 
   /// <summary>The deepest a call within a budget may nest calls, which keeps the interpreter well inside the stack of its thread.</summary>
@@ -185,7 +188,7 @@ public static partial class IrInterpreter {
   }
 
   /// <summary>A function of the module called with values taken across the boundary, in the globals of an instance.</summary>
-  private static object? Call(Program program, Dictionary<IrGlobal, object> globals, IrModule module, string function, object[] arguments, long steps = long.MaxValue, IIrObserver? observer = null) {
+  private static object? Call(Program program, Dictionary<IrGlobal, object> globals, IrModule module, string function, object[] arguments, long steps = long.MaxValue, IIrObserver? observer = null, Action<string>? standardOutput = null) {
     var functions = program.Functions;
     if (!functions.TryGetValue(function, out var target))
       throw new ArgumentException($"The module '{module.Name}' has no function '{function}'.", nameof(function));
@@ -194,7 +197,7 @@ public static partial class IrInterpreter {
       throw new ArgumentException($"'{function}' takes {target.Parameters.Count} arguments, not {arguments.Length}.", nameof(arguments));
 
     var values = arguments.Select((argument, index) => FromHost(target.Parameters[index], argument)).ToArray();
-    var machine = new Machine(program, globals) { Observer = observer };
+    var machine = new Machine(program, globals, standardOutput) { Observer = observer };
     if (steps != long.MaxValue)
       machine.Limit(steps);
 
@@ -351,7 +354,7 @@ public static partial class IrInterpreter {
 
   private sealed record Program(Dictionary<string, IrFunction> Functions, Dictionary<IrModuleConst, object> Constants);
 
-  private sealed partial class Machine(Program program, Dictionary<IrGlobal, object> globals) {
+  private sealed partial class Machine(Program program, Dictionary<IrGlobal, object> globals, Action<string>? standardOutput) {
 
     /// <summary>The steps left: without a budget more than any run takes.</summary>
     private long _steps = long.MaxValue;
@@ -441,6 +444,13 @@ public static partial class IrInterpreter {
           return Flow.Next;
         case IrExprStmt expression:
           this.Evaluate(expression.Expression, frame);
+          return Flow.Next;
+        case IrWriteLine write:
+          var text = (string)this.Evaluate(write.Value, frame);
+          if (standardOutput is null)
+            throw new InvalidOperationException("This invocation has no standard output sink.");
+
+          standardOutput(text);
           return Flow.Next;
         case IrFieldStore store when store.Target.Type.IsObject:
           this.StoreObjectField(store, frame);

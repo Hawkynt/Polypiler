@@ -231,6 +231,7 @@ public static class Optimizer {
       IrStore => new IrStore((IrExpr)parts[0], (IrExpr)parts[1], (IrExpr)parts[2]),
       IrFieldStore store => store with { Target = (IrExpr)parts[0], Value = (IrExpr)parts[1] },
       IrExprStmt => new IrExprStmt((IrExpr)parts[0]),
+      IrWriteLine write => write with { Value = (IrExpr)parts[0] },
       IrIf => new IrIf((IrExpr)parts[0], (IrBlock)parts[1], parts.Count > 2 ? (IrBlock)parts[2] : null),
       IrWhile => new IrWhile((IrExpr)parts[0], (IrBlock)parts[1]),
       IrDoWhile => new IrDoWhile((IrBlock)parts[0], (IrExpr)parts[1]),

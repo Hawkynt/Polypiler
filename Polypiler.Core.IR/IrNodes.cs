@@ -1165,6 +1165,10 @@ public sealed record IrFieldStore(IrExpr Target, IrField Field, IrExpr Value) : 
 /// <param name="Expression">The expression.</param>
 public sealed record IrExprStmt(IrExpr Expression) : IrStmt;
 
+/// <summary>Writes a line to standard output after evaluating its text.</summary>
+/// <param name="Value">The string to write, without the target's line terminator.</param>
+public sealed record IrWriteLine(IrExpr Value) : IrStmt;
+
 /// <summary>A conditional statement.</summary>
 /// <param name="Condition">The truth value deciding the branch.</param>
 /// <param name="Then">Executed when the condition holds.</param>
