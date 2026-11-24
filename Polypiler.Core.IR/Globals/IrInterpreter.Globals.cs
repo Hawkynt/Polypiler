@@ -45,7 +45,7 @@ public static partial class IrInterpreter {
   /// Instantiates a module with a standard output sink shared by its initializers and all calls.
   /// </summary>
   /// <param name="module">The module.</param>
-  /// <param name="standardOutput">Receives each written line as text without an added terminator.</param>
+  /// <param name="standardOutput">Receives each written line without a terminator. A null string arrives as empty text.</param>
   /// <returns>The instance.</returns>
   /// <exception cref="ArgumentNullException"><paramref name="standardOutput"/> is <see langword="null"/>.</exception>
   /// <exception cref="IrTrapException">An initializer trapped.</exception>

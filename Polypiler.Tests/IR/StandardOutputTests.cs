@@ -29,6 +29,32 @@ public sealed class StandardOutputTests {
     }
   }
 
+  [TestCase(false)]
+  [TestCase(true)]
+  public void AStringWithNoValueWritesAnEmptyLine(bool fromCall) {
+    var missing = new IrNull(IrType.String);
+    IrExpr value = fromCall ? new IrCall("Missing", IrType.String, []) : missing;
+    var module = new IrModule("NullableOutput", [
+      Function("Run", true, IrType.I32, [], First(), new IrWriteLine(value),
+        new IrWriteLine(new IrStrConst("")), new IrReturn(Int(42))),
+      Function("Missing", false, IrType.String, [], new IrReturn(missing))
+    ]);
+    foreach (var candidate in Variants(module)) {
+      Assert.That(IrVerifier.Verify(candidate), Is.Empty);
+      var output = new List<string>();
+      Assert.That(IrInterpreter.Instantiate(candidate, output.Add).Call("Run"), Is.EqualTo(42));
+      Assert.That(output, Is.EqualTo(new[] { "first", "", "" }));
+    }
+  }
+
+  [Test]
+  public void AWriteOfNullStillRequiresAnOutputSink() {
+    var module = new IrModule("NullableOutput", [Function("Run", true, IrType.Void, [],
+      new IrWriteLine(new IrNull(IrType.String)), new IrReturn(null))]);
+    Assert.That(() => IrInterpreter.Call(module, "Run", []),
+      Throws.InvalidOperationException.With.Message.Contains("output sink"));
+  }
+
   [Test]
   public void EarlierOutputSurvivesAnOperandThatTraps() {
     foreach (var module in Variants(FromOracle())) {
