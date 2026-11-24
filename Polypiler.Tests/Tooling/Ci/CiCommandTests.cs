@@ -91,7 +91,7 @@ public sealed class CiCommandTests {
 
   [Test]
   public void Env_Repository_NamesTheLockedVersions()
-    => Assert.That(Invoke(PrototypeFixture.RepositoryRoot, "env", "--layer", "core").Output, Does.Match(@"^dotnet-sdk=\d+\.\d+\.\d+\nnode=\d+\.\d+\.\d+\n$"));
+    => Assert.That(Invoke(PrototypeFixture.RepositoryRoot, "env", "--layer", "core").Output, Does.Match(@"^cmd=\d+\.\d+\.\d+\ndotnet-sdk=\d+\.\d+\.\d+\nnode=\d+\.\d+\.\d+\n$"));
 
   /// <summary>Test design 15: an unknown layer.</summary>
   [Test]

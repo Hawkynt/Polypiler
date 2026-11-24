@@ -52,6 +52,7 @@ blocks:
   - { first: PLY2500, last: PLY2599, area: ruby }
   - { first: PLY2600, last: PLY2699, area: visualbasic }
   - { first: PLY2700, last: PLY2799, area: vintagebasic }
+  - { first: PLY2800, last: PLY2899, area: batch }
   - { first: PLY3000, last: PLY3999, area: formats }
   - { first: PLY3000, last: PLY3099, area: msil }
   - { first: PLY3100, last: PLY3199, area: jvm }
@@ -1917,6 +1918,24 @@ codes:
     area: python
     owner: BE-PY-FUNCTIONS
     surfaces: standard error of polypiler translate --to python; stops emission, no file is written
+  - code: PLY2800
+    severity: error
+    exit: InvalidSource
+    title: malformed cmd Batch source
+    message: "invalid Batch script: <detail>"
+    rule: batch.frontend.syntax
+    area: batch
+    owner: "#1455"
+    surfaces: standard error of polypiler translate --from batch; stops import
+  - code: PLY2802
+    severity: error
+    exit: UnsupportedConstruct
+    title: construct outside the cmd Batch source profile
+    message: "'<construct>' is not supported by the cmd Batch frontend"
+    rule: batch.frontend.profile
+    area: batch
+    owner: "#1455"
+    surfaces: standard error of polypiler translate --from batch; stops import
   - code: PLY3935
     severity: error
     exit: OracleFailure

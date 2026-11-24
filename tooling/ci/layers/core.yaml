@@ -3,7 +3,7 @@
 # Format: spec/schemas/ci-layer.schema.json. node runs the generated JavaScript of the acceptance tests.
 schema: 1
 layer: core
-toolchains: [dotnet-sdk, node]
-os: [ubuntu-latest, windows-latest]
+toolchains: [dotnet-sdk, node, cmd]
+os: [ubuntu-latest, windows-2025]
 paths: ["**"]
 always: true
