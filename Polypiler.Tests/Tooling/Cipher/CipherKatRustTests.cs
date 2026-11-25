@@ -425,6 +425,19 @@ public sealed class CipherKatRustTests {
     Assert.That(KatRustCrate.ReadTests("error[E0425]: cannot find value `x`\n"), Is.Empty, "a build that failed ran no test");
   }
 
+  /// <summary>#1437: harness panic origins with slashes, backslashes or absolute paths stay distinct from translated panics.</summary>
+  [TestCase("tests/kat.rs:40:13", "mismatch", "mismatch")]
+  [TestCase(@"tests\kat.rs:40:13", "mismatch", "mismatch")]
+  [TestCase("/tmp/work/tests/kat.rs:40:13", "mismatch", "mismatch")]
+  [TestCase(@"C:\work\tests\kat.rs:40:13", "mismatch", "mismatch")]
+  [TestCase("crate/src/xorsum.rs:26:9", "boom", "the translation panicked: boom")]
+  [TestCase(@"crate\src\xorsum.rs:26:9", "boom", "the translation panicked: boom")]
+  public void CargoTest_ClassifiesPanicOriginsAcrossHosts(string origin, string detail, string expected) {
+    var output = $"running 1 test\ntest kat_1 ... FAILED\n\nfailures:\n\n---- kat_1 stdout ----\nthread 'kat_1' panicked at {origin}:\n{detail}\n";
+    var outcomes = KatRustCrate.ReadTests(output);
+    Assert.That(outcomes["kat_1"], Is.EqualTo(new KatRustOutcome(false, expected)));
+  }
+
   [TestCase("   Compiling k v0.1.0\nerror[E0425]: cannot find value `x` in this scope\n --> src/m.rs:1:1\nerror: could not compile `k` (lib) due to 1 previous error\n", "E0425: cannot find value `x` in this scope")]
   [TestCase("error: failed to parse manifest at `/w/Cargo.toml`\r\n", "failed to parse manifest at `/w/Cargo.toml`")]
   [TestCase("error: could not compile `k` (lib) due to 1 previous error\n", "could not compile `k` (lib) due to 1 previous error")]

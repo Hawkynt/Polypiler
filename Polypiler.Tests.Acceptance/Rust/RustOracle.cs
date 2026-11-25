@@ -248,7 +248,14 @@ internal static class RustOracle {
 
   /// <summary>Runs a program in a folder and waits for it: its exit code, standard output and standard error.</summary>
   internal static (int ExitCode, string Output, string Error) Run(string program, string directory, params string[] arguments) {
-    var start = new ProcessStartInfo(program) { WorkingDirectory = directory, RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
+    var start = new ProcessStartInfo(program) {
+      WorkingDirectory = directory,
+      RedirectStandardOutput = true,
+      RedirectStandardError = true,
+      StandardOutputEncoding = Encoding.UTF8,
+      StandardErrorEncoding = Encoding.UTF8,
+      UseShellExecute = false
+    };
     foreach (var argument in arguments)
       start.ArgumentList.Add(argument);
 

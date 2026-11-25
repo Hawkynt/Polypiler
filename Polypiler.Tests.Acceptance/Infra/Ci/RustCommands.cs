@@ -137,6 +137,14 @@ public sealed partial class RustCommands {
   public static string? SmokeProblem(string output)
     => Passed(output) > 0 ? null : "a smoke crate must run at least one test, and cargo test passed none";
 
+  /// <summary>Removes ANSI CSI colour and formatting escape sequences from tool output.</summary>
+  /// <param name="text">The output text.</param>
+  /// <returns>The plain text without escape sequences.</returns>
+  public static string StripAnsi(string text) {
+    ArgumentNullException.ThrowIfNull(text);
+    return AnsiEscape().Replace(text, string.Empty);
+  }
+
   private static int Count(string output, string outcome) {
     ArgumentNullException.ThrowIfNull(output);
     return TestResult().Matches(output).Sum(match => int.Parse(match.Groups[outcome].Value, CultureInfo.InvariantCulture));
@@ -152,6 +160,7 @@ public sealed partial class RustCommands {
     var environment = new Dictionary<string, string>(StringComparer.Ordinal) {
       [OfflineVariable] = "true",
       ["CARGO_TERM_COLOR"] = "never",
+      ["NO_COLOR"] = "1",
       ["RUSTUP_TOOLCHAIN"] = this.Stable,
       ["RUSTUP_AUTO_INSTALL"] = "0"
     };
@@ -168,5 +177,8 @@ public sealed partial class RustCommands {
 
   [GeneratedRegex(@"^test result: \w+\. (?<passed>\d+) passed; (?<failed>\d+) failed;", RegexOptions.Multiline | RegexOptions.CultureInvariant)]
   private static partial Regex TestResult();
+
+  [GeneratedRegex(@"\x1B\[[0-9;?]*[ -/]*[@-~]", RegexOptions.CultureInvariant)]
+  private static partial Regex AnsiEscape();
 
 }

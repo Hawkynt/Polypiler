@@ -536,7 +536,7 @@ public static partial class KatRustCrate {
     var panics = new Dictionary<string, string>(StringComparer.Ordinal);
     foreach (Match panic in PanicLine().Matches(text)) {
       var message = panic.Groups["message"].Value.Trim();
-      panics.TryAdd(panic.Groups["name"].Value, panic.Groups["at"].Value.StartsWith("tests/", StringComparison.Ordinal) ? message : $"the translation panicked: {message}");
+      panics.TryAdd(panic.Groups["name"].Value, IsHarnessOrigin(panic.Groups["at"].Value) ? message : $"the translation panicked: {message}");
     }
 
     var outcomes = new Dictionary<string, KatRustOutcome>(StringComparer.Ordinal);
@@ -562,6 +562,11 @@ public static partial class KatRustCrate {
 
     var code = error.Groups["code"].Value;
     return code.Length == 0 ? error.Groups["message"].Value : $"{code}: {error.Groups["message"].Value}";
+  }
+
+  private static bool IsHarnessOrigin(string location) {
+    var normalized = location.Replace('\\', '/');
+    return normalized.StartsWith("tests/", StringComparison.Ordinal) || normalized.EndsWith("/tests/kat.rs", StringComparison.Ordinal);
   }
 
   private static bool Summary(string message)

@@ -48,7 +48,7 @@ public static class CargoMessageParser {
       var code = message.TryGetProperty("code", out var codeElement) && codeElement.ValueKind == JsonValueKind.Object ? codeElement.GetProperty("code").GetString() : null;
       var span = message.TryGetProperty("spans", out var spans) ? spans.EnumerateArray().FirstOrDefault(candidate => candidate.GetProperty("is_primary").GetBoolean()) : default;
       messages.Add(span.ValueKind == JsonValueKind.Object
-        ? new CargoMessage(level, code, span.GetProperty("file_name").GetString(), span.GetProperty("line_start").GetInt32(), span.GetProperty("column_start").GetInt32(), text)
+        ? new CargoMessage(level, code, span.GetProperty("file_name").GetString()?.Replace('\\', '/'), span.GetProperty("line_start").GetInt32(), span.GetProperty("column_start").GetInt32(), text)
         : new CargoMessage(level, code, null, 0, 0, text));
     }
 
