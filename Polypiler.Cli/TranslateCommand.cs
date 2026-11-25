@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using Polypiler.Core;
 using Polypiler.Core.Backends.Batch;
+using Polypiler.Core.Backends.Cpp;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.Backends.Jvm;
@@ -15,6 +16,7 @@ using Polypiler.Core.Backends.Perl;
 using Polypiler.Core.Backends.Python;
 using Polypiler.Core.Backends.Rust;
 using Polypiler.Core.Frontends.Batch;
+using Polypiler.Core.Frontends.Cpp;
 using Polypiler.Core.Frontends.CSharp;
 using Polypiler.Core.Frontends.JavaScript;
 using Polypiler.Core.Frontends.Jvm;
@@ -121,12 +123,12 @@ public sealed partial class TranslateCommand : ICliCommand {
     [Export] = "JavaScript, MSIL and JVM: the functions or methods to translate",
     [ExplainTypes] = "JavaScript: write why every value has its type to standard output",
     [BatchDialectOption] = "Batch source: cmd.exe (the default) or MS-DOS 6.22 COMMAND.COM",
-    [Profile] = "the target profile: a target framework of C#, a language level of JavaScript, a version of Python, an edition of Rust, a Perl version, an MSIL framework or a JVM classfile version",
+    [Profile] = "the target profile: a target framework of C#, a language level of JavaScript, a version of Python, an edition of Rust, a Perl version, a C++ standard, an MSIL framework or a JVM classfile version",
     [Module] = "JavaScript: how the file is packaged",
     [Global] = "JavaScript: the global object a script declares",
     [TypedArrays] = "JavaScript: an ECMAScript 5 engine with typed arrays",
     [Float] = "the floating-point mode",
-    [Namespace] = "C#: the namespace of the generated code",
+    [Namespace] = "C# and C++: the namespace of the generated code",
     [Instantiate] = "C#: an instantiation of a public generic method that the class itself does not use",
     [OverflowChecksOption] = "Rust: what an overflowing operator does, as rustc -C overflow-checks: panic (debug) or wrap (release); by default what the Cargo profile gives",
     [CargoProfileOption] = "Rust: the Cargo profile whose overflow-checks apply when --overflow-checks is not given (default: dev)",
@@ -169,7 +171,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     new("perl", [new(PerlContractOption, "<file-or-line>")], _ => null, ImportPerl),
     new("batch", [new(BatchDialectOption, "<cmd|dos622>")], BatchDialectMisuse, ImportBatch),
     new("msil", [new(Export, "<name>[,<name>...]")], ExportMisuse, null, ImportMsil),
-    new("jvm", [new(Export, "<name>[,<name>...]")], ExportMisuse, null, ImportJvm)
+    new("jvm", [new(Export, "<name>[,<name>...]")], ExportMisuse, null, ImportJvm),
+    new("cpp", [], _ => null, ImportCpp)
   ];
 
   /// <summary>The target languages; another one is another entry.</summary>
@@ -181,7 +184,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     Perl(Implementations),
     Batch(),
     Msil(Implementations),
-    Jvm(Implementations)
+    Jvm(Implementations),
+    Cpp(Implementations)
   ];
 
   /// <summary>
@@ -232,7 +236,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// <param name="capabilities">The table the JavaScript backend chooses its constructs from.</param>
   /// <returns>The process exit code.</returns>
   public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, JavaScriptCapabilities capabilities)
-    => Run(arguments, output, error, [JavaScript(capabilities, Implementations), CSharp(CSharpCapabilities.Default, Implementations), Python(PythonCapabilities.Standard, Implementations), Rust(RustCapabilities.Default, Implementations), Perl(Implementations), Batch(), Msil(Implementations), Jvm(Implementations)]);
+    => Run(arguments, output, error, [JavaScript(capabilities, Implementations), CSharp(CSharpCapabilities.Default, Implementations), Python(PythonCapabilities.Standard, Implementations), Rust(RustCapabilities.Default, Implementations), Perl(Implementations), Batch(), Msil(Implementations), Jvm(Implementations), Cpp(Implementations)]);
 
   /// <summary>Runs the command with portable floating-point implementations of the caller's in place of the precomputed ones.</summary>
   /// <param name="arguments">The arguments after the word <c>translate</c>.</param>
@@ -244,7 +248,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// </param>
   /// <returns>The process exit code.</returns>
   public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Func<IrModule> implementations)
-    => Run(arguments, output, error, [JavaScript(JavaScriptCapabilities.Standard, implementations), CSharp(CSharpCapabilities.Default, implementations), Python(PythonCapabilities.Standard, implementations), Rust(RustCapabilities.Default, implementations), Perl(implementations), Batch(), Msil(implementations), Jvm(implementations)]);
+    => Run(arguments, output, error, [JavaScript(JavaScriptCapabilities.Standard, implementations), CSharp(CSharpCapabilities.Default, implementations), Python(PythonCapabilities.Standard, implementations), Rust(RustCapabilities.Default, implementations), Perl(implementations), Batch(), Msil(implementations), Jvm(implementations), Cpp(implementations)]);
 
   /// <summary>Runs <c>polypiler translate</c> with the arguments, the command made with the given backends.</summary>
   private static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Backend[] backends) {
@@ -600,6 +604,16 @@ public sealed partial class TranslateCommand : ICliCommand {
     return (imported.Module, failure, []);
   }
 
+  private static (IrModule? Module, int ExitCode, IReadOnlyList<ManifestMessage> Caveats) ImportCpp(
+    string file, string source, IReadOnlyDictionary<string, string> options, CliContext context) {
+    var imported = CppFrontend.Import(file, source);
+    foreach (var diagnostic in imported.Diagnostics)
+      context.Report(diagnostic);
+
+    var failure = imported.Diagnostics.Any(diagnostic => diagnostic.ExitCode == ExitCode.InvalidSource) ? InvalidSource : UnsupportedConstruct;
+    return (imported.Module, failure, []);
+  }
+
   /// <summary>The text of a file a JavaScript module requires, or <see langword="null"/> when there is none.</summary>
   private static string? Required(string file) => File.Exists(file) ? File.ReadAllText(file) : null;
 
@@ -760,6 +774,24 @@ public sealed partial class TranslateCommand : ICliCommand {
 
   private static (JvmProfile? Profile, string? Error) JvmProfileOf(IReadOnlyDictionary<string, string> options) {
     JvmProfile.TryParse(options.GetValueOrDefault(Profile), options.GetValueOrDefault(PackageFormatOption), out var profile, out var error);
+    return (profile, error);
+  }
+
+  /// <summary>The C++ backend; <c>--profile</c> accepts <c>cpp/cpp17</c>, <c>cpp/cpp20</c> or <c>cpp/cpp23</c>, and <c>--namespace</c> overrides the C++ namespace.</summary>
+  private static Backend Cpp(Func<IrModule> implementations) => new("cpp",
+    CppEmitter.Runtime,
+    options => CppProfileOf(options).Profile!.ToString(),
+    RuleTarget.Neutral,
+    [new(Profile, Choice(CppProfile.Names)), new(Namespace, "<name>"), new(Float, FloatChoice)],
+    options => FloatMisuse(options) ?? CppProfileOf(options).Error,
+    (module, options) => CppEmitter.Legalize(module, implementations, CppProfileOf(options).Profile!, FloatModeOf(options)),
+    (module, options) => CppEmitter.Check(module, CppProfileOf(options).Profile!),
+    (module, options, _, _) => CppEmitter.EmitTarget(module, CppProfileOf(options).Profile!, new CppEmitOptions {
+      Namespace = options.GetValueOrDefault(Namespace)
+    }));
+
+  private static (CppProfile? Profile, string? Error) CppProfileOf(IReadOnlyDictionary<string, string> options) {
+    CppProfile.TryParse(options.GetValueOrDefault(Profile), out var profile, out var error);
     return (profile, error);
   }
 

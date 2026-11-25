@@ -161,6 +161,19 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY1107](PLY1107.md) | error | 3 (UnsupportedConstruct) | `a thrown value that is not an Error reaches <place>, which observes it` | #1323 |
 | [PLY1152](PLY1152.md) | error | 3 (UnsupportedConstruct) | `'<operation>' cannot be expressed in JavaScript profile '<profile>'` | PROTOTYPE |
 
+## PLY1400–PLY1499 · cpp
+
+| Code | Severity | Exit code | Message | Owner |
+| --- | --- | --- | --- | --- |
+| [PLY1400](PLY1400.md) | error | 4 (InvalidSource) | `C++ syntax error: <detail>` | #400 |
+| [PLY1401](PLY1401.md) | error | 3 (UnsupportedConstruct) | `C++ construct '<construct>' is not supported by the C++ frontend` | #400 |
+| [PLY1402](PLY1402.md) | error | 3 (UnsupportedConstruct) | `C++ type '<type>' is not supported by the C++ frontend` | #400 |
+| [PLY1403](PLY1403.md) | error | 3 (UnsupportedConstruct) | `C++ call '<call>' is not supported by the C++ frontend` | #400 |
+| [PLY1404](PLY1404.md) | error | 4 (InvalidSource) | `unresolved C++ symbol '<symbol>'` | #400 |
+| [PLY1450](PLY1450.md) | error | 3 (UnsupportedConstruct) | `construct '<construct>' cannot be emitted as C++` | #399 |
+| [PLY1451](PLY1451.md) | error | 3 (UnsupportedConstruct) | `type '<type>' has no C++ representation in profile '<profile>'` | #399 |
+| [PLY1452](PLY1452.md) | error | 3 (UnsupportedConstruct) | `intrinsic '<intrinsic>' cannot be emitted as C++` | #399 |
+
 ## PLY1500–PLY1599 · rust
 
 | Code | Severity | Exit code | Message | Owner |
