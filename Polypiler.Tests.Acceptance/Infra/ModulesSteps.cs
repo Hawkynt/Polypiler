@@ -34,10 +34,14 @@ public sealed class ModulesSteps {
   /// <summary>The projects of the languages added after the module issue, each a frontend or a backend of its own.</summary>
   private static readonly string[] _languages = [
     "Polypiler.Core.Backends.Batch",
+    "Polypiler.Core.Backends.Jvm",
+    "Polypiler.Core.Backends.Msil",
     "Polypiler.Core.Backends.Perl",
     "Polypiler.Core.Backends.Python",
     "Polypiler.Core.Backends.Rust",
     "Polypiler.Core.Frontends.Batch",
+    "Polypiler.Core.Frontends.Jvm",
+    "Polypiler.Core.Frontends.Msil",
     "Polypiler.Core.Frontends.Perl",
     "Polypiler.Core.Frontends.Python",
     "Polypiler.Core.Frontends.Rust"

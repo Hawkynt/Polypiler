@@ -65,11 +65,15 @@
     <ProjectReference Include="..\Polypiler.Cli\Polypiler.Cli.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Analysis\Polypiler.Core.Analysis.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Backends.CSharp\Polypiler.Core.Backends.CSharp.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Backends.Jvm\Polypiler.Core.Backends.Jvm.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Backends.Msil\Polypiler.Core.Backends.Msil.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Backends.Perl\Polypiler.Core.Backends.Perl.csproj" />
     <ProjectReference Include="..\Polypiler.Core.BinaryFormats\Polypiler.Core.BinaryFormats.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Backends.Rust\Polypiler.Core.Backends.Rust.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Frontends.CSharp\Polypiler.Core.Frontends.CSharp.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Frontends.JavaScript\Polypiler.Core.Frontends.JavaScript.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Frontends.Jvm\Polypiler.Core.Frontends.Jvm.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Frontends.Msil\Polypiler.Core.Frontends.Msil.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Frontends.Perl\Polypiler.Core.Frontends.Perl.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Frontends.Python\Polypiler.Core.Frontends.Python.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Frontends.Rust\Polypiler.Core.Frontends.Rust.csproj" />
