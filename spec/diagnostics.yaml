@@ -1945,6 +1945,15 @@ codes:
     area: batch
     owner: "#1456"
     surfaces: standard error of polypiler translate --to batch; stops emission
+  - code: PLY2851
+    severity: error
+    exit: UnsupportedConstruct
+    title: construct or resource requirement outside the dos622 Batch target profile
+    message: "'<construct>' cannot be emitted for the dos622 Batch profile"
+    rule: batch.backend.dos622
+    area: batch
+    owner: "#1467"
+    surfaces: standard error of polypiler translate --to batch --profile dos622; stops emission
   - code: PLY3935
     severity: error
     exit: OracleFailure
