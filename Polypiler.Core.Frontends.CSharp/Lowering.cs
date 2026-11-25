@@ -661,6 +661,8 @@ internal sealed partial class Lowering(string path, BoundModel model) {
         break;
       case InvocationExpressionSyntax when this.Paired(expression, into):
         break;
+      case InvocationExpressionSyntax invocation when this.ConsoleWriteLine(invocation, into):
+        break;
       case AwaitExpressionSyntax:
       case InvocationExpressionSyntax:
       case BaseObjectCreationExpressionSyntax when this.ClassOf(model.GetTypeInfo(expression).Type) is not null:
@@ -669,6 +671,24 @@ internal sealed partial class Lowering(string path, BoundModel model) {
       default:
         throw new UnsupportedException(expression, expression.Kind().ToString());
     }
+  }
+
+  /// <summary>Lowers <c>System.Console.WriteLine(string)</c> to <see cref="IrWriteLine"/>; other overloads are refused.</summary>
+  private bool ConsoleWriteLine(InvocationExpressionSyntax invocation, List<IrStmt> into) {
+    if (model.GetSymbolInfo(invocation).Symbol is not IMethodSymbol method
+        || method.Name != "WriteLine"
+        || method.ContainingType.ToDisplayString() != "System.Console")
+      return false;
+
+    if (method.Parameters is not [{ Type.SpecialType: SpecialType.System_String }])
+      throw new UnsupportedException(invocation, Member(method));
+
+    var argument = invocation.ArgumentList.Arguments[0].Expression;
+    var value = model.GetConstantValue(argument) is { HasValue: true, Value: null }
+      ? new IrNull(IrType.String)
+      : this.Natural(argument, IrType.String);
+    into.Add(new IrWriteLine(value));
+    return true;
   }
 
   private void Assignment(AssignmentExpressionSyntax assignment, List<IrStmt> into) {

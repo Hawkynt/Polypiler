@@ -5,15 +5,29 @@ namespace Polypiler.Core.Frontends.Batch;
 
 public static partial class BatchFrontend {
 
-  private sealed class Arithmetic(string text, int line, Func<string, IrLocal> local) {
+  private sealed class Arithmetic(string text, int line, Func<string, IrLocal> local, (char Letter, IrLocal Local)? forVariable = null) {
 
     private int _position;
 
     public IrExpr Read() {
-      var value = this.Sum(0);
+      var value = this.BitAnd(0);
       this.SkipSpace();
       if (this._position != text.Length)
         throw new Refusal(line, $"arithmetic syntax near {text[this._position..]}");
+      return value;
+    }
+
+    private IrExpr BitAnd(int depth) {
+      var value = this.Shift(depth);
+      while (this.TakeSingle('&'))
+        value = new IrBinary(IrBinaryOp.And, value, this.Shift(depth));
+      return value;
+    }
+
+    private IrExpr Shift(int depth) {
+      var value = this.Sum(depth);
+      while (this.Take(">>"))
+        value = new IrBinary(IrBinaryOp.ShiftRight, value, this.Sum(depth));
       return value;
     }
 
@@ -42,7 +56,7 @@ public static partial class BatchFrontend {
 
       var negative = this.Take('-');
       if (this.Take('(')) {
-        var inner = this.Sum(depth + 1);
+        var inner = this.BitAnd(depth + 1);
         if (!this.Take(')'))
           throw new Refusal(line, "missing close parenthesis", malformed: true);
         return Negative(inner, negative);
@@ -51,6 +65,18 @@ public static partial class BatchFrontend {
       var start = this._position;
       if (start == text.Length)
         throw new Refusal(line, "missing arithmetic operand", malformed: true);
+      if (text[start] == '%') {
+        if (start + 2 < text.Length && text[start + 1] == '%' && char.IsAsciiLetter(text[start + 2])
+            && (start + 3 == text.Length || (!char.IsAsciiLetterOrDigit(text[start + 3]) && text[start + 3] != '_'))) {
+          var letter = text[start + 2];
+          if (forVariable is { } bound && bound.Letter == letter) {
+            this._position += 3;
+            return Negative(new IrLocalRef(bound.Local), negative);
+          }
+          throw new Refusal(line, $"unbound FOR variable %%{letter}");
+        }
+        throw new Refusal(line, $"arithmetic syntax near {text[start..]}");
+      }
       if (char.IsAsciiDigit(text[start])) {
         while (this._position < text.Length && char.IsAsciiDigit(text[this._position]))
           ++this._position;
@@ -76,6 +102,24 @@ public static partial class BatchFrontend {
       if (this._position == text.Length || text[this._position] != token)
         return false;
       ++this._position;
+      return true;
+    }
+
+    private bool TakeSingle(char token) {
+      this.SkipSpace();
+      if (this._position == text.Length || text[this._position] != token)
+        return false;
+      if (this._position + 1 < text.Length && text[this._position + 1] == token)
+        return false;
+      ++this._position;
+      return true;
+    }
+
+    private bool Take(string token) {
+      this.SkipSpace();
+      if (!text.AsSpan(this._position).StartsWith(token, StringComparison.Ordinal))
+        return false;
+      this._position += token.Length;
       return true;
     }
 
