@@ -75,6 +75,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   private const string Export = "--export";
   private const string ExplainTypes = "--explain-types";
   private const string Profile = "--profile";
+  private const string BatchDialectOption = "--batch-dialect";
   private const string LangVersion = "--langversion";
   private const string Module = "--module";
   private const string Global = "--global";
@@ -113,6 +114,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     [ExplainOpt] = "write every optimization applied to standard error",
     [Export] = "JavaScript: the functions to translate",
     [ExplainTypes] = "JavaScript: write why every value has its type to standard output",
+    [BatchDialectOption] = "Batch source: cmd.exe (the default) or MS-DOS 6.22 COMMAND.COM",
     [Profile] = "the target profile: a target framework of C#, a language level of JavaScript, a version of Python, an edition of Rust",
     [Module] = "JavaScript: how the file is packaged",
     [Global] = "JavaScript: the global object a script declares",
@@ -157,7 +159,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     new("python", [], _ => null, ImportPython),
     new("rust", [new(OverflowChecksOption, "<panic|wrap>"), new(CargoProfileOption, "<name>"), new(DebugAssertionsOption, "<on|off>")], OverflowChecksMisuse, ImportRust),
     new("perl", [new(PerlContractOption, "<file-or-line>")], _ => null, ImportPerl),
-    new("batch", [], _ => null, ImportBatch)
+    new("batch", [new(BatchDialectOption, "<cmd|dos622>")], BatchDialectMisuse, ImportBatch)
   ];
 
   /// <summary>The target languages; another one is another entry.</summary>
@@ -549,11 +551,16 @@ public sealed partial class TranslateCommand : ICliCommand {
 
   private static (IrModule? Module, int ExitCode, IReadOnlyList<ManifestMessage> Caveats) ImportBatch(
     string file, string source, IReadOnlyDictionary<string, string> options, CliContext context) {
-    var imported = BatchFrontend.Import(file, source);
+    var dialect = options.GetValueOrDefault(BatchDialectOption) == "dos622" ? BatchDialect.Dos622 : BatchDialect.Cmd;
+    var imported = BatchFrontend.Import(file, source, dialect);
     foreach (var diagnostic in imported.Diagnostics)
       context.Report(diagnostic);
     return (imported.Module, imported.Diagnostics.FirstOrDefault()?.ExitCode is { } code ? (int)code : InvalidSource, []);
   }
+
+  private static string? BatchDialectMisuse(IReadOnlyDictionary<string, string> options)
+    => options.TryGetValue(BatchDialectOption, out var name) && name is not ("cmd" or "dos622")
+      ? $"unknown Batch source dialect '{name}'; expected cmd or dos622" : null;
 
   /// <summary>The text of a file a JavaScript module requires, or <see langword="null"/> when there is none.</summary>
   private static string? Required(string file) => File.Exists(file) ? File.ReadAllText(file) : null;

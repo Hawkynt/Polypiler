@@ -8,24 +8,30 @@ namespace Polypiler.Core.Frontends.Batch;
 public static partial class BatchFrontend {
 
   private sealed class Script(IReadOnlyList<Instruction> instructions, IReadOnlyDictionary<string, int> labels,
-    IReadOnlyDictionary<string, IrLocal> locals) {
+    IReadOnlyDictionary<string, IrLocal> locals, Action<int[][], int[]>? validate = null) {
 
     public IrModule Lift(string name) {
       var edges = Enumerable.Range(0, instructions.Count).Select(this.Successors).ToArray();
       var reachable = this.Reachable(edges);
       this.CheckAssignments(edges, reachable);
       this.CheckReducible(edges, reachable);
+      validate?.Invoke(edges, reachable);
 
       var pc = new IrLocal("batchPc", IrType.I32);
       var result = new IrLocal("batchResult", IrType.I32);
-      var sections = reachable.Select(index => this.Section(index, edges[index], pc, result)).ToArray();
+      var used = reachable.SelectMany(index => References(instructions[index])).ToHashSet();
+      foreach (var index in reachable)
+        if (instructions[index] is Assignment { Value: not (IrConst or IrStrConst) } assignment)
+          used.Add(assignment.Destination);
+      var storage = locals.Values.Where(used.Contains).ToArray();
+      var sections = reachable.Select(index => this.Section(index, edges[index], pc, result, used)).ToArray();
       var drive = new IrWhile(new IrBinary(IrBinaryOp.NotEqual, new IrLocalRef(pc), Number(-1)),
         new([new IrSwitch(new IrLocalRef(pc), sections)]));
 
       // Definite assignment proves these storage initializers are never observable.
-      IrStmt[] statements = [.. locals.Values.Select(local => new IrDeclare(local, Number(0))),
+      IrStmt[] statements = [.. storage.Select(local => new IrDeclare(local, local.Type.IsString ? new IrStrConst("") : Number(0))),
         new IrDeclare(pc, Number(0)), new IrDeclare(result, Number(0)), drive, new IrReturn(new IrLocalRef(result))];
-      IrFunction run = new("Run", true, IrType.I32, [], [.. locals.Values, pc, result], new(statements));
+      IrFunction run = new("Run", true, IrType.I32, [], [.. storage, pc, result], new(statements));
       return new(name, [run]);
     }
 
@@ -72,19 +78,20 @@ public static partial class BatchFrontend {
       }
 
       var names = locals.ToDictionary(pair => pair.Value, pair => pair.Key);
-      foreach (var index in reachable) {
-        var expression = instructions[index] switch {
-          Assignment assignment => assignment.Value,
-          Jump jump => jump.Condition,
-          Exit exit => exit.Status,
-          _ => null
-        };
-        if (expression is null)
-          continue;
-        foreach (var reference in IrTree.Nodes(expression).OfType<IrLocalRef>())
-          if (!entry[index].Contains(reference.Local))
-            throw new Refusal(instructions[index].Line, $"read of {names[reference.Local]} before assignment");
-      }
+      foreach (var index in reachable)
+        foreach (var local in References(instructions[index]))
+          if (!entry[index].Contains(local))
+            throw new Refusal(instructions[index].Line, $"read of {names[local]} before assignment");
+    }
+
+    private static IEnumerable<IrLocal> References(Instruction instruction) {
+      var expression = instruction switch {
+        Assignment assignment => assignment.Value,
+        Jump jump => jump.Condition,
+        Exit exit => exit.Status,
+        _ => null
+      };
+      return expression is null ? [] : IrTree.Nodes(expression).OfType<IrLocalRef>().Select(reference => reference.Local);
     }
 
     private void CheckReducible(int[][] edges, int[] reachable) {
@@ -180,10 +187,11 @@ public static partial class BatchFrontend {
       }
     }
 
-    private IrSwitchSection Section(int index, int[] edges, IrLocal pc, IrLocal result) {
+    private IrSwitchSection Section(int index, int[] edges, IrLocal pc, IrLocal result, IReadOnlySet<IrLocal> used) {
       IrAssign Go(int destination) => new(pc, Number(destination));
       IrStmt[] statements = instructions[index] switch {
-        Assignment assignment => [new IrAssign(assignment.Destination, assignment.Value), Go(edges[0])],
+        Assignment assignment when used.Contains(assignment.Destination) => [new IrAssign(assignment.Destination, assignment.Value), Go(edges[0])],
+        Assignment => [Go(edges[0])],
         Jump { Condition: { } condition } => [new IrIf(condition, new([Go(edges[0])]), new([Go(edges[1])]))],
         Jump => [Go(edges[0])],
         Exit exit => [new IrAssign(result, exit.Status), Go(-1)],
