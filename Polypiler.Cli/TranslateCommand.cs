@@ -9,12 +9,16 @@ using Polypiler.Core;
 using Polypiler.Core.Backends.Batch;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
+using Polypiler.Core.Backends.Jvm;
+using Polypiler.Core.Backends.Msil;
 using Polypiler.Core.Backends.Perl;
 using Polypiler.Core.Backends.Python;
 using Polypiler.Core.Backends.Rust;
 using Polypiler.Core.Frontends.Batch;
 using Polypiler.Core.Frontends.CSharp;
 using Polypiler.Core.Frontends.JavaScript;
+using Polypiler.Core.Frontends.Jvm;
+using Polypiler.Core.Frontends.Msil;
 using Polypiler.Core.Frontends.Perl;
 using Polypiler.Core.Frontends.Python;
 using Polypiler.Core.Frontends.Rust;
@@ -95,6 +99,8 @@ public sealed partial class TranslateCommand : ICliCommand {
   private const string PerlContractOption = "--perl-contract";
   private const string ByteStorageOption = "--byte-storage";
   private const string ObjectModelOption = "--object-model";
+  private const string OutputTypeOption = "--output-type";
+  private const string PackageFormatOption = "--package-format";
 
   /// <summary>The caveat that records the overflow mode of a Rust import and where it came from.</summary>
   public const string RustOverflowCaveat = "rs-overflow-checks";
@@ -112,10 +118,10 @@ public sealed partial class TranslateCommand : ICliCommand {
     [Opt] = "the optimization level",
     [DisableOpt] = "optimizations not to apply",
     [ExplainOpt] = "write every optimization applied to standard error",
-    [Export] = "JavaScript: the functions to translate",
+    [Export] = "JavaScript, MSIL and JVM: the functions or methods to translate",
     [ExplainTypes] = "JavaScript: write why every value has its type to standard output",
     [BatchDialectOption] = "Batch source: cmd.exe (the default) or MS-DOS 6.22 COMMAND.COM",
-    [Profile] = "the target profile: a target framework of C#, a language level of JavaScript, a version of Python, an edition of Rust",
+    [Profile] = "the target profile: a target framework of C#, a language level of JavaScript, a version of Python, an edition of Rust, a Perl version, an MSIL framework or a JVM classfile version",
     [Module] = "JavaScript: how the file is packaged",
     [Global] = "JavaScript: the global object a script declares",
     [TypedArrays] = "JavaScript: an ECMAScript 5 engine with typed arrays",
@@ -132,7 +138,9 @@ public sealed partial class TranslateCommand : ICliCommand {
     [Bind] = "JavaScript: the binding module or global object of a native library, repeatable",
     [PerlContractOption] = "Perl: file holding source contract lines for exported subroutines",
     [ByteStorageOption] = "Perl: how u8[] byte buffers are stored (array or string)",
-    [ObjectModelOption] = "Perl: object representation for classes and interfaces (blessed, moose or inside-out)"
+    [ObjectModelOption] = "Perl: object representation for classes and interfaces (blessed, moose or inside-out)",
+    [OutputTypeOption] = "MSIL: whether to emit a class library (library) or a runnable console executable (exe)",
+    [PackageFormatOption] = "JVM: whether to emit a JAR archive (jar) or standalone class files (class)"
   };
 
   private readonly Backend[] _backendsOfThis;
@@ -159,7 +167,9 @@ public sealed partial class TranslateCommand : ICliCommand {
     new("python", [], _ => null, ImportPython),
     new("rust", [new(OverflowChecksOption, "<panic|wrap>"), new(CargoProfileOption, "<name>"), new(DebugAssertionsOption, "<on|off>")], OverflowChecksMisuse, ImportRust),
     new("perl", [new(PerlContractOption, "<file-or-line>")], _ => null, ImportPerl),
-    new("batch", [new(BatchDialectOption, "<cmd|dos622>")], BatchDialectMisuse, ImportBatch)
+    new("batch", [new(BatchDialectOption, "<cmd|dos622>")], BatchDialectMisuse, ImportBatch),
+    new("msil", [new(Export, "<name>[,<name>...]")], ExportMisuse, null, ImportMsil),
+    new("jvm", [new(Export, "<name>[,<name>...]")], ExportMisuse, null, ImportJvm)
   ];
 
   /// <summary>The target languages; another one is another entry.</summary>
@@ -169,7 +179,9 @@ public sealed partial class TranslateCommand : ICliCommand {
     Python(PythonCapabilities.Standard, Implementations),
     Rust(RustCapabilities.Default, Implementations),
     Perl(Implementations),
-    Batch()
+    Batch(),
+    Msil(Implementations),
+    Jvm(Implementations)
   ];
 
   /// <summary>
@@ -220,7 +232,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// <param name="capabilities">The table the JavaScript backend chooses its constructs from.</param>
   /// <returns>The process exit code.</returns>
   public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, JavaScriptCapabilities capabilities)
-    => Run(arguments, output, error, [JavaScript(capabilities, Implementations), CSharp(CSharpCapabilities.Default, Implementations), Python(PythonCapabilities.Standard, Implementations), Rust(RustCapabilities.Default, Implementations), Perl(Implementations), Batch()]);
+    => Run(arguments, output, error, [JavaScript(capabilities, Implementations), CSharp(CSharpCapabilities.Default, Implementations), Python(PythonCapabilities.Standard, Implementations), Rust(RustCapabilities.Default, Implementations), Perl(Implementations), Batch(), Msil(Implementations), Jvm(Implementations)]);
 
   /// <summary>Runs the command with portable floating-point implementations of the caller's in place of the precomputed ones.</summary>
   /// <param name="arguments">The arguments after the word <c>translate</c>.</param>
@@ -232,7 +244,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// </param>
   /// <returns>The process exit code.</returns>
   public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Func<IrModule> implementations)
-    => Run(arguments, output, error, [JavaScript(JavaScriptCapabilities.Standard, implementations), CSharp(CSharpCapabilities.Default, implementations), Python(PythonCapabilities.Standard, implementations), Rust(RustCapabilities.Default, implementations), Perl(implementations), Batch()]);
+    => Run(arguments, output, error, [JavaScript(JavaScriptCapabilities.Standard, implementations), CSharp(CSharpCapabilities.Default, implementations), Python(PythonCapabilities.Standard, implementations), Rust(RustCapabilities.Default, implementations), Perl(implementations), Batch(), Msil(implementations), Jvm(implementations)]);
 
   /// <summary>Runs <c>polypiler translate</c> with the arguments, the command made with the given backends.</summary>
   private static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Backend[] backends) {
@@ -278,8 +290,9 @@ public sealed partial class TranslateCommand : ICliCommand {
       return (int)ExitCode.EnvironmentError;
 
     var bytes = File.ReadAllBytes(context.Resolve(file));
-    using var text = new StreamReader(new MemoryStream(bytes), Encoding.UTF8, true);
-    var (module, exitCode, caveats) = frontend.Import(file, text.ReadToEnd(), options, context);
+    var (module, exitCode, caveats) = frontend.ImportBytes is not null
+      ? frontend.ImportBytes(file, bytes, options, context)
+      : frontend.Import!(file, ReadText(bytes), options, context);
     if (module is null)
       return exitCode;
 
@@ -287,7 +300,12 @@ public sealed partial class TranslateCommand : ICliCommand {
       return Refuse(context, unused);
 
     var (optimized, applications) = Optimized(file, module, options, context, backend);
-    return Emit(optimized, options, context, backend, new Record(file, bytes, frontend.Name, caveats, applications));
+    return Emit(optimized, options, context, backend, new Record(file, bytes, frontend.Name, caveats, applications, frontend.ImportBytes is not null));
+  }
+
+  private static string ReadText(byte[] bytes) {
+    using var text = new StreamReader(new MemoryStream(bytes), Encoding.UTF8, true);
+    return text.ReadToEnd();
   }
 
   /// <summary>The level of <c>--opt</c>, or <see langword="null"/> for a value that names none.</summary>
@@ -440,7 +458,7 @@ public sealed partial class TranslateCommand : ICliCommand {
       var helpers = new List<EmittedHelper>();
       foreach (var generated in emission.Files) {
         helpers.AddRange(generated.Helpers);
-        var bytes = _utf8.GetBytes(generated.Content);
+        var bytes = generated.GetBytes();
         // A crate's sources lie in a folder of the output (src/lib.rs).
         Directory.CreateDirectory(Path.GetDirectoryName(Path.Combine(full, generated.Path))!);
         File.WriteAllBytes(Path.Combine(full, generated.Path), bytes);
@@ -561,6 +579,26 @@ public sealed partial class TranslateCommand : ICliCommand {
   private static string? BatchDialectMisuse(IReadOnlyDictionary<string, string> options)
     => options.TryGetValue(BatchDialectOption, out var name) && name is not ("cmd" or "dos622")
       ? $"unknown Batch source dialect '{name}'; expected cmd or dos622" : null;
+
+  private static (IrModule? Module, int ExitCode, IReadOnlyList<ManifestMessage> Caveats) ImportMsil(
+    string file, byte[] bytes, IReadOnlyDictionary<string, string> options, CliContext context) {
+    var imported = MsilFrontend.Import(file, bytes, options.TryGetValue(Export, out var names) ? new MsilImportOptions { Exports = Names(names) } : null);
+    foreach (var diagnostic in imported.Diagnostics)
+      context.Report(diagnostic);
+
+    var failure = imported.Diagnostics.Any(diagnostic => diagnostic.ExitCode == ExitCode.InvalidSource) ? InvalidSource : UnsupportedConstruct;
+    return (imported.Module, failure, []);
+  }
+
+  private static (IrModule? Module, int ExitCode, IReadOnlyList<ManifestMessage> Caveats) ImportJvm(
+    string file, byte[] bytes, IReadOnlyDictionary<string, string> options, CliContext context) {
+    var imported = JvmFrontend.Import(file, bytes, options.TryGetValue(Export, out var names) ? new JvmImportOptions { Exports = Names(names) } : null);
+    foreach (var diagnostic in imported.Diagnostics)
+      context.Report(diagnostic);
+
+    var failure = imported.Diagnostics.Any(diagnostic => diagnostic.ExitCode == ExitCode.InvalidSource) ? InvalidSource : UnsupportedConstruct;
+    return (imported.Module, failure, []);
+  }
 
   /// <summary>The text of a file a JavaScript module requires, or <see langword="null"/> when there is none.</summary>
   private static string? Required(string file) => File.Exists(file) ? File.ReadAllText(file) : null;
@@ -696,6 +734,38 @@ public sealed partial class TranslateCommand : ICliCommand {
 
   private static bool IsDosBatch(IReadOnlyDictionary<string, string> options) => options.GetValueOrDefault(Profile) == DosBatchEmitter.Profile;
 
+  /// <summary>The .NET MSIL backend; <c>--profile</c> selects <c>msil/net10</c> or <c>msil/net8</c>, and <c>--output-type</c> selects <c>library</c> or <c>exe</c>.</summary>
+  private static Backend Msil(Func<IrModule> implementations) => new("msil",
+    MsilEmitter.Runtime,
+    options => MsilProfileOf(options).Profile!.ToString(),
+    RuleTarget.Neutral,
+    [new(Profile, Choice(MsilProfile.Names)), new(OutputTypeOption, Choice(MsilProfile.OutputKindNames)), new(Float, FloatChoice)],
+    options => FloatMisuse(options) ?? MsilProfileOf(options).Error,
+    (module, options) => MsilEmitter.Legalize(module, implementations, MsilProfileOf(options).Profile!, FloatModeOf(options)),
+    (module, options) => MsilEmitter.Check(module, MsilProfileOf(options).Profile!),
+    (module, options, _, _) => MsilEmitter.EmitTarget(module, MsilProfileOf(options).Profile!));
+
+  private static (MsilProfile? Profile, string? Error) MsilProfileOf(IReadOnlyDictionary<string, string> options) {
+    MsilProfile.TryParse(options.GetValueOrDefault(Profile), options.GetValueOrDefault(OutputTypeOption), out var profile, out var error);
+    return (profile, error);
+  }
+
+  /// <summary>The JVM bytecode backend; <c>--profile</c> selects <c>jvm/21</c>, <c>jvm/17</c> or <c>jvm/8</c>, and <c>--package-format</c> selects <c>jar</c> or <c>class</c>.</summary>
+  private static Backend Jvm(Func<IrModule> implementations) => new("jvm",
+    JvmEmitter.Runtime,
+    options => JvmProfileOf(options).Profile!.ToString(),
+    RuleTarget.Neutral,
+    [new(Profile, Choice(JvmProfile.Names)), new(PackageFormatOption, Choice(JvmProfile.PackageFormatNames)), new(Float, FloatChoice)],
+    options => FloatMisuse(options) ?? JvmProfileOf(options).Error,
+    (module, options) => JvmEmitter.Legalize(module, implementations, JvmProfileOf(options).Profile!, FloatModeOf(options)),
+    (module, options) => JvmEmitter.Check(module, JvmProfileOf(options).Profile!),
+    (module, options, _, _) => JvmEmitter.EmitTarget(module, JvmProfileOf(options).Profile!));
+
+  private static (JvmProfile? Profile, string? Error) JvmProfileOf(IReadOnlyDictionary<string, string> options) {
+    JvmProfile.TryParse(options.GetValueOrDefault(Profile), options.GetValueOrDefault(PackageFormatOption), out var profile, out var error);
+    return (profile, error);
+  }
+
   /// <summary>The Perl backend; <c>--profile</c> accepts <c>perl/5.6</c>, <c>perl/5.8</c> or <c>perl/5</c>, <c>--byte-storage</c> chooses <c>array</c> or <c>string</c>, and <c>--object-model</c> chooses <c>blessed</c>, <c>moose</c> or <c>inside-out</c>.</summary>
   private static Backend Perl(Func<IrModule> implementations) => new("perl",
     PerlEmitter.Runtime,
@@ -806,7 +876,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// <param name="Language">The source language.</param>
   /// <param name="Caveats">What the imported code is known to do differently from the source.</param>
   /// <param name="Applications">Every rule the optimizer applied.</param>
-  private sealed record Record(string File, byte[] Bytes, string Language, IReadOnlyList<ManifestMessage> Caveats, IReadOnlyList<RuleApplication> Applications);
+  private sealed record Record(string File, byte[] Bytes, string Language, IReadOnlyList<ManifestMessage> Caveats, IReadOnlyList<RuleApplication> Applications, bool IsBinary = false);
 
   private static readonly UTF8Encoding _utf8 = new(false);
 
@@ -844,7 +914,7 @@ public sealed partial class TranslateCommand : ICliCommand {
         : null,
       Helpers = [.. helpers.Select(helper => new ManifestHelper(helper.Symbol, helper.Licence, helper.Origin, helper.CallSites, helper.Size, helper.DependsOn))],
       NativeDependencies = [.. module.ForeignFunctions.Select(function => function.Library).Distinct().Select(library => new ManifestNativeDependency(library, "unspecified", "NOASSERTION"))],
-      Licensing = new(OutputLicence.Of(OutputLicence.Header(_utf8.GetString(record.Bytes)), helpers.Select(helper => helper.Licence)), Obligations(helpers), []),
+      Licensing = new(OutputLicence.Of(record.IsBinary ? null : OutputLicence.Header(_utf8.GetString(record.Bytes)), helpers.Select(helper => helper.Licence)), Obligations(helpers), []),
       Caveats = [.. record.Caveats, .. ForeignCaveats(module, options, backend)],
       Optimization = new(options.GetValueOrDefault(Opt, "default"), options.TryGetValue(DisableOpt, out var disabled) ? disabled.Split(',') : [],
         [.. record.Applications.Select(application => application.Id).Distinct().Select(id => new ManifestPass(id, "unproven"))]),
@@ -887,7 +957,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     string Name,
     OptionSpec[] Options,
     Func<IReadOnlyDictionary<string, string>, string?> Misuse,
-    Func<string, string, IReadOnlyDictionary<string, string>, CliContext, (IrModule? Module, int ExitCode, IReadOnlyList<ManifestMessage> Caveats)> Import) {
+    Func<string, string, IReadOnlyDictionary<string, string>, CliContext, (IrModule? Module, int ExitCode, IReadOnlyList<ManifestMessage> Caveats)>? Import,
+    Func<string, byte[], IReadOnlyDictionary<string, string>, CliContext, (IrModule? Module, int ExitCode, IReadOnlyList<ManifestMessage> Caveats)>? ImportBytes = null) {
 
     /// <summary>Whether an option belongs to this language.</summary>
     public bool Has(string option) => this.Options.Any(candidate => candidate.Name == option);

@@ -1954,6 +1954,222 @@ codes:
     area: batch
     owner: "#1467"
     surfaces: standard error of polypiler translate --to batch --profile dos622; stops emission
+  - code: PLY3000
+    severity: error
+    exit: InvalidSource
+    title: input is not a PE/CLI assembly
+    message: "<detail>"
+    rule: msil.frontend.pe
+    area: msil
+    owner: "#833"
+    surfaces: standard error of polypiler translate --from msil; stops import
+  - code: PLY3001
+    severity: error
+    exit: InvalidSource
+    title: corrupt CLI metadata or method header
+    message: "<detail>"
+    rule: msil.frontend.metadata
+    area: msil
+    owner: "#833"
+    surfaces: standard error of polypiler translate --from msil; stops import
+  - code: PLY3002
+    severity: error
+    exit: InvalidSource
+    title: requested MSIL export not found or ambiguous
+    message: "<detail>"
+    rule: msil.frontend.export
+    area: msil
+    owner: "#833"
+    surfaces: standard error of polypiler translate --from msil; stops import
+  - code: PLY3003
+    severity: error
+    exit: UnsupportedConstruct
+    title: mixed-mode assembly not supported
+    message: "<detail>"
+    rule: msil.frontend.mixed-mode
+    area: msil
+    owner: "#833"
+    surfaces: standard error of polypiler translate --from msil; stops import
+  - code: PLY3004
+    severity: error
+    exit: UnsupportedConstruct
+    title: MSIL method has no IL body
+    message: "<detail>"
+    rule: msil.frontend.method-body
+    area: msil
+    owner: "#833"
+    surfaces: standard error of polypiler translate --from msil; stops import
+  - code: PLY3005
+    severity: error
+    exit: UnsupportedConstruct
+    title: unsupported CIL opcode
+    message: "<detail>"
+    rule: msil.frontend.opcode
+    area: msil
+    owner: "#833"
+    surfaces: standard error of polypiler translate --from msil; stops import
+  - code: PLY3006
+    severity: error
+    exit: UnsupportedConstruct
+    title: unsupported CLR type
+    message: "<detail>"
+    rule: msil.frontend.type
+    area: msil
+    owner: "#833"
+    surfaces: standard error of polypiler translate --from msil; stops import
+  - code: PLY3007
+    severity: error
+    exit: InvalidSource
+    title: unverifiable CIL evaluation stack
+    message: "<detail>"
+    rule: msil.frontend.stack
+    area: msil
+    owner: "#833"
+    surfaces: standard error of polypiler translate --from msil; stops import
+  - code: PLY3008
+    severity: error
+    exit: UnsupportedConstruct
+    title: unsupported MSIL call target
+    message: "<detail>"
+    rule: msil.frontend.call
+    area: msil
+    owner: "#833"
+    surfaces: standard error of polypiler translate --from msil; stops import
+  - code: PLY3050
+    severity: error
+    exit: UnsupportedConstruct
+    title: construct unsupported by MSIL backend
+    message: "construct '<construct>' is not supported by the MSIL backend"
+    rule: msil.backend.construct
+    area: msil
+    owner: "#833"
+    surfaces: standard error of polypiler translate --to msil; stops emission
+  - code: PLY3051
+    severity: error
+    exit: UnsupportedConstruct
+    title: type unsupported by MSIL backend
+    message: "type '<type>' is not supported by the MSIL backend"
+    rule: msil.backend.type
+    area: msil
+    owner: "#833"
+    surfaces: standard error of polypiler translate --to msil; stops emission
+  - code: PLY3052
+    severity: error
+    exit: UnsupportedConstruct
+    title: intrinsic unsupported by MSIL backend
+    message: "intrinsic '<intrinsic>' is not supported by the MSIL backend"
+    rule: msil.backend.intrinsic
+    area: msil
+    owner: "#833"
+    surfaces: standard error of polypiler translate --to msil; stops emission
+  - code: PLY3100
+    severity: error
+    exit: InvalidSource
+    title: input is not a JVM class file or JAR archive
+    message: "<detail>"
+    rule: jvm.frontend.format
+    area: jvm
+    owner: "#831"
+    surfaces: standard error of polypiler translate --from jvm; stops import
+  - code: PLY3101
+    severity: error
+    exit: InvalidSource
+    title: corrupt JVM class file or JAR archive
+    message: "<detail>"
+    rule: jvm.frontend.corrupt
+    area: jvm
+    owner: "#831"
+    surfaces: standard error of polypiler translate --from jvm; stops import
+  - code: PLY3102
+    severity: error
+    exit: UnsupportedConstruct
+    title: unsupported JVM class file version
+    message: "<detail>"
+    rule: jvm.frontend.version
+    area: jvm
+    owner: "#831"
+    surfaces: standard error of polypiler translate --from jvm; stops import
+  - code: PLY3103
+    severity: error
+    exit: UnsupportedConstruct
+    title: requested JVM export not found
+    message: "<detail>"
+    rule: jvm.frontend.export
+    area: jvm
+    owner: "#831"
+    surfaces: standard error of polypiler translate --from jvm; stops import
+  - code: PLY3104
+    severity: error
+    exit: UnsupportedConstruct
+    title: unsupported JVM bytecode opcode
+    message: "<detail>"
+    rule: jvm.frontend.opcode
+    area: jvm
+    owner: "#831"
+    surfaces: standard error of polypiler translate --from jvm; stops import
+  - code: PLY3105
+    severity: error
+    exit: UnsupportedConstruct
+    title: unsupported JVM field or method descriptor
+    message: "<detail>"
+    rule: jvm.frontend.descriptor
+    area: jvm
+    owner: "#831"
+    surfaces: standard error of polypiler translate --from jvm; stops import
+  - code: PLY3106
+    severity: error
+    exit: InvalidSource
+    title: invalid JVM StackMapTable attribute
+    message: "<detail>"
+    rule: jvm.frontend.stackmap
+    area: jvm
+    owner: "#831"
+    surfaces: standard error of polypiler translate --from jvm; stops import
+  - code: PLY3107
+    severity: error
+    exit: UnsupportedConstruct
+    title: invokedynamic not supported by JVM frontend
+    message: "<detail>"
+    rule: jvm.frontend.invokedynamic
+    area: jvm
+    owner: "#831"
+    surfaces: standard error of polypiler translate --from jvm; stops import
+  - code: PLY3108
+    severity: error
+    exit: UnsupportedConstruct
+    title: JVM method has no liftable bytecode body
+    message: "<detail>"
+    rule: jvm.frontend.method-body
+    area: jvm
+    owner: "#831"
+    surfaces: standard error of polypiler translate --from jvm; stops import
+  - code: PLY3150
+    severity: error
+    exit: UnsupportedConstruct
+    title: construct unsupported by JVM backend
+    message: "<detail>"
+    rule: jvm.backend.construct
+    area: jvm
+    owner: "#831"
+    surfaces: standard error of polypiler translate --to jvm; stops emission
+  - code: PLY3151
+    severity: error
+    exit: UnsupportedConstruct
+    title: type unsupported by JVM backend
+    message: "<detail>"
+    rule: jvm.backend.type
+    area: jvm
+    owner: "#831"
+    surfaces: standard error of polypiler translate --to jvm; stops emission
+  - code: PLY3152
+    severity: error
+    exit: UnsupportedConstruct
+    title: intrinsic unsupported by JVM backend
+    message: "<detail>"
+    rule: jvm.backend.intrinsic
+    area: jvm
+    owner: "#831"
+    surfaces: standard error of polypiler translate --to jvm; stops emission
   - code: PLY3935
     severity: error
     exit: OracleFailure

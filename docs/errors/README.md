@@ -275,6 +275,40 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY2850](PLY2850.md) | error | 3 (UnsupportedConstruct) | `'<construct>' cannot be emitted for the cmd Batch profile` | #1456 |
 | [PLY2851](PLY2851.md) | error | 3 (UnsupportedConstruct) | `'<construct>' cannot be emitted for the dos622 Batch profile` | #1467 |
 
+## PLY3000–PLY3099 · msil
+
+| Code | Severity | Exit code | Message | Owner |
+| --- | --- | --- | --- | --- |
+| [PLY3000](PLY3000.md) | error | 4 (InvalidSource) | `<detail>` | #833 |
+| [PLY3001](PLY3001.md) | error | 4 (InvalidSource) | `<detail>` | #833 |
+| [PLY3002](PLY3002.md) | error | 4 (InvalidSource) | `<detail>` | #833 |
+| [PLY3003](PLY3003.md) | error | 3 (UnsupportedConstruct) | `<detail>` | #833 |
+| [PLY3004](PLY3004.md) | error | 3 (UnsupportedConstruct) | `<detail>` | #833 |
+| [PLY3005](PLY3005.md) | error | 3 (UnsupportedConstruct) | `<detail>` | #833 |
+| [PLY3006](PLY3006.md) | error | 3 (UnsupportedConstruct) | `<detail>` | #833 |
+| [PLY3007](PLY3007.md) | error | 4 (InvalidSource) | `<detail>` | #833 |
+| [PLY3008](PLY3008.md) | error | 3 (UnsupportedConstruct) | `<detail>` | #833 |
+| [PLY3050](PLY3050.md) | error | 3 (UnsupportedConstruct) | `construct '<construct>' is not supported by the MSIL backend` | #833 |
+| [PLY3051](PLY3051.md) | error | 3 (UnsupportedConstruct) | `type '<type>' is not supported by the MSIL backend` | #833 |
+| [PLY3052](PLY3052.md) | error | 3 (UnsupportedConstruct) | `intrinsic '<intrinsic>' is not supported by the MSIL backend` | #833 |
+
+## PLY3100–PLY3199 · jvm
+
+| Code | Severity | Exit code | Message | Owner |
+| --- | --- | --- | --- | --- |
+| [PLY3100](PLY3100.md) | error | 4 (InvalidSource) | `<detail>` | #831 |
+| [PLY3101](PLY3101.md) | error | 4 (InvalidSource) | `<detail>` | #831 |
+| [PLY3102](PLY3102.md) | error | 3 (UnsupportedConstruct) | `<detail>` | #831 |
+| [PLY3103](PLY3103.md) | error | 3 (UnsupportedConstruct) | `<detail>` | #831 |
+| [PLY3104](PLY3104.md) | error | 3 (UnsupportedConstruct) | `<detail>` | #831 |
+| [PLY3105](PLY3105.md) | error | 3 (UnsupportedConstruct) | `<detail>` | #831 |
+| [PLY3106](PLY3106.md) | error | 4 (InvalidSource) | `<detail>` | #831 |
+| [PLY3107](PLY3107.md) | error | 3 (UnsupportedConstruct) | `<detail>` | #831 |
+| [PLY3108](PLY3108.md) | error | 3 (UnsupportedConstruct) | `<detail>` | #831 |
+| [PLY3150](PLY3150.md) | error | 3 (UnsupportedConstruct) | `<detail>` | #831 |
+| [PLY3151](PLY3151.md) | error | 3 (UnsupportedConstruct) | `<detail>` | #831 |
+| [PLY3152](PLY3152.md) | error | 3 (UnsupportedConstruct) | `<detail>` | #831 |
+
 ## PLY3900–PLY3999 · tokenized-basic
 
 | Code | Severity | Exit code | Message | Owner |
