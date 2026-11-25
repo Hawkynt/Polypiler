@@ -446,7 +446,7 @@ internal sealed partial class Lowering {
       // A reference in parentheses is the reference, not the object the operator around it converts it to.
       case ParenthesizedExpressionSyntax parenthesized when type.IsObject:
         return this.Natural(parenthesized.Expression, type);
-      case IdentifierNameSyntax or MemberAccessExpressionSyntax when model.GetSymbolInfo(expression).Symbol is { IsStatic: false } member
+      case IdentifierNameSyntax or MemberAccessExpressionSyntax when model.GetSymbolInfo(expression).Symbol is (IFieldSymbol or IPropertySymbol) and { IsStatic: false } member
           && member.ContainingType is { } owner && this.IsFileType(owner):
         if (member is IPropertySymbol property && this._properties.TryGetValue(property, out var computed))
           return computed.Getter is { } getter
@@ -454,7 +454,7 @@ internal sealed partial class Lowering {
             : throw new UnsupportedException(expression, $"a read of the property {property.Name}, which has no getter");
 
         return this._fields.TryGetValue(member, out var field) ? new IrFieldLoad(this.Owner(expression, expression), field) : null;
-      case InvocationExpressionSyntax invocation when model.GetSymbolInfo(invocation).Symbol is IMethodSymbol method:
+      case InvocationExpressionSyntax invocation when model.GetSymbolInfo(invocation).Symbol is IMethodSymbol { MethodKind: not MethodKind.LocalFunction } method:
         if (method is { Name: "ReferenceEquals", ContainingType.SpecialType: SpecialType.System_Object } && invocation.ArgumentList.Arguments is [var first, var second])
           return this.Identity(first.Expression, second.Expression, invocation);
 
@@ -540,7 +540,7 @@ internal sealed partial class Lowering {
   /// reads: the object is evaluated once into a temporary when it is read as well; <see langword="null"/> for any other target.
   /// </summary>
   private (Func<IrExpr> Read, Func<IrExpr, IrStmt> Write)? ObjectTarget(ExpressionSyntax target, List<IrStmt> into, bool alsoRead) {
-    if (target is not (IdentifierNameSyntax or MemberAccessExpressionSyntax) || model.GetSymbolInfo(target).Symbol is not { IsStatic: false } member
+    if (target is not (IdentifierNameSyntax or MemberAccessExpressionSyntax) || model.GetSymbolInfo(target).Symbol is not ((IFieldSymbol or IPropertySymbol) and { IsStatic: false } member)
         || member.ContainingType is not { } owner || !this.IsFileType(owner))
       return null;
 

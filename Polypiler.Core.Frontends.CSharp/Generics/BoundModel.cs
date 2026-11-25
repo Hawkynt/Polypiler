@@ -128,6 +128,8 @@ internal sealed class BoundModel {
         return this.Close(type);
       case IParameterSymbol { ContainingSymbol: IMethodSymbol method } parameter:
         return this.Close(method) is IMethodSymbol closed && !SymbolEqualityComparer.Default.Equals(closed, method) ? closed.Parameters[parameter.Ordinal] : parameter;
+      case IMethodSymbol { MethodKind: MethodKind.AnonymousFunction or MethodKind.LocalFunction }:
+        return symbol;
       case IMethodSymbol or IFieldSymbol or IPropertySymbol when symbol.ContainingType is { } owner:
         var member = symbol;
         if (this.Close(owner) is INamedTypeSymbol closedOwner && !SymbolEqualityComparer.Default.Equals(closedOwner, owner))

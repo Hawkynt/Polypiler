@@ -276,4 +276,66 @@ public sealed class GenericClassTemplateTests {
     Assert.That(Problems(read), Is.Empty);
   }
 
+  /// <summary>#1421: a generic class member using a local List&lt;T&gt;, collection initializer, or local variable assignment imports cleanly without throwing OpenException.</summary>
+  [Test]
+  public void GenericClassMember_WithLocalListAndLocals_ImportsAndComputes() {
+    var module = Snippet("""
+      using System.Collections.Generic;
+      public sealed class Cell<T> {
+        private T _v;
+        public Cell(T v) { this._v = v; }
+        public List<T> Collect(T extra) {
+          var list = new List<T>();
+          list.Add(this._v);
+          var copy = extra;
+          copy = this._v;
+          list.Add(copy);
+          return list;
+        }
+        public int InitCount() {
+          var list = new List<T> { this._v };
+          return list.Count;
+        }
+      }
+      public static class Use {
+        public static int F(int a, int b) {
+          var c = new Cell<int>(a);
+          var list = c.Collect(b);
+          return list[0] + list[1] * 10 + c.InitCount() * 100;
+        }
+      }
+      """);
+    Assert.That(Problems(module), Is.Empty);
+    Assert.That(IrInterpreter.Call(module, "F", [3, 9]), Is.EqualTo(133));
+  }
+
+  /// <summary>#1421: a lambda or local function inside a generic class member closes cleanly without failing in BoundModel.Close.</summary>
+  [Test]
+  public void GenericClassMember_WithLambdaAndLocalFunction_ImportsAndComputes() {
+    var module = Snippet("""
+      using System;
+      public sealed class Cell<T> {
+        private T _v;
+        public Cell(T v) { this._v = v; }
+        public T Apply(Func<T, T> f) {
+          Func<T, T> wrap = x => f(x);
+          T Forward(T y) => wrap(y);
+          return Forward(this._v);
+        }
+        public T CaptureSelf(Func<T, T> f) {
+          Func<T> read = () => f(this._v);
+          return read();
+        }
+      }
+      public static class Use {
+        public static int F(int a) {
+          var c = new Cell<int>(a);
+          return c.Apply(x => x + 1) + c.CaptureSelf(x => x * 2) * 10;
+        }
+      }
+      """);
+    Assert.That(Problems(module), Is.Empty);
+    Assert.That(IrInterpreter.Call(module, "F", [4]), Is.EqualTo(85));
+  }
+
 }
