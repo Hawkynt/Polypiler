@@ -190,6 +190,48 @@ public static partial class RustEmitter {
     /// <summary>The tables of white space the crate carries, by name.</summary>
     private readonly SortedDictionary<string, RsConst> _whitespace = new(StringComparer.Ordinal);
 
+    /// <summary>The compiled NFA tables for regular expressions tested by the module, by pattern and flags.</summary>
+    private readonly Dictionary<(string Pattern, string Flags), (string Ops, string? Ranges)> _regexes = [];
+
+    /// <summary>The static arrays of NFA instructions and ranges emitted for regular expressions.</summary>
+    private readonly List<RsConst> _regexTables = [];
+
+    /// <summary>
+    /// A regular-expression test (#1419): <c>ply_regex_test</c> over the UTF-16 code units of the
+    /// subject using static NFA bytecode and range tables compiled once per distinct pattern and flags.
+    /// </summary>
+    private RsExpression RegexTest(IrIntrinsic operation) {
+      var key = RegexOperations.Of(operation);
+      if (!this._regexes.TryGetValue(key, out var table)) {
+        var program = RegexOperations.ToProgram(key.Pattern, key.Flags);
+        if (program is null)
+          return this.Refuse("a regular expression with too many states");
+
+        var index = this._regexes.Count + 1;
+        var opsName = $"PLY_REGEX_OPS_{index.ToString(CultureInfo.InvariantCulture)}";
+        var opsValues = program.Instructions
+          .SelectMany(instruction => new int[] { instruction.Op, instruction.First, instruction.Second })
+          .Select(value => (RsExpression)new RsLiteral(value.ToString(CultureInfo.InvariantCulture)))
+          .ToList();
+        this._regexTables.Add(new RsConst(opsName, "", $"[usize; {opsValues.Count}]", new RsArray(opsValues)) { IsStatic = true });
+        string? rangesName = null;
+        if (program.Ranges.Count > 0) {
+          rangesName = $"PLY_REGEX_RANGES_{index.ToString(CultureInfo.InvariantCulture)}";
+          var rangeValues = program.Ranges
+            .SelectMany(range => new ushort[] { range.Low, range.High })
+            .Select(value => (RsExpression)new RsLiteral(value.ToString(CultureInfo.InvariantCulture)))
+            .ToList();
+          this._regexTables.Add(new RsConst(rangesName, "", $"[u16; {rangeValues.Count}]", new RsArray(rangeValues)) { IsStatic = true });
+        }
+
+        table = (opsName, rangesName);
+        this._regexes[key] = table;
+      }
+
+      RsExpression ranges = table.Ranges is { } name ? new RsReference(false, new RsPath(name)) : new RsReference(false, new RsArray([]));
+      return this.HelperCall("ply_regex_test", IrType.Bool, [this.StringArgument(operation.Arguments[0]), new RsReference(false, new RsPath(table.Ops)), ranges]);
+    }
+
     /// <summary>The table of the code units of a white-space set, a <c>static</c> of the crate; its name.</summary>
     private string WhitespaceTable(WhitespaceSet set) {
       var (name, units) = Strings.Whitespace(set);

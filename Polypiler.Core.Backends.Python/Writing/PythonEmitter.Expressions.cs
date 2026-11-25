@@ -417,6 +417,9 @@ public static partial class PythonEmitter {
       if (StringOperations.IsString(intrinsic.Op))
         return this.StringOperation(intrinsic);
 
+      if (RegexOperations.IsRegex(intrinsic.Op))
+        return this.RegexTest(intrinsic);
+
       if (EnumOperations.IsEnum(intrinsic.Op))
         return this.EnumOperation(intrinsic);
 
@@ -476,6 +479,22 @@ public static partial class PythonEmitter {
         default:
           return this.Inexpressible(intrinsic.Op.ToString());
       }
+    }
+
+    /// <summary>
+    /// The test of a regular expression (#1419): <c>_PATTERN_k.search(subject) is not None</c>, with
+    /// each pattern and flags compiled once at module level via <c>re.compile</c> from
+    /// <see cref="RegexOperations.ToPython"/>.
+    /// </summary>
+    private PyExpression RegexTest(IrIntrinsic intrinsic) {
+      var key = RegexOperations.Of(intrinsic);
+      if (!this._regexes.TryGetValue(key, out var name)) {
+        name = this.Take($"_PATTERN_{this._regexes.Count + 1}");
+        this._regexes[key] = name;
+        this._regexDefinitions.Add(new PyAssign(Name(name), new PyCall(new PyAttribute(Name("re"), "compile"), [new PyString(RegexOperations.ToPython(key.Pattern, key.Flags))])));
+      }
+
+      return Compare(new PyCall(new PyAttribute(Name(name), "search"), [this.Expression(intrinsic.Arguments[0])]), "is not", new PyNone());
     }
 
   }

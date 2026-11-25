@@ -97,7 +97,34 @@ public static class RegexOperations {
   /// <param name="flags">The flags.</param>
   /// <returns>The .NET pattern.</returns>
   /// <exception cref="ArgumentException">The pattern or a flag is outside the subset; the message names it.</exception>
-  public static string ToDotNet(string pattern, string flags) {
+  public static string ToDotNet(string pattern, string flags) => Write(Parse(pattern, flags), false);
+
+  /// <summary>The pattern in the syntax of Python's <c>re</c> module that matches on UTF-16 code-unit strings exactly what the ECMAScript pattern matches.</summary>
+  /// <param name="pattern">The pattern, as ECMAScript writes it between the slashes.</param>
+  /// <param name="flags">The flags.</param>
+  /// <returns>The Python <c>re</c> pattern.</returns>
+  /// <exception cref="ArgumentException">The pattern or a flag is outside the subset; the message names it.</exception>
+  public static string ToPython(string pattern, string flags) => Write(Parse(pattern, flags), true);
+
+  /// <summary>A compiled Thompson NFA bytecode program for a regular expression in the subset: instructions and inclusive UTF-16 code-unit ranges.</summary>
+  /// <param name="Instructions">Opcodes: 0 Match, 1 Start (<c>^</c>), 2 End (<c>$</c>), 3 Class (<c>First..Second</c> into <paramref name="Ranges"/>), 4 Jump (<c>First</c>), 5 Split (<c>First</c>, <c>Second</c>).</param>
+  /// <param name="Ranges">Inclusive <c>(Low, High)</c> UTF-16 code-unit ranges referenced by Class instructions.</param>
+  public sealed record RegexProgram(IReadOnlyList<(byte Op, int First, int Second)> Instructions, IReadOnlyList<(ushort Low, ushort High)> Ranges);
+
+  /// <summary>
+  /// Compiles an ECMAScript pattern in the subset into a Thompson NFA bytecode program over UTF-16
+  /// code units, or returns <see langword="null"/> when expanding its repetitions would exceed
+  /// <paramref name="maxInstructions"/>.
+  /// </summary>
+  /// <param name="pattern">The pattern, as ECMAScript writes it between the slashes.</param>
+  /// <param name="flags">The flags.</param>
+  /// <param name="maxInstructions">Maximum number of NFA instructions admitted.</param>
+  /// <returns>The compiled program, or <see langword="null"/> if it exceeds <paramref name="maxInstructions"/>.</returns>
+  /// <exception cref="ArgumentException">The pattern or a flag is outside the subset; the message names it.</exception>
+  public static RegexProgram? ToProgram(string pattern, string flags, int maxInstructions = 4096)
+    => new ProgramCompiler(maxInstructions).Compile(Parse(pattern, flags));
+
+  private static Node Parse(string pattern, string flags) {
     var ignoreCase = false;
     foreach (var flag in flags)
       if (flag != 'i' || ignoreCase)
@@ -182,7 +209,182 @@ public static class RegexOperations {
 
   }
 
-  /// <summary>A reader of an ECMAScript pattern without the flag <c>u</c> that writes it in .NET's syntax as it goes.</summary>
+  private abstract record Node;
+  private sealed record AnchorNode(bool IsEnd) : Node;
+  private sealed record CharsetNode(Units Units) : Node;
+  private sealed record SequenceNode(IReadOnlyList<Node> Items) : Node;
+  private sealed record AlternationNode(IReadOnlyList<Node> Branches) : Node;
+  private sealed record GroupNode(Node Inner, bool Capturing) : Node;
+  private sealed record QuantifiedNode(Node Inner, string Raw, int Min, int? Max) : Node;
+
+  /// <summary>Writes a parsed regular expression in .NET's or Python's <c>re</c> syntax.</summary>
+  private static string Write(Node root, bool python) {
+    var written = new StringBuilder();
+    void Emit(Node node) {
+      switch (node) {
+        case AnchorNode anchor:
+          written.Append(anchor.IsEnd ? (python ? @"\Z" : @"\z") : "^");
+          break;
+        case CharsetNode charset:
+          WriteUnits(charset.Units, written, python);
+          break;
+        case SequenceNode sequence:
+          foreach (var item in sequence.Items)
+            Emit(item);
+          break;
+        case AlternationNode alternation:
+          for (var index = 0; index < alternation.Branches.Count; ++index) {
+            if (index > 0)
+              written.Append('|');
+
+            Emit(alternation.Branches[index]);
+          }
+          break;
+        case GroupNode group:
+          written.Append(group.Capturing ? "(" : "(?:");
+          Emit(group.Inner);
+          written.Append(')');
+          break;
+        case QuantifiedNode quantified:
+          Emit(quantified.Inner);
+          written.Append(quantified.Raw);
+          break;
+      }
+    }
+
+    Emit(root);
+    return written.ToString();
+  }
+
+  /// <summary>A set as a character class, escaping every character that is not an ASCII letter, digit or underscore.</summary>
+  private static void WriteUnits(Units units, StringBuilder written, bool python) {
+    string Unit(char unit) => char.IsAsciiLetterOrDigit(unit) || unit == '_' ? unit.ToString()
+      : python ? (unit <= 0x7F ? $"\\x{(int)unit:X2}" : unit.ToString())
+      : $"\\u{(int)unit:X4}";
+    if (units.Ranges is [var (single, end)] && single == end) {
+      written.Append(Unit(single));
+      return;
+    }
+
+    if (units.Ranges.Count == 0) {
+      // A class that matches nothing; neither .NET nor Python has an empty class.
+      written.Append(python ? "(?!)" : @"[^\u0000-\uFFFF]");
+      return;
+    }
+
+    written.Append('[');
+    foreach (var (first, last) in units.Ranges) {
+      written.Append(Unit(first));
+      if (last > first)
+        written.Append(last > first + 1 ? "-" : "").Append(Unit(last));
+    }
+
+    written.Append(']');
+  }
+
+  /// <summary>Compiles a parsed regular expression into Thompson NFA instructions and inclusive UTF-16 ranges.</summary>
+  private sealed class ProgramCompiler(int maxInstructions) {
+
+    private readonly List<(byte Op, int First, int Second)> _ops = [];
+    private readonly List<(ushort Low, ushort High)> _ranges = [];
+
+    public RegexProgram? Compile(Node root) {
+      if (!this.Emit(root) || this._ops.Count >= maxInstructions)
+        return null;
+
+      this._ops.Add((0, 0, 0));
+      return new RegexProgram(this._ops, this._ranges);
+    }
+
+    private bool Emit(Node node) {
+      if (this._ops.Count >= maxInstructions)
+        return false;
+
+      switch (node) {
+        case AnchorNode anchor:
+          this._ops.Add((anchor.IsEnd ? (byte)2 : (byte)1, 0, 0));
+          return true;
+        case CharsetNode charset:
+          var start = this._ranges.Count;
+          foreach (var (first, last) in charset.Units.Ranges)
+            this._ranges.Add((first, last));
+
+          this._ops.Add((3, start, this._ranges.Count));
+          return true;
+        case SequenceNode sequence:
+          foreach (var item in sequence.Items)
+            if (!this.Emit(item))
+              return false;
+
+          return true;
+        case GroupNode group:
+          return this.Emit(group.Inner);
+        case AlternationNode alternation: {
+          var jumps = new List<int>();
+          for (var index = 0; index < alternation.Branches.Count; ++index) {
+            var split = -1;
+            if (index + 1 < alternation.Branches.Count) {
+              split = this._ops.Count;
+              this._ops.Add((5, split + 1, 0));
+            }
+
+            if (!this.Emit(alternation.Branches[index]))
+              return false;
+
+            if (index + 1 < alternation.Branches.Count) {
+              jumps.Add(this._ops.Count);
+              this._ops.Add((4, 0, 0));
+              this._ops[split] = (5, split + 1, this._ops.Count);
+            }
+          }
+
+          var end = this._ops.Count;
+          foreach (var jump in jumps)
+            this._ops[jump] = (4, end, 0);
+
+          return true;
+        }
+        default: {
+          var quantified = (QuantifiedNode)node;
+          for (var copy = 0; copy < quantified.Min; ++copy) {
+            var before = this._ops.Count;
+            if (!this.Emit(quantified.Inner))
+              return false;
+            if (this._ops.Count == before)
+              break;
+          }
+
+          if (quantified.Max is null) {
+            var loop = this._ops.Count;
+            this._ops.Add((5, loop + 1, 0));
+            if (!this.Emit(quantified.Inner))
+              return false;
+
+            this._ops.Add((4, loop, 0));
+            this._ops[loop] = (5, loop + 1, this._ops.Count);
+            return this._ops.Count < maxInstructions;
+          }
+
+          for (var copy = quantified.Min; copy < quantified.Max.Value; ++copy) {
+            var split = this._ops.Count;
+            this._ops.Add((5, split + 1, 0));
+            var before = this._ops.Count;
+            if (!this.Emit(quantified.Inner))
+              return false;
+
+            this._ops[split] = (5, split + 1, this._ops.Count);
+            if (this._ops.Count == before)
+              break;
+          }
+
+          return true;
+        }
+      }
+    }
+
+  }
+
+  /// <summary>A reader of an ECMAScript pattern without the flag <c>u</c>.</summary>
   private sealed class Converter(string pattern, bool ignoreCase) {
 
     private static readonly Units _digits = Units.Of(('0', '9'));
@@ -190,15 +392,14 @@ public static class RegexOperations {
     private static readonly Units _space = Spaces();
     private static readonly Units _terminators = Units.Of(('\n', '\n'), ('\r', '\r'), ('\u2028', '\u2029'));
 
-    private readonly StringBuilder _written = new();
     private int _at;
 
-    public string Run() {
-      this.Disjunction();
+    public Node Run() {
+      var node = this.Disjunction();
       if (this._at < pattern.Length)
         throw new ArgumentException("an unmatched )");
 
-      return this._written.ToString();
+      return node;
     }
 
     private static Units Spaces() {
@@ -211,52 +412,60 @@ public static class RegexOperations {
 
     private bool At(char unit) => this._at < pattern.Length && pattern[this._at] == unit;
 
-    private void Disjunction() {
-      this.Alternative();
+    private Node Disjunction() {
+      var first = this.Alternative();
+      if (!this.At('|'))
+        return first;
+
+      var branches = new List<Node> { first };
       while (this.At('|')) {
         ++this._at;
-        this._written.Append('|');
-        this.Alternative();
+        branches.Add(this.Alternative());
       }
+
+      return new AlternationNode(branches);
     }
 
-    private void Alternative() {
+    private Node Alternative() {
+      var items = new List<Node>();
       while (this._at < pattern.Length && pattern[this._at] is not ('|' or ')'))
-        this.Term();
+        items.Add(this.Term());
+
+      return items.Count == 1 ? items[0] : new SequenceNode(items);
     }
 
-    private void Term() {
+    private Node Term() {
       var unit = pattern[this._at++];
+      Node atom;
       switch (unit) {
         case '^':
-          this._written.Append('^');
-          return;
+          return new AnchorNode(false);
         case '$':
-          this._written.Append(@"\z");
-          return;
+          return new AnchorNode(true);
         case '(':
-          this.Group();
+          atom = this.Group();
           break;
         case '.':
-          this.Write(_terminators.Complement());
+          atom = new CharsetNode(_terminators.Complement());
           break;
         case '[':
-          this.Write(this.Class());
+          atom = new CharsetNode(this.Class());
           break;
         case '\\':
-          this.Write(this.Escape(false));
+          atom = new CharsetNode(this.Escape(false));
           break;
         case '*' or '+' or '?' or '{':
           throw new ArgumentException($"a quantifier {unit} without anything to repeat");
         default:
-          this.Write(this.Literal(unit));
+          atom = new CharsetNode(this.Literal(unit));
           break;
       }
 
-      this.Quantifier();
+      return this.Quantifier(atom);
     }
 
-    private void Group() {
+    private Node Group() {
+      var capturing = true;
       if (this.At('?')) {
         if (this._at + 1 >= pattern.Length)
           throw new ArgumentException("an unclosed (");
@@ -273,45 +482,56 @@ public static class RegexOperations {
           throw new ArgumentException(what);
 
         this._at += 2;
-        this._written.Append("(?:");
-      } else {
-        this._written.Append('(');
+        capturing = false;
       }
 
-      this.Disjunction();
+      var inner = this.Disjunction();
       if (!this.At(')'))
         throw new ArgumentException("an unclosed (");
 
       ++this._at;
-      this._written.Append(')');
+      return new GroupNode(inner, capturing);
     }
 
-    private void Quantifier() {
+    private Node Quantifier(Node atom) {
       if (this._at >= pattern.Length)
-        return;
+        return atom;
 
+      var start = this._at;
+      int min;
+      int? max;
       switch (pattern[this._at]) {
-        case '*' or '+' or '?':
-          this._written.Append(pattern[this._at++]);
+        case '*':
+          ++this._at;
+          (min, max) = (0, null);
+          break;
+        case '+':
+          ++this._at;
+          (min, max) = (1, null);
+          break;
+        case '?':
+          ++this._at;
+          (min, max) = (0, 1);
           break;
         case '{':
           var close = pattern.IndexOf('}', this._at);
           var bounds = close < 0 ? null : pattern[(this._at + 1)..close].Split(',');
-          if (bounds is null || bounds.Length > 2 || !Count(bounds[0], out var least)
-            || (bounds.Length == 2 && bounds[1].Length > 0 && (!Count(bounds[1], out var most) || most < least)))
+          var most = 0;
+          if (bounds is null || bounds.Length > 2 || !Count(bounds[0], out min)
+            || (bounds.Length == 2 && bounds[1].Length > 0 && (!Count(bounds[1], out most) || most < min)))
             throw new ArgumentException("a { that starts no quantifier");
 
-          this._written.Append(pattern, this._at, close + 1 - this._at);
+          max = bounds.Length == 1 ? min : bounds[1].Length == 0 ? null : most;
           this._at = close + 1;
           break;
         default:
-          return;
+          return atom;
       }
 
-      if (this.At('?')) {
+      if (this.At('?'))
         ++this._at;
-        this._written.Append('?');
-      }
+
+      return new QuantifiedNode(atom, pattern[start..this._at], min, max);
     }
 
     private static bool Count(string digits, out int count) {
@@ -442,30 +662,6 @@ public static class RegexOperations {
       var value = (char)int.Parse(pattern.AsSpan(this._at, digits), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture);
       this._at += digits;
       return value;
-    }
-
-    /// <summary>A set as .NET's class, every character but an ASCII letter, a digit and the underscore as its <c>\u</c> escape; a single character as itself or its escape.</summary>
-    private void Write(Units units) {
-      static string Unit(char unit) => char.IsAsciiLetterOrDigit(unit) || unit == '_' ? unit.ToString() : $"\\u{(int)unit:X4}";
-      if (units.Ranges is [var (single, end)] && single == end) {
-        this._written.Append(Unit(single));
-        return;
-      }
-
-      if (units.Ranges.Count == 0) {
-        // A class that matches nothing; .NET has no empty class.
-        this._written.Append(@"[^\u0000-\uFFFF]");
-        return;
-      }
-
-      this._written.Append('[');
-      foreach (var (first, last) in units.Ranges) {
-        this._written.Append(Unit(first));
-        if (last > first)
-          this._written.Append(last > first + 1 ? "-" : "").Append(Unit(last));
-      }
-
-      this._written.Append(']');
     }
 
   }

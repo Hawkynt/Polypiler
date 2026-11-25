@@ -195,5 +195,10 @@ The C# backend writes a `private static readonly Regex` field per pattern and fl
 `Pattern1`, `Pattern2`, … where no member or variable has the name, and the test as
 `PatternN.IsMatch(s)`; `System.Text.RegularExpressions` is in every profile from .NET Framework 2.0
 on. The JavaScript backend writes the literal back, a `/` outside a class escaped, every code unit
-outside printable ASCII as its `\u` escape and the empty pattern as `(?:)`. The Python backend has no
-form yet and refuses `RegexTest` by name.
+outside printable ASCII as its `\u` escape and the empty pattern as `(?:)`. The Python backend writes a
+module-level `_PATTERN_1 = re.compile(…)` per distinct pattern and flags using
+`RegexOperations.ToPython` (`\Z` for `$`, `(?!)` for the empty class, `\xHH` for non-word ASCII, and
+the expanded sets) and tests with `_PATTERN_N.search(s) is not None`. The Rust backend compiles each
+distinct pattern and flags into static Thompson NFA bytecode and UTF-16 range tables (`PLY_REGEX_OPS_N`,
+`PLY_REGEX_RANGES_N`) executed by the dependency-free helper `ply_regex_test`, refusing oversized
+repetitions that exceed the instruction cap by name (`PLY1550`).

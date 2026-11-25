@@ -1,9 +1,16 @@
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using Polypiler.Backends.Testing;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
+using Polypiler.Core.Backends.Python.Printing;
+using Polypiler.Core.Backends.Python.Syntax;
+using Polypiler.Core.Backends.Rust.Printing;
+using Polypiler.Core.Backends.Rust.Syntax;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
 
@@ -106,6 +113,93 @@ public sealed class IrSkipsBaseTests {
     Assert.That(GeneratedCSharp.Compile(text, false).Method("f").Invoke(null, []), Is.EqualTo(4), text);
     var script = LegalizedJavaScript.Emit(module, JavaScriptProfile.Parse("es2022")).Single().Content;
     Assert.That(script, Does.Not.Contain("Object.create").And.Not.Contain("Uninitialized"), script);
+    var python = PythonFixtures.Translate(module);
+    Assert.That(python.Problems, Is.Empty);
+    Assert.That(python.Source, Does.Contain("self.z = 0").And.Not.Contain("super()"), python.Source);
+    Assert.That(RustCrates.Check(module), Is.Empty);
+  }
+
+  /// <summary>Python initializes every inherited field to its default and emits no super().__init__ call, keeping even an empty __init__ so the base constructor is never inherited (#1419).</summary>
+  [Test]
+  public void Python_SkippingConstructor_InitializesAllFieldsAndNeverCallsSuper() {
+    var translation = PythonFixtures.Translate(new Built().Module);
+    Assert.That(translation.Problems, Is.Empty);
+    var text = translation.Source!;
+    Assert.That(text, Does.Contain("class B(A):\n    def __init__(self, y: int) -> None:\n        self.x = 0\n        self.y = 0\n        self.y = y"), text);
+    Assert.That(text, Does.Not.Contain("super()"), text);
+    var parsed = PythonSyntaxReader.ReadModule(text);
+    Assert.That(PythonPrinter.Print(PythonSyntaxReader.ReadModule(PythonPrinter.Print(parsed))), Is.EqualTo(PythonPrinter.Print(parsed)));
+
+    // When neither base nor derived declares fields and B.ctor has an empty body, B.__init__ must still be kept as `pass` so A.__init__ is not inherited.
+    var ran = new IrGlobal("ran", IrType.I32, new IrConst(IrType.I32, 0));
+    var a = new IrClassType("A");
+    var b = new IrClassType("B");
+    var aCtor = new IrConstructor("A.ctor");
+    var bCtor = new IrConstructor("B.ctor") { SkipsBase = true };
+    a.Inherit(null, []);
+    b.Inherit(a, []);
+    a.Define([]);
+    b.Define([]);
+    a.DefineMembers([aCtor], [], [], []);
+    b.DefineMembers([bCtor], [], [], []);
+    var o = new IrLocal("o", IrType.Object(b));
+    var emptyModule = new IrModule("Empty", [
+      new IrFunction("A.ctor", false, IrType.Void, [new IrLocal("this", IrType.Object(a))], [], new IrBlock([new IrGlobalAssign(ran, new IrConst(IrType.I32, 1))])),
+      new IrFunction("B.ctor", false, IrType.Void, [new IrLocal("this", IrType.Object(b))], [], new IrBlock([])),
+      new IrFunction("f", true, IrType.I32, [], [o], new IrBlock([
+        new IrDeclare(o, new IrNew(IrType.Object(b), bCtor, [])),
+        new IrReturn(new IrGlobalRef(ran))
+      ]))
+    ]) { Types = [a, b], Globals = [ran] };
+    Assert.That(Problems(emptyModule), Is.Empty);
+    Assert.That(IrInterpreter.Call(emptyModule, "f", []), Is.EqualTo(0));
+    var emptyPy = PythonFixtures.Translate(emptyModule);
+    Assert.That(emptyPy.Problems, Is.Empty);
+    Assert.That(emptyPy.Source, Does.Contain("class B(A):\n    def __init__(self) -> None:\n        pass"), emptyPy.Source);
+  }
+
+  /// <summary>Rust constructs the derived struct with all fields defaulted and runs only B.ctor without calling A.ctor (#1419).</summary>
+  [Test]
+  public void Rust_SkippingConstructor_LeavesBaseFieldsAtDefaults() {
+    var module = new Built().Module;
+    Assert.That(RustCrates.Check(module), Is.Empty);
+    var text = RustCrates.ModuleText(RustCrates.Emit(module));
+    Assert.That(text, Does.Contain("pub struct B {").And.Contain("x: Cell<i32>,").And.Contain("y: Cell<i32>,"));
+    Assert.That(text, Does.Contain("pub fn b_ctor(this: &B, y: i32) {\n    this.y.set(y);\n}"), text);
+    Assert.That(RustPrinter.Print(RustSyntaxReader.Read(text)), Is.EqualTo(text));
+  }
+
+  [Test]
+  [Category("EndToEnd")]
+  public void PythonAndRust_SkippingConstructor_RunAndReturn30() {
+    var module = new Built().Module;
+    var pyDir = Directory.CreateTempSubdirectory("skips-base-py-");
+    var rsDir = Directory.CreateTempSubdirectory("skips-base-rs-");
+    try {
+      File.WriteAllText(Path.Combine(pyDir.FullName, "m.py"), PythonFixtures.Translate(module).Source!);
+      using (var python = Process.Start(new ProcessStartInfo("python3", ["-c", "import m; assert m.f() == 30"]) { WorkingDirectory = pyDir.FullName, RedirectStandardError = true })!) {
+        var stderr = python.StandardError.ReadToEnd();
+        python.WaitForExit();
+        Assert.That(python.ExitCode, Is.EqualTo(0), stderr);
+      }
+
+      foreach (var file in RustCrates.Emit(module)) {
+        var full = Path.Combine(rsDir.FullName, file.Path);
+        Directory.CreateDirectory(Path.GetDirectoryName(full)!);
+        File.WriteAllText(full, file.Content);
+      }
+
+      Directory.CreateDirectory(Path.Combine(rsDir.FullName, "tests"));
+      File.WriteAllText(Path.Combine(rsDir.FullName, "tests", "skips.rs"), "#[test]\nfn skips_base() {\n    assert_eq!(m::m::f(), 30);\n}\n");
+      using (var cargo = Process.Start(new ProcessStartInfo("cargo", ["test", "--offline"]) { WorkingDirectory = rsDir.FullName, RedirectStandardOutput = true, RedirectStandardError = true })!) {
+        var output = cargo.StandardOutput.ReadToEnd() + "\n" + cargo.StandardError.ReadToEnd();
+        cargo.WaitForExit();
+        Assert.That(cargo.ExitCode, Is.EqualTo(0), output);
+      }
+    } finally {
+      pyDir.Delete(true);
+      rsDir.Delete(true);
+    }
   }
 
   /// <summary>The verifier refuses a skipping constructor that calls a constructor, stands beside another or skips a class of the library.</summary>
