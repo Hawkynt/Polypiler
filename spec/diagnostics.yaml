@@ -1921,7 +1921,7 @@ codes:
   - code: PLY2800
     severity: error
     exit: InvalidSource
-    title: malformed cmd Batch source
+    title: malformed Batch source
     message: "invalid Batch script: <detail>"
     rule: batch.frontend.syntax
     area: batch
@@ -1930,8 +1930,8 @@ codes:
   - code: PLY2802
     severity: error
     exit: UnsupportedConstruct
-    title: construct outside the cmd Batch source profile
-    message: "'<construct>' is not supported by the cmd Batch frontend"
+    title: construct outside the Batch source profile
+    message: "'<construct>' is not supported by the Batch frontend"
     rule: batch.frontend.profile
     area: batch
     owner: "#1455"

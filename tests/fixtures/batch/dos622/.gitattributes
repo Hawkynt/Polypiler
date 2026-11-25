@@ -1,2 +1,2 @@
-*.BAT -text whitespace=cr-at-eol
+*.[Bb][Aa][Tt] -text whitespace=cr-at-eol
 *.COM binary

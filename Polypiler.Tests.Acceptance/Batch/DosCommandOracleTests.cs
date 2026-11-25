@@ -90,7 +90,7 @@ public sealed class DosCommandOracleTests {
 
   private static DosCommandOracle.FixtureFile At(string name) => new(Fixture(name), name);
 
-  private static DosCommandOracle Guest() {
+  internal static DosCommandOracle Guest() {
     var image = Environment.GetEnvironmentVariable("POLYPILER_MSDOS622_BOOT_IMAGE");
     if (string.IsNullOrEmpty(image))
       Assert.Inconclusive("Set POLYPILER_MSDOS622_BOOT_IMAGE to the licensed MS-DOS 6.22 boot floppy image.");

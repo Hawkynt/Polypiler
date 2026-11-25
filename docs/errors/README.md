@@ -271,7 +271,7 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | Code | Severity | Exit code | Message | Owner |
 | --- | --- | --- | --- | --- |
 | [PLY2800](PLY2800.md) | error | 4 (InvalidSource) | `invalid Batch script: <detail>` | #1455 |
-| [PLY2802](PLY2802.md) | error | 3 (UnsupportedConstruct) | `'<construct>' is not supported by the cmd Batch frontend` | #1455 |
+| [PLY2802](PLY2802.md) | error | 3 (UnsupportedConstruct) | `'<construct>' is not supported by the Batch frontend` | #1455 |
 | [PLY2850](PLY2850.md) | error | 3 (UnsupportedConstruct) | `'<construct>' cannot be emitted for the cmd Batch profile` | #1456 |
 
 ## PLY3900–PLY3999 · tokenized-basic

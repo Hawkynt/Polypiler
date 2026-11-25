@@ -17,5 +17,8 @@ The `tree` case stages its two data files under `DATA` in the order `TWO.TXT`, `
 The runner accepts explicit relative 8.3 destinations and creates parent directories on drive B.
 The guest's wildcard trace tests both the paths and the order.
 
+The `lift.bat` fixture tests the label prefix and a 127-byte SET line. `LIFTDRV.BAT`
+boots a child interpreter and captures its hexadecimal result for comparison with generated C#.
+
 The fixtures in this folder are LGPL-3.0-or-later. `PLYRC.COM` is five bytes
 (`B8 2A 4C CD 21`) and exits through DOS interrupt 21h with status 42.
