@@ -33,6 +33,7 @@ public sealed class ModulesSteps {
   /// <summary>The test and benchmark projects, which the issue does not count among its modules; <c>Polypiler.Benchmarks</c> came with the benchmark harness (#27).</summary>
   /// <summary>The projects of the languages added after the module issue, each a frontend or a backend of its own.</summary>
   private static readonly string[] _languages = [
+    "Polypiler.Core.Backends.Batch",
     "Polypiler.Core.Backends.Perl",
     "Polypiler.Core.Backends.Python",
     "Polypiler.Core.Backends.Rust",

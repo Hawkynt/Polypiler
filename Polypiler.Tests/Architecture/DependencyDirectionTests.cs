@@ -35,6 +35,7 @@ public sealed class DependencyDirectionTests {
     "Polypiler.Cli",
     "Polypiler.Core",
     "Polypiler.Core.Analysis",
+    "Polypiler.Core.Backends.Batch",
     "Polypiler.Core.Backends.CSharp",
     "Polypiler.Core.Backends.JavaScript",
     "Polypiler.Core.Backends.Perl",
