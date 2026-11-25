@@ -1165,7 +1165,7 @@ public sealed record IrFieldStore(IrExpr Target, IrField Field, IrExpr Value) : 
 /// <param name="Expression">The expression.</param>
 public sealed record IrExprStmt(IrExpr Expression) : IrStmt;
 
-/// <summary>Writes a line to standard output after evaluating its text.</summary>
+/// <summary>Writes a line to standard output after evaluating its text. A null string writes a blank line.</summary>
 /// <param name="Value">The string to write, without the target's line terminator.</param>
 public sealed record IrWriteLine(IrExpr Value) : IrStmt;
 

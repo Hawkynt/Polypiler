@@ -446,11 +446,11 @@ public static partial class IrInterpreter {
           this.Evaluate(expression.Expression, frame);
           return Flow.Next;
         case IrWriteLine write:
-          var text = (string)this.Evaluate(write.Value, frame);
+          var textValue = this.Evaluate(write.Value, frame);
           if (standardOutput is null)
             throw new InvalidOperationException("This invocation has no standard output sink.");
 
-          standardOutput(text);
+          standardOutput(textValue is NullReference ? "" : (string)textValue);
           return Flow.Next;
         case IrFieldStore store when store.Target.Type.IsObject:
           this.StoreObjectField(store, frame);
