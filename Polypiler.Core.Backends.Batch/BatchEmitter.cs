@@ -33,10 +33,7 @@ public static class BatchEmitter {
     if (verification.Count > 0)
       return ([], verification);
     try {
-      if (module.Functions is not [{ IsPublic: true, ReturnType: var type, Parameters.Count: 0 } function]
-          || type != IrType.I32 || module.Constants.Count != 0 || module.Globals.Count != 0
-          || module.Types.Count != 0 || module.Initializer is not null)
-        throw new Refusal("module other than a single public parameterless Int32 kernel");
+      var function = Kernel(module) ?? throw new Refusal("module other than a single public parameterless Int32 kernel");
       var writer = new Writer(function.Locals);
       writer.Block(function.Body);
       return (writer.Lines, []);
@@ -44,6 +41,11 @@ public static class BatchEmitter {
       return ([], [Diagnostic.Create(Unsupported, null, error.Message)]);
     }
   }
+
+  internal static IrFunction? Kernel(IrModule module)
+    => module.Functions is [{ IsPublic: true, ReturnType: var type, Parameters.Count: 0 } function]
+       && type == IrType.I32 && module.Constants.Count == 0 && module.Globals.Count == 0
+       && module.Types.Count == 0 && module.Initializer is null ? function : null;
 
   private sealed class Refusal(string detail) : Exception(detail);
 

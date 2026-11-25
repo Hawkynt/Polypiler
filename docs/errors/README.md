@@ -273,6 +273,7 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY2800](PLY2800.md) | error | 4 (InvalidSource) | `invalid Batch script: <detail>` | #1455 |
 | [PLY2802](PLY2802.md) | error | 3 (UnsupportedConstruct) | `'<construct>' is not supported by the Batch frontend` | #1455 |
 | [PLY2850](PLY2850.md) | error | 3 (UnsupportedConstruct) | `'<construct>' cannot be emitted for the cmd Batch profile` | #1456 |
+| [PLY2851](PLY2851.md) | error | 3 (UnsupportedConstruct) | `'<construct>' cannot be emitted for the dos622 Batch profile` | #1467 |
 
 ## PLY3000–PLY3099 · msil
 

@@ -724,12 +724,15 @@ public sealed partial class TranslateCommand : ICliCommand {
     (module, options) => CSharpEmitter.Check(module, CSharpProfileOf(options), capabilities),
     (module, options, passes, _) => CSharpEmitter.Emit(module, CSharpProfileOf(options), FloatModeOf(options), options.GetValueOrDefault(Namespace), capabilities, passes));
 
-  private static Backend Batch() => new("batch", "cmd", _ => BatchEmitter.Profile, RuleTarget.Neutral,
-    [new(Profile, "<cmd>")],
-    options => options.GetValueOrDefault(Profile) is null or BatchEmitter.Profile ? null : $"unknown Batch profile '{options[Profile]}'",
+  private static Backend Batch() => new("batch", "cmd", options => options.GetValueOrDefault(Profile, BatchEmitter.Profile), RuleTarget.Neutral,
+    [new(Profile, "<cmd|dos622>")],
+    options => options.GetValueOrDefault(Profile) is null or BatchEmitter.Profile or DosBatchEmitter.Profile ? null : $"unknown Batch profile '{options[Profile]}'",
     (module, _) => module,
-    (module, _) => BatchEmitter.Check(module),
-    (module, _, _, _) => new(BatchEmitter.Emit(module), []));
+    (module, options) => IsDosBatch(options) ? DosBatchEmitter.Check(module) : BatchEmitter.Check(module),
+    (module, options, _, _) => new(IsDosBatch(options) ? DosBatchEmitter.Emit(module) : BatchEmitter.Emit(module), []),
+    options => IsDosBatch(options) ? "command.com" : "cmd");
+
+  private static bool IsDosBatch(IReadOnlyDictionary<string, string> options) => options.GetValueOrDefault(Profile) == DosBatchEmitter.Profile;
 
   /// <summary>The .NET MSIL backend; <c>--profile</c> selects <c>msil/net10</c> or <c>msil/net8</c>, and <c>--output-type</c> selects <c>library</c> or <c>exe</c>.</summary>
   private static Backend Msil(Func<IrModule> implementations) => new("msil",
@@ -894,18 +897,19 @@ public sealed partial class TranslateCommand : ICliCommand {
 
     command.AddRange(context.ContributedArguments);
     var mode = FloatModeOf(options);
+    var runtime = backend.ProfileRuntime?.Invoke(options) ?? backend.Runtime;
     return new Manifest {
       Compiler = new(ProductInfo.Name, ProductInfo.Version, IrModuleFormat.Version),
       Command = command,
       Inputs = [new(input, ManifestWriter.Sha256(record.Bytes), null)],
       Frontend = new(record.Language, null),
-      Target = new(backend.Name, backend.ProfileName(options), backend.Runtime, "any"),
+      Target = new(backend.Name, backend.ProfileName(options), runtime, "any"),
       Outputs = outputs,
       Api = [.. module.Functions.Where(function => function.IsPublic).Select(function => new ManifestApiSymbol(function.Name,
         $"{function.ReturnType} {function.Name}({string.Join(", ", function.Parameters.Select(parameter => $"{parameter.Type} {parameter.Name}"))})"))],
       Intrinsics = [.. FloatManifest.Operations(module).Select(op => $"INTRINSICS.{op}")],
       FloatingPoint = FloatManifest.HasFloat(module)
-        ? new(mode == FloatMode.Strict ? "strict" : "accurate", [.. FloatManifest.Natives(module, mode, backend.Runtime).Select(native => new ManifestNativeFunction(
+        ? new(mode == FloatMode.Strict ? "strict" : "accurate", [.. FloatManifest.Natives(module, mode, runtime).Select(native => new ManifestNativeFunction(
           $"INTRINSICS.{native.Op}", native.Format.ToString(), native.Contract.ToString(), native.Runtime, native.Slack, native.Bound))])
         : null,
       Helpers = [.. helpers.Select(helper => new ManifestHelper(helper.Symbol, helper.Licence, helper.Origin, helper.CallSites, helper.Size, helper.DependsOn))],
@@ -986,7 +990,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     Func<IReadOnlyDictionary<string, string>, string?> Misuse,
     Func<IrModule, IReadOnlyDictionary<string, string>, IrModule> Lower,
     Func<IrModule, IReadOnlyDictionary<string, string>, IReadOnlyList<Diagnostic>> Check,
-    Func<IrModule, IReadOnlyDictionary<string, string>, TargetPassOptions, CrateLayout?, TargetEmission> Emit) {
+    Func<IrModule, IReadOnlyDictionary<string, string>, TargetPassOptions, CrateLayout?, TargetEmission> Emit,
+    Func<IReadOnlyDictionary<string, string>, string>? ProfileRuntime = null) {
 
     /// <summary>Whether an option belongs to this language.</summary>
     public bool Has(string option) => this.Options.Any(candidate => candidate.Name == option);
