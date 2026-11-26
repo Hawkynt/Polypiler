@@ -133,8 +133,28 @@ public sealed class StandardOutputTests {
     var module = FromOracle();
     AssertRefusesOutput(CSharpEmitter.Check(module));
     AssertRefusesOutput(JavaScriptEmitter.Check(module, JavaScriptProfile.Parse("es2022")));
-    AssertRefusesOutput(PerlEmitter.Check(module));
-    AssertRefusesOutput(PythonEmitter.Check(module, PythonProfile.Parse("py3.14")));
+  }
+
+  [Test]
+  public void PythonBackendEmitsPrintForStandardOutput() {
+    var module = FromOracle();
+    foreach (var name in PythonProfile.Names) {
+      var profile = PythonProfile.Parse(name);
+      Assert.That(PythonEmitter.Check(module, profile), Is.Empty, name);
+      var source = PythonEmitter.Emit(module, profile)[0].Content;
+      Assert.That(source, Does.Contain("print("), name);
+    }
+  }
+
+  [Test]
+  public void PerlBackendEmitsPrintForStandardOutput() {
+    var module = FromOracle();
+    foreach (var name in PerlProfile.Names) {
+      var profile = PerlProfile.Parse(name);
+      Assert.That(PerlEmitter.Check(module, profile), Is.Empty, name);
+      var source = PerlEmitter.Emit(module, profile)[0].Content;
+      Assert.That(source, Does.Contain("print("), name);
+    }
   }
 
   [Test]

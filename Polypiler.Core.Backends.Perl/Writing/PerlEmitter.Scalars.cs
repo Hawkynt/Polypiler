@@ -482,6 +482,19 @@ public static partial class PerlEmitter {
           return $"((unpack('Q', pack('q', {args[0]})) >> 32) & 0xFFFFFFFF)";
         case IrIntrinsicOp.JoinWords:
           return $"unpack('q', pack('Q', ((({args[0]}) & 0xFFFFFFFF) << 32) | (({args[1]}) & 0xFFFFFFFF)))";
+        case IrIntrinsicOp.FormatDotNet or IrIntrinsicOp.FormatEcma: {
+          var argType = intrinsic.Arguments[0].Type;
+          if (argType.IsFloat) {
+            var dotnet = intrinsic.Op == IrIntrinsicOp.FormatDotNet ? "1" : "0";
+            var isF32 = argType == IrType.F32 ? "1" : "0";
+            return $"{this.HelperCall(PerlHelpers.FormatFloat)}({args[0]}, {dotnet}, {isF32})";
+          }
+          return argType == IrType.U64 ? $"sprintf('%u', {args[0]})" : $"sprintf('%d', {args[0]})";
+        }
+        case IrIntrinsicOp.FormatBoolDotNet:
+          return $"(({args[0]}) ? 'True' : 'False')";
+        case IrIntrinsicOp.FormatBoolEcma:
+          return $"(({args[0]}) ? 'true' : 'false')";
         default:
           return this.UnsupportedOp(intrinsic.Op.ToString());
       }

@@ -37,13 +37,14 @@ internal static class PerlHelpers {
   public const string TaskFromResult = "_ply_task_from_result";
   public const string TaskAwait = "_ply_await";
   public const string TaskWhenAll = "_ply_when_all";
+  public const string FormatFloat = "_ply_format_float";
 
   public static IReadOnlyList<string> Order { get; } = [
     FloatSignBit, FloatDivide, FloatDivide56, FloatRemainder, FloatRemainder56,
     FloatTrunc, FloatRoundAway, FloatRoundEven, FloatCopySign, FloatIsNormal,
     SwapEndian, RoundF32, IntToF32, ArrayCopy, ArrayEq,
     ViewSlice, ViewCopy, ViewEqual, TrapKind, TrapMessage, TrapMatches,
-    StrTrim, StrPad, TaskFromResult, TaskAwait, TaskWhenAll
+    StrTrim, StrPad, TaskFromResult, TaskAwait, TaskWhenAll, FormatFloat
   ];
 
   public static IReadOnlyDictionary<string, string> Bodies { get; } = new Dictionary<string, string> {
@@ -283,6 +284,21 @@ internal static class PerlHelpers {
               push @results, $t->{value} unless $is_void;
           }
           return $is_void ? { done => 1, value => undef } : { done => 1, value => \@results };
+      }
+      """,
+    [FormatFloat] = """
+      sub _ply_format_float {
+          my ($v, $dotnet, $is_f32) = @_;
+          return 'NaN' if $v != $v;
+          return ($v < 0 ? '-Infinity' : 'Infinity') if $v == 9**9**9 || $v == -9**9**9;
+          return (($dotnet && _ply_signbit($v)) ? '-0' : '0') if $v == 0;
+          my $s = sprintf($is_f32 ? '%.7g' : '%.15g', $v);
+          if ($dotnet) {
+              $s =~ s/e/E/;
+          } else {
+              $s =~ s/e([+-])0+(\d)/e$1$2/;
+          }
+          return $s;
       }
       """
   };
