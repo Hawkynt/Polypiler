@@ -9,20 +9,32 @@ public static partial class JvmEmitter {
   private sealed partial class ModuleEmitter {
 
     private static bool IsSupportedIntrinsic(IrIntrinsic intrinsic) => intrinsic.Op switch {
-      IrIntrinsicOp.Abs or IrIntrinsicOp.Min or IrIntrinsicOp.Max or IrIntrinsicOp.Sign
+      IrIntrinsicOp.Abs or IrIntrinsicOp.Min or IrIntrinsicOp.Max or IrIntrinsicOp.Sign or IrIntrinsicOp.Clamp
         or IrIntrinsicOp.Sqrt or IrIntrinsicOp.Floor or IrIntrinsicOp.Ceiling or IrIntrinsicOp.Truncate
         or IrIntrinsicOp.RoundEven or IrIntrinsicOp.RoundAway or IrIntrinsicOp.CopySign
+        or IrIntrinsicOp.Sin or IrIntrinsicOp.Cos or IrIntrinsicOp.Tan
+        or IrIntrinsicOp.Asin or IrIntrinsicOp.Acos or IrIntrinsicOp.Atan or IrIntrinsicOp.Atan2
+        or IrIntrinsicOp.Sinh or IrIntrinsicOp.Cosh or IrIntrinsicOp.Tanh
+        or IrIntrinsicOp.Exp or IrIntrinsicOp.Log or IrIntrinsicOp.Log10
+        or IrIntrinsicOp.Pow or IrIntrinsicOp.Cbrt or IrIntrinsicOp.FusedMultiplyAdd
         or IrIntrinsicOp.FloatBits or IrIntrinsicOp.BitsFloat
         or IrIntrinsicOp.IsNaN or IrIntrinsicOp.IsInfinity or IrIntrinsicOp.IsFinite
         or IrIntrinsicOp.IsNormal or IrIntrinsicOp.IsSubnormal or IrIntrinsicOp.IsNegative
         or IrIntrinsicOp.RotateLeft or IrIntrinsicOp.RotateRight
         or IrIntrinsicOp.LeadingZeroCount or IrIntrinsicOp.TrailingZeroCount or IrIntrinsicOp.PopCount
-        or IrIntrinsicOp.ByteSwap or IrIntrinsicOp.HighWord or IrIntrinsicOp.JoinWords
+        or IrIntrinsicOp.ByteSwap or IrIntrinsicOp.BitReverse or IrIntrinsicOp.IsPow2
+        or IrIntrinsicOp.HighWord or IrIntrinsicOp.JoinWords or IrIntrinsicOp.BigMul
         or IrIntrinsicOp.ParallelBitExtract or IrIntrinsicOp.ParallelBitDeposit
         or IrIntrinsicOp.ArrayOf or IrIntrinsicOp.ArrayCopy or IrIntrinsicOp.ArrayClear or IrIntrinsicOp.ArrayFill
+        or IrIntrinsicOp.EnumHasFlag or IrIntrinsicOp.EnumIsDefined or IrIntrinsicOp.EnumToString
+        or IrIntrinsicOp.EnumParse or IrIntrinsicOp.EnumNames or IrIntrinsicOp.EnumValues
         or IrIntrinsicOp.StrLength or IrIntrinsicOp.StrConcat or IrIntrinsicOp.StrEquals
-        or IrIntrinsicOp.StrCodeUnitAt or IrIntrinsicOp.StrSubstring or IrIntrinsicOp.StrCompareOrdinal
-        or IrIntrinsicOp.FormatDotNet
+        or IrIntrinsicOp.StrCodeUnitAt or IrIntrinsicOp.StrFromCodeUnit or IrIntrinsicOp.StrSubstring or IrIntrinsicOp.StrCompareOrdinal
+        or IrIntrinsicOp.StrStartsWith or IrIntrinsicOp.StrEndsWith or IrIntrinsicOp.StrContains
+        or IrIntrinsicOp.StrIndexOf or IrIntrinsicOp.StrLastIndexOf or IrIntrinsicOp.StrJoin
+        or IrIntrinsicOp.StrReplaceAll or IrIntrinsicOp.StrReplaceFirst
+        or IrIntrinsicOp.StrTrim or IrIntrinsicOp.StrTrimStart or IrIntrinsicOp.StrTrimEnd or IrIntrinsicOp.StrSplit
+        or IrIntrinsicOp.FormatDotNet or IrIntrinsicOp.FormatBoolDotNet or IrIntrinsicOp.FormatBoolEcma
         or IrIntrinsicOp.ViewOf or IrIntrinsicOp.Slice or IrIntrinsicOp.ViewLength or IrIntrinsicOp.StackAlloc
         or IrIntrinsicOp.ViewCopy or IrIntrinsicOp.ViewTryCopy or IrIntrinsicOp.ViewFill
         or IrIntrinsicOp.ViewEqual or IrIntrinsicOp.ViewToArray
@@ -44,6 +56,9 @@ public static partial class JvmEmitter {
     private sealed partial class MethodContext {
 
       private void EmitIntrinsic(IrIntrinsic intrinsic) {
+        if (this.TryEmitExtendedIntrinsic(intrinsic))
+          return;
+
         var args = intrinsic.Arguments;
         switch (intrinsic.Op) {
           case IrIntrinsicOp.Abs:
