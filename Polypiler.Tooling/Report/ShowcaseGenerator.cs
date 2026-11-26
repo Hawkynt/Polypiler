@@ -1,14 +1,19 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using Polypiler.Tooling.Toolchains;
 
 namespace Polypiler.Tooling.Report;
+
+/// <summary>A target backend together with all of its supported dialect profiles.</summary>
+/// <param name="Backend">The backend name passed to <c>--to</c>.</param>
+/// <param name="Profiles">The dialect profile names passed to <c>--profile</c>, in canonical order.</param>
+public sealed record ShowcaseTarget(string Backend, IReadOnlyList<string> Profiles);
 
 /// <summary>A curated C# showcase example read from <c>docs/showcase/</c>.</summary>
 /// <param name="FileName">The file name, e.g. <c>04-structs-and-records.cs</c>.</param>
@@ -32,8 +37,9 @@ public sealed record ShowcaseExample(
 /// <param name="Disassembled">Whether <paramref name="Content"/> was disassembled from a binary output.</param>
 public sealed record ShowcaseFile(string Path, string Fence, string Content, bool Disassembled);
 
-/// <summary>The outcome of translating one example to one backend.</summary>
+/// <summary>The outcome of translating one example to one backend dialect.</summary>
 /// <param name="Backend">The backend name passed to <c>--to</c>.</param>
+/// <param name="RequestedProfile">The dialect profile name passed to <c>--profile</c>.</param>
 /// <param name="Succeeded">Whether <c>polypiler translate</c> exited 0.</param>
 /// <param name="Profile">The profile recorded in <c>polypiler.manifest.json</c>, if any.</param>
 /// <param name="Files">The rendered output files when <paramref name="Succeeded"/> is true.</param>
@@ -41,16 +47,19 @@ public sealed record ShowcaseFile(string Path, string Fence, string Content, boo
 /// <param name="DiagnosticMessage">Concise refusal message when refused.</param>
 public sealed record ShowcaseOutcome(
   string Backend,
+  string RequestedProfile,
   bool Succeeded,
   string? Profile,
   IReadOnlyList<ShowcaseFile> Files,
   string? DiagnosticCode,
   string? DiagnosticMessage);
 
-/// <summary>Generates the cross-backend C# translation showcase Markdown by invoking the latest <c>polypiler</c> binary.</summary>
+/// <summary>Generates the cross-backend, dialect-grouped C# translation showcase Markdown by invoking the latest <c>polypiler</c> binary.</summary>
 public static partial class ShowcaseGenerator {
 
-  private static readonly TimeSpan _commandTimeout = TimeSpan.FromMinutes(2);
+  private static readonly TimeSpan _discoveryTimeout = TimeSpan.FromMinutes(2);
+  private static readonly TimeSpan _batchTimeout = TimeSpan.FromMinutes(10);
+  private static readonly JsonSerializerOptions _json = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
   /// <summary>Reads all <c>*.cs</c> showcase examples from <paramref name="directory"/> in deterministic file-name order.</summary>
   public static IReadOnlyList<ShowcaseExample> LoadExamples(string directory) {
@@ -85,57 +94,103 @@ public static partial class ShowcaseGenerator {
     return result;
   }
 
-  /// <summary>Discovers all supported target backends from <c>polypiler translate --help</c>.</summary>
-  public static IReadOnlyList<string> DiscoverBackends(IProcessRunner runner, IReadOnlyList<string> polypiler) {
+  /// <summary>Discovers all supported target backends and their dialect profiles from <c>polypiler targets</c>.</summary>
+  public static IReadOnlyList<ShowcaseTarget> DiscoverTargets(IProcessRunner runner, IReadOnlyList<string> polypiler) {
     ArgumentNullException.ThrowIfNull(runner);
     ArgumentNullException.ThrowIfNull(polypiler);
-    var result = runner.Run([.. polypiler, "translate", "--help"], _commandTimeout);
+    var result = runner.Run([.. polypiler, "targets"], _discoveryTimeout);
     if (result.TimedOut || result.ExitCode != 0)
-      throw new InvalidOperationException($"polypiler translate --help failed (exit {result.ExitCode}): {result.StandardError.Trim()}");
+      throw new InvalidOperationException($"polypiler targets failed (exit {result.ExitCode}): {result.StandardError.Trim()}");
 
-    var match = ToOptionPattern().Match(result.StandardOutput);
-    if (!match.Success)
-      throw new InvalidOperationException("could not discover target backends from 'polypiler translate --help'");
+    List<ShowcaseTarget>? targets;
+    try {
+      targets = JsonSerializer.Deserialize<List<ShowcaseTarget>>(result.StandardOutput, _json);
+    } catch (JsonException exception) {
+      throw new InvalidOperationException($"could not parse 'polypiler targets' output: {exception.Message}", exception);
+    }
 
-    return [.. match.Groups[1].Value.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
+    if (targets is null || targets.Count == 0)
+      throw new InvalidOperationException("could not discover target backends from 'polypiler targets'");
+
+    return targets;
   }
 
-  /// <summary>Translates all examples across all backends and renders the complete Markdown document.</summary>
+  /// <summary>Translates all examples across all discovered backends and dialects and renders the complete Markdown document.</summary>
   public static string Generate(
     IProcessRunner runner,
     IReadOnlyList<string> polypiler,
     IReadOnlyList<ShowcaseExample> examples,
-    IReadOnlyList<string> backends,
+    IReadOnlyList<ShowcaseTarget> targets,
     string relativeExamplesDirectory = "showcase") {
     ArgumentNullException.ThrowIfNull(runner);
     ArgumentNullException.ThrowIfNull(polypiler);
     ArgumentNullException.ThrowIfNull(examples);
-    ArgumentNullException.ThrowIfNull(backends);
+    ArgumentNullException.ThrowIfNull(targets);
 
-    var matrix = new ShowcaseOutcome[examples.Count, backends.Count];
-    var pairs = new List<(int Example, int Backend)>(examples.Count * backends.Count);
-    for (var e = 0; e < examples.Count; ++e)
-      for (var b = 0; b < backends.Count; ++b)
-        pairs.Add((e, b));
+    var matrix = new IReadOnlyList<ShowcaseOutcome>[examples.Count, targets.Count];
+    var workRoot = Path.Combine(Path.GetTempPath(), "polypiler-showcase-" + Guid.NewGuid().ToString("N"));
+    try {
+      Directory.CreateDirectory(workRoot);
+      var jobs = new List<BatchJobSpec>();
+      var jobMap = new Dictionary<string, (int Example, int Target, int Profile, string OutputDir)>(StringComparer.Ordinal);
 
-    Parallel.ForEach(pairs, pair => {
-      matrix[pair.Example, pair.Backend] = TranslateOne(runner, polypiler, examples[pair.Example], backends[pair.Backend]);
-    });
+      for (var e = 0; e < examples.Count; ++e)
+        for (var t = 0; t < targets.Count; ++t) {
+          var target = targets[t];
+          for (var p = 0; p < target.Profiles.Count; ++p) {
+            var id = $"{e}:{t}:{p}";
+            var outDir = Path.Combine(workRoot, $"{e}-{t}-{p}");
+            var profile = target.Profiles[p];
+            jobs.Add(new(id, [examples[e].FilePath, "--from", "csharp", "--to", target.Backend, "--profile", profile, "--output", outDir]));
+            jobMap[id] = (e, t, p, outDir);
+          }
+        }
 
-    return RenderMarkdown(examples, backends, matrix, relativeExamplesDirectory);
+      var perCell = new ShowcaseOutcome[examples.Count, targets.Count][];
+      for (var e = 0; e < examples.Count; ++e)
+        for (var t = 0; t < targets.Count; ++t)
+          perCell[e, t] = new ShowcaseOutcome[targets[t].Profiles.Count];
+
+      if (jobs.Count > 0) {
+        var batchPath = Path.Combine(workRoot, "jobs.json");
+        File.WriteAllText(batchPath, JsonSerializer.Serialize(jobs, _json), new UTF8Encoding(false));
+        var run = runner.Run([.. polypiler, "targets", "--run-batch", batchPath], _batchTimeout);
+        if (run.TimedOut || run.ExitCode != 0)
+          throw new InvalidOperationException($"polypiler targets --run-batch failed (exit {run.ExitCode}): {run.StandardError.Trim()}");
+
+        var results = JsonSerializer.Deserialize<BatchJobOutcome[]>(run.StandardOutput, _json)
+          ?? throw new InvalidOperationException("could not parse 'polypiler targets --run-batch' output");
+
+        foreach (var item in results) {
+          var (e, t, p, outDir) = jobMap[item.Id];
+          var backend = targets[t].Backend;
+          var requestedProfile = targets[t].Profiles[p];
+          perCell[e, t][p] = ReadOutcome(examples[e], backend, requestedProfile, item.ExitCode, item.Stderr, outDir);
+        }
+      }
+
+      for (var e = 0; e < examples.Count; ++e)
+        for (var t = 0; t < targets.Count; ++t)
+          matrix[e, t] = perCell[e, t];
+
+      return RenderMarkdown(examples, targets, matrix, relativeExamplesDirectory);
+    } finally {
+      if (Directory.Exists(workRoot))
+        Directory.Delete(workRoot, recursive: true);
+    }
   }
 
-  /// <summary>Renders a precomputed translation matrix to deterministic LF Markdown.</summary>
+  /// <summary>Renders a precomputed backend/dialect translation matrix to deterministic LF Markdown.</summary>
   public static string RenderMarkdown(
     IReadOnlyList<ShowcaseExample> examples,
-    IReadOnlyList<string> backends,
-    ShowcaseOutcome[,] matrix,
+    IReadOnlyList<ShowcaseTarget> targets,
+    IReadOnlyList<ShowcaseOutcome>[,] matrix,
     string relativeExamplesDirectory = "showcase") {
     var sb = new StringBuilder();
     sb.AppendLine("<!-- generated by \"polypiler-tooling report showcase\"; do not edit -->");
     sb.AppendLine("# Cross-Backend Translation Showcase");
     sb.AppendLine();
-    sb.AppendLine("Live translations of high-level C# constructs generated directly by the latest `polypiler translate` across every supported backend. Binary targets (`.NET MSIL`, `JVM bytecode`) are disassembled from the real emitted `.dll` and `.jar` artifacts into readable assembler-like text mnemonics. Constructs not yet implemented in the C# frontend or a target backend report their exact `PLY####` diagnostic rather than fabricating code.");
+    sb.AppendLine("Live translations of high-level C# constructs generated directly by the latest `polypiler translate` across every supported backend and target dialect. Dialects are grouped under their parent backend so you can compare how features lower across versions (such as `es5` vs `es2022`, `net2.0` vs `net10.0`, `py3.8` vs `py3.14`, `perl/5.6` vs `perl/5`, `cpp/cpp17` vs `cpp/cpp23`, `cmd` vs `dos622`, `jvm/8` vs `jvm/21`, and `msil/net8` vs `msil/net10`). Structurally identical dialect outputs under the same backend are collapsed together while every distinct lowering is shown verbatim. Binary targets (`.NET MSIL`, `JVM bytecode`) are disassembled from the real emitted `.dll` and `.jar` artifacts into readable assembler-like text mnemonics. Constructs not yet implemented report their exact `PLY####` diagnostic rather than fabricating code.");
     sb.AppendLine();
     sb.AppendLine("Regenerate locally with:");
     sb.AppendLine();
@@ -147,11 +202,11 @@ public static partial class ShowcaseGenerator {
     sb.AppendLine("## Summary matrix");
     sb.AppendLine();
     sb.Append("| Construct | Category |");
-    foreach (var backend in backends)
-      sb.Append(' ').Append(DisplayBackendName(backend)).Append(" |");
+    foreach (var target in targets)
+      sb.Append(' ').Append(DisplayBackendName(target.Backend)).Append(" |");
     sb.AppendLine();
     sb.Append("| --- | --- |");
-    for (var b = 0; b < backends.Count; ++b)
+    for (var t = 0; t < targets.Count; ++t)
       sb.Append(" :---: |");
     sb.AppendLine();
 
@@ -159,11 +214,42 @@ public static partial class ShowcaseGenerator {
       var example = examples[e];
       sb.Append("| [").Append(example.Title).Append("](#").Append(Anchor(example.Title)).Append(") | ")
         .Append(example.Category).Append(" |");
-      for (var b = 0; b < backends.Count; ++b) {
-        var outcome = matrix[e, b];
-        sb.Append(' ').Append(outcome.Succeeded ? "✅" : $"`{outcome.DiagnosticCode ?? "refused"}`").Append(" |");
-      }
+      for (var t = 0; t < targets.Count; ++t)
+        sb.Append(' ').Append(FormatOverviewCell(matrix[e, t])).Append(" |");
       sb.AppendLine();
+    }
+
+    var multiDialectTargets = targets.Select((target, index) => (Target: target, Index: index))
+      .Where(item => item.Target.Profiles.Count > 1)
+      .ToList();
+    if (multiDialectTargets.Count > 0) {
+      sb.AppendLine();
+      sb.AppendLine("## Dialect support by backend");
+      foreach (var (target, t) in multiDialectTargets) {
+        sb.AppendLine();
+        sb.AppendLine("<details>");
+        sb.Append("<summary><strong>").Append(DisplayBackendName(target.Backend)).Append("</strong> (")
+          .Append(target.Profiles.Count.ToString(CultureInfo.InvariantCulture)).Append(" dialects: ")
+          .Append(string.Join(", ", target.Profiles.Select(p => $"<code>{p}</code>"))).AppendLine(")</summary>");
+        sb.AppendLine();
+        sb.Append("| Construct |");
+        foreach (var profile in target.Profiles)
+          sb.Append(" `").Append(profile).Append("` |");
+        sb.AppendLine();
+        sb.Append("| --- |");
+        for (var p = 0; p < target.Profiles.Count; ++p)
+          sb.Append(" :---: |");
+        sb.AppendLine();
+        for (var e = 0; e < examples.Count; ++e) {
+          var example = examples[e];
+          sb.Append("| [").Append(example.Title).Append("](#").Append(Anchor(example.Title)).Append(") |");
+          foreach (var outcome in matrix[e, t])
+            sb.Append(' ').Append(outcome.Succeeded ? "✅" : $"`{outcome.DiagnosticCode ?? "refused"}`").Append(" |");
+          sb.AppendLine();
+        }
+        sb.AppendLine();
+        sb.AppendLine("</details>");
+      }
     }
 
     for (var e = 0; e < examples.Count; ++e) {
@@ -179,48 +265,32 @@ public static partial class ShowcaseGenerator {
       sb.AppendLine(example.DisplaySource);
       sb.AppendLine("```");
 
-      var succeeded = new List<ShowcaseOutcome>();
-      var refused = new List<ShowcaseOutcome>();
-      for (var b = 0; b < backends.Count; ++b) {
-        var outcome = matrix[e, b];
-        if (outcome.Succeeded)
-          succeeded.Add(outcome);
-        else
-          refused.Add(outcome);
-      }
+      var fullyRefusedBackends = new List<(string Backend, IReadOnlyList<ShowcaseOutcome> Outcomes)>();
+      var anyBackendSucceeded = false;
 
-      foreach (var item in succeeded) {
-        var fileSummary = string.Join(", ", item.Files.Select(f => f.Disassembled ? $"`{f.Path}` (disassembled)" : $"`{f.Path}`"));
-        var profileLabel = string.IsNullOrEmpty(item.Profile) ? "" : $"`{item.Profile}` — ";
-        sb.AppendLine();
-        sb.AppendLine("<details>");
-        sb.Append("<summary><strong>").Append(DisplayBackendName(item.Backend)).Append("</strong> (")
-          .Append(profileLabel).Append(fileSummary).AppendLine(")</summary>");
-        foreach (var file in item.Files) {
-          sb.AppendLine();
-          if (item.Files.Count > 1 || file.Disassembled) {
-            sb.Append("**`").Append(file.Path).Append("`**");
-            if (file.Disassembled)
-              sb.Append(" *(disassembled mnemonics)*");
-            sb.AppendLine();
-            sb.AppendLine();
-          }
-          sb.Append("```").AppendLine(file.Fence);
-          sb.AppendLine(file.Content.TrimEnd());
-          sb.AppendLine("```");
+      for (var t = 0; t < targets.Count; ++t) {
+        var outcomes = matrix[e, t];
+        var succeeded = outcomes.Where(o => o.Succeeded).ToList();
+        var refused = outcomes.Where(o => !o.Succeeded).ToList();
+        if (succeeded.Count == 0) {
+          fullyRefusedBackends.Add((targets[t].Backend, refused));
+          continue;
         }
-        sb.AppendLine();
-        sb.AppendLine("</details>");
+
+        anyBackendSucceeded = true;
+        var groups = GroupByStructuralOutput(succeeded);
+        RenderBackendSection(sb, targets[t].Backend, outcomes.Count, groups, refused);
       }
 
-      if (refused.Count > 0) {
+      if (fullyRefusedBackends.Count > 0) {
         sb.AppendLine();
-        if (succeeded.Count == 0 && refused.Select(r => (r.DiagnosticCode, r.DiagnosticMessage)).Distinct().Count() == 1) {
-          var first = refused[0];
-          sb.Append("> **Frontend refusal (all backends):** `").Append(first.DiagnosticCode ?? "error")
+        var allRefusals = fullyRefusedBackends.SelectMany(b => b.Outcomes).ToList();
+        if (!anyBackendSucceeded && allRefusals.Select(r => (r.DiagnosticCode, r.DiagnosticMessage)).Distinct().Count() == 1) {
+          var first = allRefusals[0];
+          sb.Append("> **Frontend refusal (all backends & dialects):** `").Append(first.DiagnosticCode ?? "error")
             .Append("`: ").AppendLine(first.DiagnosticMessage);
         } else {
-          var notes = refused.Select(r => $"`{r.Backend}` (`{r.DiagnosticCode ?? "error"}`: {r.DiagnosticMessage})");
+          var notes = fullyRefusedBackends.Select(entry => FormatRefusedBackend(entry.Backend, entry.Outcomes));
           sb.Append("> **Refused by:** ").AppendLine(string.Join("; ", notes));
         }
       }
@@ -229,34 +299,173 @@ public static partial class ShowcaseGenerator {
     return sb.ToString().Replace("\r\n", "\n", StringComparison.Ordinal);
   }
 
-  private static ShowcaseOutcome TranslateOne(IProcessRunner runner, IReadOnlyList<string> polypiler, ShowcaseExample example, string backend) {
-    var workDir = Path.Combine(Path.GetTempPath(), "polypiler-showcase-" + Guid.NewGuid().ToString("N"));
-    try {
-      var result = runner.Run([.. polypiler, "translate", example.FilePath, "--from", "csharp", "--to", backend, "--output", workDir], _commandTimeout);
-      if (result.TimedOut)
-        return new(backend, false, null, [], "TIMEOUT", "translation timed out");
-      if (result.ExitCode != 0) {
-        var (code, message) = ParseDiagnostic(result.StandardError, example.FilePath);
-        return new(backend, false, null, [], code, message);
-      }
+  private static void RenderBackendSection(
+    StringBuilder sb,
+    string backend,
+    int totalDialects,
+    IReadOnlyList<DialectGroup> groups,
+    IReadOnlyList<ShowcaseOutcome> refused) {
+    var displayName = DisplayBackendName(backend);
+    sb.AppendLine();
+    sb.AppendLine("<details>");
 
-      var profile = ReadProfile(workDir);
-      var rendered = new List<ShowcaseFile>();
-      if (Directory.Exists(workDir)) {
-        var files = Directory.GetFiles(workDir, "*", SearchOption.AllDirectories)
-          .Select(full => (Full: full, Relative: Path.GetRelativePath(workDir, full).Replace('\\', '/')))
-          .Where(item => item.Relative != "polypiler.manifest.json" && !item.Relative.EndsWith(".runtimeconfig.json", StringComparison.Ordinal))
-          .OrderBy(item => item.Relative, StringComparer.Ordinal);
-
-        foreach (var (full, relative) in files)
-          rendered.Add(RenderOutputFile(relative, File.ReadAllBytes(full)));
-      }
-
-      return new(backend, true, profile, rendered, null, null);
-    } finally {
-      if (Directory.Exists(workDir))
-        Directory.Delete(workDir, recursive: true);
+    if (groups.Count == 1 && refused.Count == 0) {
+      var only = groups[0];
+      var dialectList = string.Join(", ", only.Dialects.Select(d => $"<code>{d}</code>"));
+      var fileSummary = FormatFileSummary(only.Representative.Files);
+      var qualifier = only.Dialects.Count > 1 ? "identical output — " : "";
+      sb.Append("<summary><strong>").Append(displayName).Append("</strong> — ")
+        .Append(dialectList).Append(" (").Append(qualifier).Append(fileSummary).AppendLine(")</summary>");
+      RenderFiles(sb, only.Representative.Files);
+      sb.AppendLine();
+      sb.AppendLine("</details>");
+      return;
     }
+
+    var passedCount = groups.Sum(g => g.Dialects.Count);
+    var statusPart = refused.Count == 0
+      ? $"{totalDialects.ToString(CultureInfo.InvariantCulture)} dialects"
+      : $"{passedCount.ToString(CultureInfo.InvariantCulture)}/{totalDialects.ToString(CultureInfo.InvariantCulture)} dialects";
+    var variantPart = groups.Count == 1
+      ? "1 output"
+      : $"{groups.Count.ToString(CultureInfo.InvariantCulture)} distinct outputs";
+    sb.Append("<summary><strong>").Append(displayName).Append("</strong> — ")
+      .Append(statusPart).Append(" (").Append(variantPart).AppendLine(")</summary>");
+
+    foreach (var group in groups) {
+      var label = group.Dialects.Count == 1 ? "Dialect" : "Dialects";
+      var dialectList = string.Join(", ", group.Dialects.Select(d => $"<code>{d}</code>"));
+      sb.AppendLine();
+      sb.AppendLine("<details>");
+      sb.Append("<summary>").Append(label).Append(": ").Append(dialectList)
+        .Append(" (").Append(FormatFileSummary(group.Representative.Files)).AppendLine(")</summary>");
+      RenderFiles(sb, group.Representative.Files);
+      sb.AppendLine();
+      sb.AppendLine("</details>");
+    }
+
+    if (refused.Count > 0) {
+      var groupedRefusals = refused
+        .GroupBy(r => (r.DiagnosticCode, r.DiagnosticMessage))
+        .Select(g => $"{string.Join(", ", g.Select(x => $"`{x.RequestedProfile}`"))} (`{g.Key.DiagnosticCode ?? "error"}`: {g.Key.DiagnosticMessage})");
+      sb.AppendLine();
+      sb.Append("> **Refused dialects:** ").AppendLine(string.Join("; ", groupedRefusals));
+    }
+
+    sb.AppendLine();
+    sb.AppendLine("</details>");
+  }
+
+  private static void RenderFiles(StringBuilder sb, IReadOnlyList<ShowcaseFile> files) {
+    foreach (var file in files) {
+      sb.AppendLine();
+      if (files.Count > 1 || file.Disassembled) {
+        sb.Append("**`").Append(file.Path).Append("`**");
+        if (file.Disassembled)
+          sb.Append(" *(disassembled mnemonics)*");
+        sb.AppendLine();
+        sb.AppendLine();
+      }
+      sb.Append("```").AppendLine(file.Fence);
+      sb.AppendLine(file.Content.TrimEnd());
+      sb.AppendLine("```");
+    }
+  }
+
+  private static string FormatFileSummary(IReadOnlyList<ShowcaseFile> files)
+    => string.Join(", ", files.Select(f => f.Disassembled ? $"<code>{f.Path}</code> (disassembled)" : $"<code>{f.Path}</code>"));
+
+  private static string FormatOverviewCell(IReadOnlyList<ShowcaseOutcome> outcomes) {
+    var passed = outcomes.Count(o => o.Succeeded);
+    if (passed == outcomes.Count)
+      return "✅";
+    if (passed > 0)
+      return $"⚠️ {passed.ToString(CultureInfo.InvariantCulture)}/{outcomes.Count.ToString(CultureInfo.InvariantCulture)}";
+
+    var codes = outcomes.Select(o => o.DiagnosticCode ?? "refused").Distinct(StringComparer.Ordinal).ToList();
+    return string.Join("/", codes.Select(code => $"`{code}`"));
+  }
+
+  private static string FormatRefusedBackend(string backend, IReadOnlyList<ShowcaseOutcome> refused) {
+    var distinct = refused.GroupBy(r => (r.DiagnosticCode, r.DiagnosticMessage)).ToList();
+    if (distinct.Count == 1) {
+      var first = distinct[0].Key;
+      return $"`{backend}` (`{first.DiagnosticCode ?? "error"}`: {first.DiagnosticMessage})";
+    }
+
+    var perDialect = distinct.Select(g => $"{string.Join("/", g.Select(x => $"`{x.RequestedProfile}`"))}: `{g.Key.DiagnosticCode ?? "error"}`: {g.Key.DiagnosticMessage}");
+    return $"`{backend}` ({string.Join("; ", perDialect)})";
+  }
+
+  private static IReadOnlyList<DialectGroup> GroupByStructuralOutput(IReadOnlyList<ShowcaseOutcome> succeeded) {
+    var groups = new List<DialectGroup>();
+    var indexByKey = new Dictionary<string, int>(StringComparer.Ordinal);
+    foreach (var outcome in succeeded) {
+      var key = StructuralKey(outcome.Files);
+      if (indexByKey.TryGetValue(key, out var existing)) {
+        groups[existing].Dialects.Add(outcome.RequestedProfile);
+      } else {
+        indexByKey[key] = groups.Count;
+        groups.Add(new([outcome.RequestedProfile], outcome));
+      }
+    }
+    return groups;
+  }
+
+  /// <summary>
+  /// Builds a comparison key across emitted files while ignoring pure profile-banner metadata lines
+  /// so dialects that emit structurally identical code collapse cleanly under one heading.
+  /// </summary>
+  internal static string StructuralKey(IReadOnlyList<ShowcaseFile> files) {
+    var sb = new StringBuilder();
+    foreach (var file in files) {
+      sb.Append(file.Path).Append('\0');
+      var isCargoToml = file.Path.EndsWith("Cargo.toml", StringComparison.Ordinal);
+      foreach (var line in file.Content.Split('\n')) {
+        if (IsProfileBannerLine(line, isCargoToml))
+          continue;
+        sb.Append(line).Append('\n');
+      }
+      sb.Append('\0');
+    }
+    return sb.ToString();
+  }
+
+  private static bool IsProfileBannerLine(string line, bool isCargoToml) {
+    if (line.StartsWith("// Profile:", StringComparison.Ordinal)
+      || line.StartsWith("// JavaScript profile:", StringComparison.Ordinal)
+      || line.StartsWith("# Python profile:", StringComparison.Ordinal)
+      || line.StartsWith("//! Rust profile:", StringComparison.Ordinal)
+      || line.StartsWith("// classfile version ", StringComparison.Ordinal))
+      return true;
+    return isCargoToml && (line.StartsWith("edition = ", StringComparison.Ordinal) || line.StartsWith("rust-version = ", StringComparison.Ordinal));
+  }
+
+  private static ShowcaseOutcome ReadOutcome(
+    ShowcaseExample example,
+    string backend,
+    string requestedProfile,
+    int exitCode,
+    string stderr,
+    string outputDirectory) {
+    if (exitCode != 0) {
+      var (code, message) = ParseDiagnostic(stderr, example.FilePath);
+      return new(backend, requestedProfile, false, null, [], code, message);
+    }
+
+    var profile = ReadProfile(outputDirectory);
+    var rendered = new List<ShowcaseFile>();
+    if (Directory.Exists(outputDirectory)) {
+      var files = Directory.GetFiles(outputDirectory, "*", SearchOption.AllDirectories)
+        .Select(full => (Full: full, Relative: Path.GetRelativePath(outputDirectory, full).Replace('\\', '/')))
+        .Where(item => item.Relative != "polypiler.manifest.json" && !item.Relative.EndsWith(".runtimeconfig.json", StringComparison.Ordinal))
+        .OrderBy(item => item.Relative, StringComparer.Ordinal);
+
+      foreach (var (full, relative) in files)
+        rendered.Add(RenderOutputFile(relative, File.ReadAllBytes(full)));
+    }
+
+    return new(backend, requestedProfile, true, profile, rendered, null, null);
   }
 
   /// <summary>Converts one emitted file (text or binary) into a Markdown-ready <see cref="ShowcaseFile"/>.</summary>
@@ -288,10 +497,10 @@ public static partial class ShowcaseGenerator {
     sb.Append("; binary artifact (").Append(bytes.Length).AppendLine(" bytes)");
     var limit = Math.Min(bytes.Length, 64);
     for (var offset = 0; offset < limit; offset += 16) {
-      sb.Append(offset.ToString("X4", System.Globalization.CultureInfo.InvariantCulture)).Append(':');
+      sb.Append(offset.ToString("X4", CultureInfo.InvariantCulture)).Append(':');
       var end = Math.Min(offset + 16, limit);
       for (var i = offset; i < end; ++i)
-        sb.Append(' ').Append(bytes[i].ToString("X2", System.Globalization.CultureInfo.InvariantCulture));
+        sb.Append(' ').Append(bytes[i].ToString("X2", CultureInfo.InvariantCulture));
       sb.AppendLine();
     }
     return sb.ToString();
@@ -309,10 +518,10 @@ public static partial class ShowcaseGenerator {
   }
 
   private static (string? Code, string Message) ParseDiagnostic(string stderr, string sourcePath) {
-    var firstLine = stderr.Replace("\r\n", "\n", StringComparison.Ordinal)
-      .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-      .FirstOrDefault(line => line.Contains("error PLY", StringComparison.Ordinal))
-      ?? stderr.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault()
+    var lines = stderr.Replace("\r\n", "\n", StringComparison.Ordinal)
+      .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    var firstLine = lines.FirstOrDefault(line => line.Contains("error PLY", StringComparison.Ordinal))
+      ?? lines.FirstOrDefault()
       ?? "translation failed";
 
     var match = DiagnosticLinePattern().Match(firstLine);
@@ -361,8 +570,11 @@ public static partial class ShowcaseGenerator {
     return sb.ToString();
   }
 
-  [GeneratedRegex(@"--to\s+<([^>]+)>", RegexOptions.CultureInvariant)]
-  private static partial Regex ToOptionPattern();
+  private sealed record DialectGroup(List<string> Dialects, ShowcaseOutcome Representative);
+
+  private sealed record BatchJobSpec(string Id, string[] Args);
+
+  private sealed record BatchJobOutcome(string Id, int ExitCode, string Stderr);
 
   [GeneratedRegex(@"error\s+(PLY\d{4}):\s*(.+)$", RegexOptions.CultureInvariant)]
   private static partial Regex DiagnosticLinePattern();

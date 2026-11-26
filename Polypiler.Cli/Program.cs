@@ -19,6 +19,7 @@ public static class Program {
   /// <summary>The commands of <c>polypiler</c>: the single place a command is registered.</summary>
   public static CommandRegistry CreateRegistry() {
     var registry = new CommandRegistry();
+    registry.Add(new TargetsCommand());
     registry.Add(new TranslateCommand());
     registry.Add(new VerifyCommand());
     return registry;

@@ -738,6 +738,10 @@ public sealed partial class TranslateCommand : ICliCommand {
   private static string? ExportMisuse(IReadOnlyDictionary<string, string> options)
     => options.TryGetValue(Export, out var names) && Names(names).Length == 0 ? $"the option '{Export}' names no function" : null;
 
+  /// <summary>Lists every supported target backend and its dialect profiles in canonical order.</summary>
+  public static IReadOnlyList<(string Backend, IReadOnlyList<string> Profiles)> SupportedTargets()
+    => [.. _backends.Select(backend => (backend.Name, backend.Profiles))];
+
   /// <summary>The JavaScript backend with a capability table; <c>--profile</c> names the language level.</summary>
   private static Backend JavaScript(JavaScriptCapabilities capabilities, Func<IrModule> implementations) => new(
     "javascript",
@@ -748,7 +752,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     options => FloatMisuse(options) ?? JavaScriptProfileOf(options).Error ?? BindMisuse(options),
     (module, options) => JavaScriptEmitter.Legalize(module, implementations, JavaScriptProfileOf(options).Profile!, FloatModeOf(options), capabilities),
     (module, options) => JavaScriptEmitter.Check(module, JavaScriptProfileOf(options).Profile!, capabilities),
-    (module, options, passes, _) => JavaScriptEmitter.Emit(module, JavaScriptProfileOf(options).Profile!, FloatModeOf(options), capabilities, passes));
+    (module, options, passes, _) => JavaScriptEmitter.Emit(module, JavaScriptProfileOf(options).Profile!, FloatModeOf(options), capabilities, passes),
+    JavaScriptProfile.LevelNames);
 
   /// <summary>The JavaScript profile the options of a command line name, or what is wrong with them.</summary>
   private static (JavaScriptProfile? Profile, string? Error) JavaScriptProfileOf(IReadOnlyDictionary<string, string> options) {
@@ -767,7 +772,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     options => FloatMisuse(options) ?? CSharpMisuse(options),
     (module, options) => CSharpEmitter.Legalize(module, implementations, CSharpProfileOf(options), FloatModeOf(options), capabilities),
     (module, options) => CSharpEmitter.Check(module, CSharpProfileOf(options), capabilities),
-    (module, options, passes, _) => CSharpEmitter.Emit(module, CSharpProfileOf(options), FloatModeOf(options), options.GetValueOrDefault(Namespace), capabilities, passes));
+    (module, options, passes, _) => CSharpEmitter.Emit(module, CSharpProfileOf(options), FloatModeOf(options), options.GetValueOrDefault(Namespace), capabilities, passes),
+    [.. CSharpProfile.All.Select(profile => profile.Name)]);
 
   private static Backend Batch() => new("batch", "cmd", options => options.GetValueOrDefault(Profile, BatchEmitter.Profile), RuleTarget.Neutral,
     [new(Profile, "<cmd|dos622>")],
@@ -775,6 +781,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     (module, _) => module,
     (module, options) => IsDosBatch(options) ? DosBatchEmitter.Check(module) : BatchEmitter.Check(module),
     (module, options, _, _) => new(IsDosBatch(options) ? DosBatchEmitter.Emit(module) : BatchEmitter.Emit(module), []),
+    [BatchEmitter.Profile, DosBatchEmitter.Profile],
     options => IsDosBatch(options) ? "command.com" : "cmd");
 
   private static bool IsDosBatch(IReadOnlyDictionary<string, string> options) => options.GetValueOrDefault(Profile) == DosBatchEmitter.Profile;
@@ -788,7 +795,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     options => FloatMisuse(options) ?? MsilProfileOf(options).Error,
     (module, options) => MsilEmitter.Legalize(module, implementations, MsilProfileOf(options).Profile!, FloatModeOf(options)),
     (module, options) => MsilEmitter.Check(module, MsilProfileOf(options).Profile!),
-    (module, options, _, _) => MsilEmitter.EmitTarget(module, MsilProfileOf(options).Profile!));
+    (module, options, _, _) => MsilEmitter.EmitTarget(module, MsilProfileOf(options).Profile!),
+    MsilProfile.Names);
 
   private static (MsilProfile? Profile, string? Error) MsilProfileOf(IReadOnlyDictionary<string, string> options) {
     MsilProfile.TryParse(options.GetValueOrDefault(Profile), options.GetValueOrDefault(OutputTypeOption), out var profile, out var error);
@@ -804,7 +812,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     options => FloatMisuse(options) ?? JvmProfileOf(options).Error,
     (module, options) => JvmEmitter.Legalize(module, implementations, JvmProfileOf(options).Profile!, FloatModeOf(options)),
     (module, options) => JvmEmitter.Check(module, JvmProfileOf(options).Profile!),
-    (module, options, _, _) => JvmEmitter.EmitTarget(module, JvmProfileOf(options).Profile!));
+    (module, options, _, _) => JvmEmitter.EmitTarget(module, JvmProfileOf(options).Profile!),
+    JvmProfile.Names);
 
   private static (JvmProfile? Profile, string? Error) JvmProfileOf(IReadOnlyDictionary<string, string> options) {
     JvmProfile.TryParse(options.GetValueOrDefault(Profile), options.GetValueOrDefault(PackageFormatOption), out var profile, out var error);
@@ -822,7 +831,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     (module, options) => CppEmitter.Check(module, CppProfileOf(options).Profile!),
     (module, options, _, _) => CppEmitter.EmitTarget(module, CppProfileOf(options).Profile!, new CppEmitOptions {
       Namespace = options.GetValueOrDefault(Namespace)
-    }));
+    }),
+    CppProfile.Names);
 
   private static (CppProfile? Profile, string? Error) CppProfileOf(IReadOnlyDictionary<string, string> options) {
     CppProfile.TryParse(options.GetValueOrDefault(Profile), out var profile, out var error);
@@ -838,7 +848,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     options => FloatMisuse(options) ?? VBScriptProfileOf(options).Error,
     (module, options) => VBScriptEmitter.Legalize(module, implementations, VBScriptProfileOf(options).Profile!, FloatModeOf(options)),
     (module, options) => VBScriptEmitter.Check(module, VBScriptProfileOf(options).Profile!),
-    (module, options, _, _) => VBScriptEmitter.EmitTarget(module, VBScriptProfileOf(options).Profile!));
+    (module, options, _, _) => VBScriptEmitter.EmitTarget(module, VBScriptProfileOf(options).Profile!),
+    VBScriptProfile.Names);
 
   private static (VBScriptProfile? Profile, string? Error) VBScriptProfileOf(IReadOnlyDictionary<string, string> options) {
     VBScriptProfile.TryParse(options.GetValueOrDefault(Profile), out var profile, out var error);
@@ -857,7 +868,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     (module, options, _, layout) => PerlEmitter.EmitTarget(module, PerlProfileOf(options).Profile!, new PerlEmitOptions {
       PackageName = layout?.Package,
       TestFunctions = layout?.Tests is { Count: > 0 } tests ? tests.ToHashSet(StringComparer.Ordinal) : new HashSet<string>(StringComparer.Ordinal)
-    }));
+    }),
+    PerlProfile.Names);
 
   private static (PerlProfile? Profile, string? Error) PerlProfileOf(IReadOnlyDictionary<string, string> options) {
     PerlProfile.TryParse(options.GetValueOrDefault(Profile), options.GetValueOrDefault(ByteStorageOption), options.GetValueOrDefault(ObjectModelOption), out var profile, out var error);
@@ -873,7 +885,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     options => FloatMisuse(options) ?? PythonProfileOf(options).Error,
     (module, options) => PythonEmitter.Legalize(module, implementations, PythonProfileOf(options).Profile!, FloatModeOf(options), capabilities),
     (module, options) => PythonEmitter.Check(module, PythonProfileOf(options).Profile!, capabilities),
-    (module, options, passes, _) => PythonEmitter.Emit(module, PythonProfileOf(options).Profile!, FloatModeOf(options), capabilities, passes));
+    (module, options, passes, _) => PythonEmitter.Emit(module, PythonProfileOf(options).Profile!, FloatModeOf(options), capabilities, passes),
+    PythonProfile.Names);
 
   /// <summary>The Python profile <c>--profile</c> names, the default one without it, or what is wrong with the name.</summary>
   private static (PythonProfile? Profile, string? Error) PythonProfileOf(IReadOnlyDictionary<string, string> options) {
@@ -896,7 +909,8 @@ public sealed partial class TranslateCommand : ICliCommand {
       Modules = layout?.Modules ?? new Dictionary<string, string>(),
       CrateRoot = layout?.Modules.Count > 0,
       TestFunctions = layout?.Tests ?? []
-    }));
+    }),
+    [.. RustProfile.All.Select(profile => profile.Name)]);
 
   /// <summary>The Rust profile the options of a command line name, unsafe code allowed by <c>--allow-unsafe</c>, or what is wrong with them.</summary>
   private static (RustProfile? Profile, string? Error) RustProfileOf(IReadOnlyDictionary<string, string> options) {
@@ -1070,6 +1084,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     Func<IrModule, IReadOnlyDictionary<string, string>, IrModule> Lower,
     Func<IrModule, IReadOnlyDictionary<string, string>, IReadOnlyList<Diagnostic>> Check,
     Func<IrModule, IReadOnlyDictionary<string, string>, TargetPassOptions, CrateLayout?, TargetEmission> Emit,
+    IReadOnlyList<string> Profiles,
     Func<IReadOnlyDictionary<string, string>, string>? ProfileRuntime = null) {
 
     /// <summary>Whether an option belongs to this language.</summary>
