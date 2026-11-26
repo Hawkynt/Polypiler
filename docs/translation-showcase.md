@@ -16,23 +16,23 @@ dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -- re
 | --- | --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | [Operators, Bitwise & Checked Arithmetic](#operators-bitwise--checked-arithmetic) | Core Language | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
 | [Recursion](#recursion) | Control Flow & Functions | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
-| [Method & Constructor Overloading](#method--constructor-overloading) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | `PLY3051` | `PLY3151` | ✅ | ✅ |
-| [Structs & Value Records](#structs--value-records) | Types & Data | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | `PLY3151` | ✅ | ✅ |
-| [Classes, Properties & Reference Records](#classes-properties--reference-records) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | `PLY3051` | `PLY3151` | ✅ | ✅ |
+| [Method & Constructor Overloading](#method--constructor-overloading) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
+| [Structs & Value Records](#structs--value-records) | Types & Data | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
+| [Classes, Properties & Reference Records](#classes-properties--reference-records) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
 | [Statics & Module State](#statics--module-state) | Core Language | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
-| [Inheritance, Virtual Dispatch & Interfaces](#inheritance-virtual-dispatch--interfaces) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | `PLY3051` | `PLY3151` | ✅ | ✅ |
-| [Generics](#generics) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | `PLY3051` | `PLY3151` | ✅ | ✅ |
-| [Lambdas & Closures](#lambdas--closures) | Functional | ✅ | ✅ | ✅ | ✅ | `PLY0001` | `PLY2850`/`PLY2851` | `PLY3051` | `PLY3151` | `PLY1451` | `PLY2651` |
+| [Inheritance, Virtual Dispatch & Interfaces](#inheritance-virtual-dispatch--interfaces) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
+| [Generics](#generics) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
+| [Lambdas & Closures](#lambdas--closures) | Functional | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
 | [Callbacks & Delegates](#callbacks--delegates) | Functional | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
 | [Enums & Nullable Optionals](#enums--nullable-optionals) | Types & Data | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | `PLY3052` | `PLY3152` | ✅ | ✅ |
-| [Collections](#collections) | Collections & Sequences | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | `PLY3051` | `PLY3151` | `PLY1451` | `PLY2651` |
-| [Iterators & Lazy Sequences](#iterators--lazy-sequences) | Collections & Sequences | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | `PLY3051` | `PLY3151` | `PLY1451` | `PLY2651` |
+| [Collections](#collections) | Collections & Sequences | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
+| [Iterators & Lazy Sequences](#iterators--lazy-sequences) | Collections & Sequences | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
 | [LINQ](#linq) | Collections & Sequences | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
-| [Exceptions & Resource Scopes](#exceptions--resource-scopes) | Error Handling | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | `PLY3051` | `PLY3151` | ✅ | ✅ |
-| [Tasks & Async/Await](#tasks--asyncawait) | Concurrency & Asynchrony | ⚠️ 4/5 | ⚠️ 7/9 | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | `PLY3051` | `PLY3151` | `PLY1451` | `PLY2651` |
-| [Standard Output (Stdio)](#standard-output-stdio) | I/O & Interop | `PLY1152` | `PLY1052` | `PLY1851` | ✅ | `PLY1751` | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
-| [Spans, Bit Permutations & Unsafe Pointers](#spans-bit-permutations--unsafe-pointers) | Low-Level & Performance | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | `PLY3051` | `PLY3151` | `PLY1451` | `PLY2651` |
-| [Native Interop (P/Invoke)](#native-interop-pinvoke) | I/O & Interop | `PLY1152` | ✅ | `PLY1851` | ✅ | `PLY1751` | `PLY2850`/`PLY2851` | ✅ | `PLY3151` | ✅ | `PLY2650` |
+| [Exceptions & Resource Scopes](#exceptions--resource-scopes) | Error Handling | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
+| [Tasks & Async/Await](#tasks--asyncawait) | Concurrency & Asynchrony | ⚠️ 4/5 | ⚠️ 7/9 | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
+| [Standard Output (Stdio)](#standard-output-stdio) | I/O & Interop | `PLY1152` | `PLY1052` | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
+| [Spans, Bit Permutations & Unsafe Pointers](#spans-bit-permutations--unsafe-pointers) | Low-Level & Performance | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
+| [Native Interop (P/Invoke)](#native-interop-pinvoke) | I/O & Interop | `PLY1152` | ✅ | ✅ | ✅ | `PLY1751` | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | `PLY2650` |
 | [User-Defined Operator Overloading (Boundary)](#user-defined-operator-overloading-boundary) | Unsupported Boundaries | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
 | [Hardware SIMD Vectorization (Boundary)](#hardware-simd-vectorization-boundary) | Unsupported Boundaries | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
 | [Multithreading & Synchronization (Boundary)](#multithreading--synchronization-boundary) | Unsupported Boundaries | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
@@ -123,9 +123,9 @@ dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -- re
 | [LINQ](#linq) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [Exceptions & Resource Scopes](#exceptions--resource-scopes) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [Tasks & Async/Await](#tasks--asyncawait) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| [Standard Output (Stdio)](#standard-output-stdio) | `PLY1851` | `PLY1851` | `PLY1851` | `PLY1851` | `PLY1851` | `PLY1851` | `PLY1851` |
+| [Standard Output (Stdio)](#standard-output-stdio) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [Spans, Bit Permutations & Unsafe Pointers](#spans-bit-permutations--unsafe-pointers) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| [Native Interop (P/Invoke)](#native-interop-pinvoke) | `PLY1851` | `PLY1851` | `PLY1851` | `PLY1851` | `PLY1851` | `PLY1851` | `PLY1851` |
+| [Native Interop (P/Invoke)](#native-interop-pinvoke) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | [User-Defined Operator Overloading (Boundary)](#user-defined-operator-overloading-boundary) | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
 | [Hardware SIMD Vectorization (Boundary)](#hardware-simd-vectorization-boundary) | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
 | [Multithreading & Synchronization (Boundary)](#multithreading--synchronization-boundary) | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
@@ -177,7 +177,7 @@ dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -- re
 | [Statics & Module State](#statics--module-state) | ✅ | ✅ | ✅ |
 | [Inheritance, Virtual Dispatch & Interfaces](#inheritance-virtual-dispatch--interfaces) | ✅ | ✅ | ✅ |
 | [Generics](#generics) | ✅ | ✅ | ✅ |
-| [Lambdas & Closures](#lambdas--closures) | `PLY0001` | `PLY0001` | `PLY0001` |
+| [Lambdas & Closures](#lambdas--closures) | ✅ | ✅ | ✅ |
 | [Callbacks & Delegates](#callbacks--delegates) | ✅ | ✅ | ✅ |
 | [Enums & Nullable Optionals](#enums--nullable-optionals) | ✅ | ✅ | ✅ |
 | [Collections](#collections) | ✅ | ✅ | ✅ |
@@ -185,7 +185,7 @@ dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -- re
 | [LINQ](#linq) | ✅ | ✅ | ✅ |
 | [Exceptions & Resource Scopes](#exceptions--resource-scopes) | ✅ | ✅ | ✅ |
 | [Tasks & Async/Await](#tasks--asyncawait) | ✅ | ✅ | ✅ |
-| [Standard Output (Stdio)](#standard-output-stdio) | `PLY1751` | `PLY1751` | `PLY1751` |
+| [Standard Output (Stdio)](#standard-output-stdio) | ✅ | ✅ | ✅ |
 | [Spans, Bit Permutations & Unsafe Pointers](#spans-bit-permutations--unsafe-pointers) | ✅ | ✅ | ✅ |
 | [Native Interop (P/Invoke)](#native-interop-pinvoke) | `PLY1751` | `PLY1751` | `PLY1751` |
 | [User-Defined Operator Overloading (Boundary)](#user-defined-operator-overloading-boundary) | `PLY1002` | `PLY1002` | `PLY1002` |
@@ -233,22 +233,22 @@ dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -- re
 | --- | :---: | :---: |
 | [Operators, Bitwise & Checked Arithmetic](#operators-bitwise--checked-arithmetic) | ✅ | ✅ |
 | [Recursion](#recursion) | ✅ | ✅ |
-| [Method & Constructor Overloading](#method--constructor-overloading) | `PLY3051` | `PLY3051` |
+| [Method & Constructor Overloading](#method--constructor-overloading) | ✅ | ✅ |
 | [Structs & Value Records](#structs--value-records) | ✅ | ✅ |
-| [Classes, Properties & Reference Records](#classes-properties--reference-records) | `PLY3051` | `PLY3051` |
+| [Classes, Properties & Reference Records](#classes-properties--reference-records) | ✅ | ✅ |
 | [Statics & Module State](#statics--module-state) | ✅ | ✅ |
-| [Inheritance, Virtual Dispatch & Interfaces](#inheritance-virtual-dispatch--interfaces) | `PLY3051` | `PLY3051` |
-| [Generics](#generics) | `PLY3051` | `PLY3051` |
-| [Lambdas & Closures](#lambdas--closures) | `PLY3051` | `PLY3051` |
+| [Inheritance, Virtual Dispatch & Interfaces](#inheritance-virtual-dispatch--interfaces) | ✅ | ✅ |
+| [Generics](#generics) | ✅ | ✅ |
+| [Lambdas & Closures](#lambdas--closures) | ✅ | ✅ |
 | [Callbacks & Delegates](#callbacks--delegates) | ✅ | ✅ |
 | [Enums & Nullable Optionals](#enums--nullable-optionals) | `PLY3052` | `PLY3052` |
-| [Collections](#collections) | `PLY3051` | `PLY3051` |
-| [Iterators & Lazy Sequences](#iterators--lazy-sequences) | `PLY3051` | `PLY3051` |
+| [Collections](#collections) | ✅ | ✅ |
+| [Iterators & Lazy Sequences](#iterators--lazy-sequences) | ✅ | ✅ |
 | [LINQ](#linq) | ✅ | ✅ |
-| [Exceptions & Resource Scopes](#exceptions--resource-scopes) | `PLY3051` | `PLY3051` |
-| [Tasks & Async/Await](#tasks--asyncawait) | `PLY3051` | `PLY3051` |
+| [Exceptions & Resource Scopes](#exceptions--resource-scopes) | ✅ | ✅ |
+| [Tasks & Async/Await](#tasks--asyncawait) | ✅ | ✅ |
 | [Standard Output (Stdio)](#standard-output-stdio) | ✅ | ✅ |
-| [Spans, Bit Permutations & Unsafe Pointers](#spans-bit-permutations--unsafe-pointers) | `PLY3051` | `PLY3051` |
+| [Spans, Bit Permutations & Unsafe Pointers](#spans-bit-permutations--unsafe-pointers) | ✅ | ✅ |
 | [Native Interop (P/Invoke)](#native-interop-pinvoke) | ✅ | ✅ |
 | [User-Defined Operator Overloading (Boundary)](#user-defined-operator-overloading-boundary) | `PLY1002` | `PLY1002` |
 | [Hardware SIMD Vectorization (Boundary)](#hardware-simd-vectorization-boundary) | `PLY1002` | `PLY1002` |
@@ -264,23 +264,23 @@ dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -- re
 | --- | :---: | :---: | :---: |
 | [Operators, Bitwise & Checked Arithmetic](#operators-bitwise--checked-arithmetic) | ✅ | ✅ | ✅ |
 | [Recursion](#recursion) | ✅ | ✅ | ✅ |
-| [Method & Constructor Overloading](#method--constructor-overloading) | `PLY3151` | `PLY3151` | `PLY3151` |
-| [Structs & Value Records](#structs--value-records) | `PLY3151` | `PLY3151` | `PLY3151` |
-| [Classes, Properties & Reference Records](#classes-properties--reference-records) | `PLY3151` | `PLY3151` | `PLY3151` |
+| [Method & Constructor Overloading](#method--constructor-overloading) | ✅ | ✅ | ✅ |
+| [Structs & Value Records](#structs--value-records) | ✅ | ✅ | ✅ |
+| [Classes, Properties & Reference Records](#classes-properties--reference-records) | ✅ | ✅ | ✅ |
 | [Statics & Module State](#statics--module-state) | ✅ | ✅ | ✅ |
-| [Inheritance, Virtual Dispatch & Interfaces](#inheritance-virtual-dispatch--interfaces) | `PLY3151` | `PLY3151` | `PLY3151` |
-| [Generics](#generics) | `PLY3151` | `PLY3151` | `PLY3151` |
-| [Lambdas & Closures](#lambdas--closures) | `PLY3151` | `PLY3151` | `PLY3151` |
+| [Inheritance, Virtual Dispatch & Interfaces](#inheritance-virtual-dispatch--interfaces) | ✅ | ✅ | ✅ |
+| [Generics](#generics) | ✅ | ✅ | ✅ |
+| [Lambdas & Closures](#lambdas--closures) | ✅ | ✅ | ✅ |
 | [Callbacks & Delegates](#callbacks--delegates) | ✅ | ✅ | ✅ |
 | [Enums & Nullable Optionals](#enums--nullable-optionals) | `PLY3152` | `PLY3152` | `PLY3152` |
-| [Collections](#collections) | `PLY3151` | `PLY3151` | `PLY3151` |
-| [Iterators & Lazy Sequences](#iterators--lazy-sequences) | `PLY3151` | `PLY3151` | `PLY3151` |
+| [Collections](#collections) | ✅ | ✅ | ✅ |
+| [Iterators & Lazy Sequences](#iterators--lazy-sequences) | ✅ | ✅ | ✅ |
 | [LINQ](#linq) | ✅ | ✅ | ✅ |
-| [Exceptions & Resource Scopes](#exceptions--resource-scopes) | `PLY3151` | `PLY3151` | `PLY3151` |
-| [Tasks & Async/Await](#tasks--asyncawait) | `PLY3151` | `PLY3151` | `PLY3151` |
+| [Exceptions & Resource Scopes](#exceptions--resource-scopes) | ✅ | ✅ | ✅ |
+| [Tasks & Async/Await](#tasks--asyncawait) | ✅ | ✅ | ✅ |
 | [Standard Output (Stdio)](#standard-output-stdio) | ✅ | ✅ | ✅ |
-| [Spans, Bit Permutations & Unsafe Pointers](#spans-bit-permutations--unsafe-pointers) | `PLY3151` | `PLY3151` | `PLY3151` |
-| [Native Interop (P/Invoke)](#native-interop-pinvoke) | `PLY3151` | `PLY3151` | `PLY3151` |
+| [Spans, Bit Permutations & Unsafe Pointers](#spans-bit-permutations--unsafe-pointers) | ✅ | ✅ | ✅ |
+| [Native Interop (P/Invoke)](#native-interop-pinvoke) | ✅ | ✅ | ✅ |
 | [User-Defined Operator Overloading (Boundary)](#user-defined-operator-overloading-boundary) | `PLY1002` | `PLY1002` | `PLY1002` |
 | [Hardware SIMD Vectorization (Boundary)](#hardware-simd-vectorization-boundary) | `PLY1002` | `PLY1002` | `PLY1002` |
 | [Multithreading & Synchronization (Boundary)](#multithreading--synchronization-boundary) | `PLY1002` | `PLY1002` | `PLY1002` |
@@ -301,16 +301,16 @@ dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -- re
 | [Statics & Module State](#statics--module-state) | ✅ | ✅ | ✅ |
 | [Inheritance, Virtual Dispatch & Interfaces](#inheritance-virtual-dispatch--interfaces) | ✅ | ✅ | ✅ |
 | [Generics](#generics) | ✅ | ✅ | ✅ |
-| [Lambdas & Closures](#lambdas--closures) | `PLY1451` | `PLY1451` | `PLY1451` |
+| [Lambdas & Closures](#lambdas--closures) | ✅ | ✅ | ✅ |
 | [Callbacks & Delegates](#callbacks--delegates) | ✅ | ✅ | ✅ |
 | [Enums & Nullable Optionals](#enums--nullable-optionals) | ✅ | ✅ | ✅ |
-| [Collections](#collections) | `PLY1451` | `PLY1451` | `PLY1451` |
-| [Iterators & Lazy Sequences](#iterators--lazy-sequences) | `PLY1451` | `PLY1451` | `PLY1451` |
+| [Collections](#collections) | ✅ | ✅ | ✅ |
+| [Iterators & Lazy Sequences](#iterators--lazy-sequences) | ✅ | ✅ | ✅ |
 | [LINQ](#linq) | ✅ | ✅ | ✅ |
 | [Exceptions & Resource Scopes](#exceptions--resource-scopes) | ✅ | ✅ | ✅ |
-| [Tasks & Async/Await](#tasks--asyncawait) | `PLY1451` | `PLY1451` | `PLY1451` |
+| [Tasks & Async/Await](#tasks--asyncawait) | ✅ | ✅ | ✅ |
 | [Standard Output (Stdio)](#standard-output-stdio) | ✅ | ✅ | ✅ |
-| [Spans, Bit Permutations & Unsafe Pointers](#spans-bit-permutations--unsafe-pointers) | `PLY1451` | `PLY1451` | `PLY1451` |
+| [Spans, Bit Permutations & Unsafe Pointers](#spans-bit-permutations--unsafe-pointers) | ✅ | ✅ | ✅ |
 | [Native Interop (P/Invoke)](#native-interop-pinvoke) | ✅ | ✅ | ✅ |
 | [User-Defined Operator Overloading (Boundary)](#user-defined-operator-overloading-boundary) | `PLY1002` | `PLY1002` | `PLY1002` |
 | [Hardware SIMD Vectorization (Boundary)](#hardware-simd-vectorization-boundary) | `PLY1002` | `PLY1002` | `PLY1002` |
@@ -854,12 +854,12 @@ T ply_rotl(T value, std::int32_t count) {
 
 } // namespace
 
-std::uint32_t mix([[maybe_unused]] std::uint32_t value, [[maybe_unused]] std::int32_t shift) {
+std::uint32_t mix(std::uint32_t value, std::int32_t shift) {
   std::uint32_t rotated = ply_rotl<std::uint32_t>(value, shift);
   return static_cast<std::uint32_t>(static_cast<std::uint32_t>(static_cast<std::uint32_t>(static_cast<std::uint32_t>(rotated) ^ static_cast<std::uint32_t>(2654435769u))) * static_cast<std::uint32_t>(2246822507u));
 }
 
-std::int32_t safe_add([[maybe_unused]] std::int32_t a, [[maybe_unused]] std::int32_t b) {
+std::int32_t safe_add(std::int32_t a, std::int32_t b) {
   return ply_checked_add<std::int32_t>(a, b);
 }
 
@@ -916,12 +916,12 @@ T ply_checked_add(T a, T b) {
 
 } // namespace
 
-std::uint32_t mix([[maybe_unused]] std::uint32_t value, [[maybe_unused]] std::int32_t shift) {
+std::uint32_t mix(std::uint32_t value, std::int32_t shift) {
   std::uint32_t rotated = static_cast<std::uint32_t>(std::rotl(static_cast<std::uint32_t>(value), static_cast<int>(shift)));
   return static_cast<std::uint32_t>(static_cast<std::uint32_t>(static_cast<std::uint32_t>(static_cast<std::uint32_t>(rotated) ^ static_cast<std::uint32_t>(2654435769u))) * static_cast<std::uint32_t>(2246822507u));
 }
 
-std::int32_t safe_add([[maybe_unused]] std::int32_t a, [[maybe_unused]] std::int32_t b) {
+std::int32_t safe_add(std::int32_t a, std::int32_t b) {
   return ply_checked_add<std::int32_t>(a, b);
 }
 
@@ -1655,7 +1655,7 @@ T ply_rem(T a, T b) {
 
 } // namespace
 
-std::int32_t gcd([[maybe_unused]] std::int32_t a, [[maybe_unused]] std::int32_t b) {
+std::int32_t gcd(std::int32_t a, std::int32_t b) {
   if ((b == 0)) {
     return ((a < 0) ? static_cast<std::int32_t>(static_cast<std::uint32_t>(0) - static_cast<std::uint32_t>(a)) : a);
   }
@@ -2440,6 +2440,183 @@ Returns i32.
 </details>
 
 <details>
+<summary><strong>MSIL</strong> — <code>msil/net10</code>, <code>msil/net8</code> (identical output — <code>OverloadingShowcase.dll</code> (disassembled))</summary>
+
+**`OverloadingShowcase.dll`** *(disassembled mnemonics)*
+
+```il
+.assembly OverloadingShowcase {}
+
+.class public sealed Accumulator extends System.Object {
+  .field public int32 _total
+  .method public hidebysig void .ctor() cil managed {
+    .maxstack 64
+    IL_0000: ldarg.0
+    IL_0001: call void System.Object::.ctor()
+    IL_0006: ldarg.0
+    IL_0007: ldc.i4.0
+    IL_0008: stfld _total
+    IL_000D: ret
+  }
+  .method public hidebysig void .ctor(int32 seed) cil managed {
+    .maxstack 64
+    IL_0000: ldarg.0
+    IL_0001: call void System.Object::.ctor()
+    IL_0006: ldarg.0
+    IL_0007: ldarg.1
+    IL_0008: stfld _total
+    IL_000D: ret
+  }
+  .method public hidebysig int32 Add(int32 value) cil managed {
+    .maxstack 64
+    IL_0000: ldarg.0
+    IL_0001: ldarg.0
+    IL_0002: ldfld _total
+    IL_0007: ldarg.1
+    IL_0008: add
+    IL_0009: stfld _total
+    IL_000E: ldarg.0
+    IL_000F: ldfld _total
+    IL_0014: ret
+    IL_0015: ldc.i4.0
+    IL_0016: ret
+  }
+  .method public hidebysig int32 Add(int32 a, int32 b) cil managed {
+    .maxstack 64
+    IL_0000: ldarg.0
+    IL_0001: ldarg.0
+    IL_0002: ldfld _total
+    IL_0007: ldarg.1
+    IL_0008: ldarg.2
+    IL_0009: add
+    IL_000A: add
+    IL_000B: stfld _total
+    IL_0010: ldarg.0
+    IL_0011: ldfld _total
+    IL_0016: ret
+    IL_0017: ldc.i4.0
+    IL_0018: ret
+  }
+}
+
+.class public abstract sealed OverloadingShowcase extends System.Object {
+  .method public hidebysig static int32 Run(int32 seed, int32 x, int32 y) cil managed {
+    .maxstack 64
+    .locals init ([0] Accumulator, [1] Accumulator)
+    IL_0000: newobj void Accumulator::.ctor()
+    IL_0005: stloc.0
+    IL_0006: ldarg.0
+    IL_0007: newobj void Accumulator::.ctor(int32)
+    IL_000C: stloc.1
+    IL_000D: ldloc.0
+    IL_000E: ldarg.1
+    IL_000F: callvirt int32 Accumulator::Add(int32)
+    IL_0014: ldloc.1
+    IL_0015: ldarg.1
+    IL_0016: ldarg.2
+    IL_0017: callvirt int32 Accumulator::Add(int32, int32)
+    IL_001C: add
+    IL_001D: ret
+    IL_001E: ldc.i4.0
+    IL_001F: ret
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><strong>JVM</strong> — <code>jvm/21</code>, <code>jvm/17</code>, <code>jvm/8</code> (identical output — <code>OverloadingShowcase.jar</code> (disassembled))</summary>
+
+**`OverloadingShowcase.jar`** *(disassembled mnemonics)*
+
+```text
+// classfile version 65.0
+public final class Accumulator {
+  public I _total;
+  public <init>()V;
+    Code: stack=2, locals=1
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: aload_0
+      5: iconst_0
+      6: putfield // Field Accumulator._total:I
+      9: return
+  public <init>(I)V;
+    Code: stack=2, locals=2
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: aload_0
+      5: iload_1
+      6: putfield // Field Accumulator._total:I
+      9: return
+  public Add(I)I;
+    Code: stack=3, locals=2
+      0: aload_0
+      1: aload_0
+      2: getfield // Field Accumulator._total:I
+      5: iload_1
+      6: iadd
+      7: putfield // Field Accumulator._total:I
+      10: aload_0
+      11: getfield // Field Accumulator._total:I
+      14: ireturn
+  public Add(II)I;
+    Code: stack=4, locals=3
+      0: aload_0
+      1: aload_0
+      2: getfield // Field Accumulator._total:I
+      5: iload_1
+      6: iload_2
+      7: iadd
+      8: iadd
+      9: putfield // Field Accumulator._total:I
+      12: aload_0
+      13: getfield // Field Accumulator._total:I
+      16: ireturn
+}
+
+// classfile version 65.0
+public class OverloadingShowcase {
+  public <init>()V;
+    Code: stack=1, locals=1
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: return
+  public static Run(III)I;
+    Code: stack=4, locals=6
+      0: aconst_null
+      1: astore_3
+      2: aconst_null
+      3: astore 4
+      5: iconst_0
+      6: istore 5
+      8: new // class Accumulator
+      11: dup
+      12: invokespecial // Method Accumulator.<init>:()V
+      15: astore_3
+      16: iload_0
+      17: istore 5
+      19: new // class Accumulator
+      22: dup
+      23: iload 5
+      25: invokespecial // Method Accumulator.<init>:(I)V
+      28: astore 4
+      30: aload_3
+      31: iload_1
+      32: invokevirtual // Method Accumulator.Add:(I)I
+      35: aload 4
+      37: iload_1
+      38: iload_2
+      39: invokevirtual // Method Accumulator.Add:(II)I
+      42: iadd
+      43: ireturn
+}
+```
+
+</details>
+
+<details>
 <summary><strong>C++</strong> — <code>cpp/cpp17</code>, <code>cpp/cpp20</code>, <code>cpp/cpp23</code> (identical output — <code>overloading_showcase.cpp</code>, <code>overloading_showcase.hpp</code>)</summary>
 
 **`overloading_showcase.cpp`**
@@ -2469,17 +2646,17 @@ Accumulator::Accumulator(std::int32_t seed) {
   this->total = seed;
 }
 
-std::int32_t Accumulator::add([[maybe_unused]] std::int32_t value) {
+std::int32_t Accumulator::add(std::int32_t value) {
   this->total = static_cast<std::int32_t>(static_cast<std::uint32_t>(this->total) + static_cast<std::uint32_t>(value));
   return this->total;
 }
 
-std::int32_t Accumulator::add_2([[maybe_unused]] std::int32_t a, [[maybe_unused]] std::int32_t b) {
+std::int32_t Accumulator::add_2(std::int32_t a, std::int32_t b) {
   this->total = static_cast<std::int32_t>(static_cast<std::uint32_t>(this->total) + static_cast<std::uint32_t>(static_cast<std::int32_t>(static_cast<std::uint32_t>(a) + static_cast<std::uint32_t>(b))));
   return this->total;
 }
 
-std::int32_t run([[maybe_unused]] std::int32_t seed, [[maybe_unused]] std::int32_t x, [[maybe_unused]] std::int32_t y) {
+std::int32_t run(std::int32_t seed, std::int32_t x, std::int32_t y) {
   std::shared_ptr<Accumulator> a = std::make_shared<Accumulator>();
   std::shared_ptr<Accumulator> b = std::make_shared<Accumulator>(seed);
   return static_cast<std::int32_t>(static_cast<std::uint32_t>(ply_nonnull(a)->add(x)) + static_cast<std::uint32_t>(ply_nonnull(b)->add_2(x, y)));
@@ -2615,7 +2792,7 @@ End Sub
 
 </details>
 
-> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile); `msil` (`PLY3051`: type 'Accumulator' is not supported by the MSIL backend); `jvm` (`PLY3151`: declared type 'Accumulator' (IrClassType) is not supported by the JVM backend)
+> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
 
 ## Structs & Value Records
 
@@ -3696,6 +3873,222 @@ Hash reference with keys: first, second.
 </details>
 
 <details>
+<summary><strong>JVM</strong> — <code>jvm/21</code>, <code>jvm/17</code>, <code>jvm/8</code> (identical output — <code>StructsAndRecordsShowcase.jar</code> (disassembled))</summary>
+
+**`StructsAndRecordsShowcase.jar`** *(disassembled mnemonics)*
+
+```text
+// classfile version 65.0
+public final class MutablePair {
+  public I First;
+  public I Second;
+  public <init>()V;
+    Code: stack=1, locals=1
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: return
+  public <init>(II)V;
+    Code: stack=2, locals=3
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: aload_0
+      5: iload_1
+      6: putfield // Field MutablePair.First:I
+      9: aload_0
+      10: iload_2
+      11: putfield // Field MutablePair.Second:I
+      14: return
+  public copy()LMutablePair;;
+    Code: stack=2, locals=2
+      0: aconst_null
+      1: astore_1
+      2: new // class MutablePair
+      5: dup
+      6: invokespecial // Method MutablePair.<init>:()V
+      9: astore_1
+      10: aload_1
+      11: aload_0
+      12: getfield // Field MutablePair.First:I
+      15: putfield // Field MutablePair.First:I
+      18: aload_1
+      19: aload_0
+      20: getfield // Field MutablePair.Second:I
+      23: putfield // Field MutablePair.Second:I
+      26: aload_1
+      27: areturn
+  public static $eq(LMutablePair;LMutablePair;)Z;
+    Code: stack=2, locals=2
+      0: aload_0
+      1: getfield // Field MutablePair.First:I
+      4: aload_1
+      5: getfield // Field MutablePair.First:I
+      8: if_icmpne 24
+      11: aload_0
+      12: getfield // Field MutablePair.Second:I
+      15: aload_1
+      16: getfield // Field MutablePair.Second:I
+      19: if_icmpne 24
+      22: iconst_1
+      23: ireturn
+      24: iconst_0
+      25: ireturn
+}
+
+// classfile version 65.0
+public class StructsAndRecordsShowcase {
+  public <init>()V;
+    Code: stack=1, locals=1
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: return
+  public static Dot(LVec2;LVec2;)I;
+    Code: stack=3, locals=2
+      0: aload_0
+      1: getfield // Field Vec2.X:I
+      4: aload_1
+      5: getfield // Field Vec2.X:I
+      8: imul
+      9: aload_0
+      10: getfield // Field Vec2.Y:I
+      13: aload_1
+      14: getfield // Field Vec2.Y:I
+      17: imul
+      18: iadd
+      19: ireturn
+  public static AreEqual(II)Z;
+    Code: stack=4, locals=8
+      0: aconst_null
+      1: astore_2
+      2: aconst_null
+      3: astore_3
+      4: iconst_0
+      5: istore 4
+      7: iconst_0
+      8: istore 5
+      10: iconst_0
+      11: istore 6
+      13: iconst_0
+      14: istore 7
+      16: iload_0
+      17: istore 4
+      19: iload_1
+      20: istore 5
+      22: new // class Vec2
+      25: dup
+      26: iload 4
+      28: iload 5
+      30: invokespecial // Method Vec2.<init>:(II)V
+      33: astore_2
+      34: iload_0
+      35: istore 6
+      37: iload_1
+      38: istore 7
+      40: new // class Vec2
+      43: dup
+      44: iload 6
+      46: iload 7
+      48: invokespecial // Method Vec2.<init>:(II)V
+      51: astore_3
+      52: aload_2
+      53: invokevirtual // Method Vec2.copy:()LVec2;
+      56: aload_3
+      57: invokevirtual // Method Vec2.copy:()LVec2;
+      60: invokestatic // Method Vec2.$eq:(LVec2;LVec2;)Z
+      63: ireturn
+  public static CopyValue(I)I;
+    Code: stack=3, locals=3
+      0: aconst_null
+      1: astore_1
+      2: aconst_null
+      3: astore_2
+      4: new // class MutablePair
+      7: dup
+      8: invokespecial // Method MutablePair.<init>:()V
+      11: astore_1
+      12: aload_1
+      13: iload_0
+      14: putfield // Field MutablePair.First:I
+      17: aload_1
+      18: bipush 10
+      20: putfield // Field MutablePair.Second:I
+      23: aload_1
+      24: invokevirtual // Method MutablePair.copy:()LMutablePair;
+      27: astore_2
+      28: aload_2
+      29: iload_0
+      30: iconst_1
+      31: iadd
+      32: putfield // Field MutablePair.First:I
+      35: aload_1
+      36: getfield // Field MutablePair.First:I
+      39: bipush 100
+      41: imul
+      42: aload_2
+      43: getfield // Field MutablePair.First:I
+      46: iadd
+      47: ireturn
+}
+
+// classfile version 65.0
+public final class Vec2 {
+  public I X;
+  public I Y;
+  public <init>()V;
+    Code: stack=1, locals=1
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: return
+  public <init>(II)V;
+    Code: stack=2, locals=3
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: aload_0
+      5: iload_1
+      6: putfield // Field Vec2.X:I
+      9: aload_0
+      10: iload_2
+      11: putfield // Field Vec2.Y:I
+      14: return
+  public copy()LVec2;;
+    Code: stack=2, locals=2
+      0: aconst_null
+      1: astore_1
+      2: new // class Vec2
+      5: dup
+      6: invokespecial // Method Vec2.<init>:()V
+      9: astore_1
+      10: aload_1
+      11: aload_0
+      12: getfield // Field Vec2.X:I
+      15: putfield // Field Vec2.X:I
+      18: aload_1
+      19: aload_0
+      20: getfield // Field Vec2.Y:I
+      23: putfield // Field Vec2.Y:I
+      26: aload_1
+      27: areturn
+  public static $eq(LVec2;LVec2;)Z;
+    Code: stack=2, locals=2
+      0: aload_0
+      1: getfield // Field Vec2.X:I
+      4: aload_1
+      5: getfield // Field Vec2.X:I
+      8: if_icmpne 24
+      11: aload_0
+      12: getfield // Field Vec2.Y:I
+      15: aload_1
+      16: getfield // Field Vec2.Y:I
+      19: if_icmpne 24
+      22: iconst_1
+      23: ireturn
+      24: iconst_0
+      25: ireturn
+}
+```
+
+</details>
+
+<details>
 <summary><strong>C++</strong> — <code>cpp/cpp17</code>, <code>cpp/cpp20</code>, <code>cpp/cpp23</code> (identical output — <code>structs_and_records_showcase.cpp</code>, <code>structs_and_records_showcase.hpp</code>)</summary>
 
 **`structs_and_records_showcase.cpp`**
@@ -3705,11 +4098,11 @@ Hash reference with keys: first, second.
 
 namespace structs_and_records_showcase {
 
-std::int32_t dot([[maybe_unused]] Vec2 a, [[maybe_unused]] Vec2 b) {
+std::int32_t dot(Vec2 a, Vec2 b) {
   return static_cast<std::int32_t>(static_cast<std::uint32_t>(static_cast<std::int32_t>(static_cast<std::uint32_t>((a).x) * static_cast<std::uint32_t>((b).x))) + static_cast<std::uint32_t>(static_cast<std::int32_t>(static_cast<std::uint32_t>((a).y) * static_cast<std::uint32_t>((b).y))));
 }
 
-bool are_equal([[maybe_unused]] std::int32_t x, [[maybe_unused]] std::int32_t y) {
+bool are_equal(std::int32_t x, std::int32_t y) {
   Vec2 left = Vec2{x, y};
   Vec2 right = Vec2{x, y};
   return (left == right);
@@ -3879,7 +4272,7 @@ End Function
 
 </details>
 
-> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile); `jvm` (`PLY3151`: declared type 'Vec2' (IrStructType) is not supported by the JVM backend)
+> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
 
 ## Classes, Properties & Reference Records
 
@@ -4993,6 +5386,282 @@ Returns i32.
 </details>
 
 <details>
+<summary><strong>MSIL</strong> — <code>msil/net10</code>, <code>msil/net8</code> (identical output — <code>ClassesShowcase.dll</code> (disassembled))</summary>
+
+**`ClassesShowcase.dll`** *(disassembled mnemonics)*
+
+```il
+.assembly ClassesShowcase {}
+
+.class public sealed Meter extends System.Object {
+  .field public int32 Count
+  .field public int32 Scale
+  .method public hidebysig void .ctor(int32 scale) cil managed {
+    .maxstack 64
+    IL_0000: ldarg.0
+    IL_0001: call void System.Object::.ctor()
+    IL_0006: ldarg.0
+    IL_0007: ldarg.1
+    IL_0008: stfld Scale
+    IL_000D: ret
+  }
+  .method public hidebysig int32 get_Total() cil managed {
+    .maxstack 64
+    IL_0000: ldarg.0
+    IL_0001: ldfld Count
+    IL_0006: ldarg.0
+    IL_0007: ldfld Scale
+    IL_000C: mul
+    IL_000D: ret
+    IL_000E: ldc.i4.0
+    IL_000F: ret
+  }
+  .method public hidebysig void Increment(int32 by) cil managed {
+    .maxstack 64
+    IL_0000: ldarg.0
+    IL_0001: ldarg.0
+    IL_0002: ldfld Count
+    IL_0007: ldarg.1
+    IL_0008: add
+    IL_0009: stfld Count
+    IL_000E: ret
+  }
+}
+
+.class public sealed PointRecord extends System.Object {
+  .field public int32 X
+  .field public int32 Y
+  .method public hidebysig void .ctor(int32 X, int32 Y) cil managed {
+    .maxstack 64
+    IL_0000: ldarg.0
+    IL_0001: call void System.Object::.ctor()
+    IL_0006: ldarg.0
+    IL_0007: ldarg.1
+    IL_0008: stfld X
+    IL_000D: ldarg.0
+    IL_000E: ldarg.2
+    IL_000F: stfld Y
+    IL_0014: ret
+  }
+}
+
+.class public abstract sealed ClassesShowcase extends System.Object {
+  .method public hidebysig static int32 Measure(int32 scale, int32 steps) cil managed {
+    .maxstack 64
+    .locals init ([0] Meter, [1] PointRecord, [2] PointRecord)
+    IL_0000: ldarg.0
+    IL_0001: newobj void Meter::.ctor(int32)
+    IL_0006: stloc.0
+    IL_0007: ldloc.0
+    IL_0008: ldarg.1
+    IL_0009: callvirt void Meter::Increment(int32)
+    IL_000E: ldloc.0
+    IL_000F: ldfld Count
+    IL_0014: ldloc.0
+    IL_0015: callvirt int32 Meter::get_Total()
+    IL_001A: newobj void PointRecord::.ctor(int32, int32)
+    IL_001F: stloc.1
+    IL_0020: ldloc.0
+    IL_0021: ldfld Count
+    IL_0026: ldloc.0
+    IL_0027: callvirt int32 Meter::get_Total()
+    IL_002C: newobj void PointRecord::.ctor(int32, int32)
+    IL_0031: stloc.2
+    IL_0032: ldloc.1
+    IL_0033: ldloc.2
+    IL_0034: call bool ClassesShowcase::$RecEq_0(PointRecord, PointRecord)
+    IL_0039: brfalse IL_0049
+    IL_003E: ldloc.0
+    IL_003F: callvirt int32 Meter::get_Total()
+    IL_0044: br IL_004A
+    IL_0049: ldc.i4.m1
+    IL_004A: ret
+    IL_004B: ldc.i4.0
+    IL_004C: ret
+  }
+  .method private hidebysig static bool $RecEq_0(PointRecord, PointRecord) cil managed {
+    .maxstack 16
+    IL_0000: ldarg.0
+    IL_0001: ldarg.1
+    IL_0002: beq IL_0035
+    IL_0007: ldarg.0
+    IL_0008: brfalse IL_0037
+    IL_000D: ldarg.1
+    IL_000E: brfalse IL_0037
+    IL_0013: ldarg.0
+    IL_0014: ldfld X
+    IL_0019: ldarg.1
+    IL_001A: ldfld X
+    IL_001F: bne.un IL_0037
+    IL_0024: ldarg.0
+    IL_0025: ldfld Y
+    IL_002A: ldarg.1
+    IL_002B: ldfld Y
+    IL_0030: bne.un IL_0037
+    IL_0035: ldc.i4.1
+    IL_0036: ret
+    IL_0037: ldc.i4.0
+    IL_0038: ret
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><strong>JVM</strong> — <code>jvm/21</code>, <code>jvm/17</code>, <code>jvm/8</code> (identical output — <code>ClassesShowcase.jar</code> (disassembled))</summary>
+
+**`ClassesShowcase.jar`** *(disassembled mnemonics)*
+
+```text
+// classfile version 65.0
+public class ClassesShowcase {
+  public <init>()V;
+    Code: stack=1, locals=1
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: return
+  public static Measure(II)I;
+    Code: stack=4, locals=10
+      0: aconst_null
+      1: astore_2
+      2: aconst_null
+      3: astore_3
+      4: aconst_null
+      5: astore 4
+      7: iconst_0
+      8: istore 5
+      10: iconst_0
+      11: istore 6
+      13: iconst_0
+      14: istore 7
+      16: iconst_0
+      17: istore 8
+      19: iconst_0
+      20: istore 9
+      22: iload_0
+      23: istore 5
+      25: new // class Meter
+      28: dup
+      29: iload 5
+      31: invokespecial // Method Meter.<init>:(I)V
+      34: astore_2
+      35: aload_2
+      36: iload_1
+      37: invokevirtual // Method Meter.Increment:(I)V
+      40: aload_2
+      41: getfield // Field Meter.Count:I
+      44: istore 6
+      46: aload_2
+      47: invokevirtual // Method Meter.Total:()I
+      50: istore 7
+      52: new // class PointRecord
+      55: dup
+      56: iload 6
+      58: iload 7
+      60: invokespecial // Method PointRecord.<init>:(II)V
+      63: astore_3
+      64: aload_2
+      65: getfield // Field Meter.Count:I
+      68: istore 8
+      70: aload_2
+      71: invokevirtual // Method Meter.Total:()I
+      74: istore 9
+      76: new // class PointRecord
+      79: dup
+      80: iload 8
+      82: iload 9
+      84: invokespecial // Method PointRecord.<init>:(II)V
+      87: astore 4
+      89: aload_3
+      90: aload 4
+      92: invokestatic // Method PointRecord.$eq:(LPointRecord;LPointRecord;)Z
+      95: ifeq 105
+      98: aload_2
+      99: invokevirtual // Method Meter.Total:()I
+      102: goto 106
+      105: iconst_m1
+      106: ireturn
+}
+
+// classfile version 65.0
+public final class Meter {
+  public I Count;
+  public I Scale;
+  public <init>(I)V;
+    Code: stack=2, locals=2
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: aload_0
+      5: iload_1
+      6: putfield // Field Meter.Scale:I
+      9: return
+  public Total()I;
+    Code: stack=2, locals=1
+      0: aload_0
+      1: getfield // Field Meter.Count:I
+      4: aload_0
+      5: getfield // Field Meter.Scale:I
+      8: imul
+      9: ireturn
+  public Increment(I)V;
+    Code: stack=3, locals=2
+      0: aload_0
+      1: aload_0
+      2: getfield // Field Meter.Count:I
+      5: iload_1
+      6: iadd
+      7: putfield // Field Meter.Count:I
+      10: return
+}
+
+// classfile version 65.0
+public final class PointRecord {
+  public I X;
+  public I Y;
+  public <init>(II)V;
+    Code: stack=2, locals=3
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: aload_0
+      5: iload_1
+      6: putfield // Field PointRecord.X:I
+      9: aload_0
+      10: iload_2
+      11: putfield // Field PointRecord.Y:I
+      14: return
+  public static $eq(LPointRecord;LPointRecord;)Z;
+    Code: stack=2, locals=2
+      0: aload_0
+      1: aload_1
+      2: if_acmpeq 16
+      5: aload_0
+      6: ifnull 42
+      9: aload_1
+      10: ifnull 42
+      13: goto 18
+      16: iconst_1
+      17: ireturn
+      18: aload_0
+      19: getfield // Field PointRecord.X:I
+      22: aload_1
+      23: getfield // Field PointRecord.X:I
+      26: if_icmpne 42
+      29: aload_0
+      30: getfield // Field PointRecord.Y:I
+      33: aload_1
+      34: getfield // Field PointRecord.Y:I
+      37: if_icmpne 42
+      40: iconst_1
+      41: ireturn
+      42: iconst_0
+      43: ireturn
+}
+```
+
+</details>
+
+<details>
 <summary><strong>C++</strong> — <code>cpp/cpp17</code>, <code>cpp/cpp20</code>, <code>cpp/cpp23</code> (identical output — <code>classes_showcase.cpp</code>, <code>classes_showcase.hpp</code>)</summary>
 
 **`classes_showcase.cpp`**
@@ -5022,7 +5691,7 @@ std::int32_t Meter::get_total() {
   return static_cast<std::int32_t>(static_cast<std::uint32_t>(this->count) * static_cast<std::uint32_t>(this->scale));
 }
 
-void Meter::increment([[maybe_unused]] std::int32_t by) {
+void Meter::increment(std::int32_t by) {
   this->count = static_cast<std::int32_t>(static_cast<std::uint32_t>(this->count) + static_cast<std::uint32_t>(by));
 }
 
@@ -5035,7 +5704,7 @@ bool PointRecord::operator==(const PointRecord& other) const {
   return (this->x == other.x) && (this->y == other.y);
 }
 
-std::int32_t measure([[maybe_unused]] std::int32_t scale, [[maybe_unused]] std::int32_t steps) {
+std::int32_t measure(std::int32_t scale, std::int32_t steps) {
   std::shared_ptr<Meter> meter = std::make_shared<Meter>(scale);
   ply_nonnull(meter)->increment(steps);
   std::shared_ptr<PointRecord> p1 = std::make_shared<PointRecord>(ply_nonnull(meter)->count, ply_nonnull(meter)->get_total());
@@ -5242,7 +5911,7 @@ End Sub
 
 </details>
 
-> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile); `msil` (`PLY3051`: type 'Meter' is not supported by the MSIL backend); `jvm` (`PLY3151`: declared type 'Meter' (IrClassType) is not supported by the JVM backend)
+> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
 
 ## Statics & Module State
 
@@ -5724,7 +6393,7 @@ Returns i32.
 ```text
 // classfile version 65.0
 public class StaticsShowcase {
-  private static final [I $const_Weights;
+  static final [I $const_Weights;
   public static I _counter;
   public <init>()V;
     Code: stack=1, locals=1
@@ -5799,14 +6468,14 @@ namespace statics_showcase {
 
 namespace {
 
-template <typename T>
-T& ply_at(std::vector<T>& arr, std::int32_t index) {
+template <typename C>
+auto ply_at(C& arr, std::int32_t index) -> decltype(arr[static_cast<std::size_t>(0)]) {
   if (index < 0 || static_cast<std::size_t>(index) >= arr.size())
     throw std::out_of_range("index out of range");
   return arr[static_cast<std::size_t>(index)];
 }
-template <typename T>
-const T& ply_at(const std::vector<T>& arr, std::int32_t index) {
+template <typename C>
+auto ply_at(const C& arr, std::int32_t index) -> decltype(arr[static_cast<std::size_t>(0)]) {
   if (index < 0 || static_cast<std::size_t>(index) >= arr.size())
     throw std::out_of_range("index out of range");
   return arr[static_cast<std::size_t>(index)];
@@ -5818,7 +6487,7 @@ std::int32_t ply_g_counter = 1;
 
 } // namespace
 
-std::int32_t next_weighted([[maybe_unused]] std::int32_t index) {
+std::int32_t next_weighted(std::int32_t index) {
   std::int32_t slot = static_cast<std::int32_t>(static_cast<std::uint32_t>(index) & static_cast<std::uint32_t>(3));
   std::int32_t value = static_cast<std::int32_t>(static_cast<std::uint32_t>(static_cast<std::int32_t>(static_cast<std::uint32_t>(ply_g_counter) * static_cast<std::uint32_t>(ply_at(ply_c_weights, slot)))) + static_cast<std::uint32_t>(7));
   ply_g_counter = static_cast<std::int32_t>(static_cast<std::uint32_t>(ply_g_counter) + static_cast<std::uint32_t>(1));
@@ -7066,6 +7735,269 @@ Returns i32.
 </details>
 
 <details>
+<summary><strong>MSIL</strong> — <code>msil/net10</code>, <code>msil/net8</code> (identical output — <code>InheritanceShowcase.dll</code> (disassembled))</summary>
+
+**`InheritanceShowcase.dll`** *(disassembled mnemonics)*
+
+```il
+.assembly InheritanceShowcase {}
+
+.class public abstract IScalable {
+  .method public hidebysig int32 Area() cil managed {
+  }
+}
+
+.class public abstract Shape extends System.Object {
+  .field public int32 Factor
+  .method public hidebysig void .ctor(int32 factor) cil managed {
+    .maxstack 64
+    IL_0000: ldarg.0
+    IL_0001: call void System.Object::.ctor()
+    IL_0006: ldarg.0
+    IL_0007: ldarg.1
+    IL_0008: stfld Factor
+    IL_000D: ret
+  }
+  .method public hidebysig int32 Area() cil managed {
+  }
+}
+
+.class public sealed Rect extends Shape {
+  .field public int32 _w
+  .field public int32 _h
+  .method public hidebysig void .ctor(int32 w, int32 h, int32 factor) cil managed {
+    .maxstack 64
+    IL_0000: ldarg.0
+    IL_0001: ldarg.3
+    IL_0002: call void Shape::.ctor(int32)
+    IL_0007: ldarg.0
+    IL_0008: ldarg.1
+    IL_0009: stfld _w
+    IL_000E: ldarg.0
+    IL_000F: ldarg.2
+    IL_0010: stfld _h
+    IL_0015: ret
+  }
+  .method public hidebysig int32 Area() cil managed {
+    .maxstack 64
+    IL_0000: ldarg.0
+    IL_0001: ldfld _w
+    IL_0006: ldarg.0
+    IL_0007: ldfld _h
+    IL_000C: mul
+    IL_000D: ldarg.0
+    IL_000E: ldfld Factor
+    IL_0013: mul
+    IL_0014: ret
+    IL_0015: ldc.i4.0
+    IL_0016: ret
+  }
+}
+
+.class public sealed Square extends Shape {
+  .field public int32 _side
+  .method public hidebysig void .ctor(int32 side) cil managed {
+    .maxstack 64
+    IL_0000: ldarg.0
+    IL_0001: ldc.i4.1
+    IL_0002: call void Shape::.ctor(int32)
+    IL_0007: ldarg.0
+    IL_0008: ldarg.1
+    IL_0009: stfld _side
+    IL_000E: ret
+  }
+  .method public hidebysig int32 Area() cil managed {
+    .maxstack 64
+    IL_0000: ldarg.0
+    IL_0001: ldfld _side
+    IL_0006: ldarg.0
+    IL_0007: ldfld _side
+    IL_000C: mul
+    IL_000D: ret
+    IL_000E: ldc.i4.0
+    IL_000F: ret
+  }
+}
+
+.class public abstract sealed InheritanceShowcase extends System.Object {
+  .method public hidebysig static int32 Measure(bool rect, int32 a, int32 b) cil managed {
+    .maxstack 64
+    .locals init ([0] IScalable, [1] int32)
+    IL_0000: ldarg.0
+    IL_0001: brfalse IL_0014
+    IL_0006: ldarg.1
+    IL_0007: ldarg.2
+    IL_0008: ldc.i4.2
+    IL_0009: newobj void Rect::.ctor(int32, int32, int32)
+    IL_000E: stloc.0
+    IL_000F: br IL_001B
+    IL_0014: ldarg.1
+    IL_0015: newobj void Square::.ctor(int32)
+    IL_001A: stloc.0
+    IL_001B: ldloc.0
+    IL_001C: .byte 0x75
+    IL_001D: ldarg.3
+    IL_001E: nop
+    IL_001F: nop
+    IL_0020: ldarg.0
+    IL_0021: ldnull
+    IL_0022: cgt.un
+    IL_0024: brfalse IL_002F
+    IL_0029: ldc.i4.1
+    IL_002A: br IL_0030
+    IL_002F: ldc.i4.0
+    IL_0030: stloc.1
+    IL_0031: ldloc.0
+    IL_0032: callvirt int32 IScalable::Area()
+    IL_0037: ldloc.1
+    IL_0038: add
+    IL_0039: ret
+    IL_003A: ldc.i4.0
+    IL_003B: ret
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><strong>JVM</strong> — <code>jvm/21</code>, <code>jvm/17</code>, <code>jvm/8</code> (identical output — <code>InheritanceShowcase.jar</code> (disassembled))</summary>
+
+**`InheritanceShowcase.jar`** *(disassembled mnemonics)*
+
+```text
+// classfile version 65.0
+public class IScalable {
+  public Area()I;
+}
+
+// classfile version 65.0
+public class InheritanceShowcase {
+  public <init>()V;
+    Code: stack=1, locals=1
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: return
+  public static Measure(ZII)I;
+    Code: stack=5, locals=9
+      0: aconst_null
+      1: astore_3
+      2: iconst_0
+      3: istore 4
+      5: iconst_0
+      6: istore 5
+      8: iconst_0
+      9: istore 6
+      11: iconst_0
+      12: istore 7
+      14: iconst_0
+      15: istore 8
+      17: iload_0
+      18: ifeq 47
+      21: iload_1
+      22: istore 5
+      24: iload_2
+      25: istore 6
+      27: iconst_2
+      28: istore 7
+      30: new // class Rect
+      33: dup
+      34: iload 5
+      36: iload 6
+      38: iload 7
+      40: invokespecial // Method Rect.<init>:(III)V
+      43: astore_3
+      44: goto 60
+      47: iload_1
+      48: istore 8
+      50: new // class Square
+      53: dup
+      54: iload 8
+      56: invokespecial // Method Square.<init>:(I)V
+      59: astore_3
+      60: aload_3
+      61: instanceof // class Square
+      64: ifeq 71
+      67: iconst_1
+      68: goto 72
+      71: iconst_0
+      72: istore 4
+      74: aload_3
+      75: invokeinterface // Method IScalable.Area:()I
+      80: iload 4
+      82: iadd
+      83: ireturn
+}
+
+// classfile version 65.0
+public final class Rect extends Shape {
+  public I _w;
+  public I _h;
+  public <init>(III)V;
+    Code: stack=2, locals=4
+      0: aload_0
+      1: iload_3
+      2: invokespecial // Method Shape.<init>:(I)V
+      5: aload_0
+      6: iload_1
+      7: putfield // Field Rect._w:I
+      10: aload_0
+      11: iload_2
+      12: putfield // Field Rect._h:I
+      15: return
+  public Area()I;
+    Code: stack=2, locals=1
+      0: aload_0
+      1: getfield // Field Rect._w:I
+      4: aload_0
+      5: getfield // Field Rect._h:I
+      8: imul
+      9: aload_0
+      10: getfield // Field Shape.Factor:I
+      13: imul
+      14: ireturn
+}
+
+// classfile version 65.0
+public class Shape implements IScalable {
+  public I Factor;
+  public <init>(I)V;
+    Code: stack=2, locals=2
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: aload_0
+      5: iload_1
+      6: putfield // Field Shape.Factor:I
+      9: return
+  public Area()I;
+}
+
+// classfile version 65.0
+public final class Square extends Shape {
+  public I _side;
+  public <init>(I)V;
+    Code: stack=2, locals=2
+      0: aload_0
+      1: iconst_1
+      2: invokespecial // Method Shape.<init>:(I)V
+      5: aload_0
+      6: iload_1
+      7: putfield // Field Square._side:I
+      10: return
+  public Area()I;
+    Code: stack=2, locals=1
+      0: aload_0
+      1: getfield // Field Square._side:I
+      4: aload_0
+      5: getfield // Field Square._side:I
+      8: imul
+      9: ireturn
+}
+```
+
+</details>
+
+<details>
 <summary><strong>C++</strong> — <code>cpp/cpp17</code>, <code>cpp/cpp20</code>, <code>cpp/cpp23</code> (identical output — <code>inheritance_showcase.cpp</code>, <code>inheritance_showcase.hpp</code>)</summary>
 
 **`inheritance_showcase.cpp`**
@@ -7091,7 +8023,7 @@ Shape::Shape(std::int32_t factor) {
   this->factor = factor;
 }
 
-Rect::Rect(std::int32_t w, std::int32_t h, [[maybe_unused]] std::int32_t factor) : Shape(factor) {
+Rect::Rect(std::int32_t w, std::int32_t h, std::int32_t factor) : Shape(factor) {
   this->w = w;
   this->h = h;
 }
@@ -7108,7 +8040,7 @@ std::int32_t Square::area() {
   return static_cast<std::int32_t>(static_cast<std::uint32_t>(this->side) * static_cast<std::uint32_t>(this->side));
 }
 
-std::int32_t measure(bool rect, [[maybe_unused]] std::int32_t a, [[maybe_unused]] std::int32_t b) {
+std::int32_t measure(bool rect, std::int32_t a, std::int32_t b) {
   std::shared_ptr<IScalable> item = nullptr;
   if (rect) {
     item = std::make_shared<Rect>(a, b, 2);
@@ -7354,7 +8286,7 @@ End Sub
 
 </details>
 
-> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile); `msil` (`PLY3051`: type 'IScalable' is not supported by the MSIL backend); `jvm` (`PLY3151`: declared type 'IScalable' (IrInterfaceType) is not supported by the JVM backend)
+> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
 
 ## Generics
 
@@ -8251,6 +9183,260 @@ Returns i64.
 </details>
 
 <details>
+<summary><strong>MSIL</strong> — <code>msil/net10</code>, <code>msil/net8</code> (identical output — <code>GenericsShowcase.dll</code> (disassembled))</summary>
+
+**`GenericsShowcase.dll`** *(disassembled mnemonics)*
+
+```il
+.assembly GenericsShowcase {}
+
+.class public sealed Box_i32_ extends System.Object {
+  .field public int32 Value
+  .method public hidebysig void .ctor(int32 initial) cil managed {
+    .maxstack 64
+    IL_0000: ldarg.0
+    IL_0001: call void System.Object::.ctor()
+    IL_0006: ldarg.0
+    IL_0007: ldarg.1
+    IL_0008: stfld Value
+    IL_000D: ret
+  }
+}
+
+.class public sealed Box_i64_ extends System.Object {
+  .field public int64 Value
+  .method public hidebysig void .ctor(int64 initial) cil managed {
+    .maxstack 64
+    IL_0000: ldarg.0
+    IL_0001: call void System.Object::.ctor()
+    IL_0006: ldarg.0
+    IL_0007: ldarg.1
+    IL_0008: stfld Value
+    IL_000D: ret
+  }
+}
+
+.class public abstract sealed GenericsShowcase extends System.Object {
+  .method public hidebysig static int64 Run(int32 a, int64 b) cil managed {
+    .maxstack 64
+    .locals init ([0] Box_i32_, [1] Box_i64_)
+    IL_0000: ldarg.0
+    IL_0001: ldc.i4.0
+    IL_0002: ldc.i4.s 100
+    IL_0004: call int32 GenericsShowcase::Clamp<i32>(int32, int32, int32)
+    IL_0009: newobj void Box_i32_::.ctor(int32)
+    IL_000E: stloc.0
+    IL_000F: ldarg.1
+    IL_0010: ldc.i8 -50
+    IL_0019: ldc.i8 50
+    IL_0022: call int64 GenericsShowcase::Clamp<i64>(int64, int64, int64)
+    IL_0027: newobj void Box_i64_::.ctor(int64)
+    IL_002C: stloc.1
+    IL_002D: ldloc.0
+    IL_002E: ldfld Value
+    IL_0033: conv.i8
+    IL_0034: ldloc.1
+    IL_0035: ldfld Value
+    IL_003A: add
+    IL_003B: ret
+    IL_003C: ldc.i8 0
+    IL_0045: ret
+  }
+  .method private hidebysig static int32 Clamp<i32>(int32 value, int32 min, int32 max) cil managed {
+    .maxstack 64
+    .locals init ([0] int32, [1] int32)
+    IL_0000: ldarg.0
+    IL_0001: stloc.0
+    IL_0002: ldloca.s 0
+    IL_0004: ldarg.1
+    IL_0005: call int32 System.Int32::CompareTo(int32)
+    IL_000A: ldc.i4.0
+    IL_000B: clt
+    IL_000D: brfalse IL_0014
+    IL_0012: ldarg.1
+    IL_0013: ret
+    IL_0014: ldarg.0
+    IL_0015: stloc.1
+    IL_0016: ldloca.s 1
+    IL_0018: ldarg.2
+    IL_0019: call int32 System.Int32::CompareTo(int32)
+    IL_001E: ldc.i4.0
+    IL_001F: cgt
+    IL_0021: brfalse IL_0028
+    IL_0026: ldarg.2
+    IL_0027: ret
+    IL_0028: ldarg.0
+    IL_0029: ret
+    IL_002A: ldc.i4.0
+    IL_002B: ret
+  }
+  .method private hidebysig static int64 Clamp<i64>(int64 value, int64 min, int64 max) cil managed {
+    .maxstack 64
+    .locals init ([0] int64, [1] int64)
+    IL_0000: ldarg.0
+    IL_0001: stloc.0
+    IL_0002: ldloca.s 0
+    IL_0004: ldarg.1
+    IL_0005: call int32 System.Int64::CompareTo(int64)
+    IL_000A: ldc.i4.0
+    IL_000B: clt
+    IL_000D: brfalse IL_0014
+    IL_0012: ldarg.1
+    IL_0013: ret
+    IL_0014: ldarg.0
+    IL_0015: stloc.1
+    IL_0016: ldloca.s 1
+    IL_0018: ldarg.2
+    IL_0019: call int32 System.Int64::CompareTo(int64)
+    IL_001E: ldc.i4.0
+    IL_001F: cgt
+    IL_0021: brfalse IL_0028
+    IL_0026: ldarg.2
+    IL_0027: ret
+    IL_0028: ldarg.0
+    IL_0029: ret
+    IL_002A: ldc.i8 0
+    IL_0033: ret
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><strong>JVM</strong> — <code>jvm/21</code>, <code>jvm/17</code>, <code>jvm/8</code> (identical output — <code>GenericsShowcase.jar</code> (disassembled))</summary>
+
+**`GenericsShowcase.jar`** *(disassembled mnemonics)*
+
+```text
+// classfile version 65.0
+public final class Box$x3Ci32$x3E {
+  public I Value;
+  public <init>(I)V;
+    Code: stack=2, locals=2
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: aload_0
+      5: iload_1
+      6: putfield // Field Box$x3Ci32$x3E.Value:I
+      9: return
+}
+
+// classfile version 65.0
+public final class Box$x3Ci64$x3E {
+  public J Value;
+  public <init>(J)V;
+    Code: stack=3, locals=3
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: aload_0
+      5: lload_1
+      6: putfield // Field Box$x3Ci64$x3E.Value:J
+      9: return
+}
+
+// classfile version 65.0
+public class GenericsShowcase {
+  public <init>()V;
+    Code: stack=1, locals=1
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: return
+  public static Run(IJ)J;
+    Code: stack=6, locals=8
+      0: aconst_null
+      1: astore_3
+      2: aconst_null
+      3: astore 4
+      5: iconst_0
+      6: istore 5
+      8: lconst_0
+      9: lstore 6
+      11: iload_0
+      12: iconst_0
+      13: bipush 100
+      15: invokestatic // Method GenericsShowcase.Clamp$x3Ci32$x3E:(III)I
+      18: istore 5
+      20: new // class Box$x3Ci32$x3E
+      23: dup
+      24: iload 5
+      26: invokespecial // Method Box$x3Ci32$x3E.<init>:(I)V
+      29: astore_3
+      30: lload_1
+      31: ldc2_w -50L
+      34: ldc2_w 50L
+      37: invokestatic // Method GenericsShowcase.Clamp$x3Ci64$x3E:(JJJ)J
+      40: lstore 6
+      42: new // class Box$x3Ci64$x3E
+      45: dup
+      46: lload 6
+      48: invokespecial // Method Box$x3Ci64$x3E.<init>:(J)V
+      51: astore 4
+      53: aload_3
+      54: getfield // Field Box$x3Ci32$x3E.Value:I
+      57: i2l
+      58: aload 4
+      60: getfield // Field Box$x3Ci64$x3E.Value:J
+      63: ladd
+      64: lreturn
+  static Clamp$x3Ci32$x3E(III)I;
+    Code: stack=2, locals=3
+      0: iload_0
+      1: iload_1
+      2: invokestatic // Method java/lang/Integer.compare:(II)I
+      5: iconst_0
+      6: if_icmplt 13
+      9: iconst_0
+      10: goto 14
+      13: iconst_1
+      14: ifeq 19
+      17: iload_1
+      18: ireturn
+      19: iload_0
+      20: iload_2
+      21: invokestatic // Method java/lang/Integer.compare:(II)I
+      24: iconst_0
+      25: if_icmpgt 32
+      28: iconst_0
+      29: goto 33
+      32: iconst_1
+      33: ifeq 38
+      36: iload_2
+      37: ireturn
+      38: iload_0
+      39: ireturn
+  static Clamp$x3Ci64$x3E(JJJ)J;
+    Code: stack=4, locals=6
+      0: lload_0
+      1: lload_2
+      2: invokestatic // Method java/lang/Long.compare:(JJ)I
+      5: iconst_0
+      6: if_icmplt 13
+      9: iconst_0
+      10: goto 14
+      13: iconst_1
+      14: ifeq 19
+      17: lload_2
+      18: lreturn
+      19: lload_0
+      20: lload 4
+      22: invokestatic // Method java/lang/Long.compare:(JJ)I
+      25: iconst_0
+      26: if_icmpgt 33
+      29: iconst_0
+      30: goto 34
+      33: iconst_1
+      34: ifeq 40
+      37: lload 4
+      39: lreturn
+      40: lload_0
+      41: lreturn
+}
+```
+
+</details>
+
+<details>
 <summary><strong>C++</strong> — <code>cpp/cpp17</code>, <code>cpp/cpp20</code>, <code>cpp/cpp23</code> (identical output — <code>generics_showcase.cpp</code>, <code>generics_showcase.hpp</code>)</summary>
 
 **`generics_showcase.cpp`**
@@ -8329,7 +9515,7 @@ static std::int64_t clamp_of_i64(std::int64_t value, std::int64_t min, std::int6
   return value;
 }
 
-std::int64_t run([[maybe_unused]] std::int32_t a, [[maybe_unused]] std::int64_t b) {
+std::int64_t run(std::int32_t a, std::int64_t b) {
   std::shared_ptr<BoxI32> int_box = std::make_shared<BoxI32>(clamp_of_i32(a, 0, 100));
   std::shared_ptr<BoxI64> long_box = std::make_shared<BoxI64>(clamp_of_i64(b, -50LL, 50LL));
   return static_cast<std::int64_t>(static_cast<std::uint64_t>(static_cast<std::int64_t>(static_cast<std::uint64_t>(ply_nonnull(int_box)->value))) + static_cast<std::uint64_t>(ply_nonnull(long_box)->value));
@@ -8519,7 +9705,7 @@ End Function
 
 </details>
 
-> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile); `msil` (`PLY3051`: type 'Box<i32>' is not supported by the MSIL backend); `jvm` (`PLY3151`: declared type 'Box<i32>' (IrClassType) is not supported by the JVM backend)
+> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
 
 ## Lambdas & Closures
 
@@ -8800,7 +9986,600 @@ pub mod closures_showcase;
 
 </details>
 
-> **Refused by:** `perl` (`PLY0001`: internal compiler error: ArgumentException: The point is not in a block of 'Run'. (Parameter 'point')); `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile); `msil` (`PLY3051`: type 'fn() -> i32' is not supported by the MSIL backend); `jvm` (`PLY3151`: type 'fn() -> i32' in local 'DoubleAcc' of 'Run' is not supported by the JVM backend); `cpp` (`cpp/cpp17`: `PLY1451`: type 'fn() -> i32' has no C++ representation in profile 'cpp/cpp17'; `cpp/cpp20`: `PLY1451`: type 'fn() -> i32' has no C++ representation in profile 'cpp/cpp20'; `cpp/cpp23`: `PLY1451`: type 'fn() -> i32' has no C++ representation in profile 'cpp/cpp23'); `vbscript` (`PLY2651`: type 'fn() -> i32' has no VBScript representation in profile 'vbscript/5.8')
+<details>
+<summary><strong>Perl</strong> — 3 dialects (3 distinct outputs)</summary>
+
+<details>
+<summary>Dialect: <code>perl/5.6</code> (<code>lib/ClosuresShowcase.pm</code>)</summary>
+
+```perl
+package ClosuresShowcase;
+use 5.006;
+use strict;
+use warnings;
+use Exporter ();
+our @ISA = qw(Exporter);
+use Carp ();
+
+our $VERSION = '0.001';
+our @EXPORT_OK = qw(run);
+BEGIN { die "ClosuresShowcase requires a perl with 64-bit integers\n" unless ~0 > 4294967295; }
+
+sub run {
+    use integer;
+    @_ == 2 or Carp::croak('usage: run($start, $step)');
+    my ($start, $step) = @_;
+    my $double_acc = undef;
+    my $acc = $start;
+    $double_acc = sub {
+        $acc = ((((($acc * 2)) & 0xFFFFFFFF) ^ 0x80000000) - 0x80000000);
+        return $acc;
+    };
+    my $bump = sub {
+        my ($delta) = @_;
+        $acc = ((((($acc + $delta)) & 0xFFFFFFFF) ^ 0x80000000) - 0x80000000);
+        return $acc;
+    };
+    my $first = do { my $_fn = $bump; die "NullReference: null function\n" unless defined $_fn; $_fn->($step) };
+    my $second = do { my $_fn = $double_acc; die "NullReference: null function\n" unless defined $_fn; $_fn->() };
+    return ((((($first + $second)) & 0xFFFFFFFF) ^ 0x80000000) - 0x80000000);
+}
+
+1;
+
+__END__
+
+=head1 NAME
+
+ClosuresShowcase
+
+=head1 SYNOPSIS
+
+    use ClosuresShowcase qw(run);
+
+=head2 run($start, $step)
+
+Returns i32.
+
+=cut
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>perl/5.8</code> (<code>lib/ClosuresShowcase.pm</code>)</summary>
+
+```perl
+package ClosuresShowcase;
+use 5.008;
+use strict;
+use warnings;
+use Exporter ();
+our @ISA = qw(Exporter);
+use Carp ();
+
+our $VERSION = '0.001';
+our @EXPORT_OK = qw(run);
+BEGIN { die "ClosuresShowcase requires a perl with 64-bit integers\n" unless ~0 > 4294967295; }
+
+sub run {
+    use integer;
+    @_ == 2 or Carp::croak('usage: run($start, $step)');
+    my ($start, $step) = @_;
+    my $double_acc = undef;
+    my $acc = $start;
+    $double_acc = sub {
+        $acc = ((((($acc * 2)) & 0xFFFFFFFF) ^ 0x80000000) - 0x80000000);
+        return $acc;
+    };
+    my $bump = sub {
+        my ($delta) = @_;
+        $acc = ((((($acc + $delta)) & 0xFFFFFFFF) ^ 0x80000000) - 0x80000000);
+        return $acc;
+    };
+    my $first = do { my $_fn = $bump; die "NullReference: null function\n" unless defined $_fn; $_fn->($step) };
+    my $second = do { my $_fn = $double_acc; die "NullReference: null function\n" unless defined $_fn; $_fn->() };
+    return ((((($first + $second)) & 0xFFFFFFFF) ^ 0x80000000) - 0x80000000);
+}
+
+1;
+
+__END__
+
+=head1 NAME
+
+ClosuresShowcase
+
+=head1 SYNOPSIS
+
+    use ClosuresShowcase qw(run);
+
+=head2 run($start, $step)
+
+Returns i32.
+
+=cut
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>perl/5</code> (<code>lib/ClosuresShowcase.pm</code>)</summary>
+
+```perl
+package ClosuresShowcase;
+use strict;
+use warnings;
+use Exporter 'import';
+use Carp ();
+
+our $VERSION = '0.001';
+our @EXPORT_OK = qw(run);
+BEGIN { die "ClosuresShowcase requires a perl with 64-bit integers\n" unless ~0 > 4294967295; }
+
+sub run {
+    use integer;
+    @_ == 2 or Carp::croak('usage: run($start, $step)');
+    my ($start, $step) = @_;
+    my $double_acc = undef;
+    my $acc = $start;
+    $double_acc = sub {
+        $acc = ((((($acc * 2)) & 0xFFFFFFFF) ^ 0x80000000) - 0x80000000);
+        return $acc;
+    };
+    my $bump = sub {
+        my ($delta) = @_;
+        $acc = ((((($acc + $delta)) & 0xFFFFFFFF) ^ 0x80000000) - 0x80000000);
+        return $acc;
+    };
+    my $first = do { my $_fn = $bump; die "NullReference: null function\n" unless defined $_fn; $_fn->($step) };
+    my $second = do { my $_fn = $double_acc; die "NullReference: null function\n" unless defined $_fn; $_fn->() };
+    return ((((($first + $second)) & 0xFFFFFFFF) ^ 0x80000000) - 0x80000000);
+}
+
+1;
+
+__END__
+
+=head1 NAME
+
+ClosuresShowcase
+
+=head1 SYNOPSIS
+
+    use ClosuresShowcase qw(run);
+
+=head2 run($start, $step)
+
+Returns i32.
+
+=cut
+```
+
+</details>
+
+</details>
+
+<details>
+<summary><strong>MSIL</strong> — <code>msil/net10</code>, <code>msil/net8</code> (identical output — <code>ClosuresShowcase.dll</code> (disassembled))</summary>
+
+**`ClosuresShowcase.dll`** *(disassembled mnemonics)*
+
+```il
+.assembly ClosuresShowcase {}
+
+.class public sealed $Cell_0 extends System.Object {
+  .field public int32 Value
+  .method public hidebysig void .ctor() cil managed {
+    .maxstack 8
+    IL_0000: ldarg.0
+    IL_0001: call void System.Object::.ctor()
+    IL_0006: ret
+  }
+}
+
+.class public abstract $Fn_0 {
+  .method public hidebysig int32 Invoke() cil managed {
+  }
+}
+
+.class public abstract $Fn_1 {
+  .method public hidebysig int32 Invoke(int32 p0) cil managed {
+  }
+}
+
+.class public sealed $Lambda_0 extends System.Object {
+  .field public $Cell_0 $c0
+  .method public hidebysig void .ctor($Cell_0 c0) cil managed {
+    .maxstack 8
+    IL_0000: ldarg.0
+    IL_0001: call void System.Object::.ctor()
+    IL_0006: ldarg.0
+    IL_0007: ldarg.1
+    IL_0008: stfld $c0
+    IL_000D: ret
+  }
+  .method public hidebysig int32 Invoke() cil managed {
+    .maxstack 64
+    .locals init ([0] int32)
+    IL_0000: ldarg.0
+    IL_0001: ldfld $c0
+    IL_0006: ldfld Value
+    IL_000B: ldc.i4.2
+    IL_000C: mul
+    IL_000D: stloc.0
+    IL_000E: ldarg.0
+    IL_000F: ldfld $c0
+    IL_0014: ldloc.0
+    IL_0015: stfld Value
+    IL_001A: ldarg.0
+    IL_001B: ldfld $c0
+    IL_0020: ldfld Value
+    IL_0025: ret
+    IL_0026: ldc.i4.0
+    IL_0027: ret
+  }
+}
+
+.class public sealed $Lambda_1 extends System.Object {
+  .field public $Cell_0 $c0
+  .method public hidebysig void .ctor($Cell_0 c0) cil managed {
+    .maxstack 8
+    IL_0000: ldarg.0
+    IL_0001: call void System.Object::.ctor()
+    IL_0006: ldarg.0
+    IL_0007: ldarg.1
+    IL_0008: stfld $c0
+    IL_000D: ret
+  }
+  .method public hidebysig int32 Invoke(int32 delta) cil managed {
+    .maxstack 64
+    .locals init ([0] int32)
+    IL_0000: ldarg.0
+    IL_0001: ldfld $c0
+    IL_0006: ldfld Value
+    IL_000B: ldarg.1
+    IL_000C: add
+    IL_000D: stloc.0
+    IL_000E: ldarg.0
+    IL_000F: ldfld $c0
+    IL_0014: ldloc.0
+    IL_0015: stfld Value
+    IL_001A: ldarg.0
+    IL_001B: ldfld $c0
+    IL_0020: ldfld Value
+    IL_0025: ret
+    IL_0026: ldc.i4.0
+    IL_0027: ret
+  }
+}
+
+.class public abstract sealed ClosuresShowcase extends System.Object {
+  .method public hidebysig static int32 Run(int32 start, int32 step) cil managed {
+    .maxstack 64
+    .locals init ([0] $Fn_0, [1] $Cell_0, [2] $Fn_1, [3] int32, [4] int32, [5] int32)
+    IL_0000: newobj void $Cell_0::.ctor()
+    IL_0005: stloc.1
+    IL_0006: ldarg.0
+    IL_0007: stloc.s 5
+    IL_0009: ldloc.1
+    IL_000A: ldloc.s 5
+    IL_000C: stfld Value
+    IL_0011: ldloc.1
+    IL_0012: newobj void $Lambda_0::.ctor($Cell_0)
+    IL_0017: stloc.0
+    IL_0018: ldloc.1
+    IL_0019: newobj void $Lambda_1::.ctor($Cell_0)
+    IL_001E: stloc.2
+    IL_001F: ldloc.2
+    IL_0020: ldarg.1
+    IL_0021: callvirt int32 $Fn_1::Invoke(int32)
+    IL_0026: stloc.3
+    IL_0027: ldloc.0
+    IL_0028: callvirt int32 $Fn_0::Invoke()
+    IL_002D: stloc.s 4
+    IL_002F: ldloc.3
+    IL_0030: ldloc.s 4
+    IL_0032: add
+    IL_0033: ret
+    IL_0034: ldc.i4.0
+    IL_0035: ret
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><strong>JVM</strong> — <code>jvm/21</code>, <code>jvm/17</code>, <code>jvm/8</code> (identical output — <code>ClosuresShowcase.jar</code> (disassembled))</summary>
+
+**`ClosuresShowcase.jar`** *(disassembled mnemonics)*
+
+```text
+// classfile version 65.0
+public final class ClosuresShowcase$Cell_I {
+  public I value;
+  public <init>()V;
+    Code: stack=1, locals=1
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: return
+  public <init>(I)V;
+    Code: stack=2, locals=2
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: aload_0
+      5: iload_1
+      6: putfield // Field ClosuresShowcase$Cell_I.value:I
+      9: return
+}
+
+// classfile version 65.0
+public class ClosuresShowcase$Fn_I__I {
+  public invoke(I)I;
+}
+
+// classfile version 65.0
+public class ClosuresShowcase$Fn___I {
+  public invoke()I;
+}
+
+// classfile version 65.0
+public final class ClosuresShowcase$Lam1 implements ClosuresShowcase$Fn___I {
+  public final LClosuresShowcase$Cell_I; cap0;
+  public <init>(LClosuresShowcase$Cell_I;)V;
+    Code: stack=2, locals=2
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: aload_0
+      5: aload_1
+      6: putfield // Field ClosuresShowcase$Lam1.cap0:LClosuresShowcase$Cell_I;
+      9: return
+  public invoke()I;
+    Code: stack=3, locals=1
+      0: aload_0
+      1: getfield // Field ClosuresShowcase$Lam1.cap0:LClosuresShowcase$Cell_I;
+      4: aload_0
+      5: getfield // Field ClosuresShowcase$Lam1.cap0:LClosuresShowcase$Cell_I;
+      8: getfield // Field ClosuresShowcase$Cell_I.value:I
+      11: iconst_2
+      12: imul
+      13: putfield // Field ClosuresShowcase$Cell_I.value:I
+      16: aload_0
+      17: getfield // Field ClosuresShowcase$Lam1.cap0:LClosuresShowcase$Cell_I;
+      20: getfield // Field ClosuresShowcase$Cell_I.value:I
+      23: ireturn
+}
+
+// classfile version 65.0
+public final class ClosuresShowcase$Lam2 implements ClosuresShowcase$Fn_I__I {
+  public final LClosuresShowcase$Cell_I; cap0;
+  public <init>(LClosuresShowcase$Cell_I;)V;
+    Code: stack=2, locals=2
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: aload_0
+      5: aload_1
+      6: putfield // Field ClosuresShowcase$Lam2.cap0:LClosuresShowcase$Cell_I;
+      9: return
+  public invoke(I)I;
+    Code: stack=3, locals=2
+      0: aload_0
+      1: getfield // Field ClosuresShowcase$Lam2.cap0:LClosuresShowcase$Cell_I;
+      4: aload_0
+      5: getfield // Field ClosuresShowcase$Lam2.cap0:LClosuresShowcase$Cell_I;
+      8: getfield // Field ClosuresShowcase$Cell_I.value:I
+      11: iload_1
+      12: iadd
+      13: putfield // Field ClosuresShowcase$Cell_I.value:I
+      16: aload_0
+      17: getfield // Field ClosuresShowcase$Lam2.cap0:LClosuresShowcase$Cell_I;
+      20: getfield // Field ClosuresShowcase$Cell_I.value:I
+      23: ireturn
+}
+
+// classfile version 65.0
+public class ClosuresShowcase {
+  public <init>()V;
+    Code: stack=1, locals=1
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: return
+  public static Run(II)I;
+    Code: stack=3, locals=7
+      0: aconst_null
+      1: astore_2
+      2: aconst_null
+      3: astore_3
+      4: aconst_null
+      5: astore 4
+      7: iconst_0
+      8: istore 5
+      10: iconst_0
+      11: istore 6
+      13: new // class ClosuresShowcase$Cell_I
+      16: dup
+      17: invokespecial // Method ClosuresShowcase$Cell_I.<init>:()V
+      20: astore_3
+      21: aload_3
+      22: iload_0
+      23: putfield // Field ClosuresShowcase$Cell_I.value:I
+      26: new // class ClosuresShowcase$Lam1
+      29: dup
+      30: aload_3
+      31: invokespecial // Method ClosuresShowcase$Lam1.<init>:(LClosuresShowcase$Cell_I;)V
+      34: astore_2
+      35: new // class ClosuresShowcase$Lam2
+      38: dup
+      39: aload_3
+      40: invokespecial // Method ClosuresShowcase$Lam2.<init>:(LClosuresShowcase$Cell_I;)V
+      43: astore 4
+      45: aload 4
+      47: iload_1
+      48: invokeinterface // Method ClosuresShowcase$Fn_I__I.invoke:(I)I
+      53: istore 5
+      55: aload_2
+      56: invokeinterface // Method ClosuresShowcase$Fn___I.invoke:()I
+      61: istore 6
+      63: iload 5
+      65: iload 6
+      67: iadd
+      68: ireturn
+}
+```
+
+</details>
+
+<details>
+<summary><strong>C++</strong> — <code>cpp/cpp17</code>, <code>cpp/cpp20</code>, <code>cpp/cpp23</code> (identical output — <code>closures_showcase.cpp</code>, <code>closures_showcase.hpp</code>)</summary>
+
+**`closures_showcase.cpp`**
+
+```cpp
+#include "closures_showcase.hpp"
+#include <functional>
+#include <memory>
+#include <stdexcept>
+
+namespace closures_showcase {
+
+namespace {
+
+template <typename F>
+const F& ply_nonnull_fn(const F& fn) {
+  if (!fn)
+    throw std::runtime_error("null reference");
+  return fn;
+}
+
+} // namespace
+
+std::int32_t run(std::int32_t start, std::int32_t step) {
+  std::function<std::int32_t()> double_acc = std::function<std::int32_t()>{};
+  auto acc = std::make_shared<std::int32_t>(start);
+  double_acc = [acc]() -> std::int32_t {
+  (*acc) = static_cast<std::int32_t>(static_cast<std::uint32_t>((*acc)) * static_cast<std::uint32_t>(2));
+  return (*acc);
+};
+  std::function<std::int32_t(std::int32_t)> bump = [acc](std::int32_t delta) -> std::int32_t {
+  (*acc) = static_cast<std::int32_t>(static_cast<std::uint32_t>((*acc)) + static_cast<std::uint32_t>(delta));
+  return (*acc);
+};
+  std::int32_t first = [&]() { auto ply_fn1 = bump; auto ply_a2 = step; return ply_nonnull_fn(ply_fn1)(ply_a2); }();
+  std::int32_t second = ply_nonnull_fn(double_acc)();
+  return static_cast<std::int32_t>(static_cast<std::uint32_t>(first) + static_cast<std::uint32_t>(second));
+}
+
+} // namespace closures_showcase
+```
+
+**`closures_showcase.hpp`**
+
+```cpp
+#pragma once
+
+#include <cstdint>
+
+namespace closures_showcase {
+
+std::int32_t run(std::int32_t start, std::int32_t step);
+
+} // namespace closures_showcase
+```
+
+</details>
+
+<details>
+<summary><strong>VBScript</strong> — <code>vbscript/5.8</code> (<code>ClosuresShowcase.vbs</code>)</summary>
+
+```vbscript
+Option Explicit
+
+Function ply_i32(ByVal x)
+  Dim m
+  m = CDbl(x)
+  m = m - Int(m / 4294967296.0) * 4294967296.0
+  If m >= 2147483648.0 Then m = m - 4294967296.0
+  ply_i32 = CLng(m)
+End Function
+
+Function ply_u32(ByVal x)
+  Dim m
+  m = CDbl(x)
+  ply_u32 = m - Int(m / 4294967296.0) * 4294967296.0
+End Function
+
+Function ply_mul32(ByVal a, ByVal b)
+  Dim ua, ub, al, ah, bl, bh, lo, md
+  ua = ply_u32(a)
+  ub = ply_u32(b)
+  al = ua - Int(ua / 65536.0) * 65536.0
+  ah = Int(ua / 65536.0)
+  bl = ub - Int(ub / 65536.0) * 65536.0
+  bh = Int(ub / 65536.0)
+  lo = al * bl
+  md = ah * bl + al * bh
+  md = md - Int(md / 65536.0) * 65536.0
+  ply_mul32 = ply_i32(lo + md * 65536.0)
+End Function
+
+Function ply_chk_null(ByVal o)
+  If o Is Nothing Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+  Set ply_chk_null = o
+End Function
+
+Class ply_Cell
+  Public Val
+End Class
+
+
+Class ply_Clos_0
+  Public c_0
+  Public Function Invoke()
+    c_0.Val = ply_mul32(c_0.Val, 2)
+    Invoke = c_0.Val
+    Exit Function
+  End Function
+End Class
+
+Class ply_Clos_1
+  Public c_0
+  Public Function Invoke(ByVal delta)
+    c_0.Val = ply_i32(CDbl(c_0.Val) + CDbl(delta))
+    Invoke = c_0.Val
+    Exit Function
+  End Function
+End Class
+
+
+Function Run(ByVal start, ByVal step_v)
+  Dim DoubleAcc, acc, bump, first, second_v, ply_fn1, ply_fn2, ply_cfn3, ply_ca4, ply_ir5, ply_cfn6, ply_ir7
+  Set DoubleAcc = Nothing
+  Set acc = New ply_Cell
+  acc.Val = start
+  Set ply_fn1 = New ply_Clos_0
+  Set ply_fn1.c_0 = acc
+  Set DoubleAcc = ply_fn1
+  Set ply_fn2 = New ply_Clos_1
+  Set ply_fn2.c_0 = acc
+  Set bump = ply_fn2
+  Set ply_cfn3 = bump
+  ply_ca4 = step_v
+  Set ply_cfn3 = ply_chk_null(ply_cfn3)
+  If Not (ply_cfn3 Is Nothing) Then ply_ir5 = ply_cfn3.Invoke(ply_ca4)
+  first = ply_ir5
+  Set ply_cfn6 = DoubleAcc
+  Set ply_cfn6 = ply_chk_null(ply_cfn6)
+  If Not (ply_cfn6 Is Nothing) Then ply_ir7 = ply_cfn6.Invoke()
+  second_v = ply_ir7
+  Run = ply_i32(CDbl(first) + CDbl(second_v))
+  Exit Function
+End Function
+```
+
+</details>
+
+> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
 
 ## Callbacks & Delegates
 
@@ -9395,7 +11174,7 @@ public class CallbacksShowcase {
       0: aload_0
       1: invokespecial // Method java/lang/Object.<init>:()V
       4: return
-  private static Square(I)I;
+  static Square(I)I;
     Code: stack=2, locals=1
       0: iload_0
       1: iload_0
@@ -9473,14 +11252,14 @@ namespace callbacks_showcase {
 
 namespace {
 
-template <typename T>
-T& ply_at(std::vector<T>& arr, std::int32_t index) {
+template <typename C>
+auto ply_at(C& arr, std::int32_t index) -> decltype(arr[static_cast<std::size_t>(0)]) {
   if (index < 0 || static_cast<std::size_t>(index) >= arr.size())
     throw std::out_of_range("index out of range");
   return arr[static_cast<std::size_t>(index)];
 }
-template <typename T>
-const T& ply_at(const std::vector<T>& arr, std::int32_t index) {
+template <typename C>
+auto ply_at(const C& arr, std::int32_t index) -> decltype(arr[static_cast<std::size_t>(0)]) {
   if (index < 0 || static_cast<std::size_t>(index) >= arr.size())
     throw std::out_of_range("index out of range");
   return arr[static_cast<std::size_t>(index)];
@@ -9490,11 +11269,11 @@ const T& ply_at(const std::vector<T>& arr, std::int32_t index) {
 
 static std::int32_t square(std::int32_t);
 
-static std::int32_t square([[maybe_unused]] std::int32_t x) {
+static std::int32_t square(std::int32_t x) {
   return static_cast<std::int32_t>(static_cast<std::uint32_t>(x) * static_cast<std::uint32_t>(x));
 }
 
-std::int32_t run([[maybe_unused]] const std::vector<std::int32_t>& values, [[maybe_unused]] std::int32_t seed) {
+std::int32_t run(const std::vector<std::int32_t>& values, std::int32_t seed) {
   std::int32_t apply_twice_bound = square(square(seed));
   std::int32_t sum = 0;
   {
@@ -10032,7 +11811,7 @@ Returns i32.
 
 namespace enums_and_optionals_showcase {
 
-std::int32_t resolve([[maybe_unused]] Permissions flags, [[maybe_unused]] std::optional<std::int32_t> override_value) {
+std::int32_t resolve(Permissions flags, std::optional<std::int32_t> override_value) {
   std::int32_t base_score = (((static_cast<std::int32_t>(flags) & static_cast<std::int32_t>(Permissions::Write)) == static_cast<std::int32_t>(Permissions::Write)) ? 10 : 1);
   std::optional<std::int32_t> adjusted = ((!(override_value).has_value()) ? std::optional<std::int32_t>{} : std::optional<std::int32_t>(static_cast<std::int32_t>(static_cast<std::uint32_t>((*(override_value))) + static_cast<std::uint32_t>(base_score))));
   return [&]() { auto ply_opt = adjusted; return ply_opt.has_value() ? *ply_opt : (base_score); }();
@@ -11134,7 +12913,1136 @@ Returns i32.
 
 </details>
 
-> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile); `msil` (`PLY3051`: type 'list<i32>' is not supported by the MSIL backend); `jvm` (`PLY3151`: type 'list<i32>' in local 'list' of 'Run' is not supported by the JVM backend); `cpp` (`cpp/cpp17`: `PLY1451`: type 'set<i32, slotreuse>' has no C++ representation in profile 'cpp/cpp17'; `cpp/cpp20`: `PLY1451`: type 'set<i32, slotreuse>' has no C++ representation in profile 'cpp/cpp20'; `cpp/cpp23`: `PLY1451`: type 'set<i32, slotreuse>' has no C++ representation in profile 'cpp/cpp23'); `vbscript` (`PLY2651`: type 'list<i32>' has no VBScript representation in profile 'vbscript/5.8')
+<details>
+<summary><strong>MSIL</strong> — <code>msil/net10</code>, <code>msil/net8</code> (identical output — <code>CollectionsShowcase.dll</code> (disassembled))</summary>
+
+**`CollectionsShowcase.dll`** *(disassembled mnemonics)*
+
+```il
+.assembly CollectionsShowcase {}
+
+.class public abstract sealed CollectionsShowcase extends System.Object {
+  .method public hidebysig static int32 Run(int32[] values) cil managed {
+    .maxstack 64
+    .locals init ([0] System.Collections.Generic.List`1<int32>, [1] System.Collections.Generic.HashSet`1<int32>, [2] System.Collections.Generic.Dictionary`2<string, int32>, [3] int32, [4] int32, [5] string, [6] int32, [7] int32, [8] string, [9] int32)
+    IL_0000: newobj void 0x1B000001::.ctor()
+    IL_0005: stloc.0
+    IL_0006: newobj void 0x1B000002::.ctor()
+    IL_000B: stloc.1
+    IL_000C: newobj void 0x1B000003::.ctor()
+    IL_0011: stloc.2
+    IL_0012: ldc.i4.0
+    IL_0013: stloc.3
+    IL_0014: ldloc.3
+    IL_0015: ldarg.0
+    IL_0016: ldlen
+    IL_0017: conv.i4
+    IL_0018: clt
+    IL_001A: brfalse IL_0094
+    IL_001F: ldarg.0
+    IL_0020: ldloc.3
+    IL_0021: ldelem.i4
+    IL_0022: stloc.s 4
+    IL_0024: ldloc.1
+    IL_0025: ldloc.s 4
+    IL_0027: callvirt bool 0x1B000002::Add(!0)
+    IL_002C: brfalse IL_0039
+    IL_0031: ldloc.0
+    IL_0032: ldloc.s 4
+    IL_0034: callvirt void 0x1B000001::Add(!0)
+    IL_0039: ldloc.s 4
+    IL_003B: ldc.i4.0
+    IL_003C: clt
+    IL_003E: ldc.i4.0
+    IL_003F: ceq
+    IL_0041: brfalse IL_0050
+    IL_0046: ldstr "pos"
+    IL_004B: br IL_0055
+    IL_0050: ldstr "neg"
+    IL_0055: stloc.s 5
+    IL_0057: ldloc.2
+    IL_0058: ldloc.s 5
+    IL_005A: callvirt bool 0x1B000003::ContainsKey(!0)
+    IL_005F: brfalse IL_007F
+    IL_0064: ldloc.2
+    IL_0065: ldloc.s 5
+    IL_0067: callvirt !1 0x1B000003::get_Item(!0)
+    IL_006C: stloc.s 6
+    IL_006E: ldloc.2
+    IL_006F: ldloc.s 5
+    IL_0071: ldloc.s 6
+    IL_0073: ldc.i4.1
+    IL_0074: add
+    IL_0075: callvirt void 0x1B000003::set_Item(!0, !1)
+    IL_007A: br IL_008B
+    IL_007F: ldc.i4.0
+    IL_0080: stloc.s 6
+    IL_0082: ldloc.2
+    IL_0083: ldloc.s 5
+    IL_0085: ldc.i4.1
+    IL_0086: callvirt void 0x1B000003::Add(!0, !1)
+    IL_008B: ldloc.3
+    IL_008C: ldc.i4.1
+    IL_008D: add
+    IL_008E: stloc.3
+    IL_008F: br IL_0014
+    IL_0094: ldc.i4.0
+    IL_0095: stloc.s 7
+    IL_0097: ldstr "pos"
+    IL_009C: stloc.s 8
+    IL_009E: ldloc.2
+    IL_009F: ldloc.s 8
+    IL_00A1: callvirt bool 0x1B000003::ContainsKey(!0)
+    IL_00A6: brfalse IL_00BE
+    IL_00AB: ldloc.2
+    IL_00AC: ldloc.s 8
+    IL_00AE: callvirt !1 0x1B000003::get_Item(!0)
+    IL_00B3: stloc.s 9
+    IL_00B5: ldloc.s 9
+    IL_00B7: stloc.s 7
+    IL_00B9: br IL_00C1
+    IL_00BE: ldc.i4.0
+    IL_00BF: stloc.s 9
+    IL_00C1: ldloc.0
+    IL_00C2: callvirt int32 0x1B000001::get_Count()
+    IL_00C7: ldc.i4.s 10
+    IL_00C9: mul
+    IL_00CA: ldloc.s 7
+    IL_00CC: add
+    IL_00CD: ret
+    IL_00CE: ldc.i4.0
+    IL_00CF: ret
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><strong>JVM</strong> — <code>jvm/21</code>, <code>jvm/17</code>, <code>jvm/8</code> (identical output — <code>CollectionsShowcase.jar</code> (disassembled))</summary>
+
+**`CollectionsShowcase.jar`** *(disassembled mnemonics)*
+
+```text
+// classfile version 65.0
+public class CollectionsShowcase {
+  public <init>()V;
+    Code: stack=1, locals=1
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: return
+  public static Run([I)I;
+    Code: stack=4, locals=18
+      0: aconst_null
+      1: astore_1
+      2: aconst_null
+      3: astore_2
+      4: aconst_null
+      5: astore_3
+      6: iconst_0
+      7: istore 4
+      9: iconst_0
+      10: istore 5
+      12: aconst_null
+      13: astore 6
+      15: iconst_0
+      16: istore 7
+      18: iconst_0
+      19: istore 8
+      21: aconst_null
+      22: astore 9
+      24: iconst_0
+      25: istore 10
+      27: aconst_null
+      28: astore 11
+      30: aconst_null
+      31: astore 12
+      33: aconst_null
+      34: astore 13
+      36: aconst_null
+      37: astore 14
+      39: aconst_null
+      40: astore 15
+      42: aconst_null
+      43: astore 16
+      45: aconst_null
+      46: astore 17
+      48: new // class java/util/ArrayList
+      51: dup
+      52: invokespecial // Method java/util/ArrayList.<init>:()V
+      55: astore_1
+      56: new // class java/util/LinkedHashSet
+      59: dup
+      60: invokespecial // Method java/util/LinkedHashSet.<init>:()V
+      63: astore_2
+      64: new // class java/util/LinkedHashMap
+      67: dup
+      68: invokespecial // Method java/util/LinkedHashMap.<init>:()V
+      71: astore_3
+      72: iconst_0
+      73: istore 4
+      75: iload 4
+      77: aload_0
+      78: arraylength
+      79: if_icmplt 86
+      82: iconst_0
+      83: goto 87
+      86: iconst_1
+      87: ifeq 264
+      90: aload_0
+      91: iload 4
+      93: iaload
+      94: istore 5
+      96: aload_2
+      97: iload 5
+      99: invokestatic // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      102: invokevirtual // Method java/util/LinkedHashSet.add:(Ljava/lang/Object;)Z
+      105: ifeq 118
+      108: aload_1
+      109: iload 5
+      111: invokestatic // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      114: invokevirtual // Method java/util/ArrayList.add:(Ljava/lang/Object;)Z
+      117: pop
+      118: iload 5
+      120: iconst_0
+      121: if_icmpge 128
+      124: iconst_0
+      125: goto 129
+      128: iconst_1
+      129: ifeq 137
+      132: ldc "pos"
+      134: goto 139
+      137: ldc "neg"
+      139: astore 6
+      141: aload_3
+      142: aload 6
+      144: invokevirtual // Method java/util/LinkedHashMap.containsKey:(Ljava/lang/Object;)Z
+      147: ifeq 209
+      150: aload_3
+      151: astore 11
+      153: aload 6
+      155: astore 12
+      157: aload 11
+      159: aload 12
+      161: invokevirtual // Method java/util/LinkedHashMap.containsKey:(Ljava/lang/Object;)Z
+      164: ifne 177
+      167: new // class java/util/NoSuchElementException
+      170: dup
+      171: ldc "The given key was not present in the dictionary."
+      173: invokespecial // Method java/util/NoSuchElementException.<init>:(Ljava/lang/String;)V
+      176: athrow
+      177: aload 11
+      179: aload 12
+      181: invokevirtual // Method java/util/LinkedHashMap.get:(Ljava/lang/Object;)Ljava/lang/Object;
+      184: checkcast // class java/lang/Integer
+      187: invokevirtual // Method java/lang/Integer.intValue:()I
+      190: istore 7
+      192: aload_3
+      193: aload 6
+      195: iload 7
+      197: iconst_1
+      198: iadd
+      199: invokestatic // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      202: invokevirtual // Method java/util/LinkedHashMap.put:(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+      205: pop
+      206: goto 255
+      209: iconst_0
+      210: istore 7
+      212: aload_3
+      213: astore 13
+      215: aload 6
+      217: astore 14
+      219: iconst_1
+      220: invokestatic // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      223: astore 15
+      225: aload 13
+      227: aload 14
+      229: invokevirtual // Method java/util/LinkedHashMap.containsKey:(Ljava/lang/Object;)Z
+      232: ifeq 245
+      235: new // class java/lang/IllegalArgumentException
+      238: dup
+      239: ldc "An item with the same key has already been added."
+      241: invokespecial // Method java/lang/IllegalArgumentException.<init>:(Ljava/lang/String;)V
+      244: athrow
+      245: aload 13
+      247: aload 14
+      249: aload 15
+      251: invokevirtual // Method java/util/LinkedHashMap.put:(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+      254: pop
+      255: iload 4
+      257: iconst_1
+      258: iadd
+      259: istore 4
+      261: goto 75
+      264: iconst_0
+      265: istore 8
+      267: ldc "pos"
+      269: astore 9
+      271: aload_3
+      272: aload 9
+      274: invokevirtual // Method java/util/LinkedHashMap.containsKey:(Ljava/lang/Object;)Z
+      277: ifeq 329
+      280: aload_3
+      281: astore 16
+      283: aload 9
+      285: astore 17
+      287: aload 16
+      289: aload 17
+      291: invokevirtual // Method java/util/LinkedHashMap.containsKey:(Ljava/lang/Object;)Z
+      294: ifne 307
+      297: new // class java/util/NoSuchElementException
+      300: dup
+      301: ldc "The given key was not present in the dictionary."
+      303: invokespecial // Method java/util/NoSuchElementException.<init>:(Ljava/lang/String;)V
+      306: athrow
+      307: aload 16
+      309: aload 17
+      311: invokevirtual // Method java/util/LinkedHashMap.get:(Ljava/lang/Object;)Ljava/lang/Object;
+      314: checkcast // class java/lang/Integer
+      317: invokevirtual // Method java/lang/Integer.intValue:()I
+      320: istore 10
+      322: iload 10
+      324: istore 8
+      326: goto 332
+      329: iconst_0
+      330: istore 10
+      332: aload_1
+      333: invokevirtual // Method java/util/ArrayList.size:()I
+      336: bipush 10
+      338: imul
+      339: iload 8
+      341: iadd
+      342: ireturn
+}
+```
+
+</details>
+
+<details>
+<summary><strong>C++</strong> — <code>cpp/cpp17</code>, <code>cpp/cpp20</code>, <code>cpp/cpp23</code> (identical output — <code>collections_showcase.cpp</code>, <code>collections_showcase.hpp</code>)</summary>
+
+**`collections_showcase.cpp`**
+
+```cpp
+#include "collections_showcase.hpp"
+#include <cmath>
+#include <cstddef>
+#include <optional>
+#include <stdexcept>
+#include <string>
+#include <type_traits>
+#include <utility>
+
+namespace collections_showcase {
+
+namespace {
+
+template <typename K, typename V, bool SlotReuse>
+struct PlyMap {
+  struct Entry {
+    bool occupied = false;
+    K key{};
+    V value{};
+  };
+
+  std::vector<Entry> entries{};
+  std::vector<std::size_t> free_list{};
+  std::size_t count_ = 0;
+
+  static bool key_eq(const K& a, const K& b) {
+    if constexpr (std::is_floating_point_v<K>)
+      return (a == b) || (std::isnan(a) && std::isnan(b));
+    else
+      return a == b;
+  }
+
+  std::size_t find_slot(const K& key) const {
+    for (std::size_t i = 0; i < this->entries.size(); ++i)
+      if (this->entries[i].occupied && key_eq(this->entries[i].key, key))
+        return i;
+    return static_cast<std::size_t>(-1);
+  }
+
+  std::int32_t count() const { return static_cast<std::int32_t>(this->count_); }
+
+  bool contains_key(const K& key) const { return this->find_slot(key) != static_cast<std::size_t>(-1); }
+
+  V& get(const K& key) {
+    const auto slot = this->find_slot(key);
+    if (slot == static_cast<std::size_t>(-1))
+      throw std::out_of_range("key not found");
+    return this->entries[slot].value;
+  }
+
+  const V& get(const K& key) const {
+    const auto slot = this->find_slot(key);
+    if (slot == static_cast<std::size_t>(-1))
+      throw std::out_of_range("key not found");
+    return this->entries[slot].value;
+  }
+
+  std::optional<V> try_get_opt(const K& key) const {
+    const auto slot = this->find_slot(key);
+    if (slot == static_cast<std::size_t>(-1))
+      return std::nullopt;
+    return this->entries[slot].value;
+  }
+
+  V try_get_ref(const K& key) const {
+    const auto slot = this->find_slot(key);
+    if (slot == static_cast<std::size_t>(-1))
+      return V{};
+    return this->entries[slot].value;
+  }
+
+  void insert_new(const K& key, V value) {
+    if constexpr (SlotReuse) {
+      if (!this->free_list.empty()) {
+        const auto slot = this->free_list.back();
+        this->free_list.pop_back();
+        this->entries[slot] = Entry{true, key, std::move(value)};
+        ++this->count_;
+        return;
+      }
+    }
+    this->entries.push_back(Entry{true, key, std::move(value)});
+    ++this->count_;
+  }
+
+  void put(const K& key, V value) {
+    const auto slot = this->find_slot(key);
+    if (slot != static_cast<std::size_t>(-1)) {
+      this->entries[slot].value = std::move(value);
+      return;
+    }
+    this->insert_new(key, std::move(value));
+  }
+
+  void add(const K& key, V value) {
+    if (this->find_slot(key) != static_cast<std::size_t>(-1))
+      throw std::invalid_argument("duplicate key");
+    this->insert_new(key, std::move(value));
+  }
+
+  bool try_add(const K& key, V value) {
+    if (this->find_slot(key) != static_cast<std::size_t>(-1))
+      return false;
+    this->insert_new(key, std::move(value));
+    return true;
+  }
+
+  bool remove(const K& key) {
+    const auto slot = this->find_slot(key);
+    if (slot == static_cast<std::size_t>(-1))
+      return false;
+    this->entries[slot].occupied = false;
+    this->entries[slot].key = K{};
+    this->entries[slot].value = V{};
+    if constexpr (SlotReuse)
+      this->free_list.push_back(slot);
+    --this->count_;
+    return true;
+  }
+
+  void clear() {
+    this->entries.clear();
+    this->free_list.clear();
+    this->count_ = 0;
+  }
+};
+
+template <typename K, bool SlotReuse>
+struct PlySet {
+  struct Entry {
+    bool occupied = false;
+    K key{};
+  };
+
+  std::vector<Entry> entries{};
+  std::vector<std::size_t> free_list{};
+  std::size_t count_ = 0;
+
+  static bool key_eq(const K& a, const K& b) {
+    if constexpr (std::is_floating_point_v<K>)
+      return (a == b) || (std::isnan(a) && std::isnan(b));
+    else
+      return a == b;
+  }
+
+  std::size_t find_slot(const K& key) const {
+    for (std::size_t i = 0; i < this->entries.size(); ++i)
+      if (this->entries[i].occupied && key_eq(this->entries[i].key, key))
+        return i;
+    return static_cast<std::size_t>(-1);
+  }
+
+  std::int32_t count() const { return static_cast<std::int32_t>(this->count_); }
+
+  bool contains(const K& key) const { return this->find_slot(key) != static_cast<std::size_t>(-1); }
+
+  bool add(const K& key) {
+    if (this->find_slot(key) != static_cast<std::size_t>(-1))
+      return false;
+    if constexpr (SlotReuse) {
+      if (!this->free_list.empty()) {
+        const auto slot = this->free_list.back();
+        this->free_list.pop_back();
+        this->entries[slot] = Entry{true, key};
+        ++this->count_;
+        return true;
+      }
+    }
+    this->entries.push_back(Entry{true, key});
+    ++this->count_;
+    return true;
+  }
+
+  bool remove(const K& key) {
+    const auto slot = this->find_slot(key);
+    if (slot == static_cast<std::size_t>(-1))
+      return false;
+    this->entries[slot].occupied = false;
+    this->entries[slot].key = K{};
+    if constexpr (SlotReuse)
+      this->free_list.push_back(slot);
+    --this->count_;
+    return true;
+  }
+
+  void clear() {
+    this->entries.clear();
+    this->free_list.clear();
+    this->count_ = 0;
+  }
+};
+
+template <typename C>
+auto ply_at(C& arr, std::int32_t index) -> decltype(arr[static_cast<std::size_t>(0)]) {
+  if (index < 0 || static_cast<std::size_t>(index) >= arr.size())
+    throw std::out_of_range("index out of range");
+  return arr[static_cast<std::size_t>(index)];
+}
+template <typename C>
+auto ply_at(const C& arr, std::int32_t index) -> decltype(arr[static_cast<std::size_t>(0)]) {
+  if (index < 0 || static_cast<std::size_t>(index) >= arr.size())
+    throw std::out_of_range("index out of range");
+  return arr[static_cast<std::size_t>(index)];
+}
+
+} // namespace
+
+std::int32_t run(const std::vector<std::int32_t>& values) {
+  std::vector<std::int32_t> list = std::vector<std::int32_t>{};
+  PlySet<std::int32_t, true> seen = PlySet<std::int32_t, true>{};
+  PlyMap<std::string, std::int32_t, true> counts = PlyMap<std::string, std::int32_t, true>{};
+  {
+    std::int32_t t3 = 0;
+    while ((t3 < static_cast<std::int32_t>((values).size()))) {
+      std::int32_t v = ply_at(values, t3);
+      if ((seen).add(v)) {
+        (list).push_back(v);
+      }
+      std::string bucket = ((v >= 0) ? std::string("pos") : std::string("neg"));
+      std::int32_t current = static_cast<std::int32_t>(0);
+      if ((counts).contains_key(bucket)) {
+        current = (counts).get(bucket);
+        (counts).put(bucket, static_cast<std::int32_t>(static_cast<std::uint32_t>(current) + static_cast<std::uint32_t>(1)));
+      } else {
+        current = 0;
+        (counts).add(bucket, 1);
+      }
+      t3 = static_cast<std::int32_t>(static_cast<std::uint32_t>(t3) + static_cast<std::uint32_t>(1));
+    }
+  }
+  std::int32_t pos = 0;
+  std::string t8 = std::string("pos");
+  std::int32_t p = static_cast<std::int32_t>(0);
+  if ((counts).contains_key(t8)) {
+    p = (counts).get(t8);
+    pos = p;
+  } else {
+    p = 0;
+  }
+  return static_cast<std::int32_t>(static_cast<std::uint32_t>(static_cast<std::int32_t>(static_cast<std::uint32_t>(static_cast<std::int32_t>((list).size())) * static_cast<std::uint32_t>(10))) + static_cast<std::uint32_t>(pos));
+}
+
+} // namespace collections_showcase
+```
+
+**`collections_showcase.hpp`**
+
+```cpp
+#pragma once
+
+#include <cstdint>
+#include <vector>
+
+namespace collections_showcase {
+
+std::int32_t run(const std::vector<std::int32_t>& values);
+
+} // namespace collections_showcase
+```
+
+</details>
+
+<details>
+<summary><strong>VBScript</strong> — <code>vbscript/5.8</code> (<code>CollectionsShowcase.vbs</code>)</summary>
+
+```vbscript
+Option Explicit
+
+Function ply_i32(ByVal x)
+  Dim m
+  m = CDbl(x)
+  m = m - Int(m / 4294967296.0) * 4294967296.0
+  If m >= 2147483648.0 Then m = m - 4294967296.0
+  ply_i32 = CLng(m)
+End Function
+
+Function ply_u32(ByVal x)
+  Dim m
+  m = CDbl(x)
+  ply_u32 = m - Int(m / 4294967296.0) * 4294967296.0
+End Function
+
+Function ply_mul32(ByVal a, ByVal b)
+  Dim ua, ub, al, ah, bl, bh, lo, md
+  ua = ply_u32(a)
+  ub = ply_u32(b)
+  al = ua - Int(ua / 65536.0) * 65536.0
+  ah = Int(ua / 65536.0)
+  bl = ub - Int(ub / 65536.0) * 65536.0
+  bh = Int(ub / 65536.0)
+  lo = al * bl
+  md = ah * bl + al * bh
+  md = md - Int(md / 65536.0) * 65536.0
+  ply_mul32 = ply_i32(lo + md * 65536.0)
+End Function
+
+Sub ply_chk_idx(ByRef a, ByVal i)
+  If IsNull(a) Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+  If i < 0 Or i > UBound(a) Then Err.Raise vbObjectError + 1003, "IndexOutOfRangeException", "Index was outside the bounds of the array."
+End Sub
+
+Function ply_chk_null(ByVal o)
+  If o Is Nothing Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+  Set ply_chk_null = o
+End Function
+
+Function ply_key_eq(ByVal a, ByVal b, ByVal eqMode)
+  If IsObject(a) Or IsObject(b) Then
+    If Not (IsObject(a) And IsObject(b)) Then
+      ply_key_eq = False
+    ElseIf (a Is Nothing) And (b Is Nothing) Then
+      ply_key_eq = True
+    ElseIf (a Is Nothing) Or (b Is Nothing) Then
+      ply_key_eq = False
+    ElseIf eqMode = 1 Then
+      ply_key_eq = a.ply_equals(b)
+    Else
+      ply_key_eq = (a Is b)
+    End If
+    Exit Function
+  End If
+  If IsNull(a) Or IsNull(b) Then
+    ply_key_eq = (IsNull(a) And IsNull(b))
+    Exit Function
+  End If
+  If VarType(a) = 8 And VarType(b) = 8 Then
+    ply_key_eq = (StrComp(a, b, 0) = 0)
+    Exit Function
+  End If
+  If VarType(a) = 11 Or VarType(b) = 11 Then
+    ply_key_eq = (VarType(a) = VarType(b) And a = b)
+    Exit Function
+  End If
+  ply_key_eq = (a = b)
+End Function
+
+Class ply_List
+  Private m_items()
+  Private m_cap
+  Public Count
+  Public Version
+
+  Private Sub Class_Initialize()
+    m_cap = 0
+    Count = 0
+    Version = 0
+  End Sub
+
+  Private Sub EnsureCap(ByVal need)
+    Dim nc
+    If need <= m_cap Then Exit Sub
+    If m_cap = 0 Then nc = 4 Else nc = m_cap * 2
+    Do While nc < need
+      nc = nc * 2
+    Loop
+    ReDim Preserve m_items(nc - 1)
+    m_cap = nc
+  End Sub
+
+  Public Function GetAt(ByVal i)
+    If i < 0 Or i >= Count Then Err.Raise vbObjectError + 1003, "ArgumentOutOfRangeException", "Index was out of range."
+    If IsObject(m_items(i)) Then Set GetAt = m_items(i) Else GetAt = m_items(i)
+  End Function
+
+  Public Sub SetAt(ByVal i, ByVal v)
+    If i < 0 Or i >= Count Then Err.Raise vbObjectError + 1003, "ArgumentOutOfRangeException", "Index was out of range."
+    If IsObject(v) Then Set m_items(i) = v Else m_items(i) = v
+    Version = Version + 1
+  End Sub
+
+  Public Sub AddItem(ByVal v)
+    Call EnsureCap(Count + 1)
+    If IsObject(v) Then Set m_items(Count) = v Else m_items(Count) = v
+    Count = Count + 1
+    Version = Version + 1
+  End Sub
+
+  Public Sub InsertAt(ByVal idx, ByVal v)
+    Dim i
+    If idx < 0 Or idx > Count Then Err.Raise vbObjectError + 1003, "ArgumentOutOfRangeException", "Index was out of range."
+    Call EnsureCap(Count + 1)
+    For i = Count To idx + 1 Step -1
+      If IsObject(m_items(i - 1)) Then Set m_items(i) = m_items(i - 1) Else m_items(i) = m_items(i - 1)
+    Next
+    If IsObject(v) Then Set m_items(idx) = v Else m_items(idx) = v
+    Count = Count + 1
+    Version = Version + 1
+  End Sub
+
+  Public Sub RemoveAt(ByVal idx)
+    Dim i
+    If idx < 0 Or idx >= Count Then Err.Raise vbObjectError + 1003, "ArgumentOutOfRangeException", "Index was out of range."
+    For i = idx To Count - 2
+      If IsObject(m_items(i + 1)) Then Set m_items(i) = m_items(i + 1) Else m_items(i) = m_items(i + 1)
+    Next
+    Count = Count - 1
+    m_items(Count) = Empty
+    Version = Version + 1
+  End Sub
+
+  Public Function RemoveLast(ByVal isObj)
+    If Count = 0 Then
+      If isObj Then Set RemoveLast = Nothing Else RemoveLast = Null
+      Exit Function
+    End If
+    Count = Count - 1
+    If IsObject(m_items(Count)) Then Set RemoveLast = m_items(Count) Else RemoveLast = m_items(Count)
+    m_items(Count) = Empty
+    Version = Version + 1
+  End Function
+
+  Public Sub ClearAll()
+    Dim i
+    For i = 0 To Count - 1
+      m_items(i) = Empty
+    Next
+    Count = 0
+    Version = Version + 1
+  End Sub
+
+  Public Function IndexOfItem(ByVal v, ByVal eqMode)
+    Dim i
+    For i = 0 To Count - 1
+      If ply_key_eq(m_items(i), v, eqMode) Then
+        IndexOfItem = CLng(i)
+        Exit Function
+      End If
+    Next
+    IndexOfItem = -1
+  End Function
+
+  Public Function ContainsItem(ByVal v, ByVal eqMode)
+    ContainsItem = (IndexOfItem(v, eqMode) >= 0)
+  End Function
+
+  Public Function ToArr(ByVal isStruct)
+    Dim r(), i
+    If Count = 0 Then
+      ToArr = Array()
+      Exit Function
+    End If
+    ReDim r(Count - 1)
+    For i = 0 To Count - 1
+      If isStruct Then
+        Set r(i) = m_items(i).ply_clone()
+      ElseIf IsObject(m_items(i)) Then
+        Set r(i) = m_items(i)
+      Else
+        r(i) = m_items(i)
+      End If
+    Next
+    ToArr = r
+  End Function
+End Class
+
+Function ply_new_list()
+  Set ply_new_list = New ply_List
+End Function
+
+Function ply_list_from_arr(ByRef arr, ByVal isStruct)
+  Dim l, i
+  If IsNull(arr) Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+  Set l = New ply_List
+  For i = 0 To UBound(arr)
+    If isStruct Then
+      Call l.AddItem(arr(i).ply_clone())
+    Else
+      Call l.AddItem(arr(i))
+    End If
+  Next
+  Set ply_list_from_arr = l
+End Function
+
+Class ply_Map
+  Public OrderMode
+  Public Count
+  Public SlotCount
+  Public Version
+  Private m_keys()
+  Private m_vals()
+  Private m_used()
+  Private m_cap
+  Private m_free()
+  Private m_freeCount
+  Private m_freeCap
+
+  Private Sub Class_Initialize()
+    OrderMode = 0
+    Count = 0
+    SlotCount = 0
+    Version = 0
+    m_cap = 0
+    m_freeCount = 0
+    m_freeCap = 0
+  End Sub
+
+  Private Sub EnsureCap(ByVal need)
+    Dim nc
+    If need <= m_cap Then Exit Sub
+    If m_cap = 0 Then nc = 4 Else nc = m_cap * 2
+    Do While nc < need
+      nc = nc * 2
+    Loop
+    ReDim Preserve m_keys(nc - 1)
+    ReDim Preserve m_vals(nc - 1)
+    ReDim Preserve m_used(nc - 1)
+    m_cap = nc
+  End Sub
+
+  Private Sub PushFree(ByVal slot)
+    Dim nc
+    If m_freeCount >= m_freeCap Then
+      If m_freeCap = 0 Then nc = 4 Else nc = m_freeCap * 2
+      ReDim Preserve m_free(nc - 1)
+      m_freeCap = nc
+    End If
+    m_free(m_freeCount) = slot
+    m_freeCount = m_freeCount + 1
+  End Sub
+
+  Private Function FindSlot(ByVal k)
+    Dim i
+    For i = 0 To SlotCount - 1
+      If m_used(i) Then
+        If ply_key_eq(m_keys(i), k, 0) Then
+          FindSlot = i
+          Exit Function
+        End If
+      End If
+    Next
+    FindSlot = -1
+  End Function
+
+  Private Function PutCore(ByVal k, ByVal v, ByVal doReplace)
+    Dim idx, slot
+    idx = FindSlot(k)
+    If idx >= 0 Then
+      If doReplace Then
+        If IsObject(v) Then Set m_vals(idx) = v Else m_vals(idx) = v
+      End If
+      PutCore = False
+      Exit Function
+    End If
+    If OrderMode = 1 And m_freeCount > 0 Then
+      m_freeCount = m_freeCount - 1
+      slot = m_free(m_freeCount)
+    Else
+      Call EnsureCap(SlotCount + 1)
+      slot = SlotCount
+      SlotCount = SlotCount + 1
+    End If
+    If IsObject(k) Then Set m_keys(slot) = k Else m_keys(slot) = k
+    If IsObject(v) Then Set m_vals(slot) = v Else m_vals(slot) = v
+    m_used(slot) = True
+    Count = Count + 1
+    Version = Version + 1
+    PutCore = True
+  End Function
+
+  Public Sub PutEntry(ByVal k, ByVal v)
+    Dim dummy
+    dummy = PutCore(k, v, True)
+  End Sub
+
+  Public Sub AddEntry(ByVal k, ByVal v)
+    If Not PutCore(k, v, False) Then Err.Raise vbObjectError + 1008, "ArgumentException", "An item with the same key has already been added."
+  End Sub
+
+  Public Function TryAddEntry(ByVal k, ByVal v)
+    TryAddEntry = PutCore(k, v, False)
+  End Function
+
+  Public Function GetEntry(ByVal k)
+    Dim idx
+    idx = FindSlot(k)
+    If idx < 0 Then Err.Raise vbObjectError + 1009, "KeyNotFoundException", "The given key was not present in the dictionary."
+    If IsObject(m_vals(idx)) Then Set GetEntry = m_vals(idx) Else GetEntry = m_vals(idx)
+  End Function
+
+  Public Function TryGetEntry(ByVal k, ByVal isObj)
+    Dim idx
+    idx = FindSlot(k)
+    If idx < 0 Then
+      If isObj Then Set TryGetEntry = Nothing Else TryGetEntry = Null
+      Exit Function
+    End If
+    If IsObject(m_vals(idx)) Then Set TryGetEntry = m_vals(idx) Else TryGetEntry = m_vals(idx)
+  End Function
+
+  Public Function HasKey(ByVal k)
+    HasKey = (FindSlot(k) >= 0)
+  End Function
+
+  Public Function RemoveKey(ByVal k)
+    Dim idx
+    idx = FindSlot(k)
+    If idx < 0 Then
+      RemoveKey = False
+      Exit Function
+    End If
+    m_used(idx) = False
+    m_keys(idx) = Empty
+    m_vals(idx) = Empty
+    Count = Count - 1
+    If OrderMode = 1 Then Call PushFree(idx)
+    RemoveKey = True
+  End Function
+
+  Public Sub ClearAll()
+    Dim i
+    For i = 0 To SlotCount - 1
+      m_used(i) = False
+      m_keys(i) = Empty
+      m_vals(i) = Empty
+    Next
+    Count = 0
+    m_freeCount = 0
+    If OrderMode = 1 Then SlotCount = 0
+  End Sub
+
+  Public Function SlotUsed(ByVal i)
+    SlotUsed = m_used(i)
+  End Function
+
+  Public Function KeyAt(ByVal i)
+    If IsObject(m_keys(i)) Then Set KeyAt = m_keys(i) Else KeyAt = m_keys(i)
+  End Function
+
+  Public Function ValAt(ByVal i)
+    If IsObject(m_vals(i)) Then Set ValAt = m_vals(i) Else ValAt = m_vals(i)
+  End Function
+End Class
+
+Function ply_new_map(ByVal orderMode)
+  Dim m
+  Set m = New ply_Map
+  m.OrderMode = orderMode
+  Set ply_new_map = m
+End Function
+
+Class ply_Set
+  Public OrderMode
+  Public Count
+  Public SlotCount
+  Public Version
+  Private m_keys()
+  Private m_used()
+  Private m_cap
+  Private m_free()
+  Private m_freeCount
+  Private m_freeCap
+
+  Private Sub Class_Initialize()
+    OrderMode = 0
+    Count = 0
+    SlotCount = 0
+    Version = 0
+    m_cap = 0
+    m_freeCount = 0
+    m_freeCap = 0
+  End Sub
+
+  Private Sub EnsureCap(ByVal need)
+    Dim nc
+    If need <= m_cap Then Exit Sub
+    If m_cap = 0 Then nc = 4 Else nc = m_cap * 2
+    Do While nc < need
+      nc = nc * 2
+    Loop
+    ReDim Preserve m_keys(nc - 1)
+    ReDim Preserve m_used(nc - 1)
+    m_cap = nc
+  End Sub
+
+  Private Sub PushFree(ByVal slot)
+    Dim nc
+    If m_freeCount >= m_freeCap Then
+      If m_freeCap = 0 Then nc = 4 Else nc = m_freeCap * 2
+      ReDim Preserve m_free(nc - 1)
+      m_freeCap = nc
+    End If
+    m_free(m_freeCount) = slot
+    m_freeCount = m_freeCount + 1
+  End Sub
+
+  Private Function FindSlot(ByVal k)
+    Dim i
+    For i = 0 To SlotCount - 1
+      If m_used(i) Then
+        If ply_key_eq(m_keys(i), k, 0) Then
+          FindSlot = i
+          Exit Function
+        End If
+      End If
+    Next
+    FindSlot = -1
+  End Function
+
+  Public Function AddVal(ByVal k)
+    Dim slot
+    If FindSlot(k) >= 0 Then
+      AddVal = False
+      Exit Function
+    End If
+    If OrderMode = 1 And m_freeCount > 0 Then
+      m_freeCount = m_freeCount - 1
+      slot = m_free(m_freeCount)
+    Else
+      Call EnsureCap(SlotCount + 1)
+      slot = SlotCount
+      SlotCount = SlotCount + 1
+    End If
+    If IsObject(k) Then Set m_keys(slot) = k Else m_keys(slot) = k
+    m_used(slot) = True
+    Count = Count + 1
+    Version = Version + 1
+    AddVal = True
+  End Function
+
+  Public Function RemoveVal(ByVal k)
+    Dim idx
+    idx = FindSlot(k)
+    If idx < 0 Then
+      RemoveVal = False
+      Exit Function
+    End If
+    m_used(idx) = False
+    m_keys(idx) = Empty
+    Count = Count - 1
+    If OrderMode = 1 Then Call PushFree(idx)
+    RemoveVal = True
+  End Function
+
+  Public Function HasItem(ByVal k)
+    HasItem = (FindSlot(k) >= 0)
+  End Function
+
+  Public Sub ClearAll()
+    Dim i
+    For i = 0 To SlotCount - 1
+      m_used(i) = False
+      m_keys(i) = Empty
+    Next
+    Count = 0
+    m_freeCount = 0
+    If OrderMode = 1 Then SlotCount = 0
+  End Sub
+
+  Public Function SlotUsed(ByVal i)
+    SlotUsed = m_used(i)
+  End Function
+
+  Public Function KeyAt(ByVal i)
+    If IsObject(m_keys(i)) Then Set KeyAt = m_keys(i) Else KeyAt = m_keys(i)
+  End Function
+End Class
+
+Function ply_new_set(ByVal orderMode)
+  Dim s
+  Set s = New ply_Set
+  s.OrderMode = orderMode
+  Set ply_new_set = s
+End Function
+
+
+Function Run(ByRef values)
+  Dim list, seen, counts, v__t3, v, bucket, current, pos, v__t8, p, ply_col1, ply_col2, ply_c3, ply_col4, ply_col5, ply_col6, ply_col7, ply_col8, ply_col9, ply_col10
+  Set list = ply_new_list()
+  Set seen = ply_new_set(1)
+  Set counts = ply_new_map(1)
+  v__t3 = 0
+  Do While ((v__t3) < ((UBound(values) + 1)))
+    Call ply_chk_idx(values, v__t3)
+    v = values(v__t3)
+    Set ply_col1 = ply_chk_null(seen)
+    If ply_col1.AddVal(v) Then
+      Set ply_col2 = ply_chk_null(list)
+      Call ply_col2.AddItem(v)
+    End If
+    If ((v) >= (0)) Then
+      ply_c3 = "pos"
+    Else
+      ply_c3 = "neg"
+    End If
+    bucket = ply_c3
+    current = 0
+    Set ply_col4 = ply_chk_null(counts)
+    If ply_col4.HasKey(bucket) Then
+      Set ply_col5 = ply_chk_null(counts)
+      current = ply_col5.GetEntry(bucket)
+      Set ply_col6 = ply_chk_null(counts)
+      Call ply_col6.PutEntry(bucket, ply_i32(CDbl(current) + CDbl(1)))
+    Else
+      current = 0
+      Set ply_col7 = ply_chk_null(counts)
+      Call ply_col7.AddEntry(bucket, 1)
+    End If
+    v__t3 = ply_i32(CDbl(v__t3) + CDbl(1))
+  Loop
+  pos = 0
+  v__t8 = "pos"
+  p = 0
+  Set ply_col8 = ply_chk_null(counts)
+  If ply_col8.HasKey(v__t8) Then
+    Set ply_col9 = ply_chk_null(counts)
+    p = ply_col9.GetEntry(v__t8)
+    pos = p
+  Else
+    p = 0
+  End If
+  Set ply_col10 = ply_chk_null(list)
+  Run = ply_i32(CDbl(ply_mul32(ply_col10.Count, 10)) + CDbl(pos))
+  Exit Function
+End Function
+```
+
+</details>
+
+> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
 
 ## Iterators & Lazy Sequences
 
@@ -11718,7 +14626,823 @@ Returns i32.
 
 </details>
 
-> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile); `msil` (`PLY3051`: type 'seq<i32>' is not supported by the MSIL backend); `jvm` (`PLY3151`: type 'seq<i32>' in return type of 'EvensUpTo' is not supported by the JVM backend); `cpp` (`cpp/cpp17`: `PLY1451`: type 'seq<i32>' has no C++ representation in profile 'cpp/cpp17'; `cpp/cpp20`: `PLY1451`: type 'seq<i32>' has no C++ representation in profile 'cpp/cpp20'; `cpp/cpp23`: `PLY1451`: type 'seq<i32>' has no C++ representation in profile 'cpp/cpp23'); `vbscript` (`PLY2651`: type 'seq<i32>' has no VBScript representation in profile 'vbscript/5.8')
+<details>
+<summary><strong>MSIL</strong> — <code>msil/net10</code>, <code>msil/net8</code> (identical output — <code>IteratorsShowcase.dll</code> (disassembled))</summary>
+
+**`IteratorsShowcase.dll`** *(disassembled mnemonics)*
+
+```il
+.assembly IteratorsShowcase {}
+
+.class public abstract $Seq_0 {
+  .method public hidebysig System.Collections.Generic.List`1<int32> Enumerate() cil managed {
+  }
+}
+
+.class public sealed $Iter_0 extends System.Object {
+  .field public int32 $p0
+  .method public hidebysig void .ctor(int32 limit) cil managed {
+    .maxstack 8
+    IL_0000: ldarg.0
+    IL_0001: call void System.Object::.ctor()
+    IL_0006: ldarg.0
+    IL_0007: ldarg.1
+    IL_0008: stfld $p0
+    IL_000D: ret
+  }
+  .method public hidebysig System.Collections.Generic.List`1<int32> Enumerate() cil managed {
+    .maxstack 64
+    .locals init ([0] int32, [1] int32, [2] System.Collections.Generic.List`1<int32>)
+    IL_0000: ldarg.0
+    IL_0001: ldfld $p0
+    IL_0006: stloc.1
+    IL_0007: newobj void 0x1B000001::.ctor()
+    IL_000C: stloc.2
+    IL_000D: ldc.i4.0
+    IL_000E: stloc.0
+    IL_000F: ldloc.0
+    IL_0010: ldloc.1
+    IL_0011: cgt
+    IL_0013: ldc.i4.0
+    IL_0014: ceq
+    IL_0016: brfalse IL_003A
+    IL_001B: ldloc.0
+    IL_001C: ldc.i4.s 100
+    IL_001E: cgt
+    IL_0020: brfalse IL_002A
+    IL_0025: br IL_003A
+    IL_002A: ldloc.2
+    IL_002B: ldloc.0
+    IL_002C: callvirt void 0x1B000001::Add(!0)
+    IL_0031: ldloc.0
+    IL_0032: ldc.i4.2
+    IL_0033: add
+    IL_0034: stloc.0
+    IL_0035: br IL_000F
+    IL_003A: ldloc.2
+    IL_003B: ret
+  }
+}
+
+.class public abstract sealed IteratorsShowcase extends System.Object {
+  .method private hidebysig static $Seq_0 EvensUpTo(int32 limit) cil managed {
+    .maxstack 8
+    IL_0000: ldarg.0
+    IL_0001: newobj void $Iter_0::.ctor(int32)
+    IL_0006: ret
+  }
+  .method public hidebysig static int32 SumEvens(int32 limit) cil managed {
+    .maxstack 64
+    .locals init ([0] int32, [1] int32, [2] System.Collections.Generic.List`1<int32>, [3] int32)
+    IL_0000: ldc.i4.0
+    IL_0001: stloc.0
+    IL_0002: ldarg.0
+    IL_0003: call $Seq_0 IteratorsShowcase::EvensUpTo(int32)
+    IL_0008: callvirt System.Collections.Generic.List`1<int32> $Seq_0::Enumerate()
+    IL_000D: stloc.2
+    IL_000E: ldc.i4.0
+    IL_000F: stloc.3
+    IL_0010: ldloc.3
+    IL_0011: ldloc.2
+    IL_0012: callvirt int32 0x1B000001::get_Count()
+    IL_0017: bge IL_0031
+    IL_001C: ldloc.2
+    IL_001D: ldloc.3
+    IL_001E: callvirt !0 0x1B000001::get_Item(int32)
+    IL_0023: stloc.1
+    IL_0024: ldloc.0
+    IL_0025: ldloc.1
+    IL_0026: add
+    IL_0027: stloc.0
+    IL_0028: ldloc.3
+    IL_0029: ldc.i4.1
+    IL_002A: add
+    IL_002B: stloc.3
+    IL_002C: br IL_0010
+    IL_0031: ldloc.0
+    IL_0032: ret
+    IL_0033: ldc.i4.0
+    IL_0034: ret
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><strong>JVM</strong> — <code>jvm/21</code>, <code>jvm/17</code>, <code>jvm/8</code> (identical output — <code>IteratorsShowcase.jar</code> (disassembled))</summary>
+
+**`IteratorsShowcase.jar`** *(disassembled mnemonics)*
+
+```text
+// classfile version 65.0
+public final class IteratorsShowcase$Iter_EvensUpTo_1 implements IteratorsShowcase$Seq {
+  public final I p0;
+  public <init>(I)V;
+    Code: stack=2, locals=2
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: aload_0
+      5: iload_1
+      6: putfield // Field IteratorsShowcase$Iter_EvensUpTo_1.p0:I
+      9: return
+  public enumerate()Ljava/util/ArrayList;;
+    Code: stack=2, locals=4
+      0: aconst_null
+      1: astore_1
+      2: iconst_0
+      3: istore_2
+      4: iconst_0
+      5: istore_3
+      6: new // class java/util/ArrayList
+      9: dup
+      10: invokespecial // Method java/util/ArrayList.<init>:()V
+      13: astore_1
+      14: aload_0
+      15: getfield // Field IteratorsShowcase$Iter_EvensUpTo_1.p0:I
+      18: istore_2
+      19: iconst_0
+      20: istore_3
+      21: iload_3
+      22: iload_2
+      23: if_icmple 30
+      26: iconst_0
+      27: goto 31
+      30: iconst_1
+      31: ifeq 66
+      34: iload_3
+      35: bipush 100
+      37: if_icmpgt 44
+      40: iconst_0
+      41: goto 45
+      44: iconst_1
+      45: ifeq 50
+      48: aload_1
+      49: areturn
+      50: aload_1
+      51: iload_3
+      52: invokestatic // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      55: invokevirtual // Method java/util/ArrayList.add:(Ljava/lang/Object;)Z
+      58: pop
+      59: iload_3
+      60: iconst_2
+      61: iadd
+      62: istore_3
+      63: goto 21
+      66: aload_1
+      67: areturn
+}
+
+// classfile version 65.0
+public class IteratorsShowcase$Seq {
+  public enumerate()Ljava/util/ArrayList;;
+}
+
+// classfile version 65.0
+public class IteratorsShowcase {
+  public <init>()V;
+    Code: stack=1, locals=1
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: return
+  static EvensUpTo(I)LIteratorsShowcase$Seq;;
+    Code: stack=3, locals=1
+      0: new // class IteratorsShowcase$Iter_EvensUpTo_1
+      3: dup
+      4: iload_0
+      5: invokespecial // Method IteratorsShowcase$Iter_EvensUpTo_1.<init>:(I)V
+      8: areturn
+  public static SumEvens(I)I;
+    Code: stack=2, locals=6
+      0: iconst_0
+      1: istore_1
+      2: iconst_0
+      3: istore_2
+      4: aconst_null
+      5: astore_3
+      6: iconst_0
+      7: istore 4
+      9: iconst_0
+      10: istore 5
+      12: iconst_0
+      13: istore_1
+      14: iload_0
+      15: invokestatic // Method IteratorsShowcase.EvensUpTo:(I)LIteratorsShowcase$Seq;
+      18: invokeinterface // Method IteratorsShowcase$Seq.enumerate:()Ljava/util/ArrayList;
+      23: astore_3
+      24: aload_3
+      25: invokevirtual // Method java/util/ArrayList.size:()I
+      28: istore 5
+      30: iconst_0
+      31: istore 4
+      33: iload 4
+      35: iload 5
+      37: if_icmpge 66
+      40: aload_3
+      41: iload 4
+      43: invokevirtual // Method java/util/ArrayList.get:(I)Ljava/lang/Object;
+      46: checkcast // class java/lang/Integer
+      49: invokevirtual // Method java/lang/Integer.intValue:()I
+      52: istore_2
+      53: iload_1
+      54: iload_2
+      55: iadd
+      56: istore_1
+      57: iload 4
+      59: iconst_1
+      60: iadd
+      61: istore 4
+      63: goto 33
+      66: iload_1
+      67: ireturn
+}
+```
+
+</details>
+
+<details>
+<summary><strong>C++</strong> — <code>cpp/cpp17</code>, <code>cpp/cpp20</code>, <code>cpp/cpp23</code> (identical output — <code>iterators_showcase.cpp</code>, <code>iterators_showcase.hpp</code>)</summary>
+
+**`iterators_showcase.cpp`**
+
+```cpp
+#include "iterators_showcase.hpp"
+#include <functional>
+#include <vector>
+
+namespace iterators_showcase {
+
+static std::function<std::vector<std::int32_t>()> evens_up_to(std::int32_t);
+
+static std::function<std::vector<std::int32_t>()> evens_up_to(std::int32_t limit) {
+  return [ply_cap2 = limit]() -> std::vector<std::int32_t> {
+    auto limit = ply_cap2;
+    std::vector<std::int32_t> ply_seq1{};
+    {
+      std::int32_t i = 0;
+      while ((i <= limit)) {
+        if ((i > 100)) {
+          return ply_seq1;
+        }
+        ply_seq1.push_back(i);
+        i = static_cast<std::int32_t>(static_cast<std::uint32_t>(i) + static_cast<std::uint32_t>(2));
+      }
+    }
+    return ply_seq1;
+  };
+}
+
+std::int32_t sum_evens(std::int32_t limit) {
+  std::int32_t sum = 0;
+  for (std::int32_t value : (evens_up_to(limit))()) {
+    sum = static_cast<std::int32_t>(static_cast<std::uint32_t>(sum) + static_cast<std::uint32_t>(value));
+  }
+  return sum;
+}
+
+} // namespace iterators_showcase
+```
+
+**`iterators_showcase.hpp`**
+
+```cpp
+#pragma once
+
+#include <cstdint>
+
+namespace iterators_showcase {
+
+std::int32_t sum_evens(std::int32_t limit);
+
+} // namespace iterators_showcase
+```
+
+</details>
+
+<details>
+<summary><strong>VBScript</strong> — <code>vbscript/5.8</code> (<code>IteratorsShowcase.vbs</code>)</summary>
+
+```vbscript
+Option Explicit
+
+Function ply_i32(ByVal x)
+  Dim m
+  m = CDbl(x)
+  m = m - Int(m / 4294967296.0) * 4294967296.0
+  If m >= 2147483648.0 Then m = m - 4294967296.0
+  ply_i32 = CLng(m)
+End Function
+
+Function ply_chk_null(ByVal o)
+  If o Is Nothing Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+  Set ply_chk_null = o
+End Function
+
+Function ply_key_eq(ByVal a, ByVal b, ByVal eqMode)
+  If IsObject(a) Or IsObject(b) Then
+    If Not (IsObject(a) And IsObject(b)) Then
+      ply_key_eq = False
+    ElseIf (a Is Nothing) And (b Is Nothing) Then
+      ply_key_eq = True
+    ElseIf (a Is Nothing) Or (b Is Nothing) Then
+      ply_key_eq = False
+    ElseIf eqMode = 1 Then
+      ply_key_eq = a.ply_equals(b)
+    Else
+      ply_key_eq = (a Is b)
+    End If
+    Exit Function
+  End If
+  If IsNull(a) Or IsNull(b) Then
+    ply_key_eq = (IsNull(a) And IsNull(b))
+    Exit Function
+  End If
+  If VarType(a) = 8 And VarType(b) = 8 Then
+    ply_key_eq = (StrComp(a, b, 0) = 0)
+    Exit Function
+  End If
+  If VarType(a) = 11 Or VarType(b) = 11 Then
+    ply_key_eq = (VarType(a) = VarType(b) And a = b)
+    Exit Function
+  End If
+  ply_key_eq = (a = b)
+End Function
+
+Class ply_List
+  Private m_items()
+  Private m_cap
+  Public Count
+  Public Version
+
+  Private Sub Class_Initialize()
+    m_cap = 0
+    Count = 0
+    Version = 0
+  End Sub
+
+  Private Sub EnsureCap(ByVal need)
+    Dim nc
+    If need <= m_cap Then Exit Sub
+    If m_cap = 0 Then nc = 4 Else nc = m_cap * 2
+    Do While nc < need
+      nc = nc * 2
+    Loop
+    ReDim Preserve m_items(nc - 1)
+    m_cap = nc
+  End Sub
+
+  Public Function GetAt(ByVal i)
+    If i < 0 Or i >= Count Then Err.Raise vbObjectError + 1003, "ArgumentOutOfRangeException", "Index was out of range."
+    If IsObject(m_items(i)) Then Set GetAt = m_items(i) Else GetAt = m_items(i)
+  End Function
+
+  Public Sub SetAt(ByVal i, ByVal v)
+    If i < 0 Or i >= Count Then Err.Raise vbObjectError + 1003, "ArgumentOutOfRangeException", "Index was out of range."
+    If IsObject(v) Then Set m_items(i) = v Else m_items(i) = v
+    Version = Version + 1
+  End Sub
+
+  Public Sub AddItem(ByVal v)
+    Call EnsureCap(Count + 1)
+    If IsObject(v) Then Set m_items(Count) = v Else m_items(Count) = v
+    Count = Count + 1
+    Version = Version + 1
+  End Sub
+
+  Public Sub InsertAt(ByVal idx, ByVal v)
+    Dim i
+    If idx < 0 Or idx > Count Then Err.Raise vbObjectError + 1003, "ArgumentOutOfRangeException", "Index was out of range."
+    Call EnsureCap(Count + 1)
+    For i = Count To idx + 1 Step -1
+      If IsObject(m_items(i - 1)) Then Set m_items(i) = m_items(i - 1) Else m_items(i) = m_items(i - 1)
+    Next
+    If IsObject(v) Then Set m_items(idx) = v Else m_items(idx) = v
+    Count = Count + 1
+    Version = Version + 1
+  End Sub
+
+  Public Sub RemoveAt(ByVal idx)
+    Dim i
+    If idx < 0 Or idx >= Count Then Err.Raise vbObjectError + 1003, "ArgumentOutOfRangeException", "Index was out of range."
+    For i = idx To Count - 2
+      If IsObject(m_items(i + 1)) Then Set m_items(i) = m_items(i + 1) Else m_items(i) = m_items(i + 1)
+    Next
+    Count = Count - 1
+    m_items(Count) = Empty
+    Version = Version + 1
+  End Sub
+
+  Public Function RemoveLast(ByVal isObj)
+    If Count = 0 Then
+      If isObj Then Set RemoveLast = Nothing Else RemoveLast = Null
+      Exit Function
+    End If
+    Count = Count - 1
+    If IsObject(m_items(Count)) Then Set RemoveLast = m_items(Count) Else RemoveLast = m_items(Count)
+    m_items(Count) = Empty
+    Version = Version + 1
+  End Function
+
+  Public Sub ClearAll()
+    Dim i
+    For i = 0 To Count - 1
+      m_items(i) = Empty
+    Next
+    Count = 0
+    Version = Version + 1
+  End Sub
+
+  Public Function IndexOfItem(ByVal v, ByVal eqMode)
+    Dim i
+    For i = 0 To Count - 1
+      If ply_key_eq(m_items(i), v, eqMode) Then
+        IndexOfItem = CLng(i)
+        Exit Function
+      End If
+    Next
+    IndexOfItem = -1
+  End Function
+
+  Public Function ContainsItem(ByVal v, ByVal eqMode)
+    ContainsItem = (IndexOfItem(v, eqMode) >= 0)
+  End Function
+
+  Public Function ToArr(ByVal isStruct)
+    Dim r(), i
+    If Count = 0 Then
+      ToArr = Array()
+      Exit Function
+    End If
+    ReDim r(Count - 1)
+    For i = 0 To Count - 1
+      If isStruct Then
+        Set r(i) = m_items(i).ply_clone()
+      ElseIf IsObject(m_items(i)) Then
+        Set r(i) = m_items(i)
+      Else
+        r(i) = m_items(i)
+      End If
+    Next
+    ToArr = r
+  End Function
+End Class
+
+Function ply_new_list()
+  Set ply_new_list = New ply_List
+End Function
+
+Function ply_list_from_arr(ByRef arr, ByVal isStruct)
+  Dim l, i
+  If IsNull(arr) Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+  Set l = New ply_List
+  For i = 0 To UBound(arr)
+    If isStruct Then
+      Call l.AddItem(arr(i).ply_clone())
+    Else
+      Call l.AddItem(arr(i))
+    End If
+  Next
+  Set ply_list_from_arr = l
+End Function
+
+Class ply_Map
+  Public OrderMode
+  Public Count
+  Public SlotCount
+  Public Version
+  Private m_keys()
+  Private m_vals()
+  Private m_used()
+  Private m_cap
+  Private m_free()
+  Private m_freeCount
+  Private m_freeCap
+
+  Private Sub Class_Initialize()
+    OrderMode = 0
+    Count = 0
+    SlotCount = 0
+    Version = 0
+    m_cap = 0
+    m_freeCount = 0
+    m_freeCap = 0
+  End Sub
+
+  Private Sub EnsureCap(ByVal need)
+    Dim nc
+    If need <= m_cap Then Exit Sub
+    If m_cap = 0 Then nc = 4 Else nc = m_cap * 2
+    Do While nc < need
+      nc = nc * 2
+    Loop
+    ReDim Preserve m_keys(nc - 1)
+    ReDim Preserve m_vals(nc - 1)
+    ReDim Preserve m_used(nc - 1)
+    m_cap = nc
+  End Sub
+
+  Private Sub PushFree(ByVal slot)
+    Dim nc
+    If m_freeCount >= m_freeCap Then
+      If m_freeCap = 0 Then nc = 4 Else nc = m_freeCap * 2
+      ReDim Preserve m_free(nc - 1)
+      m_freeCap = nc
+    End If
+    m_free(m_freeCount) = slot
+    m_freeCount = m_freeCount + 1
+  End Sub
+
+  Private Function FindSlot(ByVal k)
+    Dim i
+    For i = 0 To SlotCount - 1
+      If m_used(i) Then
+        If ply_key_eq(m_keys(i), k, 0) Then
+          FindSlot = i
+          Exit Function
+        End If
+      End If
+    Next
+    FindSlot = -1
+  End Function
+
+  Private Function PutCore(ByVal k, ByVal v, ByVal doReplace)
+    Dim idx, slot
+    idx = FindSlot(k)
+    If idx >= 0 Then
+      If doReplace Then
+        If IsObject(v) Then Set m_vals(idx) = v Else m_vals(idx) = v
+      End If
+      PutCore = False
+      Exit Function
+    End If
+    If OrderMode = 1 And m_freeCount > 0 Then
+      m_freeCount = m_freeCount - 1
+      slot = m_free(m_freeCount)
+    Else
+      Call EnsureCap(SlotCount + 1)
+      slot = SlotCount
+      SlotCount = SlotCount + 1
+    End If
+    If IsObject(k) Then Set m_keys(slot) = k Else m_keys(slot) = k
+    If IsObject(v) Then Set m_vals(slot) = v Else m_vals(slot) = v
+    m_used(slot) = True
+    Count = Count + 1
+    Version = Version + 1
+    PutCore = True
+  End Function
+
+  Public Sub PutEntry(ByVal k, ByVal v)
+    Dim dummy
+    dummy = PutCore(k, v, True)
+  End Sub
+
+  Public Sub AddEntry(ByVal k, ByVal v)
+    If Not PutCore(k, v, False) Then Err.Raise vbObjectError + 1008, "ArgumentException", "An item with the same key has already been added."
+  End Sub
+
+  Public Function TryAddEntry(ByVal k, ByVal v)
+    TryAddEntry = PutCore(k, v, False)
+  End Function
+
+  Public Function GetEntry(ByVal k)
+    Dim idx
+    idx = FindSlot(k)
+    If idx < 0 Then Err.Raise vbObjectError + 1009, "KeyNotFoundException", "The given key was not present in the dictionary."
+    If IsObject(m_vals(idx)) Then Set GetEntry = m_vals(idx) Else GetEntry = m_vals(idx)
+  End Function
+
+  Public Function TryGetEntry(ByVal k, ByVal isObj)
+    Dim idx
+    idx = FindSlot(k)
+    If idx < 0 Then
+      If isObj Then Set TryGetEntry = Nothing Else TryGetEntry = Null
+      Exit Function
+    End If
+    If IsObject(m_vals(idx)) Then Set TryGetEntry = m_vals(idx) Else TryGetEntry = m_vals(idx)
+  End Function
+
+  Public Function HasKey(ByVal k)
+    HasKey = (FindSlot(k) >= 0)
+  End Function
+
+  Public Function RemoveKey(ByVal k)
+    Dim idx
+    idx = FindSlot(k)
+    If idx < 0 Then
+      RemoveKey = False
+      Exit Function
+    End If
+    m_used(idx) = False
+    m_keys(idx) = Empty
+    m_vals(idx) = Empty
+    Count = Count - 1
+    If OrderMode = 1 Then Call PushFree(idx)
+    RemoveKey = True
+  End Function
+
+  Public Sub ClearAll()
+    Dim i
+    For i = 0 To SlotCount - 1
+      m_used(i) = False
+      m_keys(i) = Empty
+      m_vals(i) = Empty
+    Next
+    Count = 0
+    m_freeCount = 0
+    If OrderMode = 1 Then SlotCount = 0
+  End Sub
+
+  Public Function SlotUsed(ByVal i)
+    SlotUsed = m_used(i)
+  End Function
+
+  Public Function KeyAt(ByVal i)
+    If IsObject(m_keys(i)) Then Set KeyAt = m_keys(i) Else KeyAt = m_keys(i)
+  End Function
+
+  Public Function ValAt(ByVal i)
+    If IsObject(m_vals(i)) Then Set ValAt = m_vals(i) Else ValAt = m_vals(i)
+  End Function
+End Class
+
+Function ply_new_map(ByVal orderMode)
+  Dim m
+  Set m = New ply_Map
+  m.OrderMode = orderMode
+  Set ply_new_map = m
+End Function
+
+Class ply_Set
+  Public OrderMode
+  Public Count
+  Public SlotCount
+  Public Version
+  Private m_keys()
+  Private m_used()
+  Private m_cap
+  Private m_free()
+  Private m_freeCount
+  Private m_freeCap
+
+  Private Sub Class_Initialize()
+    OrderMode = 0
+    Count = 0
+    SlotCount = 0
+    Version = 0
+    m_cap = 0
+    m_freeCount = 0
+    m_freeCap = 0
+  End Sub
+
+  Private Sub EnsureCap(ByVal need)
+    Dim nc
+    If need <= m_cap Then Exit Sub
+    If m_cap = 0 Then nc = 4 Else nc = m_cap * 2
+    Do While nc < need
+      nc = nc * 2
+    Loop
+    ReDim Preserve m_keys(nc - 1)
+    ReDim Preserve m_used(nc - 1)
+    m_cap = nc
+  End Sub
+
+  Private Sub PushFree(ByVal slot)
+    Dim nc
+    If m_freeCount >= m_freeCap Then
+      If m_freeCap = 0 Then nc = 4 Else nc = m_freeCap * 2
+      ReDim Preserve m_free(nc - 1)
+      m_freeCap = nc
+    End If
+    m_free(m_freeCount) = slot
+    m_freeCount = m_freeCount + 1
+  End Sub
+
+  Private Function FindSlot(ByVal k)
+    Dim i
+    For i = 0 To SlotCount - 1
+      If m_used(i) Then
+        If ply_key_eq(m_keys(i), k, 0) Then
+          FindSlot = i
+          Exit Function
+        End If
+      End If
+    Next
+    FindSlot = -1
+  End Function
+
+  Public Function AddVal(ByVal k)
+    Dim slot
+    If FindSlot(k) >= 0 Then
+      AddVal = False
+      Exit Function
+    End If
+    If OrderMode = 1 And m_freeCount > 0 Then
+      m_freeCount = m_freeCount - 1
+      slot = m_free(m_freeCount)
+    Else
+      Call EnsureCap(SlotCount + 1)
+      slot = SlotCount
+      SlotCount = SlotCount + 1
+    End If
+    If IsObject(k) Then Set m_keys(slot) = k Else m_keys(slot) = k
+    m_used(slot) = True
+    Count = Count + 1
+    Version = Version + 1
+    AddVal = True
+  End Function
+
+  Public Function RemoveVal(ByVal k)
+    Dim idx
+    idx = FindSlot(k)
+    If idx < 0 Then
+      RemoveVal = False
+      Exit Function
+    End If
+    m_used(idx) = False
+    m_keys(idx) = Empty
+    Count = Count - 1
+    If OrderMode = 1 Then Call PushFree(idx)
+    RemoveVal = True
+  End Function
+
+  Public Function HasItem(ByVal k)
+    HasItem = (FindSlot(k) >= 0)
+  End Function
+
+  Public Sub ClearAll()
+    Dim i
+    For i = 0 To SlotCount - 1
+      m_used(i) = False
+      m_keys(i) = Empty
+    Next
+    Count = 0
+    m_freeCount = 0
+    If OrderMode = 1 Then SlotCount = 0
+  End Sub
+
+  Public Function SlotUsed(ByVal i)
+    SlotUsed = m_used(i)
+  End Function
+
+  Public Function KeyAt(ByVal i)
+    If IsObject(m_keys(i)) Then Set KeyAt = m_keys(i) Else KeyAt = m_keys(i)
+  End Function
+End Class
+
+Function ply_new_set(ByVal orderMode)
+  Dim s
+  Set s = New ply_Set
+  s.OrderMode = orderMode
+  Set ply_new_set = s
+End Function
+
+
+Class ply_Seq_0
+  Public p_0
+  Public Function Enumerate()
+    Dim ply_yields, limit, i
+    Set ply_yields = ply_new_list()
+    limit = p_0
+    i = 0
+    Do While ((i) <= (limit))
+      If ((i) > (100)) Then
+        Set Enumerate = ply_yields
+        Exit Function
+      End If
+      Call ply_yields.AddItem(i)
+      i = ply_i32(CDbl(i) + CDbl(2))
+    Loop
+    Set Enumerate = ply_yields
+  End Function
+End Class
+
+
+Function EvensUpTo(ByVal a_0)
+  Dim ply_seq
+  Set ply_seq = New ply_Seq_0
+  ply_seq.p_0 = a_0
+  Set EvensUpTo = ply_seq
+End Function
+
+Function SumEvens(ByVal limit)
+  Dim sum, value, ply_sq1, ply_sl2, ply_si3
+  sum = 0
+  Set ply_sq1 = EvensUpTo(limit)
+  Set ply_sl2 = ply_sq1.Enumerate()
+  ply_si3 = 0
+  Do While ply_si3 < ply_sl2.Count
+    value = ply_sl2.GetAt(ply_si3)
+    sum = ply_i32(CDbl(sum) + CDbl(value))
+    ply_si3 = ply_si3 + 1
+  Loop
+  SumEvens = sum
+  Exit Function
+End Function
+```
+
+</details>
+
+> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
 
 ## LINQ
 
@@ -12541,14 +16265,14 @@ T ply_checked_add(T a, T b) {
   }
 }
 
-template <typename T>
-T& ply_at(std::vector<T>& arr, std::int32_t index) {
+template <typename C>
+auto ply_at(C& arr, std::int32_t index) -> decltype(arr[static_cast<std::size_t>(0)]) {
   if (index < 0 || static_cast<std::size_t>(index) >= arr.size())
     throw std::out_of_range("index out of range");
   return arr[static_cast<std::size_t>(index)];
 }
-template <typename T>
-const T& ply_at(const std::vector<T>& arr, std::int32_t index) {
+template <typename C>
+auto ply_at(const C& arr, std::int32_t index) -> decltype(arr[static_cast<std::size_t>(0)]) {
   if (index < 0 || static_cast<std::size_t>(index) >= arr.size())
     throw std::out_of_range("index out of range");
   return arr[static_cast<std::size_t>(index)];
@@ -12556,7 +16280,7 @@ const T& ply_at(const std::vector<T>& arr, std::int32_t index) {
 
 } // namespace
 
-std::int32_t top_squared_sum([[maybe_unused]] const std::vector<std::int32_t>& values, [[maybe_unused]] std::int32_t count) {
+std::int32_t top_squared_sum(const std::vector<std::int32_t>& values, std::int32_t count) {
   std::int32_t sum = 0;
   if ((!((count <= 0)))) {
     bool stop = false;
@@ -13764,6 +17488,292 @@ Returns i32.
 </details>
 
 <details>
+<summary><strong>MSIL</strong> — <code>msil/net10</code>, <code>msil/net8</code> (identical output — <code>ExceptionsAndUsingShowcase.dll</code> (disassembled))</summary>
+
+**`ExceptionsAndUsingShowcase.dll`** *(disassembled mnemonics)*
+
+```il
+.assembly ExceptionsAndUsingShowcase {}
+
+.class public sealed DomainException extends System.Exception {
+  .method public hidebysig void .ctor(string message) cil managed {
+    .maxstack 64
+    IL_0000: ldarg.0
+    IL_0001: ldarg.1
+    IL_0002: call void System.Exception::.ctor(string)
+    IL_0007: ret
+  }
+}
+
+.class public sealed ScopeTracker extends System.Object {
+  .field public int32 Closed
+  .method public hidebysig void .ctor() cil managed {
+    .maxstack 64
+    IL_0000: ldarg.0
+    IL_0001: call void System.Object::.ctor()
+    IL_0006: ret
+  }
+  .method public hidebysig void Dispose() cil managed {
+    .maxstack 64
+    IL_0000: ldarg.0
+    IL_0001: ldarg.0
+    IL_0002: ldfld Closed
+    IL_0007: ldc.i4.1
+    IL_0008: add
+    IL_0009: stfld Closed
+    IL_000E: ret
+  }
+}
+
+.class public abstract sealed ExceptionsAndUsingShowcase extends System.Object {
+  .method public hidebysig static int32 Evaluate(int32 value) cil managed {
+    .maxstack 64
+    .locals init ([0] ScopeTracker, [1] int32, [2] ScopeTracker, [3] DomainException)
+    IL_0000: newobj void ScopeTracker::.ctor()
+    IL_0005: stloc.0
+    IL_0006: ldc.i4.0
+    IL_0007: stloc.1
+    IL_0008: ldloc.0
+    IL_0009: stloc.2
+    IL_000A: ldarg.0
+    IL_000B: ldc.i4.0
+    IL_000C: clt
+    IL_000E: brfalse IL_001E
+    IL_0013: ldstr "negative"
+    IL_0018: newobj void DomainException::.ctor(string)
+    IL_001D: throw
+    IL_001E: ldarg.0
+    IL_001F: ldc.i4.2
+    IL_0020: mul
+    IL_0021: stloc.1
+    IL_0022: leave IL_003A
+    IL_0027: ldloc.2
+    IL_0028: ldnull
+    IL_0029: ceq
+    IL_002B: ldc.i4.0
+    IL_002C: ceq
+    IL_002E: brfalse IL_0039
+    IL_0033: ldloc.2
+    IL_0034: callvirt void System.IDisposable::Dispose()
+    IL_0039: endfinally
+    IL_003A: leave IL_006F
+    IL_003F: .byte 0x75
+    IL_0040: ldarg.0
+    IL_0041: nop
+    IL_0042: nop
+    IL_0043: ldarg.0
+    IL_0044: dup
+    IL_0045: brfalse IL_005E
+    IL_004A: stloc.3
+    IL_004B: ldloc.3
+    IL_004C: callvirt string System.Exception::get_Message()
+    IL_0051: callvirt int32 System.String::get_Length()
+    IL_0056: ldc.i4.0
+    IL_0057: cgt
+    IL_0059: br IL_0060
+    IL_005E: pop
+    IL_005F: ldc.i4.0
+    IL_0060: .byte 0xFE11
+    IL_0062: .byte 0x74
+    IL_0063: ldarg.0
+    IL_0064: nop
+    IL_0065: nop
+    IL_0066: ldarg.0
+    IL_0067: stloc.3
+    IL_0068: ldc.i4.m1
+    IL_0069: stloc.1
+    IL_006A: leave IL_006F
+    IL_006F: leave IL_007E
+    IL_0074: ldloc.1
+    IL_0075: ldloc.0
+    IL_0076: ldfld Closed
+    IL_007B: add
+    IL_007C: stloc.1
+    IL_007D: endfinally
+    IL_007E: ldloc.1
+    IL_007F: ret
+    IL_0080: ldc.i4.0
+    IL_0081: ret
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><strong>JVM</strong> — <code>jvm/21</code>, <code>jvm/17</code>, <code>jvm/8</code> (identical output — <code>ExceptionsAndUsingShowcase.jar</code> (disassembled))</summary>
+
+**`ExceptionsAndUsingShowcase.jar`** *(disassembled mnemonics)*
+
+```text
+// classfile version 65.0
+public final class DomainException extends java/lang/RuntimeException {
+  public <init>(Ljava/lang/String;)V;
+    Code: stack=2, locals=2
+      0: aload_0
+      1: aload_1
+      2: invokespecial // Method java/lang/RuntimeException.<init>:(Ljava/lang/String;)V
+      5: return
+}
+
+// classfile version 65.0
+public class ExceptionsAndUsingShowcase {
+  public <init>()V;
+    Code: stack=1, locals=1
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: return
+  public static Evaluate(I)I;
+    Code: stack=3, locals=10
+      0: aconst_null
+      1: astore_1
+      2: iconst_0
+      3: istore_2
+      4: aconst_null
+      5: astore_3
+      6: aconst_null
+      7: astore 4
+      9: aconst_null
+      10: astore 5
+      12: aconst_null
+      13: astore 6
+      15: aconst_null
+      16: astore 7
+      18: aconst_null
+      19: astore 8
+      21: aconst_null
+      22: astore 9
+      24: new // class ScopeTracker
+      27: dup
+      28: invokespecial // Method ScopeTracker.<init>:()V
+      31: astore_1
+      32: iconst_0
+      33: istore_2
+      34: aload_1
+      35: astore_3
+      36: iload_0
+      37: iconst_0
+      38: if_icmplt 45
+      41: iconst_0
+      42: goto 46
+      45: iconst_1
+      46: ifeq 63
+      49: ldc "negative"
+      51: astore 5
+      53: new // class DomainException
+      56: dup
+      57: aload 5
+      59: invokespecial // Method DomainException.<init>:(Ljava/lang/String;)V
+      62: athrow
+      63: iload_0
+      64: iconst_2
+      65: imul
+      66: istore_2
+      67: aload_3
+      68: aconst_null
+      69: if_acmpeq 76
+      72: iconst_0
+      73: goto 77
+      76: iconst_1
+      77: iconst_1
+      78: ixor
+      79: ifeq 88
+      82: aload_3
+      83: invokeinterface // Method IDisposable.Dispose:()V
+      88: goto 117
+      91: astore 6
+      93: aload_3
+      94: aconst_null
+      95: if_acmpeq 102
+      98: iconst_0
+      99: goto 103
+      102: iconst_1
+      103: iconst_1
+      104: ixor
+      105: ifeq 114
+      108: aload_3
+      109: invokeinterface // Method IDisposable.Dispose:()V
+      114: aload 6
+      116: athrow
+      117: iload_2
+      118: aload_1
+      119: getfield // Field ScopeTracker.Closed:I
+      122: iadd
+      123: istore_2
+      124: goto 201
+      127: astore 7
+      129: aload 7
+      131: instanceof // class DomainException
+      134: ifeq 179
+      137: aload 7
+      139: checkcast // class DomainException
+      142: dup
+      143: astore 8
+      145: astore 4
+      147: aload 4
+      149: invokevirtual // Method java/lang/Throwable.getMessage:()Ljava/lang/String;
+      152: invokevirtual // Method java/lang/String.length:()I
+      155: iconst_0
+      156: if_icmpgt 163
+      159: iconst_0
+      160: goto 164
+      163: iconst_1
+      164: ifeq 179
+      167: iconst_m1
+      168: istore_2
+      169: iload_2
+      170: aload_1
+      171: getfield // Field ScopeTracker.Closed:I
+      174: iadd
+      175: istore_2
+      176: goto 201
+      179: iload_2
+      180: aload_1
+      181: getfield // Field ScopeTracker.Closed:I
+      184: iadd
+      185: istore_2
+      186: aload 7
+      188: athrow
+      189: astore 9
+      191: iload_2
+      192: aload_1
+      193: getfield // Field ScopeTracker.Closed:I
+      196: iadd
+      197: istore_2
+      198: aload 9
+      200: athrow
+      201: iload_2
+      202: ireturn
+}
+
+// classfile version 65.0
+public class IDisposable {
+  public Dispose()V;
+}
+
+// classfile version 65.0
+public final class ScopeTracker implements IDisposable {
+  public I Closed;
+  public <init>()V;
+    Code: stack=1, locals=1
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: return
+  public Dispose()V;
+    Code: stack=3, locals=1
+      0: aload_0
+      1: aload_0
+      2: getfield // Field ScopeTracker.Closed:I
+      5: iconst_1
+      6: iadd
+      7: putfield // Field ScopeTracker.Closed:I
+      10: return
+}
+```
+
+</details>
+
+<details>
 <summary><strong>C++</strong> — <code>cpp/cpp17</code>, <code>cpp/cpp20</code>, <code>cpp/cpp23</code> (identical output — <code>exceptions_and_using_showcase.cpp</code>, <code>exceptions_and_using_showcase.hpp</code>)</summary>
 
 **`exceptions_and_using_showcase.cpp`**
@@ -13803,7 +17813,7 @@ void ScopeTracker::dispose() {
   this->closed = static_cast<std::int32_t>(static_cast<std::uint32_t>(this->closed) + static_cast<std::uint32_t>(1));
 }
 
-std::int32_t evaluate([[maybe_unused]] std::int32_t value) {
+std::int32_t evaluate(std::int32_t value) {
   std::shared_ptr<ScopeTracker> tracker = std::make_shared<ScopeTracker>();
   std::int32_t result = 0;
   {
@@ -14121,7 +18131,7 @@ End Sub
 
 </details>
 
-> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile); `msil` (`PLY3051`: type 'IDisposable' is not supported by the MSIL backend); `jvm` (`PLY3151`: declared type 'IDisposable' (IrInterfaceType) is not supported by the JVM backend)
+> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
 
 ## Tasks & Async/Await
 
@@ -14694,7 +18704,593 @@ Returns async<i32>.
 
 </details>
 
-> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile); `msil` (`PLY3051`: type 'async<i32>' is not supported by the MSIL backend); `jvm` (`PLY3151`: type 'async<i32>' in return type of 'ComputeAsync' is not supported by the JVM backend); `cpp` (`cpp/cpp17`: `PLY1451`: type 'async<i32>' has no C++ representation in profile 'cpp/cpp17'; `cpp/cpp20`: `PLY1451`: type 'async<i32>' has no C++ representation in profile 'cpp/cpp20'; `cpp/cpp23`: `PLY1451`: type 'async<i32>' has no C++ representation in profile 'cpp/cpp23'); `vbscript` (`PLY2651`: type 'async<i32>' has no VBScript representation in profile 'vbscript/5.8')
+<details>
+<summary><strong>MSIL</strong> — <code>msil/net10</code>, <code>msil/net8</code> (identical output — <code>TasksShowcase.dll</code> (disassembled))</summary>
+
+**`TasksShowcase.dll`** *(disassembled mnemonics)*
+
+```il
+.assembly TasksShowcase {}
+
+.class public abstract sealed TasksShowcase extends System.Object {
+  .method private hidebysig static System.Threading.Tasks.Task`1<int32> ComputeAsync(int32 x) cil managed {
+    .maxstack 64
+    .locals init ([0] System.Threading.Tasks.Task`1<int32>, [1] System.Runtime.CompilerServices.TaskAwaiter`1<int32>)
+    IL_0000: ldarg.0
+    IL_0001: ldarg.0
+    IL_0002: mul
+    IL_0003: ldc.i4.1
+    IL_0004: add
+    IL_0005: call 0x2B000001
+    IL_000A: callvirt System.Runtime.CompilerServices.TaskAwaiter`1<!0> 0x1B000001::GetAwaiter()
+    IL_000F: stloc.1
+    IL_0010: ldloca.s 1
+    IL_0012: call !0 0x1B000002::GetResult()
+    IL_0017: call 0x2B000001
+    IL_001C: stloc.0
+    IL_001D: leave IL_0032
+    IL_0022: leave IL_0032
+    IL_0027: call 0x2B000002
+    IL_002C: stloc.0
+    IL_002D: leave IL_0032
+    IL_0032: ldloc.0
+    IL_0033: ret
+  }
+  .method public hidebysig static System.Threading.Tasks.Task`1<int32> CombineAsync(int32 a, int32 b) cil managed {
+    .maxstack 64
+    .locals init ([0] int32[], [1] System.Threading.Tasks.Task`1<int32>, [2] System.Runtime.CompilerServices.TaskAwaiter`1<int32[]>)
+    IL_0000: ldc.i4.2
+    IL_0001: newarr 0x1B000001
+    IL_0006: dup
+    IL_0007: ldc.i4.0
+    IL_0008: ldarg.0
+    IL_0009: call System.Threading.Tasks.Task`1<int32> TasksShowcase::ComputeAsync(int32)
+    IL_000E: stelem.ref
+    IL_000F: dup
+    IL_0010: ldc.i4.1
+    IL_0011: ldarg.1
+    IL_0012: call System.Threading.Tasks.Task`1<int32> TasksShowcase::ComputeAsync(int32)
+    IL_0017: stelem.ref
+    IL_0018: call 0x2B000003
+    IL_001D: callvirt System.Runtime.CompilerServices.TaskAwaiter`1<!0> 0x1B000003::GetAwaiter()
+    IL_0022: stloc.2
+    IL_0023: ldloca.s 2
+    IL_0025: call !0 0x1B000004::GetResult()
+    IL_002A: stloc.0
+    IL_002B: ldloc.0
+    IL_002C: ldc.i4.0
+    IL_002D: ldelem.i4
+    IL_002E: ldloc.0
+    IL_002F: ldc.i4.1
+    IL_0030: ldelem.i4
+    IL_0031: add
+    IL_0032: call 0x2B000001
+    IL_0037: stloc.1
+    IL_0038: leave IL_004D
+    IL_003D: leave IL_004D
+    IL_0042: call 0x2B000002
+    IL_0047: stloc.1
+    IL_0048: leave IL_004D
+    IL_004D: ldloc.1
+    IL_004E: ret
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><strong>JVM</strong> — <code>jvm/21</code>, <code>jvm/17</code>, <code>jvm/8</code> (identical output — <code>TasksShowcase.jar</code> (disassembled))</summary>
+
+**`TasksShowcase.jar`** *(disassembled mnemonics)*
+
+```text
+// classfile version 65.0
+public class TasksShowcase {
+  public <init>()V;
+    Code: stack=1, locals=1
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: return
+  static ComputeAsync(I)Ljava/util/concurrent/CompletableFuture;;
+    Code: stack=2, locals=5
+      0: aconst_null
+      1: astore_1
+      2: aconst_null
+      3: astore_2
+      4: aconst_null
+      5: astore_3
+      6: aconst_null
+      7: astore 4
+      9: iload_0
+      10: iload_0
+      11: imul
+      12: iconst_1
+      13: iadd
+      14: invokestatic // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      17: invokestatic // Method java/util/concurrent/CompletableFuture.completedFuture:(Ljava/lang/Object;)Ljava/util/concurrent/CompletableFuture;
+      20: astore_1
+      21: aload_1
+      22: invokevirtual // Method java/util/concurrent/CompletableFuture.join:()Ljava/lang/Object;
+      25: astore_2
+      26: goto 33
+      29: invokevirtual // Method java/lang/Throwable.getCause:()Ljava/lang/Throwable;
+      32: athrow
+      33: aload_2
+      34: checkcast // class java/lang/Integer
+      37: invokevirtual // Method java/lang/Integer.intValue:()I
+      40: invokestatic // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      43: invokestatic // Method java/util/concurrent/CompletableFuture.completedFuture:(Ljava/lang/Object;)Ljava/util/concurrent/CompletableFuture;
+      46: areturn
+      47: astore_3
+      48: new // class java/util/concurrent/CompletableFuture
+      51: dup
+      52: invokespecial // Method java/util/concurrent/CompletableFuture.<init>:()V
+      55: astore 4
+      57: aload 4
+      59: aload_3
+      60: invokevirtual // Method java/util/concurrent/CompletableFuture.completeExceptionally:(Ljava/lang/Throwable;)Z
+      63: pop
+      64: aload 4
+      66: areturn
+  public static CombineAsync(II)Ljava/util/concurrent/CompletableFuture;;
+    Code: stack=3, locals=14
+      0: aconst_null
+      1: astore_2
+      2: aconst_null
+      3: astore_3
+      4: aconst_null
+      5: astore 4
+      7: aconst_null
+      8: astore 5
+      10: aconst_null
+      11: astore 6
+      13: aconst_null
+      14: astore 7
+      16: aconst_null
+      17: astore 8
+      19: aconst_null
+      20: astore 9
+      22: aconst_null
+      23: astore 10
+      25: aconst_null
+      26: astore 11
+      28: aconst_null
+      29: astore 12
+      31: aconst_null
+      32: astore 13
+      34: iload_0
+      35: invokestatic // Method TasksShowcase.ComputeAsync:(I)Ljava/util/concurrent/CompletableFuture;
+      38: astore_3
+      39: iload_1
+      40: invokestatic // Method TasksShowcase.ComputeAsync:(I)Ljava/util/concurrent/CompletableFuture;
+      43: astore 4
+      45: iconst_2
+      46: newarray int
+      48: astore 5
+      50: aload 5
+      52: iconst_0
+      53: aload_3
+      54: astore 6
+      56: aload 6
+      58: invokevirtual // Method java/util/concurrent/CompletableFuture.join:()Ljava/lang/Object;
+      61: astore 7
+      63: goto 70
+      66: invokevirtual // Method java/lang/Throwable.getCause:()Ljava/lang/Throwable;
+      69: athrow
+      70: aload 7
+      72: checkcast // class java/lang/Integer
+      75: invokevirtual // Method java/lang/Integer.intValue:()I
+      78: iastore
+      79: aload 5
+      81: iconst_1
+      82: aload 4
+      84: astore 8
+      86: aload 8
+      88: invokevirtual // Method java/util/concurrent/CompletableFuture.join:()Ljava/lang/Object;
+      91: astore 9
+      93: goto 100
+      96: invokevirtual // Method java/lang/Throwable.getCause:()Ljava/lang/Throwable;
+      99: athrow
+      100: aload 9
+      102: checkcast // class java/lang/Integer
+      105: invokevirtual // Method java/lang/Integer.intValue:()I
+      108: iastore
+      109: aload 5
+      111: invokestatic // Method java/util/concurrent/CompletableFuture.completedFuture:(Ljava/lang/Object;)Ljava/util/concurrent/CompletableFuture;
+      114: astore 10
+      116: aload 10
+      118: invokevirtual // Method java/util/concurrent/CompletableFuture.join:()Ljava/lang/Object;
+      121: astore 11
+      123: goto 130
+      126: invokevirtual // Method java/lang/Throwable.getCause:()Ljava/lang/Throwable;
+      129: athrow
+      130: aload 11
+      132: checkcast // class [I
+      135: astore_2
+      136: aload_2
+      137: iconst_0
+      138: iaload
+      139: aload_2
+      140: iconst_1
+      141: iaload
+      142: iadd
+      143: invokestatic // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      146: invokestatic // Method java/util/concurrent/CompletableFuture.completedFuture:(Ljava/lang/Object;)Ljava/util/concurrent/CompletableFuture;
+      149: areturn
+      150: astore 12
+      152: new // class java/util/concurrent/CompletableFuture
+      155: dup
+      156: invokespecial // Method java/util/concurrent/CompletableFuture.<init>:()V
+      159: astore 13
+      161: aload 13
+      163: aload 12
+      165: invokevirtual // Method java/util/concurrent/CompletableFuture.completeExceptionally:(Ljava/lang/Throwable;)Z
+      168: pop
+      169: aload 13
+      171: areturn
+}
+```
+
+</details>
+
+<details>
+<summary><strong>C++</strong> — <code>cpp/cpp17</code>, <code>cpp/cpp20</code>, <code>cpp/cpp23</code> (identical output — <code>tasks_showcase.cpp</code>, <code>tasks_showcase.hpp</code>)</summary>
+
+**`tasks_showcase.cpp`**
+
+```cpp
+#include "tasks_showcase.hpp"
+#include <cstddef>
+#include <initializer_list>
+#include <stdexcept>
+#include <vector>
+
+namespace tasks_showcase {
+
+namespace {
+
+template <typename C>
+auto ply_at(C& arr, std::int32_t index) -> decltype(arr[static_cast<std::size_t>(0)]) {
+  if (index < 0 || static_cast<std::size_t>(index) >= arr.size())
+    throw std::out_of_range("index out of range");
+  return arr[static_cast<std::size_t>(index)];
+}
+template <typename C>
+auto ply_at(const C& arr, std::int32_t index) -> decltype(arr[static_cast<std::size_t>(0)]) {
+  if (index < 0 || static_cast<std::size_t>(index) >= arr.size())
+    throw std::out_of_range("index out of range");
+  return arr[static_cast<std::size_t>(index)];
+}
+
+template <typename T>
+PlyTask<std::vector<T>> ply_when_all_list(std::initializer_list<PlyTask<T>> tasks) {
+  std::vector<T> out;
+  out.reserve(tasks.size());
+  for (const auto& t : tasks) {
+    if (t.error_)
+      return PlyTask<std::vector<T>>::from_exception(t.error_);
+    out.push_back(*t.value_);
+  }
+  return PlyTask<std::vector<T>>::from_result(std::move(out));
+}
+
+inline PlyTask<void> ply_when_all_void(std::initializer_list<PlyTask<void>> tasks) {
+  for (const auto& t : tasks) {
+    if (t.error_)
+      return PlyTask<void>::from_exception(t.error_);
+  }
+  return PlyTask<void>::completed();
+}
+
+} // namespace
+
+static PlyTask<std::int32_t> compute_async(std::int32_t);
+
+static PlyTask<std::int32_t> compute_async(std::int32_t x) {
+  try {
+    return PlyTask<std::int32_t>::from_result((PlyTask<std::int32_t>::from_result(static_cast<std::int32_t>(static_cast<std::uint32_t>(static_cast<std::int32_t>(static_cast<std::uint32_t>(x) * static_cast<std::uint32_t>(x))) + static_cast<std::uint32_t>(1)))).await());
+  } catch (...) {
+    return PlyTask<std::int32_t>::from_exception(std::current_exception());
+  }
+}
+
+PlyTask<std::int32_t> combine_async(std::int32_t a, std::int32_t b) {
+  try {
+    std::vector<std::int32_t> parts = (ply_when_all_list<std::int32_t>({compute_async(a), compute_async(b)})).await();
+    return PlyTask<std::int32_t>::from_result(static_cast<std::int32_t>(static_cast<std::uint32_t>(ply_at(parts, 0)) + static_cast<std::uint32_t>(ply_at(parts, 1))));
+  } catch (...) {
+    return PlyTask<std::int32_t>::from_exception(std::current_exception());
+  }
+}
+
+} // namespace tasks_showcase
+```
+
+**`tasks_showcase.hpp`**
+
+```cpp
+#pragma once
+
+#include <cstdint>
+#include <exception>
+#include <optional>
+#include <utility>
+
+namespace tasks_showcase {
+
+template <typename T>
+struct PlyTask {
+  std::optional<T> value_{};
+  std::exception_ptr error_{};
+
+  static PlyTask from_result(T value) {
+    PlyTask task;
+    task.value_ = std::move(value);
+    return task;
+  }
+
+  static PlyTask from_exception(std::exception_ptr err) {
+    PlyTask task;
+    task.error_ = std::move(err);
+    return task;
+  }
+
+  T await() const {
+    if (this->error_)
+      std::rethrow_exception(this->error_);
+    return *this->value_;
+  }
+};
+
+template <>
+struct PlyTask<void> {
+  std::exception_ptr error_{};
+
+  static PlyTask completed() { return PlyTask{}; }
+
+  static PlyTask from_exception(std::exception_ptr err) {
+    PlyTask task;
+    task.error_ = std::move(err);
+    return task;
+  }
+
+  void await() const {
+    if (this->error_)
+      std::rethrow_exception(this->error_);
+  }
+};
+
+PlyTask<std::int32_t> combine_async(std::int32_t a, std::int32_t b);
+
+} // namespace tasks_showcase
+```
+
+</details>
+
+<details>
+<summary><strong>VBScript</strong> — <code>vbscript/5.8</code> (<code>TasksShowcase.vbs</code>)</summary>
+
+```vbscript
+Option Explicit
+
+Function ply_i32(ByVal x)
+  Dim m
+  m = CDbl(x)
+  m = m - Int(m / 4294967296.0) * 4294967296.0
+  If m >= 2147483648.0 Then m = m - 4294967296.0
+  ply_i32 = CLng(m)
+End Function
+
+Function ply_u32(ByVal x)
+  Dim m
+  m = CDbl(x)
+  ply_u32 = m - Int(m / 4294967296.0) * 4294967296.0
+End Function
+
+Function ply_mul32(ByVal a, ByVal b)
+  Dim ua, ub, al, ah, bl, bh, lo, md
+  ua = ply_u32(a)
+  ub = ply_u32(b)
+  al = ua - Int(ua / 65536.0) * 65536.0
+  ah = Int(ua / 65536.0)
+  bl = ub - Int(ub / 65536.0) * 65536.0
+  bh = Int(ub / 65536.0)
+  lo = al * bl
+  md = ah * bl + al * bh
+  md = md - Int(md / 65536.0) * 65536.0
+  ply_mul32 = ply_i32(lo + md * 65536.0)
+End Function
+
+Sub ply_chk_idx(ByRef a, ByVal i)
+  If IsNull(a) Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+  If i < 0 Or i > UBound(a) Then Err.Raise vbObjectError + 1003, "IndexOutOfRangeException", "Index was outside the bounds of the array."
+End Sub
+
+Dim ply_last_err
+Set ply_last_err = Nothing
+
+Class ply_Exception
+  Public ply_kind
+  Public Message
+  Public InnerException
+  Public Function ply_is(ByVal t)
+    If t = "Exception" Or t = ply_kind Then
+      ply_is = True
+      Exit Function
+    End If
+    If t = "ArithmeticException" And (ply_kind = "DivideByZeroException" Or ply_kind = "OverflowException") Then
+      ply_is = True
+      Exit Function
+    End If
+    If t = "ArgumentException" And ply_kind = "ArgumentOutOfRangeException" Then
+      ply_is = True
+      Exit Function
+    End If
+    ply_is = False
+  End Function
+End Class
+
+Function ply_make_err(ByVal kind, ByVal msg, ByVal inner)
+  Dim e
+  Set e = New ply_Exception
+  e.ply_kind = kind
+  e.Message = msg
+  Set e.InnerException = inner
+  Set ply_make_err = e
+End Function
+
+Sub ply_throw(ByVal exObj)
+  If exObj Is Nothing Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+  Set ply_last_err = exObj
+  Err.Raise vbObjectError + 1099, exObj.ply_kind, exObj.Message
+End Sub
+
+Function ply_capture_err(ByVal num, ByVal src, ByVal desc)
+  Dim e, k
+  If num = vbObjectError + 1099 And Not (ply_last_err Is Nothing) Then
+    Set e = ply_last_err
+    Set ply_last_err = Nothing
+    Set ply_capture_err = e
+    Exit Function
+  End If
+  If num = 11 Then
+    k = "DivideByZeroException"
+  ElseIf num = 6 Then
+    k = "OverflowException"
+  ElseIf num = 9 Then
+    k = "IndexOutOfRangeException"
+  ElseIf Len(src) > 0 Then
+    k = src
+  Else
+    k = "Exception"
+  End If
+  Set ply_capture_err = ply_make_err(k, desc, Nothing)
+End Function
+
+Class ply_Task
+  Public HasError
+  Public ErrObj
+  Public Result
+  Private Sub Class_Initialize()
+    HasError = False
+    Set ErrObj = Nothing
+    Result = Empty
+  End Sub
+End Class
+
+Function ply_task_from_result(ByVal v)
+  Dim t
+  Set t = New ply_Task
+  If IsObject(v) Then Set t.Result = v Else t.Result = v
+  Set ply_task_from_result = t
+End Function
+
+Function ply_task_completed()
+  Set ply_task_completed = New ply_Task
+End Function
+
+Function ply_task_fault(ByVal e)
+  Dim t
+  Set t = New ply_Task
+  t.HasError = True
+  Set t.ErrObj = e
+  Set ply_task_fault = t
+End Function
+
+Function ply_task_await(ByVal t)
+  If t Is Nothing Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+  If t.HasError Then Call ply_throw(t.ErrObj)
+  If IsObject(t.Result) Then Set ply_task_await = t.Result Else ply_task_await = t.Result
+End Function
+
+Sub ply_task_await_void(ByVal t)
+  If t Is Nothing Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+  If t.HasError Then Call ply_throw(t.ErrObj)
+End Sub
+
+Function ply_task_when_all(ByVal tasks, ByVal isVoid)
+  Dim i, n, t, r()
+  n = UBound(tasks) + 1
+  For i = 0 To n - 1
+    Set t = tasks(i)
+    If t.HasError Then
+      Set ply_task_when_all = ply_task_fault(t.ErrObj)
+      Exit Function
+    End If
+  Next
+  If isVoid Then
+    Set ply_task_when_all = ply_task_completed()
+    Exit Function
+  End If
+  If n = 0 Then
+    Set ply_task_when_all = ply_task_from_result(Array())
+    Exit Function
+  End If
+  ReDim r(n - 1)
+  For i = 0 To n - 1
+    Set t = tasks(i)
+    If IsObject(t.Result) Then Set r(i) = t.Result Else r(i) = t.Result
+  Next
+  Set ply_task_when_all = ply_task_from_result(r)
+End Function
+
+
+Function ComputeAsync(ByVal x)
+  Dim ply_an1, ply_as2, ply_ad3, ply_ar4
+  On Error Resume Next
+  Do
+    ply_ar4 = ply_task_await(ply_task_from_result(ply_i32(CDbl(ply_mul32(x, x)) + CDbl(1))))
+    If Err.Number <> 0 Then Exit Do
+    On Error GoTo 0
+    Set ComputeAsync = ply_task_from_result(ply_ar4)
+    Exit Function
+  Loop Until True
+  ply_an1 = Err.Number
+  ply_as2 = Err.Source
+  ply_ad3 = Err.Description
+  Err.Clear
+  On Error GoTo 0
+  If ply_an1 <> 0 Then
+    Set ComputeAsync = ply_task_fault(ply_capture_err(ply_an1, ply_as2, ply_ad3))
+    Exit Function
+  End If
+  Set ComputeAsync = ply_task_completed()
+End Function
+
+Function CombineAsync(ByVal a, ByVal b)
+  Dim parts, ply_an1, ply_as2, ply_ad3, ply_wt4, ply_wt5, ply_l6, ply_ar7
+  On Error Resume Next
+  Do
+    Set ply_wt4 = ComputeAsync(a)
+    Set ply_wt5 = ComputeAsync(b)
+    parts = ply_task_await(ply_task_when_all(Array(ply_wt4, ply_wt5), False))
+    If Err.Number <> 0 Then Exit Do
+    Call ply_chk_idx(parts, 0)
+    ply_l6 = parts(0)
+    Call ply_chk_idx(parts, 1)
+    ply_ar7 = ply_i32(CDbl(ply_l6) + CDbl(parts(1)))
+    If Err.Number <> 0 Then Exit Do
+    On Error GoTo 0
+    Set CombineAsync = ply_task_from_result(ply_ar7)
+    Exit Function
+  Loop Until True
+  ply_an1 = Err.Number
+  ply_as2 = Err.Source
+  ply_ad3 = Err.Description
+  Err.Clear
+  On Error GoTo 0
+  If ply_an1 <> 0 Then
+    Set CombineAsync = ply_task_fault(ply_capture_err(ply_an1, ply_as2, ply_ad3))
+    Exit Function
+  End If
+  Set CombineAsync = ply_task_completed()
+End Function
+```
+
+</details>
+
+> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
 
 ## Standard Output (Stdio)
 
@@ -14714,6 +19310,26 @@ public static class StdioShowcase {
   }
 }
 ```
+
+<details>
+<summary><strong>Python</strong> — <code>py3.8</code>, <code>py3.9</code>, <code>py3.10</code>, <code>py3.11</code>, <code>py3.12</code>, <code>py3.13</code>, <code>py3.14</code> (identical output — <code>stdio_showcase.py</code>)</summary>
+
+```python
+# StdioShowcase: generated by polypiler. Change the source, not this file.
+# Python profile: py3.8.
+
+__all__ = ["run"]
+
+
+def run() -> int:
+    sum_: int = 0
+    for i in range(1, 4):
+        sum_ = (((sum_ + ((((i * i) & 0xFFFFFFFF) ^ 0x80000000) - 0x80000000)) & 0xFFFFFFFF) ^ 0x80000000) - 0x80000000
+        print("step " + str(i) + ": sum=" + str(sum_))
+    return sum_
+```
+
+</details>
 
 <details>
 <summary><strong>Rust</strong> — <code>rust2018</code>, <code>rust2021</code>, <code>rust2024</code> (identical output — <code>Cargo.toml</code>, <code>src/lib.rs</code>, <code>src/stdio_showcase.rs</code>)</summary>
@@ -14766,6 +19382,165 @@ pub fn run() -> i32 {
     sum
 }
 ```
+
+</details>
+
+<details>
+<summary><strong>Perl</strong> — 3 dialects (3 distinct outputs)</summary>
+
+<details>
+<summary>Dialect: <code>perl/5.6</code> (<code>lib/StdioShowcase.pm</code>)</summary>
+
+```perl
+package StdioShowcase;
+use 5.006;
+use strict;
+use warnings;
+use Exporter ();
+our @ISA = qw(Exporter);
+use Carp ();
+
+our $VERSION = '0.001';
+our @EXPORT_OK = qw(run);
+BEGIN { die "StdioShowcase requires a perl with 64-bit integers\n" unless ~0 > 4294967295; }
+
+sub run {
+    use integer;
+    @_ == 0 or Carp::croak('usage: run()');
+    my $sum = 0;
+    {
+        my $i = 1;
+        LOOP1: while ($i <= 3) {
+            $sum = ((((($sum + ($i * $i))) & 0xFFFFFFFF) ^ 0x80000000) - 0x80000000);
+            print(("step " . sprintf('%d', $i) . ": sum=" . sprintf('%d', $sum)), "\n");
+            $i = ($i + 1);
+        }
+    }
+    return $sum;
+}
+
+1;
+
+__END__
+
+=head1 NAME
+
+StdioShowcase
+
+=head1 SYNOPSIS
+
+    use StdioShowcase qw(run);
+
+=head2 run()
+
+Returns i32.
+
+=cut
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>perl/5.8</code> (<code>lib/StdioShowcase.pm</code>)</summary>
+
+```perl
+package StdioShowcase;
+use 5.008;
+use strict;
+use warnings;
+use Exporter ();
+our @ISA = qw(Exporter);
+use Carp ();
+
+our $VERSION = '0.001';
+our @EXPORT_OK = qw(run);
+BEGIN { die "StdioShowcase requires a perl with 64-bit integers\n" unless ~0 > 4294967295; }
+
+sub run {
+    use integer;
+    @_ == 0 or Carp::croak('usage: run()');
+    my $sum = 0;
+    {
+        my $i = 1;
+        LOOP1: while ($i <= 3) {
+            $sum = ((((($sum + ($i * $i))) & 0xFFFFFFFF) ^ 0x80000000) - 0x80000000);
+            print(("step " . sprintf('%d', $i) . ": sum=" . sprintf('%d', $sum)), "\n");
+            $i = ($i + 1);
+        }
+    }
+    return $sum;
+}
+
+1;
+
+__END__
+
+=head1 NAME
+
+StdioShowcase
+
+=head1 SYNOPSIS
+
+    use StdioShowcase qw(run);
+
+=head2 run()
+
+Returns i32.
+
+=cut
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>perl/5</code> (<code>lib/StdioShowcase.pm</code>)</summary>
+
+```perl
+package StdioShowcase;
+use strict;
+use warnings;
+use Exporter 'import';
+use Carp ();
+
+our $VERSION = '0.001';
+our @EXPORT_OK = qw(run);
+BEGIN { die "StdioShowcase requires a perl with 64-bit integers\n" unless ~0 > 4294967295; }
+
+sub run {
+    use integer;
+    @_ == 0 or Carp::croak('usage: run()');
+    my $sum = 0;
+    {
+        my $i = 1;
+        LOOP1: while ($i <= 3) {
+            $sum = ((((($sum + ($i * $i))) & 0xFFFFFFFF) ^ 0x80000000) - 0x80000000);
+            print(("step " . sprintf('%d', $i) . ": sum=" . sprintf('%d', $sum)), "\n");
+            $i = ($i + 1);
+        }
+    }
+    return $sum;
+}
+
+1;
+
+__END__
+
+=head1 NAME
+
+StdioShowcase
+
+=head1 SYNOPSIS
+
+    use StdioShowcase qw(run);
+
+=head2 run()
+
+Returns i32.
+
+=cut
+```
+
+</details>
 
 </details>
 
@@ -15036,7 +19811,7 @@ End Function
 
 </details>
 
-> **Refused by:** `javascript` (`es5`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es5'; `es2015`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es2015'; `es2017`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es2017'; `es2020`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es2020'; `es2022`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es2022'); `csharp` (`PLY1052`: 'IrWriteLine' is not supported by the C# backend yet); `python` (`py3.8`: `PLY1851`: 'WriteLine' cannot be expressed in Python profile 'py3.8' (function 'Run'); `py3.9`: `PLY1851`: 'WriteLine' cannot be expressed in Python profile 'py3.9' (function 'Run'); `py3.10`: `PLY1851`: 'WriteLine' cannot be expressed in Python profile 'py3.10' (function 'Run'); `py3.11`: `PLY1851`: 'WriteLine' cannot be expressed in Python profile 'py3.11' (function 'Run'); `py3.12`: `PLY1851`: 'WriteLine' cannot be expressed in Python profile 'py3.12' (function 'Run'); `py3.13`: `PLY1851`: 'WriteLine' cannot be expressed in Python profile 'py3.13' (function 'Run'); `py3.14`: `PLY1851`: 'WriteLine' cannot be expressed in Python profile 'py3.14' (function 'Run')); `perl` (`PLY1751`: operation 'IrWriteLine' cannot be emitted as Perl)
+> **Refused by:** `javascript` (`es5`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es5'; `es2015`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es2015'; `es2017`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es2017'; `es2020`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es2020'; `es2022`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es2022'); `csharp` (`PLY1052`: 'IrWriteLine' is not supported by the C# backend yet)
 
 ## Spans, Bit Permutations & Unsafe Pointers
 
@@ -16778,7 +21553,1488 @@ Returns i32.
 
 </details>
 
-> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile); `msil` (`PLY3051`: type 'readonly span<i32>' is not supported by the MSIL backend); `jvm` (`PLY3151`: type 'readonly span<i32>' in local 'view' of 'SumSlice' is not supported by the JVM backend); `cpp` (`cpp/cpp17`: `PLY1451`: type 'readonly span<i32>' has no C++ representation in profile 'cpp/cpp17'; `cpp/cpp20`: `PLY1451`: type 'readonly span<i32>' has no C++ representation in profile 'cpp/cpp20'; `cpp/cpp23`: `PLY1451`: type 'readonly span<i32>' has no C++ representation in profile 'cpp/cpp23'); `vbscript` (`PLY2651`: type 'readonly span<i32>' has no VBScript representation in profile 'vbscript/5.8')
+<details>
+<summary><strong>MSIL</strong> — <code>msil/net10</code>, <code>msil/net8</code> (identical output — <code>LowLevelShowcase.dll</code> (disassembled))</summary>
+
+**`LowLevelShowcase.dll`** *(disassembled mnemonics)*
+
+```il
+.assembly LowLevelShowcase {}
+
+.class public sealed $Slice_0 extends System.ValueType {
+  .field public int32[] Array
+  .field public int32 Offset
+  .field public int32 Length
+}
+
+.class public sealed $Ptr extends System.ValueType {
+  .field public System.Array Backing
+  .field public int32 ByteOffset
+  .field public int32 RegionStart
+  .field public int32 RegionBytes
+}
+
+.class public abstract sealed LowLevelShowcase extends System.Object {
+  .method public hidebysig static uint32 ExtractBits(uint32 source, uint32 mask) cil managed {
+    .maxstack 64
+    IL_0000: ldarg.0
+    IL_0001: ldarg.1
+    IL_0002: ldc.i4.s 32
+    IL_0004: call uint32 LowLevelShowcase::$Pext32(uint32, uint32, int32)
+    IL_0009: ret
+    IL_000A: ldc.i4.0
+    IL_000B: ret
+  }
+  .method public hidebysig static int32 SumSlice(int32[] data, int32 offset, int32 length) cil managed {
+    .maxstack 64
+    .locals init ([0] $Slice_0, [1] int32, [2] $Ptr, [3] int32, [4] int32[], [5] int32, [6] int32, [7] $Slice_0, [8] int32[], [9] int32, [10] int32, [11] $Slice_0, [12] int32, [13] int32, [14] $Slice_0, [15] int32[], [16] int32, [17] int32, [18] $Ptr, [19] $Slice_0, [20] $Slice_0, [21] $Ptr, [22] int32)
+    IL_0000: ldarg.0
+    IL_0001: stloc.s 8
+    IL_0003: ldc.i4.0
+    IL_0004: stloc.s 9
+    IL_0006: ldloc.s 8
+    IL_0008: brfalse IL_0016
+    IL_000D: ldloc.s 8
+    IL_000F: ldlen
+    IL_0010: conv.i4
+    IL_0011: br IL_0017
+    IL_0016: ldc.i4.0
+    IL_0017: stloc.s 10
+    IL_0019: ldarg.1
+    IL_001A: stloc.s 12
+    IL_001C: ldarg.2
+    IL_001D: stloc.s 13
+    IL_001F: ldloc.s 12
+    IL_0021: ldc.i4.0
+    IL_0022: blt IL_003E
+    IL_0027: ldloc.s 13
+    IL_0029: ldc.i4.0
+    IL_002A: blt IL_003E
+    IL_002F: ldloc.s 12
+    IL_0031: conv.i8
+    IL_0032: ldloc.s 13
+    IL_0034: conv.i8
+    IL_0035: add
+    IL_0036: ldloc.s 10
+    IL_0038: conv.i8
+    IL_0039: ble IL_0044
+    IL_003E: newobj void System.ArgumentOutOfRangeException::.ctor()
+    IL_0043: throw
+    IL_0044: ldloca.s 11
+    IL_0046: initobj $Slice_0
+    IL_004C: ldloca.s 11
+    IL_004E: ldloc.s 8
+    IL_0050: stfld Array
+    IL_0055: ldloca.s 11
+    IL_0057: ldloc.s 9
+    IL_0059: ldloc.s 12
+    IL_005B: add
+    IL_005C: stfld Offset
+    IL_0061: ldloca.s 11
+    IL_0063: ldloc.s 13
+    IL_0065: stfld Length
+    IL_006A: ldloc.s 11
+    IL_006C: stloc.s 7
+    IL_006E: ldloca.s 7
+    IL_0070: ldfld Array
+    IL_0075: stloc.s 4
+    IL_0077: ldloca.s 7
+    IL_0079: ldfld Offset
+    IL_007E: stloc.s 5
+    IL_0080: ldloca.s 7
+    IL_0082: ldfld Length
+    IL_0087: stloc.s 6
+    IL_0089: ldloca.s 14
+    IL_008B: initobj $Slice_0
+    IL_0091: ldloca.s 14
+    IL_0093: ldloc.s 4
+    IL_0095: stfld Array
+    IL_009A: ldloca.s 14
+    IL_009C: ldloc.s 5
+    IL_009E: stfld Offset
+    IL_00A3: ldloca.s 14
+    IL_00A5: ldloc.s 6
+    IL_00A7: stfld Length
+    IL_00AC: ldloc.s 14
+    IL_00AE: stloc.0
+    IL_00AF: ldc.i4.0
+    IL_00B0: stloc.1
+    IL_00B1: ldloc.0
+    IL_00B2: stloc.s 19
+    IL_00B4: ldloca.s 19
+    IL_00B6: ldfld Array
+    IL_00BB: stloc.s 15
+    IL_00BD: ldloca.s 19
+    IL_00BF: ldfld Offset
+    IL_00C4: stloc.s 16
+    IL_00C6: ldloca.s 19
+    IL_00C8: ldfld Length
+    IL_00CD: stloc.s 17
+    IL_00CF: ldloc.s 17
+    IL_00D1: brfalse IL_010D
+    IL_00D6: ldloca.s 18
+    IL_00D8: initobj $Ptr
+    IL_00DE: ldloca.s 18
+    IL_00E0: ldloc.s 15
+    IL_00E2: stfld Backing
+    IL_00E7: ldloca.s 18
+    IL_00E9: ldloc.s 16
+    IL_00EB: ldc.i4.4
+    IL_00EC: mul
+    IL_00ED: stfld ByteOffset
+    IL_00F2: ldloca.s 18
+    IL_00F4: ldloc.s 16
+    IL_00F6: ldc.i4.4
+    IL_00F7: mul
+    IL_00F8: stfld RegionStart
+    IL_00FD: ldloca.s 18
+    IL_00FF: ldloc.s 17
+    IL_0101: ldc.i4.4
+    IL_0102: mul
+    IL_0103: stfld RegionBytes
+    IL_0108: br IL_0115
+    IL_010D: ldloca.s 18
+    IL_010F: initobj $Ptr
+    IL_0115: ldloc.s 18
+    IL_0117: stloc.2
+    IL_0118: ldc.i4.0
+    IL_0119: stloc.3
+    IL_011A: ldloc.3
+    IL_011B: ldloc.0
+    IL_011C: stloc.s 20
+    IL_011E: ldloca.s 20
+    IL_0120: ldfld Length
+    IL_0125: clt
+    IL_0127: brfalse IL_0158
+    IL_012C: ldloc.1
+    IL_012D: ldloc.2
+    IL_012E: stloc.s 21
+    IL_0130: ldloc.3
+    IL_0131: stloc.s 22
+    IL_0133: ldloca.s 21
+    IL_0135: ldloca.s 21
+    IL_0137: ldfld ByteOffset
+    IL_013C: ldloc.s 22
+    IL_013E: ldc.i4.4
+    IL_013F: mul
+    IL_0140: add
+    IL_0141: stfld ByteOffset
+    IL_0146: ldloc.s 21
+    IL_0148: call int32 LowLevelShowcase::$PtrLoad_0($Ptr)
+    IL_014D: add
+    IL_014E: stloc.1
+    IL_014F: ldloc.3
+    IL_0150: ldc.i4.1
+    IL_0151: add
+    IL_0152: stloc.3
+    IL_0153: br IL_011A
+    IL_0158: ldloc.1
+    IL_0159: ret
+    IL_015A: ldc.i4.0
+    IL_015B: ret
+  }
+  .method private hidebysig static uint32 $Pext32(uint32, uint32, int32) cil managed {
+    .maxstack 16
+    .locals init ([0] uint32, [1] int32, [2] int32)
+    IL_0000: ldc.i4.0
+    IL_0001: stloc.0
+    IL_0002: ldc.i4.0
+    IL_0003: stloc.1
+    IL_0004: ldc.i4.0
+    IL_0005: stloc.2
+    IL_0006: ldloc.2
+    IL_0007: ldarg.2
+    IL_0008: bge IL_002E
+    IL_000D: ldarg.1
+    IL_000E: ldloc.2
+    IL_000F: shr.un
+    IL_0010: ldc.i4.1
+    IL_0011: and
+    IL_0012: brfalse IL_0025
+    IL_0017: ldloc.0
+    IL_0018: ldarg.0
+    IL_0019: ldloc.2
+    IL_001A: shr.un
+    IL_001B: ldc.i4.1
+    IL_001C: and
+    IL_001D: ldloc.1
+    IL_001E: shl
+    IL_001F: or
+    IL_0020: stloc.0
+    IL_0021: ldloc.1
+    IL_0022: ldc.i4.1
+    IL_0023: add
+    IL_0024: stloc.1
+    IL_0025: ldloc.2
+    IL_0026: ldc.i4.1
+    IL_0027: add
+    IL_0028: stloc.2
+    IL_0029: br IL_0006
+    IL_002E: ldloc.0
+    IL_002F: ret
+  }
+  .method private hidebysig static int32 $PtrLoad_0($Ptr) cil managed {
+    .maxstack 16
+    .locals init ([0] int32[])
+    IL_0000: ldarga.s 0
+    IL_0002: ldfld Backing
+    IL_0007: brtrue IL_0012
+    IL_000C: newobj void System.NullReferenceException::.ctor()
+    IL_0011: throw
+    IL_0012: ldarga.s 0
+    IL_0014: ldfld ByteOffset
+    IL_0019: ldarga.s 0
+    IL_001B: ldfld RegionStart
+    IL_0020: blt IL_0042
+    IL_0025: ldarga.s 0
+    IL_0027: ldfld ByteOffset
+    IL_002C: ldarga.s 0
+    IL_002E: ldfld RegionStart
+    IL_0033: ldarga.s 0
+    IL_0035: ldfld RegionBytes
+    IL_003A: add
+    IL_003B: ldc.i4.4
+    IL_003C: sub
+    IL_003D: ble IL_0048
+    IL_0042: newobj void System.IndexOutOfRangeException::.ctor()
+    IL_0047: throw
+    IL_0048: ldarga.s 0
+    IL_004A: ldfld Backing
+    IL_004F: .byte 0x75
+    IL_0050: .byte 0x01
+    IL_0051: nop
+    IL_0052: nop
+    IL_0053: ldc.i4.5
+    IL_0054: dup
+    IL_0055: stloc.0
+    IL_0056: brfalse IL_0075
+    IL_005B: ldarga.s 0
+    IL_005D: ldfld ByteOffset
+    IL_0062: ldc.i4.3
+    IL_0063: and
+    IL_0064: brtrue IL_0075
+    IL_0069: ldloc.0
+    IL_006A: ldarga.s 0
+    IL_006C: ldfld ByteOffset
+    IL_0071: ldc.i4.4
+    IL_0072: div
+    IL_0073: ldelem.i4
+    IL_0074: ret
+    IL_0075: ldarga.s 0
+    IL_0077: ldfld Backing
+    IL_007C: ldarga.s 0
+    IL_007E: ldfld ByteOffset
+    IL_0083: call uint8 System.Buffer::GetByte(System.Array, int32)
+    IL_0088: ldarga.s 0
+    IL_008A: ldfld Backing
+    IL_008F: ldarga.s 0
+    IL_0091: ldfld ByteOffset
+    IL_0096: ldc.i4.1
+    IL_0097: add
+    IL_0098: call uint8 System.Buffer::GetByte(System.Array, int32)
+    IL_009D: ldc.i4.8
+    IL_009E: shl
+    IL_009F: or
+    IL_00A0: ldarga.s 0
+    IL_00A2: ldfld Backing
+    IL_00A7: ldarga.s 0
+    IL_00A9: ldfld ByteOffset
+    IL_00AE: ldc.i4.2
+    IL_00AF: add
+    IL_00B0: call uint8 System.Buffer::GetByte(System.Array, int32)
+    IL_00B5: ldc.i4.s 16
+    IL_00B7: shl
+    IL_00B8: or
+    IL_00B9: ldarga.s 0
+    IL_00BB: ldfld Backing
+    IL_00C0: ldarga.s 0
+    IL_00C2: ldfld ByteOffset
+    IL_00C7: ldc.i4.3
+    IL_00C8: add
+    IL_00C9: call uint8 System.Buffer::GetByte(System.Array, int32)
+    IL_00CE: ldc.i4.s 24
+    IL_00D0: shl
+    IL_00D1: or
+    IL_00D2: ret
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><strong>JVM</strong> — <code>jvm/21</code>, <code>jvm/17</code>, <code>jvm/8</code> (identical output — <code>LowLevelShowcase.jar</code> (disassembled))</summary>
+
+**`LowLevelShowcase.jar`** *(disassembled mnemonics)*
+
+```text
+// classfile version 65.0
+public final class LowLevelShowcase$Ptr_I {
+  public final [I array;
+  public final I offset;
+  public final I minOffset;
+  public final I maxOffset;
+  public <init>([IIII)V;
+    Code: stack=2, locals=5
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: aload_0
+      5: aload_1
+      6: putfield // Field LowLevelShowcase$Ptr_I.array:[I
+      9: aload_0
+      10: iload_2
+      11: putfield // Field LowLevelShowcase$Ptr_I.offset:I
+      14: aload_0
+      15: iload_3
+      16: putfield // Field LowLevelShowcase$Ptr_I.minOffset:I
+      19: aload_0
+      20: iload 4
+      22: putfield // Field LowLevelShowcase$Ptr_I.maxOffset:I
+      25: return
+}
+
+// classfile version 65.0
+public final class LowLevelShowcase$Span_I {
+  public final [I array;
+  public final I offset;
+  public final I length;
+  public <init>([III)V;
+    Code: stack=2, locals=4
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: aload_0
+      5: aload_1
+      6: putfield // Field LowLevelShowcase$Span_I.array:[I
+      9: aload_0
+      10: iload_2
+      11: putfield // Field LowLevelShowcase$Span_I.offset:I
+      14: aload_0
+      15: iload_3
+      16: putfield // Field LowLevelShowcase$Span_I.length:I
+      19: return
+}
+
+// classfile version 65.0
+public class LowLevelShowcase {
+  public <init>()V;
+    Code: stack=1, locals=1
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: return
+  public static ExtractBits(II)I;
+    Code: stack=3, locals=7
+      0: iconst_0
+      1: istore_2
+      2: iconst_0
+      3: istore_3
+      4: iconst_0
+      5: istore 4
+      7: iconst_0
+      8: istore 5
+      10: iconst_0
+      11: istore 6
+      13: iload_0
+      14: istore_2
+      15: iload_1
+      16: istore_3
+      17: iconst_0
+      18: istore 4
+      20: iconst_0
+      21: istore 5
+      23: iconst_0
+      24: istore 6
+      26: iload 5
+      28: bipush 32
+      30: if_icmpge 71
+      33: iload_3
+      34: iload 5
+      36: iushr
+      37: iconst_1
+      38: iand
+      39: ifeq 62
+      42: iload 4
+      44: iload_2
+      45: iload 5
+      47: iushr
+      48: iconst_1
+      49: iand
+      50: iload 6
+      52: ishl
+      53: ior
+      54: istore 4
+      56: iload 6
+      58: iconst_1
+      59: iadd
+      60: istore 6
+      62: iload 5
+      64: iconst_1
+      65: iadd
+      66: istore 5
+      68: goto 26
+      71: iload 4
+      73: ireturn
+  public static SumSlice([III)I;
+    Code: stack=7, locals=23
+      0: aconst_null
+      1: astore_3
+      2: iconst_0
+      3: istore 4
+      5: aconst_null
+      6: astore 5
+      8: iconst_0
+      9: istore 6
+      11: aconst_null
+      12: astore 7
+      14: iconst_0
+      15: istore 8
+      17: iconst_0
+      18: istore 9
+      20: aconst_null
+      21: astore 10
+      23: aconst_null
+      24: astore 11
+      26: iconst_0
+      27: istore 12
+      29: iconst_0
+      30: istore 13
+      32: iconst_0
+      33: istore 14
+      35: iconst_0
+      36: istore 15
+      38: aconst_null
+      39: astore 16
+      41: iconst_0
+      42: istore 17
+      44: iconst_0
+      45: istore 18
+      47: aconst_null
+      48: astore 19
+      50: aconst_null
+      51: astore 20
+      53: aconst_null
+      54: astore 21
+      56: iconst_0
+      57: istore 22
+      59: aload_0
+      60: astore 11
+      62: iconst_0
+      63: istore 12
+      65: aload 11
+      67: arraylength
+      68: istore 13
+      70: iload_1
+      71: istore 14
+      73: iload_2
+      74: istore 15
+      76: iload 14
+      78: iflt 103
+      81: iload 15
+      83: iflt 103
+      86: iload 14
+      88: i2l
+      89: iload 15
+      91: i2l
+      92: ladd
+      93: iload 13
+      95: i2l
+      96: lcmp
+      97: ifgt 103
+      100: goto 113
+      103: new // class java/lang/IllegalArgumentException
+      106: dup
+      107: ldc "Slice range is out of bounds."
+      109: invokespecial // Method java/lang/IllegalArgumentException.<init>:(Ljava/lang/String;)V
+      112: athrow
+      113: new // class LowLevelShowcase$Span_I
+      116: dup
+      117: aload 11
+      119: iload 12
+      121: iload 14
+      123: iadd
+      124: iload 15
+      126: invokespecial // Method LowLevelShowcase$Span_I.<init>:([III)V
+      129: astore 10
+      131: aload 10
+      133: getfield // Field LowLevelShowcase$Span_I.array:[I
+      136: astore 7
+      138: aload 10
+      140: getfield // Field LowLevelShowcase$Span_I.offset:I
+      143: istore 8
+      145: aload 10
+      147: getfield // Field LowLevelShowcase$Span_I.length:I
+      150: istore 9
+      152: new // class LowLevelShowcase$Span_I
+      155: dup
+      156: aload 7
+      158: iload 8
+      160: iload 9
+      162: invokespecial // Method LowLevelShowcase$Span_I.<init>:([III)V
+      165: astore_3
+      166: iconst_0
+      167: istore 4
+      169: aload_3
+      170: astore 19
+      172: aload 19
+      174: getfield // Field LowLevelShowcase$Span_I.array:[I
+      177: astore 16
+      179: aload 19
+      181: getfield // Field LowLevelShowcase$Span_I.offset:I
+      184: istore 17
+      186: aload 19
+      188: getfield // Field LowLevelShowcase$Span_I.length:I
+      191: istore 18
+      193: iload 18
+      195: ifeq 219
+      198: new // class LowLevelShowcase$Ptr_I
+      201: dup
+      202: aload 16
+      204: iload 17
+      206: iload 17
+      208: iload 17
+      210: iload 18
+      212: iadd
+      213: invokespecial // Method LowLevelShowcase$Ptr_I.<init>:([IIII)V
+      216: goto 220
+      219: aconst_null
+      220: astore 5
+      222: iconst_0
+      223: istore 6
+      225: iload 6
+      227: aload_3
+      228: getfield // Field LowLevelShowcase$Span_I.length:I
+      231: if_icmplt 238
+      234: iconst_0
+      235: goto 239
+      238: iconst_1
+      239: ifeq 389
+      242: iload 4
+      244: aload 5
+      246: astore 21
+      248: iload 6
+      250: istore 22
+      252: aload 21
+      254: ifnull 290
+      257: new // class LowLevelShowcase$Ptr_I
+      260: dup
+      261: aload 21
+      263: getfield // Field LowLevelShowcase$Ptr_I.array:[I
+      266: aload 21
+      268: getfield // Field LowLevelShowcase$Ptr_I.offset:I
+      271: iload 22
+      273: iadd
+      274: aload 21
+      276: getfield // Field LowLevelShowcase$Ptr_I.minOffset:I
+      279: aload 21
+      281: getfield // Field LowLevelShowcase$Ptr_I.maxOffset:I
+      284: invokespecial // Method LowLevelShowcase$Ptr_I.<init>:([IIII)V
+      287: goto 302
+      290: new // class LowLevelShowcase$Ptr_I
+      293: dup
+      294: aconst_null
+      295: iload 22
+      297: iconst_0
+      298: iconst_0
+      299: invokespecial // Method LowLevelShowcase$Ptr_I.<init>:([IIII)V
+      302: astore 20
+      304: aload 20
+      306: ifnull 346
+      309: aload 20
+      311: getfield // Field LowLevelShowcase$Ptr_I.array:[I
+      314: ifnull 346
+      317: aload 20
+      319: getfield // Field LowLevelShowcase$Ptr_I.offset:I
+      322: aload 20
+      324: getfield // Field LowLevelShowcase$Ptr_I.minOffset:I
+      327: if_icmplt 356
+      330: aload 20
+      332: getfield // Field LowLevelShowcase$Ptr_I.offset:I
+      335: aload 20
+      337: getfield // Field LowLevelShowcase$Ptr_I.maxOffset:I
+      340: if_icmpge 356
+      343: goto 366
+      346: new // class java/lang/NullPointerException
+      349: dup
+      350: ldc "Null pointer dereference."
+      352: invokespecial // Method java/lang/NullPointerException.<init>:(Ljava/lang/String;)V
+      355: athrow
+      356: new // class java/lang/ArrayIndexOutOfBoundsException
+      359: dup
+      360: ldc "Pointer dereference out of bounds."
+      362: invokespecial // Method java/lang/ArrayIndexOutOfBoundsException.<init>:(Ljava/lang/String;)V
+      365: athrow
+      366: aload 20
+      368: getfield // Field LowLevelShowcase$Ptr_I.array:[I
+      371: aload 20
+      373: getfield // Field LowLevelShowcase$Ptr_I.offset:I
+      376: iaload
+      377: iadd
+      378: istore 4
+      380: iload 6
+      382: iconst_1
+      383: iadd
+      384: istore 6
+      386: goto 225
+      389: iload 4
+      391: ireturn
+}
+```
+
+</details>
+
+<details>
+<summary><strong>C++</strong> — 3 dialects (2 distinct outputs)</summary>
+
+<details>
+<summary>Dialect: <code>cpp/cpp17</code> (<code>low_level_showcase.cpp</code>, <code>low_level_showcase.hpp</code>)</summary>
+
+**`low_level_showcase.cpp`**
+
+```cpp
+#include "low_level_showcase.hpp"
+#include <cstddef>
+#include <stdexcept>
+#include <type_traits>
+
+namespace low_level_showcase {
+
+namespace {
+
+template <typename T>
+struct PlySpan {
+  T* data_ = nullptr;
+  std::size_t size_ = 0;
+
+  PlySpan() = default;
+  PlySpan(T* data, std::size_t size) : data_(data), size_(size) {}
+  template <typename U, typename = std::enable_if_t<std::is_convertible_v<U (*)[], T (*)[]>>>
+  PlySpan(std::vector<U>& vec) : data_(vec.data()), size_(vec.size()) {}
+  template <typename U, typename = std::enable_if_t<std::is_convertible_v<const U (*)[], T (*)[]>>>
+  PlySpan(const std::vector<U>& vec) : data_(vec.data()), size_(vec.size()) {}
+  template <typename U, typename = std::enable_if_t<std::is_convertible_v<U (*)[], T (*)[]>>>
+  PlySpan(const PlySpan<U>& other) : data_(other.data()), size_(other.size()) {}
+
+  T* data() const { return this->data_; }
+  std::size_t size() const { return this->size_; }
+  bool empty() const { return this->size_ == 0; }
+  T* begin() const { return this->data_; }
+  T* end() const { return this->data_ + this->size_; }
+  T& operator[](std::size_t index) const { return this->data_[index]; }
+  PlySpan subspan(std::size_t offset, std::size_t count) const { return PlySpan(this->data_ + offset, count); }
+};
+
+template <typename T>
+T ply_pext(T source, T mask) {
+  using U = std::make_unsigned_t<T>;
+  const U src = static_cast<U>(source);
+  U m = static_cast<U>(mask);
+  U res = 0;
+  U bit = 1;
+  while (m != 0) {
+    const U lsb = m & static_cast<U>(U{0} - m);
+    if ((src & lsb) != 0)
+      res |= bit;
+    m ^= lsb;
+    bit <<= 1;
+  }
+  return static_cast<T>(res);
+}
+
+template <typename SpanT, typename Src>
+SpanT ply_view_of(Src&& src) {
+  using Elem = std::remove_pointer_t<decltype(SpanT{}.data())>;
+  return SpanT(const_cast<Elem*>(src.data()), src.size());
+}
+template <typename SpanT, typename Src>
+SpanT ply_view_of(Src&& src, std::int32_t start) {
+  if (start < 0 || static_cast<std::size_t>(start) > src.size())
+    throw std::out_of_range("slice out of range");
+  using Elem = std::remove_pointer_t<decltype(SpanT{}.data())>;
+  const auto s = static_cast<std::size_t>(start);
+  return SpanT(const_cast<Elem*>(src.data()) + s, src.size() - s);
+}
+template <typename SpanT, typename Src>
+SpanT ply_view_of(Src&& src, std::int32_t start, std::int32_t length) {
+  if (start < 0 || length < 0 || static_cast<std::size_t>(start) + static_cast<std::size_t>(length) > src.size())
+    throw std::out_of_range("slice out of range");
+  using Elem = std::remove_pointer_t<decltype(SpanT{}.data())>;
+  return SpanT(const_cast<Elem*>(src.data()) + static_cast<std::size_t>(start), static_cast<std::size_t>(length));
+}
+
+template <typename T, typename Src>
+T* ply_pin(Src&& src) {
+  return src.empty() ? nullptr : const_cast<T*>(src.data());
+}
+template <typename T, typename Src>
+T* ply_pin(Src&& src, std::int32_t index) {
+  if (index < 0 || static_cast<std::size_t>(index) >= src.size())
+    throw std::out_of_range("index out of range");
+  return const_cast<T*>(src.data() + static_cast<std::size_t>(index));
+}
+
+template <typename T>
+T ply_ptr_load(const T* ptr) {
+  if (ptr == nullptr)
+    throw std::runtime_error("null reference");
+  return *ptr;
+}
+
+template <typename T>
+T* ply_ptr_add(T* ptr, std::int32_t offset) {
+  return offset == 0 ? ptr : ptr + static_cast<std::ptrdiff_t>(offset);
+}
+
+} // namespace
+
+std::uint32_t extract_bits(std::uint32_t source, std::uint32_t mask) {
+  return ply_pext<std::uint32_t>(source, mask);
+}
+
+std::int32_t sum_slice(const std::vector<std::int32_t>& data, std::int32_t offset, std::int32_t length) {
+  PlySpan<const std::int32_t> view = ply_view_of<PlySpan<const std::int32_t>>(ply_view_of<PlySpan<std::int32_t>>(data, offset, length));
+  std::int32_t total = 0;
+  {
+    std::int32_t* ptr = ply_pin<std::int32_t>(view);
+    {
+      std::int32_t i = 0;
+      while ((i < static_cast<std::int32_t>((view).size()))) {
+        total = static_cast<std::int32_t>(static_cast<std::uint32_t>(total) + static_cast<std::uint32_t>(ply_ptr_load(ply_ptr_add(ptr, i))));
+        i = static_cast<std::int32_t>(static_cast<std::uint32_t>(i) + static_cast<std::uint32_t>(1));
+      }
+    }
+  }
+  return total;
+}
+
+} // namespace low_level_showcase
+```
+
+**`low_level_showcase.hpp`**
+
+```cpp
+#pragma once
+
+#include <cstdint>
+#include <vector>
+
+namespace low_level_showcase {
+
+std::uint32_t extract_bits(std::uint32_t source, std::uint32_t mask);
+std::int32_t sum_slice(const std::vector<std::int32_t>& data, std::int32_t offset, std::int32_t length);
+
+} // namespace low_level_showcase
+```
+
+</details>
+
+<details>
+<summary>Dialects: <code>cpp/cpp20</code>, <code>cpp/cpp23</code> (<code>low_level_showcase.cpp</code>, <code>low_level_showcase.hpp</code>)</summary>
+
+**`low_level_showcase.cpp`**
+
+```cpp
+#include "low_level_showcase.hpp"
+#include <cstddef>
+#include <span>
+#include <stdexcept>
+#include <type_traits>
+
+namespace low_level_showcase {
+
+namespace {
+
+template <typename T>
+T ply_pext(T source, T mask) {
+  using U = std::make_unsigned_t<T>;
+  const U src = static_cast<U>(source);
+  U m = static_cast<U>(mask);
+  U res = 0;
+  U bit = 1;
+  while (m != 0) {
+    const U lsb = m & static_cast<U>(U{0} - m);
+    if ((src & lsb) != 0)
+      res |= bit;
+    m ^= lsb;
+    bit <<= 1;
+  }
+  return static_cast<T>(res);
+}
+
+template <typename SpanT, typename Src>
+SpanT ply_view_of(Src&& src) {
+  using Elem = std::remove_pointer_t<decltype(SpanT{}.data())>;
+  return SpanT(const_cast<Elem*>(src.data()), src.size());
+}
+template <typename SpanT, typename Src>
+SpanT ply_view_of(Src&& src, std::int32_t start) {
+  if (start < 0 || static_cast<std::size_t>(start) > src.size())
+    throw std::out_of_range("slice out of range");
+  using Elem = std::remove_pointer_t<decltype(SpanT{}.data())>;
+  const auto s = static_cast<std::size_t>(start);
+  return SpanT(const_cast<Elem*>(src.data()) + s, src.size() - s);
+}
+template <typename SpanT, typename Src>
+SpanT ply_view_of(Src&& src, std::int32_t start, std::int32_t length) {
+  if (start < 0 || length < 0 || static_cast<std::size_t>(start) + static_cast<std::size_t>(length) > src.size())
+    throw std::out_of_range("slice out of range");
+  using Elem = std::remove_pointer_t<decltype(SpanT{}.data())>;
+  return SpanT(const_cast<Elem*>(src.data()) + static_cast<std::size_t>(start), static_cast<std::size_t>(length));
+}
+
+template <typename T, typename Src>
+T* ply_pin(Src&& src) {
+  return src.empty() ? nullptr : const_cast<T*>(src.data());
+}
+template <typename T, typename Src>
+T* ply_pin(Src&& src, std::int32_t index) {
+  if (index < 0 || static_cast<std::size_t>(index) >= src.size())
+    throw std::out_of_range("index out of range");
+  return const_cast<T*>(src.data() + static_cast<std::size_t>(index));
+}
+
+template <typename T>
+T ply_ptr_load(const T* ptr) {
+  if (ptr == nullptr)
+    throw std::runtime_error("null reference");
+  return *ptr;
+}
+
+template <typename T>
+T* ply_ptr_add(T* ptr, std::int32_t offset) {
+  return offset == 0 ? ptr : ptr + static_cast<std::ptrdiff_t>(offset);
+}
+
+} // namespace
+
+std::uint32_t extract_bits(std::uint32_t source, std::uint32_t mask) {
+  return ply_pext<std::uint32_t>(source, mask);
+}
+
+std::int32_t sum_slice(const std::vector<std::int32_t>& data, std::int32_t offset, std::int32_t length) {
+  std::span<const std::int32_t> view = ply_view_of<std::span<const std::int32_t>>(ply_view_of<std::span<std::int32_t>>(data, offset, length));
+  std::int32_t total = 0;
+  {
+    std::int32_t* ptr = ply_pin<std::int32_t>(view);
+    {
+      std::int32_t i = 0;
+      while ((i < static_cast<std::int32_t>((view).size()))) {
+        total = static_cast<std::int32_t>(static_cast<std::uint32_t>(total) + static_cast<std::uint32_t>(ply_ptr_load(ply_ptr_add(ptr, i))));
+        i = static_cast<std::int32_t>(static_cast<std::uint32_t>(i) + static_cast<std::uint32_t>(1));
+      }
+    }
+  }
+  return total;
+}
+
+} // namespace low_level_showcase
+```
+
+**`low_level_showcase.hpp`**
+
+```cpp
+#pragma once
+
+#include <cstdint>
+#include <vector>
+
+namespace low_level_showcase {
+
+std::uint32_t extract_bits(std::uint32_t source, std::uint32_t mask);
+std::int32_t sum_slice(const std::vector<std::int32_t>& data, std::int32_t offset, std::int32_t length);
+
+} // namespace low_level_showcase
+```
+
+</details>
+
+</details>
+
+<details>
+<summary><strong>VBScript</strong> — <code>vbscript/5.8</code> (<code>LowLevelShowcase.vbs</code>)</summary>
+
+```vbscript
+Option Explicit
+
+Function ply_i8(ByVal x)
+  Dim m
+  m = CDbl(x)
+  m = m - Int(m / 256.0) * 256.0
+  If m >= 128.0 Then m = m - 256.0
+  ply_i8 = CLng(m)
+End Function
+
+Function ply_u8(ByVal x)
+  Dim m
+  m = CDbl(x)
+  ply_u8 = CLng(m - Int(m / 256.0) * 256.0)
+End Function
+
+Function ply_i16(ByVal x)
+  Dim m
+  m = CDbl(x)
+  m = m - Int(m / 65536.0) * 65536.0
+  If m >= 32768.0 Then m = m - 65536.0
+  ply_i16 = CLng(m)
+End Function
+
+Function ply_u16(ByVal x)
+  Dim m
+  m = CDbl(x)
+  ply_u16 = CLng(m - Int(m / 65536.0) * 65536.0)
+End Function
+
+Function ply_i32(ByVal x)
+  Dim m
+  m = CDbl(x)
+  m = m - Int(m / 4294967296.0) * 4294967296.0
+  If m >= 2147483648.0 Then m = m - 4294967296.0
+  ply_i32 = CLng(m)
+End Function
+
+Function ply_u32(ByVal x)
+  Dim m
+  m = CDbl(x)
+  ply_u32 = m - Int(m / 4294967296.0) * 4294967296.0
+End Function
+
+Function ply_i64(ByVal x)
+  Dim m
+  m = Fix(CDbl(x))
+  If m >= 9223372036854775808.0 Then m = m - 18446744073709551616.0
+  If m < -9223372036854775808.0 Then m = m + 18446744073709551616.0
+  ply_i64 = m
+End Function
+
+Function ply_u64(ByVal x)
+  Dim m
+  m = Fix(CDbl(x))
+  If m < 0 Then m = m + 18446744073709551616.0
+  If m >= 18446744073709551616.0 Then m = m - 18446744073709551616.0
+  ply_u64 = m
+End Function
+
+Function ply_pext_u32(ByVal val, ByVal mask, ByVal bits)
+  Dim v, m, res, p, b, outBit
+  v = ply_u32(val)
+  m = ply_u32(mask)
+  If bits < 32 Then
+    p = 2.0 ^ bits
+    v = v - Int(v / p) * p
+    m = m - Int(m / p) * p
+  End If
+  res = 0.0
+  outBit = 1.0
+  For b = 0 To bits - 1
+    If m - Int(m / 2.0) * 2.0 = 1 Then
+      If v - Int(v / 2.0) * 2.0 = 1 Then res = res + outBit
+      outBit = outBit * 2.0
+    End If
+    v = Int(v / 2.0)
+    m = Int(m / 2.0)
+  Next
+  ply_pext_u32 = res
+End Function
+
+Function ply_new_arr(ByVal n, ByVal defVal)
+  Dim i, r()
+  If n < 0 Then Err.Raise vbObjectError + 1002, "OverflowException", "Arithmetic operation resulted in an overflow."
+  If n = 0 Then
+    ply_new_arr = Array()
+    Exit Function
+  End If
+  ReDim r(n - 1)
+  For i = 0 To n - 1
+    r(i) = defVal
+  Next
+  ply_new_arr = r
+End Function
+
+Function ply_wrap_kind(ByVal kind, ByVal lo, ByVal hi)
+  Select Case kind
+    Case 1 : ply_wrap_kind = ply_i8(lo)
+    Case 2 : ply_wrap_kind = ply_u8(lo)
+    Case 3 : ply_wrap_kind = ply_i16(lo)
+    Case 4 : ply_wrap_kind = ply_u16(lo)
+    Case 5 : ply_wrap_kind = ply_i32(lo)
+    Case 6 : ply_wrap_kind = ply_u32(lo)
+    Case 7 : ply_wrap_kind = ply_i64(hi * 4294967296.0 + lo)
+    Case Else : ply_wrap_kind = ply_u64(hi * 4294967296.0 + lo)
+  End Select
+End Function
+
+Class ply_Buf
+  Public Data
+  Public Length
+  Public ElemKind
+  Public ElemSize
+  Public IsNullArr
+
+  Private Sub Class_Initialize()
+    Data = Array()
+    Length = 0
+    ElemKind = 5
+    ElemSize = 4
+    IsNullArr = False
+  End Sub
+
+  Public Function GetElem(ByVal i)
+    GetElem = Data(i)
+  End Function
+
+  Public Sub SetElem(ByVal i, ByVal v)
+    Data(i) = v
+  End Sub
+
+  Public Function GetAtChecked(ByVal i)
+    If IsNullArr Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+    If i < 0 Or i >= Length Then Err.Raise vbObjectError + 1003, "IndexOutOfRangeException", "Index was outside the bounds of the array."
+    GetAtChecked = Data(i)
+  End Function
+
+  Public Sub SetAtChecked(ByVal i, ByVal v)
+    If IsNullArr Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+    If i < 0 Or i >= Length Then Err.Raise vbObjectError + 1003, "IndexOutOfRangeException", "Index was outside the bounds of the array."
+    Data(i) = v
+  End Sub
+
+  Public Function GetByte(ByVal bytePos)
+    Dim idx, subIdx, v, u
+    idx = Int(bytePos / ElemSize)
+    subIdx = bytePos - idx * ElemSize
+    v = Data(idx)
+    If ElemSize = 8 Then
+      u = ply_u64(v)
+      If subIdx < 4 Then
+        u = ply_u32(u)
+      Else
+        u = ply_u32(Int(u / 4294967296.0))
+        subIdx = subIdx - 4
+      End If
+    Else
+      u = ply_u32(v)
+    End If
+    u = Int(u / (256.0 ^ subIdx))
+    GetByte = CLng(u - Int(u / 256.0) * 256.0)
+  End Function
+
+  Public Sub SetByte(ByVal bytePos, ByVal bVal)
+    Dim idx, subIdx, v, lo, hi, scale, oldB, nb
+    idx = Int(bytePos / ElemSize)
+    subIdx = bytePos - idx * ElemSize
+    v = Data(idx)
+    nb = ply_u8(bVal)
+    If ElemSize = 8 Then
+      lo = ply_u32(v)
+      hi = ply_u32(Int(ply_u64(v) / 4294967296.0))
+      If subIdx < 4 Then
+        scale = 256.0 ^ subIdx
+        oldB = Int(lo / scale)
+        oldB = oldB - Int(oldB / 256.0) * 256.0
+        lo = lo + (CDbl(nb) - oldB) * scale
+      Else
+        scale = 256.0 ^ (subIdx - 4)
+        oldB = Int(hi / scale)
+        oldB = oldB - Int(oldB / 256.0) * 256.0
+        hi = hi + (CDbl(nb) - oldB) * scale
+      End If
+      Data(idx) = ply_wrap_kind(ElemKind, lo, hi)
+    Else
+      lo = ply_u32(v)
+      scale = 256.0 ^ subIdx
+      oldB = Int(lo / scale)
+      oldB = oldB - Int(oldB / 256.0) * 256.0
+      lo = lo + (CDbl(nb) - oldB) * scale
+      Data(idx) = ply_wrap_kind(ElemKind, lo, 0.0)
+    End If
+  End Sub
+End Class
+
+Function ply_buf_wrap(ByRef arr, ByVal elemKind, ByVal elemSize)
+  Dim b
+  Set b = New ply_Buf
+  b.ElemKind = elemKind
+  b.ElemSize = elemSize
+  If IsNull(arr) Then
+    b.IsNullArr = True
+    b.Data = Array()
+    b.Length = 0
+  Else
+    b.IsNullArr = False
+    b.Data = arr
+    b.Length = UBound(arr) + 1
+  End If
+  Set ply_buf_wrap = b
+End Function
+
+Function ply_buf_single(ByVal v, ByVal elemKind, ByVal elemSize)
+  Dim b, a(0)
+  a(0) = v
+  Set b = New ply_Buf
+  b.ElemKind = elemKind
+  b.ElemSize = elemSize
+  b.IsNullArr = False
+  b.Data = a
+  b.Length = 1
+  Set ply_buf_single = b
+End Function
+
+Function ply_raw_read(ByVal buf, ByVal bytePos, ByVal elemKind, ByVal elemSize)
+  Dim lo, hi, k
+  If elemKind = buf.ElemKind And (bytePos - Int(bytePos / elemSize) * elemSize) = 0 Then
+    ply_raw_read = buf.GetElem(Int(bytePos / elemSize))
+    Exit Function
+  End If
+  lo = 0.0
+  hi = 0.0
+  For k = 0 To elemSize - 1
+    If k < 4 Then
+      lo = lo + CDbl(buf.GetByte(bytePos + k)) * (256.0 ^ k)
+    Else
+      hi = hi + CDbl(buf.GetByte(bytePos + k)) * (256.0 ^ (k - 4))
+    End If
+  Next
+  ply_raw_read = ply_wrap_kind(elemKind, lo, hi)
+End Function
+
+Sub ply_raw_write(ByVal buf, ByVal bytePos, ByVal v, ByVal elemKind, ByVal elemSize)
+  Dim lo, hi, k, b
+  If elemKind = buf.ElemKind And (bytePos - Int(bytePos / elemSize) * elemSize) = 0 Then
+    Call buf.SetElem(Int(bytePos / elemSize), v)
+    Exit Sub
+  End If
+  If elemSize = 8 Then
+    lo = ply_u32(v)
+    hi = ply_u32(Int(ply_u64(v) / 4294967296.0))
+  Else
+    lo = ply_u32(v)
+    hi = 0.0
+  End If
+  For k = 0 To elemSize - 1
+    If k < 4 Then
+      b = CLng(lo - Int(lo / 256.0) * 256.0)
+      lo = Int(lo / 256.0)
+    Else
+      b = CLng(hi - Int(hi / 256.0) * 256.0)
+      hi = Int(hi / 256.0)
+    End If
+    Call buf.SetByte(bytePos + k, b)
+  Next
+End Sub
+
+Class ply_Span
+  Public Buf
+  Public ByteOffset
+  Public Length
+  Public ElemKind
+  Public ElemSize
+
+  Private Sub Class_Initialize()
+    Set Buf = Nothing
+    ByteOffset = 0
+    Length = 0
+    ElemKind = 5
+    ElemSize = 4
+  End Sub
+
+  Public Function GetAt(ByVal i)
+    If i < 0 Or i >= Length Then Err.Raise vbObjectError + 1003, "IndexOutOfRangeException", "Index was outside the bounds of the array."
+    GetAt = ply_raw_read(Buf, ByteOffset + CDbl(i) * CDbl(ElemSize), ElemKind, ElemSize)
+  End Function
+
+  Public Sub SetAt(ByVal i, ByVal v)
+    If i < 0 Or i >= Length Then Err.Raise vbObjectError + 1003, "IndexOutOfRangeException", "Index was outside the bounds of the array."
+    Call ply_raw_write(Buf, ByteOffset + CDbl(i) * CDbl(ElemSize), v, ElemKind, ElemSize)
+  End Sub
+
+  Public Function Slice(ByVal startIdx, ByVal count)
+    Dim c, s
+    If count < 0 Then c = Length - startIdx Else c = count
+    If startIdx < 0 Or c < 0 Or startIdx + c > Length Then Err.Raise vbObjectError + 1003, "ArgumentOutOfRangeException", "Slice range was out of bounds."
+    Set s = New ply_Span
+    Set s.Buf = Buf
+    s.ByteOffset = ByteOffset + CDbl(startIdx) * CDbl(ElemSize)
+    s.Length = CLng(c)
+    s.ElemKind = ElemKind
+    s.ElemSize = ElemSize
+    Set Slice = s
+  End Function
+
+  Public Sub CopyTo(ByVal dst)
+    If Not TryCopyTo(dst) Then Err.Raise vbObjectError + 1003, "ArgumentOutOfRangeException", "Destination is too short."
+  End Sub
+
+  Public Function TryCopyTo(ByVal dst)
+    Dim i, tmp()
+    If Length > dst.Length Then
+      TryCopyTo = False
+      Exit Function
+    End If
+    If Length > 0 Then
+      ReDim tmp(Length - 1)
+      For i = 0 To Length - 1
+        tmp(i) = GetAt(i)
+      Next
+      For i = 0 To Length - 1
+        Call dst.SetAt(i, tmp(i))
+      Next
+    End If
+    TryCopyTo = True
+  End Function
+
+  Public Sub FillAll(ByVal v)
+    Dim i
+    For i = 0 To Length - 1
+      Call SetAt(i, v)
+    Next
+  End Sub
+
+  Public Function ToArr()
+    Dim i, r()
+    If Length = 0 Then
+      ToArr = Array()
+      Exit Function
+    End If
+    ReDim r(Length - 1)
+    For i = 0 To Length - 1
+      r(i) = GetAt(i)
+    Next
+    ToArr = r
+  End Function
+
+  Public Function SeqEqual(ByVal other)
+    Dim i
+    If Length <> other.Length Then
+      SeqEqual = False
+      Exit Function
+    End If
+    For i = 0 To Length - 1
+      If GetAt(i) <> other.GetAt(i) Then
+        SeqEqual = False
+        Exit Function
+      End If
+    Next
+    SeqEqual = True
+  End Function
+
+  Public Function Reinterpret(ByVal newKind, ByVal newSize)
+    Dim s
+    Set s = New ply_Span
+    Set s.Buf = Buf
+    s.ByteOffset = ByteOffset
+    s.Length = CLng(Int((CDbl(Length) * CDbl(ElemSize)) / CDbl(newSize)))
+    s.ElemKind = newKind
+    s.ElemSize = newSize
+    Set Reinterpret = s
+  End Function
+End Class
+
+Function ply_span_empty(ByVal elemKind, ByVal elemSize)
+  Dim s
+  Set s = New ply_Span
+  s.ElemKind = elemKind
+  s.ElemSize = elemSize
+  Set ply_span_empty = s
+End Function
+
+Function ply_span_from_buf(ByVal buf, ByVal startIdx, ByVal count)
+  Dim c, s
+  If buf.IsNullArr Then
+    If startIdx <> 0 Or count > 0 Then Err.Raise vbObjectError + 1003, "ArgumentOutOfRangeException", "Span range was out of bounds."
+    Set ply_span_from_buf = ply_span_empty(buf.ElemKind, buf.ElemSize)
+    Exit Function
+  End If
+  If count < 0 Then c = buf.Length - startIdx Else c = count
+  If startIdx < 0 Or c < 0 Or startIdx + c > buf.Length Then Err.Raise vbObjectError + 1003, "ArgumentOutOfRangeException", "Span range was out of bounds."
+  Set s = New ply_Span
+  Set s.Buf = buf
+  s.ByteOffset = CDbl(startIdx) * CDbl(buf.ElemSize)
+  s.Length = CLng(c)
+  s.ElemKind = buf.ElemKind
+  s.ElemSize = buf.ElemSize
+  Set ply_span_from_buf = s
+End Function
+
+Function ply_span_from_arr(ByRef arr, ByVal elemKind, ByVal elemSize, ByVal startIdx, ByVal count)
+  Set ply_span_from_arr = ply_span_from_buf(ply_buf_wrap(arr, elemKind, elemSize), startIdx, count)
+End Function
+
+Function ply_span_stackalloc(ByVal n, ByVal elemKind, ByVal elemSize)
+  Dim arr
+  arr = ply_new_arr(n, 0)
+  Set ply_span_stackalloc = ply_span_from_buf(ply_buf_wrap(arr, elemKind, elemSize), 0, n)
+End Function
+
+Function ply_span_load_e(ByVal sp, ByVal at, ByVal width, ByVal isLittle, ByVal isSigned)
+  Dim i, bi, acc
+  If at < 0 Or at + width > sp.Length Then Err.Raise vbObjectError + 1003, "ArgumentOutOfRangeException", "Index was out of range."
+  acc = 0.0
+  For i = 0 To width - 1
+    If isLittle Then bi = at + i Else bi = at + width - 1 - i
+    acc = acc + CDbl(sp.GetAt(bi)) * (256.0 ^ i)
+  Next
+  If isSigned Then
+    If width = 2 Then ply_span_load_e = ply_i16(acc) Else ply_span_load_e = ply_i32(acc)
+  Else
+    ply_span_load_e = acc
+  End If
+End Function
+
+Sub ply_span_store_e(ByVal sp, ByVal at, ByVal val, ByVal width, ByVal isLittle)
+  Dim i, bi, u
+  If at < 0 Or at + width > sp.Length Then Err.Raise vbObjectError + 1003, "ArgumentOutOfRangeException", "Index was out of range."
+  u = ply_u32(val)
+  For i = 0 To width - 1
+    If isLittle Then bi = at + i Else bi = at + width - 1 - i
+    Call sp.SetAt(bi, CLng(u - Int(u / 256.0) * 256.0))
+    u = Int(u / 256.0)
+  Next
+End Sub
+
+Class ply_Ptr
+  Public Buf
+  Public RegionStart
+  Public RegionBytes
+  Public Offset
+  Private Sub Class_Initialize()
+    Set Buf = Nothing
+    RegionStart = 0.0
+    RegionBytes = 0.0
+    Offset = 0.0
+  End Sub
+End Class
+
+Function ply_ptr_from_buf(ByVal buf, ByVal regionStart, ByVal regionBytes, ByVal offset)
+  Dim p
+  Set p = New ply_Ptr
+  Set p.Buf = buf
+  p.RegionStart = CDbl(regionStart)
+  p.RegionBytes = CDbl(regionBytes)
+  p.Offset = CDbl(offset)
+  Set ply_ptr_from_buf = p
+End Function
+
+Function ply_ptr_pin_span(ByVal sp, ByVal hasIdx, ByVal idx)
+  Dim rBytes
+  rBytes = CDbl(sp.Length) * CDbl(sp.ElemSize)
+  If Not hasIdx Then
+    If sp.Length = 0 Then
+      Set ply_ptr_pin_span = Nothing
+    Else
+      Set ply_ptr_pin_span = ply_ptr_from_buf(sp.Buf, sp.ByteOffset, rBytes, 0.0)
+    End If
+    Exit Function
+  End If
+  If idx < 0 Or idx >= sp.Length Then Err.Raise vbObjectError + 1003, "IndexOutOfRangeException", "Index was outside the bounds of the array."
+  Set ply_ptr_pin_span = ply_ptr_from_buf(sp.Buf, sp.ByteOffset, rBytes, CDbl(idx) * CDbl(sp.ElemSize))
+End Function
+
+Function ply_ptr_pin_buf(ByVal buf, ByVal hasIdx, ByVal idx)
+  Dim rBytes
+  If buf.IsNullArr Then
+    If hasIdx Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+    Set ply_ptr_pin_buf = Nothing
+    Exit Function
+  End If
+  rBytes = CDbl(buf.Length) * CDbl(buf.ElemSize)
+  If Not hasIdx Then
+    If buf.Length = 0 Then
+      Set ply_ptr_pin_buf = Nothing
+    Else
+      Set ply_ptr_pin_buf = ply_ptr_from_buf(buf, 0.0, rBytes, 0.0)
+    End If
+    Exit Function
+  End If
+  If idx < 0 Or idx >= buf.Length Then Err.Raise vbObjectError + 1003, "IndexOutOfRangeException", "Index was outside the bounds of the array."
+  Set ply_ptr_pin_buf = ply_ptr_from_buf(buf, 0.0, rBytes, CDbl(idx) * CDbl(buf.ElemSize))
+End Function
+
+Function ply_ptr_pin_arr(ByRef arr, ByVal elemKind, ByVal elemSize, ByVal hasIdx, ByVal idx)
+  Set ply_ptr_pin_arr = ply_ptr_pin_buf(ply_buf_wrap(arr, elemKind, elemSize), hasIdx, idx)
+End Function
+
+Function ply_ptr_stackalloc(ByVal n, ByVal elemKind, ByVal elemSize)
+  Dim arr, b
+  arr = ply_new_arr(n, 0)
+  Set b = ply_buf_wrap(arr, elemKind, elemSize)
+  Set ply_ptr_stackalloc = ply_ptr_from_buf(b, 0.0, CDbl(n) * CDbl(elemSize), 0.0)
+End Function
+
+Function ply_ptr_add(ByVal p, ByVal delta, ByVal elemSize)
+  If p Is Nothing Then
+    Set ply_ptr_add = ply_ptr_from_buf(Nothing, 0.0, 0.0, CDbl(delta) * CDbl(elemSize))
+  Else
+    Set ply_ptr_add = ply_ptr_from_buf(p.Buf, p.RegionStart, p.RegionBytes, p.Offset + CDbl(delta) * CDbl(elemSize))
+  End If
+End Function
+
+Function ply_ptr_load(ByVal p, ByVal elemKind, ByVal elemSize)
+  If p Is Nothing Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+  If p.Buf Is Nothing Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+  If p.Offset < 0 Or p.Offset > p.RegionBytes - CDbl(elemSize) Then Err.Raise vbObjectError + 1003, "IndexOutOfRangeException", "Index was outside the bounds of the pointer region."
+  ply_ptr_load = ply_raw_read(p.Buf, p.RegionStart + p.Offset, elemKind, elemSize)
+End Function
+
+Sub ply_ptr_store(ByVal p, ByVal v, ByVal elemKind, ByVal elemSize)
+  If p Is Nothing Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+  If p.Buf Is Nothing Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+  If p.Offset < 0 Or p.Offset > p.RegionBytes - CDbl(elemSize) Then Err.Raise vbObjectError + 1003, "IndexOutOfRangeException", "Index was outside the bounds of the pointer region."
+  Call ply_raw_write(p.Buf, p.RegionStart + p.Offset, v, elemKind, elemSize)
+End Sub
+
+Function ply_ptr_same_region(ByVal a, ByVal b)
+  Dim ab, bb
+  If a Is Nothing Then Set ab = Nothing Else Set ab = a.Buf
+  If b Is Nothing Then Set bb = Nothing Else Set bb = b.Buf
+  ply_ptr_same_region = (ab Is bb)
+End Function
+
+Function ply_ptr_pos(ByVal p)
+  If p Is Nothing Then ply_ptr_pos = 0.0 Else ply_ptr_pos = p.RegionStart + p.Offset
+End Function
+
+Function ply_ptr_eq(ByVal a, ByVal b)
+  If Not ply_ptr_same_region(a, b) Then
+    ply_ptr_eq = False
+    Exit Function
+  End If
+  ply_ptr_eq = (ply_ptr_pos(a) = ply_ptr_pos(b))
+End Function
+
+Function ply_ptr_cmp(ByVal a, ByVal b)
+  If Not ply_ptr_same_region(a, b) Then Err.Raise vbObjectError + 1005, "InvalidOperationException", "Cannot compare pointers from different regions."
+  ply_ptr_cmp = ply_ptr_pos(a) - ply_ptr_pos(b)
+End Function
+
+Function ply_ptr_diff(ByVal a, ByVal b, ByVal elemSize)
+  ply_ptr_diff = Fix(ply_ptr_cmp(a, b) / CDbl(elemSize))
+End Function
+
+
+Function ExtractBits(ByVal source, ByVal mask)
+  ExtractBits = ply_u32(ply_pext_u32(source, mask, 32))
+  Exit Function
+End Function
+
+Function SumSlice(ByRef ply_p_data, ByVal offset, ByVal length)
+  Dim data, view, total, ptr, i
+  Set data = ply_buf_wrap(ply_p_data, 5, 4)
+  Set view = ply_span_from_buf(data, offset, length)
+  total = 0
+  Set ptr = ply_ptr_pin_span(view, False, 0)
+  i = 0
+  Do While ((i) < (view.Length))
+    total = ply_i32(CDbl(total) + CDbl(ply_ptr_load(ply_ptr_add(ptr, i, 4), 5, 4)))
+    i = ply_i32(CDbl(i) + CDbl(1))
+  Loop
+  SumSlice = total
+  If Not data.IsNullArr Then ply_p_data = data.Data
+  Exit Function
+  If Not data.IsNullArr Then ply_p_data = data.Data
+End Function
+```
+
+</details>
+
+> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
 
 ## Native Interop (P/Invoke)
 
@@ -16872,6 +23128,44 @@ public static class NativeInteropShowcase {
 ```
 
 </details>
+
+</details>
+
+<details>
+<summary><strong>Python</strong> — <code>py3.8</code>, <code>py3.9</code>, <code>py3.10</code>, <code>py3.11</code>, <code>py3.12</code>, <code>py3.13</code>, <code>py3.14</code> (identical output — <code>native_interop_showcase.py</code>)</summary>
+
+```python
+# NativeInteropShowcase: generated by polypiler. Change the source, not this file.
+# Python profile: py3.8.
+
+from __future__ import annotations
+import ctypes
+from dataclasses import dataclass
+
+__all__ = ["NativePoint", "measure"]
+
+
+@dataclass(frozen=True)
+class NativePoint:
+    x: int = 0
+    y: int = 0
+
+
+class _CtypesNativePoint(ctypes.Structure):
+    _fields_ = [("x", ctypes.c_int32), ("y", ctypes.c_int32)]
+
+
+def _geom_norm(point: NativePoint) -> int:
+    _t1 = ctypes.CDLL("geom")
+    _t2 = getattr(_t1, "geom_norm")
+    _t2.argtypes = [_CtypesNativePoint]
+    _t2.restype = ctypes.c_int32
+    return _t2(_CtypesNativePoint(point.x, point.y))
+
+
+def measure(x: int, y: int) -> int:
+    return _geom_norm(NativePoint(x, y))
+```
 
 </details>
 
@@ -17029,6 +23323,98 @@ pub fn measure(x: i32, y: i32) -> i32 {
 </details>
 
 <details>
+<summary><strong>JVM</strong> — <code>jvm/21</code>, <code>jvm/17</code>, <code>jvm/8</code> (identical output — <code>NativeInteropShowcase.jar</code> (disassembled))</summary>
+
+**`NativeInteropShowcase.jar`** *(disassembled mnemonics)*
+
+```text
+// classfile version 65.0
+public class NativeInteropShowcase {
+  public <init>()V;
+    Code: stack=1, locals=1
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: return
+  static geom_norm(LNativePoint;)I;
+  public static Measure(II)I;
+    Code: stack=4, locals=4
+      0: iconst_0
+      1: istore_2
+      2: iconst_0
+      3: istore_3
+      4: iload_0
+      5: istore_2
+      6: iload_1
+      7: istore_3
+      8: new // class NativePoint
+      11: dup
+      12: iload_2
+      13: iload_3
+      14: invokespecial // Method NativePoint.<init>:(II)V
+      17: invokestatic // Method NativeInteropShowcase.geom_norm:(LNativePoint;)I
+      20: ireturn
+}
+
+// classfile version 65.0
+public final class NativePoint {
+  public I X;
+  public I Y;
+  public <init>()V;
+    Code: stack=1, locals=1
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: return
+  public <init>(II)V;
+    Code: stack=2, locals=3
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: aload_0
+      5: iload_1
+      6: putfield // Field NativePoint.X:I
+      9: aload_0
+      10: iload_2
+      11: putfield // Field NativePoint.Y:I
+      14: return
+  public copy()LNativePoint;;
+    Code: stack=2, locals=2
+      0: aconst_null
+      1: astore_1
+      2: new // class NativePoint
+      5: dup
+      6: invokespecial // Method NativePoint.<init>:()V
+      9: astore_1
+      10: aload_1
+      11: aload_0
+      12: getfield // Field NativePoint.X:I
+      15: putfield // Field NativePoint.X:I
+      18: aload_1
+      19: aload_0
+      20: getfield // Field NativePoint.Y:I
+      23: putfield // Field NativePoint.Y:I
+      26: aload_1
+      27: areturn
+  public static $eq(LNativePoint;LNativePoint;)Z;
+    Code: stack=2, locals=2
+      0: aload_0
+      1: getfield // Field NativePoint.X:I
+      4: aload_1
+      5: getfield // Field NativePoint.X:I
+      8: if_icmpne 24
+      11: aload_0
+      12: getfield // Field NativePoint.Y:I
+      15: aload_1
+      16: getfield // Field NativePoint.Y:I
+      19: if_icmpne 24
+      22: iconst_1
+      23: ireturn
+      24: iconst_0
+      25: ireturn
+}
+```
+
+</details>
+
+<details>
 <summary><strong>C++</strong> — <code>cpp/cpp17</code>, <code>cpp/cpp20</code>, <code>cpp/cpp23</code> (identical output — <code>native_interop_showcase.cpp</code>, <code>native_interop_showcase.hpp</code>)</summary>
 
 **`native_interop_showcase.cpp`**
@@ -17043,7 +23429,7 @@ extern "C" {
 }
 
 
-std::int32_t measure([[maybe_unused]] std::int32_t x, [[maybe_unused]] std::int32_t y) {
+std::int32_t measure(std::int32_t x, std::int32_t y) {
   return geom_norm(NativePoint{x, y});
 }
 
@@ -17076,7 +23462,7 @@ std::int32_t measure(std::int32_t x, std::int32_t y);
 
 </details>
 
-> **Refused by:** `javascript` (`es5`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es5' cannot call; --bind geom=<module or global> supplies a binding; `es2015`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2015' cannot call; --bind geom=<module or global> supplies a binding; `es2017`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2017' cannot call; --bind geom=<module or global> supplies a binding; `es2020`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2020' cannot call; --bind geom=<module or global> supplies a binding; `es2022`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2022' cannot call; --bind geom=<module or global> supplies a binding); `python` (`py3.8`: `PLY1851`: 'the native call of geom_norm (geom)' cannot be expressed in Python profile 'py3.8' (function 'Measure'); `py3.9`: `PLY1851`: 'the native call of geom_norm (geom)' cannot be expressed in Python profile 'py3.9' (function 'Measure'); `py3.10`: `PLY1851`: 'the native call of geom_norm (geom)' cannot be expressed in Python profile 'py3.10' (function 'Measure'); `py3.11`: `PLY1851`: 'the native call of geom_norm (geom)' cannot be expressed in Python profile 'py3.11' (function 'Measure'); `py3.12`: `PLY1851`: 'the native call of geom_norm (geom)' cannot be expressed in Python profile 'py3.12' (function 'Measure'); `py3.13`: `PLY1851`: 'the native call of geom_norm (geom)' cannot be expressed in Python profile 'py3.13' (function 'Measure'); `py3.14`: `PLY1851`: 'the native call of geom_norm (geom)' cannot be expressed in Python profile 'py3.14' (function 'Measure')); `perl` (`PLY1751`: operation 'IrForeignCall' cannot be emitted as Perl); `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile); `jvm` (`PLY3151`: declared type 'NativePoint' (IrStructType) is not supported by the JVM backend); `vbscript` (`PLY2650`: construct 'foreign function 'geom_norm'' cannot be emitted as VBScript)
+> **Refused by:** `javascript` (`es5`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es5' cannot call; --bind geom=<module or global> supplies a binding; `es2015`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2015' cannot call; --bind geom=<module or global> supplies a binding; `es2017`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2017' cannot call; --bind geom=<module or global> supplies a binding; `es2020`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2020' cannot call; --bind geom=<module or global> supplies a binding; `es2022`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2022' cannot call; --bind geom=<module or global> supplies a binding); `perl` (`PLY1751`: operation 'IrForeignCall' cannot be emitted as Perl); `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile); `vbscript` (`PLY2650`: construct 'foreign function 'geom_norm'' cannot be emitted as VBScript)
 
 ## User-Defined Operator Overloading (Boundary)
 
