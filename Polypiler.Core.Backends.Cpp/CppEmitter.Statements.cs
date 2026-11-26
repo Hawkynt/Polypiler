@@ -113,6 +113,11 @@ public static partial class CppEmitter {
           this.EmitUsing(@using, text, indent);
           break;
 
+        case IrWriteLine write:
+          this._sourceIncludes.Add("<iostream>");
+          text.Append(pad).Append("std::cout << ").Append(this.EmitExpr(write.Value)).Append(" << '\\n';\n");
+          break;
+
         default:
           this.ReportUnsupportedConstruct(statement.GetType().Name);
           break;

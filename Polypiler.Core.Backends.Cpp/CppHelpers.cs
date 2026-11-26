@@ -59,6 +59,9 @@ internal static class CppHelpers {
   public const string ListInsert = "ply_list_insert";
   public const string ListRemoveAt = "ply_list_remove_at";
   public const string ListIndexOf = "ply_list_index_of";
+  public const string GenericCompare = "ply_compare";
+  public const string FormatFloat = "ply_format_float";
+  public const string ToUtf16 = "ply_to_u16";
 
   public sealed record HelperSpec(string Code, string[] Headers);
 
@@ -71,7 +74,8 @@ internal static class CppHelpers {
     StrCodeUnitAt, StrFromCodeUnits, StrToCodeUnits, StrRepeat, StrSubstring,
     StrCompare, StrIndexOf, StrLastIndexOf, StrStartsWith, StrEndsWith,
     StrReplaceAll, StrReplaceFirst, StrSplit, StrJoin, StrTrim, StrPad,
-    ListRemoveLast, ListInsert, ListRemoveAt, ListIndexOf
+    ListRemoveLast, ListInsert, ListRemoveAt, ListIndexOf,
+    GenericCompare, FormatFloat, ToUtf16
   ];
 
   private static readonly Dictionary<string, HelperSpec> _specs = new(StringComparer.Ordinal) {
@@ -727,7 +731,89 @@ internal static class CppHelpers {
         }
         return -1;
       }
-      """, ["<cmath>", "<cstddef>", "<cstdint>", "<type_traits>", "<vector>"])
+      """, ["<cmath>", "<cstddef>", "<cstdint>", "<type_traits>", "<vector>"]),
+
+    [GenericCompare] = new("""
+      template <typename T>
+      std::int32_t ply_compare(const T& a, const T& b) {
+        if constexpr (std::is_floating_point_v<T>) {
+          if (a < b) return -1;
+          if (a > b) return 1;
+          if (a == b) return 0;
+          return std::isnan(a) ? (std::isnan(b) ? 0 : -1) : 1;
+        } else if constexpr (std::is_same_v<T, std::string>) {
+          const int c = a.compare(b);
+          return c < 0 ? -1 : (c > 0 ? 1 : 0);
+        } else if constexpr (std::is_same_v<T, std::optional<std::string>>) {
+          if (!a.has_value()) return b.has_value() ? -1 : 0;
+          if (!b.has_value()) return 1;
+          const int c = a->compare(*b);
+          return c < 0 ? -1 : (c > 0 ? 1 : 0);
+        } else if constexpr (std::is_integral_v<T> && !std::is_same_v<T, bool> && sizeof(T) < 4) {
+          return static_cast<std::int32_t>(a) - static_cast<std::int32_t>(b);
+        } else {
+          return a < b ? -1 : (a > b ? 1 : 0);
+        }
+      }
+      """, ["<cmath>", "<cstdint>", "<optional>", "<string>", "<type_traits>"]),
+
+    [FormatFloat] = new("""
+      template <typename T, bool DotNet>
+      std::string ply_format_float(T value) {
+        if (std::isnan(value))
+          return "NaN";
+        if (std::isinf(value))
+          return value < T{0} ? "-Infinity" : "Infinity";
+        if (value == T{0})
+          return (DotNet && std::signbit(value)) ? "-0" : "0";
+        std::ostringstream oss;
+        oss.imbue(std::locale::classic());
+        oss << std::setprecision(std::is_same_v<T, float> ? 7 : 15) << value;
+        std::string out = oss.str();
+        if constexpr (DotNet) {
+          for (char& ch : out)
+            if (ch == 'e')
+              ch = 'E';
+        }
+        return out;
+      }
+      """, ["<cmath>", "<iomanip>", "<locale>", "<sstream>", "<string>", "<type_traits>"]),
+
+    [ToUtf16] = new("""
+      std::u16string ply_to_u16(const std::string& s) {
+        std::u16string out;
+        out.reserve(s.size());
+        std::size_t i = 0;
+        while (i < s.size()) {
+          const auto b0 = static_cast<unsigned char>(s[i++]);
+          std::uint32_t cp = b0;
+          if ((b0 & 0xF8u) == 0xF0u && i + 2 < s.size()
+              && (static_cast<unsigned char>(s[i]) & 0xC0u) == 0x80u
+              && (static_cast<unsigned char>(s[i + 1]) & 0xC0u) == 0x80u
+              && (static_cast<unsigned char>(s[i + 2]) & 0xC0u) == 0x80u) {
+            cp = ((b0 & 0x07u) << 18) | ((static_cast<unsigned char>(s[i]) & 0x3Fu) << 12) | ((static_cast<unsigned char>(s[i + 1]) & 0x3Fu) << 6) | (static_cast<unsigned char>(s[i + 2]) & 0x3Fu);
+            i += 3;
+          } else if ((b0 & 0xF0u) == 0xE0u && i + 1 < s.size()
+              && (static_cast<unsigned char>(s[i]) & 0xC0u) == 0x80u
+              && (static_cast<unsigned char>(s[i + 1]) & 0xC0u) == 0x80u) {
+            cp = ((b0 & 0x0Fu) << 12) | ((static_cast<unsigned char>(s[i]) & 0x3Fu) << 6) | (static_cast<unsigned char>(s[i + 1]) & 0x3Fu);
+            i += 2;
+          } else if ((b0 & 0xE0u) == 0xC0u && i < s.size()
+              && (static_cast<unsigned char>(s[i]) & 0xC0u) == 0x80u) {
+            cp = ((b0 & 0x1Fu) << 6) | (static_cast<unsigned char>(s[i]) & 0x3Fu);
+            i += 1;
+          }
+          if (cp > 0xFFFFu) {
+            cp -= 0x10000u;
+            out.push_back(static_cast<char16_t>(0xD800u | (cp >> 10)));
+            out.push_back(static_cast<char16_t>(0xDC00u | (cp & 0x3FFu)));
+          } else {
+            out.push_back(static_cast<char16_t>(cp));
+          }
+        }
+        return out;
+      }
+      """, ["<cstddef>", "<cstdint>", "<string>"])
   };
 
   /// <summary>Returns the helper specification for a helper name.</summary>

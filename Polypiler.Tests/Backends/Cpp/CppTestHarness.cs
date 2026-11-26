@@ -115,6 +115,17 @@ internal static class CppTestHarness {
     return result.Module!;
   }
 
+  public static IrModule ImportShowcase(string fileName) {
+    var dir = new DirectoryInfo(AppContext.BaseDirectory);
+    while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "Polypiler.slnx")))
+      dir = dir.Parent;
+    Assert.That(dir, Is.Not.Null, "Could not locate repository root containing Polypiler.slnx.");
+    var path = Path.Combine(dir!.FullName, "docs", "showcase", fileName);
+    var result = CSharpFrontend.Import(fileName, File.ReadAllText(path));
+    Assert.That(result.Diagnostics, Is.Empty, () => string.Join("\n", result.Diagnostics));
+    return result.Module!;
+  }
+
   public static object? Eval(IrModule module, string function, params object[] arguments)
     => IrInterpreter.Call(module, function, arguments);
 
@@ -144,7 +155,7 @@ internal static class CppTestHarness {
   /// <paramref name="driverCpp"/> using <c>g++</c>/<c>clang++ -std=c++XX -Wall -Wextra -Werror</c>,
   /// runs the resulting native executable, and returns its standard output.
   /// </summary>
-  public static string CompileAndRun(IrModule module, CppProfile profile, string driverCpp, CppEmitOptions? options = null) {
+  public static string CompileAndRun(IrModule module, CppProfile profile, string driverCpp, CppEmitOptions? options = null, string? companionCpp = null) {
     var files = CppEmitter.Emit(module, profile, options);
     Assert.That(files, Has.Count.EqualTo(2));
     var compiler = _compiler.Value;
@@ -169,7 +180,14 @@ internal static class CppTestHarness {
         _ => "-std=c++23"
       };
       var exePath = Path.Combine(dir, OperatingSystem.IsWindows() ? "runner.exe" : "runner");
-      var compile = RunProcess(compiler, [stdFlag, "-Wall", "-Wextra", "-Werror", "-O1", "-o", exePath, Path.Combine(dir, cppFile), driverPath], dir);
+      var compilerArgs = new List<string> { stdFlag, "-Wall", "-Wextra", "-Werror", "-O1", "-o", exePath, Path.Combine(dir, cppFile), driverPath };
+      if (companionCpp is not null) {
+        var companionPath = Path.Combine(dir, "companion.cpp");
+        File.WriteAllText(companionPath, companionCpp);
+        compilerArgs.Add(companionPath);
+      }
+
+      var compile = RunProcess(compiler, [.. compilerArgs], dir);
       if (compile.ExitCode != 0) {
         var hpp = files.First(f => f.Path.EndsWith(".hpp", StringComparison.Ordinal)).Content;
         var cpp = files.First(f => f.Path.EndsWith(".cpp", StringComparison.Ordinal)).Content;
@@ -188,10 +206,10 @@ internal static class CppTestHarness {
   }
 
   /// <summary>Runs <see cref="CompileAndRun"/> across all three C++ standards (C++17, C++20, C++23).</summary>
-  public static void CompileAndRunAllStandards(IrModule module, string driverCpp, Action<string>? assertOutput = null, CppEmitOptions? options = null) {
+  public static void CompileAndRunAllStandards(IrModule module, string driverCpp, Action<string>? assertOutput = null, CppEmitOptions? options = null, string? companionCpp = null) {
     foreach (var profile in AllProfiles) {
       var legalized = Legalize(module, profile);
-      var stdout = CompileAndRun(legalized, profile, driverCpp, options);
+      var stdout = CompileAndRun(legalized, profile, driverCpp, options, companionCpp);
       assertOutput?.Invoke(stdout);
     }
   }

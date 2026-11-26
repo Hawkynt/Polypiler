@@ -32,6 +32,7 @@ public static partial class CppEmitter {
         IrFieldLoad fieldLoad => this.EmitFieldLoad(fieldLoad),
         IrStructEquals structEquals => this.EmitStructEquals(structEquals),
         IrNew objNew => this.EmitObjectNew(objNew),
+        IrNull n when n.Type == IrType.String => this.EmitStringLiteral(""),
         IrNull => "nullptr",
         IrMethodCall methodCall => this.EmitMethodCall(methodCall),
         IrReferenceEquals refEq => $"({this.EmitExpr(refEq.Left)} == {this.EmitExpr(refEq.Right)})",
@@ -46,6 +47,8 @@ public static partial class CppEmitter {
         IrTypeTest typeTest => this.EmitTypeTest(typeTest),
         IrCast cast => this.EmitCast(cast),
         IrAsCast asCast => this.EmitAsCast(asCast),
+        IrGenericCompare genericCompare => this.EmitGenericCompare(genericCompare),
+        IrForeignCall foreignCall => this.EmitForeignCall(foreignCall),
         _ => this.ReportUnsupportedConstruct(expression.GetType().Name)
       };
     }
@@ -543,6 +546,25 @@ public static partial class CppEmitter {
           this._sourceIncludes.Add("<cstdint>");
           return $"static_cast<std::int64_t>((static_cast<std::uint64_t>({args[0]}) << 32) | static_cast<std::uint64_t>({args[1]}))";
 
+        case IrIntrinsicOp.FormatDotNet or IrIntrinsicOp.FormatEcma: {
+          var argType = intrinsic.Arguments[0].Type;
+          if (argType.IsFloat) {
+            this.UseHelper(CppHelpers.FormatFloat);
+            var dotnet = intrinsic.Op == IrIntrinsicOp.FormatDotNet ? "true" : "false";
+            return $"{CppHelpers.FormatFloat}<{this.CppType(argType, inHeader: false)}, {dotnet}>({args[0]})";
+          }
+          this._sourceIncludes.Add("<string>");
+          return $"std::to_string({args[0]})";
+        }
+
+        case IrIntrinsicOp.FormatBoolDotNet:
+          this._sourceIncludes.Add("<string>");
+          return $"({args[0]} ? std::string(\"True\") : std::string(\"False\"))";
+
+        case IrIntrinsicOp.FormatBoolEcma:
+          this._sourceIncludes.Add("<string>");
+          return $"({args[0]} ? std::string(\"true\") : std::string(\"false\"))";
+
         default:
           return this.ReportUnsupportedIntrinsic(intrinsic.Op);
       }
@@ -715,6 +737,94 @@ public static partial class CppEmitter {
           return this.ReportUnsupportedConstruct(collection.Op.ToString());
       }
     }
+
+    private string EmitGenericCompare(IrGenericCompare cmp) {
+      this.UseHelper(CppHelpers.GenericCompare);
+      return $"{CppHelpers.GenericCompare}({this.EmitExpr(cmp.Left)}, {this.EmitExpr(cmp.Right)})";
+    }
+
+    private string EmitForeignCall(IrForeignCall call) {
+      var fn = this._foreignMap[call.Function];
+      var pre = new System.Text.StringBuilder();
+      var post = new System.Text.StringBuilder();
+      var args = new string[call.Arguments.Count];
+
+      for (var i = 0; i < call.Arguments.Count; ++i) {
+        var param = fn.Parameters[i];
+        var raw = this.EmitExpr(call.Arguments[i]);
+        args[i] = this.MarshalForeignArg(param, raw, pre, post);
+      }
+
+      var rawCall = $"{fn.Symbol}({string.Join(", ", args)})";
+      var marshalledResult = call.Type == IrType.Void
+        ? rawCall
+        : this.MarshalForeignResult(call.Type, fn.Result, rawCall);
+
+      if (pre.Length == 0 && post.Length == 0)
+        return marshalledResult;
+
+      if (call.Type == IrType.Void)
+        return $"[&]() {{ {pre}{rawCall}; {post}}}()";
+
+      var retVar = this.Temp("ply_fr");
+      return $"[&]() {{ {pre}auto {retVar} = {marshalledResult}; {post}return {retVar}; }}()";
+    }
+
+    private string MarshalForeignArg(IrForeignParameter param, string expr, System.Text.StringBuilder pre, System.Text.StringBuilder post) {
+      var marshal = param.Marshal;
+      switch (marshal.Kind) {
+        case IrMarshalKind.Blittable:
+          if (marshal.NativeSize) {
+            this._sourceIncludes.Add("<cstdint>");
+            var native = param.Type == IrType.I64 ? "std::intptr_t" : "std::uintptr_t";
+            return $"static_cast<{native}>({expr})";
+          }
+          return expr;
+
+        case IrMarshalKind.Bool: {
+          var cType = this.ForeignCppType(param.Type, marshal, inHeader: false);
+          return $"static_cast<{cType}>(({expr}) ? 1 : 0)";
+        }
+
+        case IrMarshalKind.String:
+          if (marshal.Encoding == IrStringEncoding.Unicode) {
+            this.UseHelper(CppHelpers.ToUtf16);
+            return $"{CppHelpers.ToUtf16}({expr}).c_str()";
+          }
+          return $"({expr}).c_str()";
+
+        case IrMarshalKind.Array:
+          return $"({expr}).data()";
+
+        case IrMarshalKind.ByRef:
+          if (!marshal.NativeSize)
+            return $"({expr}).data()";
+          this._sourceIncludes.Add("<cstdint>");
+          var elem = param.Type.Element!;
+          var nativeElem = elem == IrType.I64 ? "std::intptr_t" : "std::uintptr_t";
+          var arrVar = this.Temp("ply_br");
+          var valVar = this.Temp("ply_bv");
+          pre.Append("auto& ").Append(arrVar).Append(" = ").Append(expr).Append("; ")
+            .Append(nativeElem).Append(' ').Append(valVar).Append(" = static_cast<").Append(nativeElem).Append(">(").Append(arrVar).Append("[0]); ");
+          if (marshal.Direction != IrMarshalDirection.In)
+            post.Append(arrVar).Append("[0] = static_cast<").Append(this.CppType(elem, inHeader: false)).Append(">(").Append(valVar).Append("); ");
+          return $"&{valVar}";
+
+        case IrMarshalKind.Struct:
+          return expr;
+
+        default:
+          this._sourceIncludes.Add("<cstdint>");
+          return $"static_cast<std::intptr_t>({expr})";
+      }
+    }
+
+    private string MarshalForeignResult(IrType type, IrMarshal marshal, string callExpr) => marshal.Kind switch {
+      IrMarshalKind.Bool => $"({callExpr} != 0)",
+      IrMarshalKind.Handle => $"static_cast<std::int64_t>({callExpr})",
+      IrMarshalKind.Blittable when marshal.NativeSize => $"static_cast<{this.CppType(type, inHeader: false)}>({callExpr})",
+      _ => callExpr
+    };
 
     private string UnwrapEnum(IrType type, string expr)
       => type.IsEnum ? $"static_cast<{this.CppType(type.Integral, inHeader: false)}>({expr})" : expr;

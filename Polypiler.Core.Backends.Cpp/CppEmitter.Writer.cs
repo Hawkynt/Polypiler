@@ -20,6 +20,7 @@ public static partial class CppEmitter {
     private readonly HashSet<string> _usedHelpers = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _functionNames = new(StringComparer.Ordinal);
     private readonly Dictionary<string, IrFunction> _functionMap = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, IrForeignFunction> _foreignMap = new(StringComparer.Ordinal);
     private readonly Dictionary<IrFunction, ParamMode[]> _paramModes = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<IrModuleConst, string> _constNames = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<IrGlobal, string> _globalNames = new(ReferenceEqualityComparer.Instance);
@@ -40,6 +41,9 @@ public static partial class CppEmitter {
       this._functionMap.Clear();
       foreach (var fn in module.Functions)
         this._functionMap[fn.Name] = fn;
+      this._foreignMap.Clear();
+      foreach (var foreign in module.ForeignFunctions)
+        this._foreignMap[foreign.Name] = foreign;
 
       var stem = CppNaming.FileStem(module.Name);
       var ns = CppNaming.Namespace(module.Name, this._options.Namespace);
@@ -56,14 +60,17 @@ public static partial class CppEmitter {
       this.PropagateMutRefParamModes(freeFunctions);
 
       // Emit header declarations
+      var declaredForeigns = new HashSet<string>(StringComparer.Ordinal);
       var headerBody = new StringBuilder();
       this.EmitHeaderEnums(module, headerBody);
       this.EmitHeaderStructs(module, headerBody);
       this.EmitHeaderClassesAndInterfaces(module, headerBody);
+      this.EmitForeignDeclarations(module.ForeignFunctions.Where(f => f.IsPublic), declaredForeigns, headerBody, inHeader: true);
       this.EmitHeaderFunctionDeclarations(freeFunctions, headerBody);
 
       // Emit implementation bodies
       var privateDecls = new StringBuilder();
+      this.EmitForeignDeclarations(module.ForeignFunctions.Where(f => !f.IsPublic), declaredForeigns, privateDecls, inHeader: false);
       var privateBodies = new StringBuilder();
       var publicBodies = new StringBuilder();
 
@@ -217,7 +224,7 @@ public static partial class CppEmitter {
           var reassigned = IsLocalReassigned(fn.Body, p);
           if (reassigned)
             modes[i] = ParamMode.Value;
-          else if (IsCollectionMutated(fn.Body, p))
+          else if (this.IsCollectionMutated(fn.Body, p))
             modes[i] = ParamMode.MutRef;
           else
             modes[i] = ParamMode.ConstRef;
@@ -248,6 +255,9 @@ public static partial class CppEmitter {
     private void EmitHeaderStructs(IrModule module, StringBuilder text) {
       foreach (var st in module.Types.OfType<IrStructType>()) {
         var name = this._typeNames[st];
+        var packed = st.Layout is { Kind: IrLayoutKind.Sequential, Pack: > 0 };
+        if (packed)
+          text.Append("#pragma pack(push, ").Append(st.Layout!.Pack.ToString(CultureInfo.InvariantCulture)).Append(")\n");
         text.Append("struct ").Append(name).Append(" {\n");
         foreach (var field in st.Fields) {
           var ftype = this.CppType(field.Type, inHeader: true);
@@ -277,7 +287,71 @@ public static partial class CppEmitter {
         }
         text.Append("  }\n");
         text.Append("  bool operator!=(const ").Append(name).Append("& other) const { return !(*this == other); }\n");
-        text.Append("};\n\n");
+        text.Append("};\n");
+        if (packed)
+          text.Append("#pragma pack(pop)\n");
+        text.Append('\n');
+      }
+    }
+
+    private void EmitForeignDeclarations(IEnumerable<IrForeignFunction> foreigns, HashSet<string> declaredSymbols, StringBuilder text, bool inHeader) {
+      var unique = foreigns.Where(f => declaredSymbols.Add(f.Symbol)).ToList();
+      if (unique.Count == 0)
+        return;
+
+      text.Append("extern \"C\" {\n");
+      foreach (var fn in unique) {
+        var ret = fn.ReturnType == IrType.Void ? "void" : this.ForeignCppType(fn.ReturnType, fn.Result, inHeader);
+        var parms = string.Join(", ", fn.Parameters.Select(p =>
+          $"{this.ForeignCppType(p.Type, p.Marshal, inHeader)} {CppNaming.Identifier(p.Name, "p")}"));
+        text.Append("  ").Append(ret).Append(' ').Append(fn.Symbol).Append('(').Append(parms).Append(");\n");
+      }
+      text.Append("}\n\n");
+    }
+
+    private string ForeignCppType(IrType type, IrMarshal marshal, bool inHeader) {
+      var includes = inHeader ? this._headerIncludes : this._sourceIncludes;
+      switch (marshal.Kind) {
+        case IrMarshalKind.Blittable:
+          if (marshal.NativeSize) {
+            includes.Add("<cstdint>");
+            return type == IrType.I64 ? "std::intptr_t" : "std::uintptr_t";
+          }
+          return this.CppType(type, inHeader);
+
+        case IrMarshalKind.Bool:
+          includes.Add("<cstdint>");
+          return marshal.BoolForm switch {
+            IrBoolForm.U1 => "std::uint8_t",
+            IrBoolForm.I1 => "std::int8_t",
+            _ => "std::int32_t"
+          };
+
+        case IrMarshalKind.String:
+          return marshal.Encoding == IrStringEncoding.Unicode ? "const char16_t*" : "const char*";
+
+        case IrMarshalKind.Array: {
+          var elem = this.CppType(type.Element!, inHeader);
+          return marshal.Direction == IrMarshalDirection.In ? $"const {elem}*" : $"{elem}*";
+        }
+
+        case IrMarshalKind.ByRef: {
+          string elem;
+          if (marshal.NativeSize) {
+            includes.Add("<cstdint>");
+            elem = type.Element == IrType.I64 ? "std::intptr_t" : "std::uintptr_t";
+          } else {
+            elem = this.CppType(type.Element!, inHeader);
+          }
+          return marshal.Direction == IrMarshalDirection.In ? $"const {elem}*" : $"{elem}*";
+        }
+
+        case IrMarshalKind.Struct:
+          return this._typeNames[type.StructType!];
+
+        default:
+          includes.Add("<cstdint>");
+          return "std::intptr_t";
       }
     }
 
@@ -503,7 +577,7 @@ public static partial class CppEmitter {
       return false;
     }
 
-    private static bool IsCollectionMutated(IrBlock body, IrLocal local) {
+    private bool IsCollectionMutated(IrBlock body, IrLocal local) {
       foreach (var stmt in AllStatements(body)) {
         if (stmt is IrStore { Array: IrLocalRef r } && r.Local == local)
           return true;
@@ -518,6 +592,11 @@ public static partial class CppEmitter {
             return true;
           if (expr is IrStep { Target: IrArrayLoad { Array: IrLocalRef sr } } && sr.Local == local)
             return true;
+          if (expr is IrForeignCall fcall && this._foreignMap.TryGetValue(fcall.Function, out var ffn)) {
+            for (var i = 0; i < fcall.Arguments.Count; ++i)
+              if (fcall.Arguments[i] is IrLocalRef flr && flr.Local == local && ffn.Parameters[i].Marshal.Direction != IrMarshalDirection.In)
+                return true;
+          }
         }
       }
       return false;
