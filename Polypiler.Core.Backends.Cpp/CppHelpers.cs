@@ -62,19 +62,41 @@ internal static class CppHelpers {
   public const string GenericCompare = "ply_compare";
   public const string FormatFloat = "ply_format_float";
   public const string ToUtf16 = "ply_to_u16";
+  public const string PlyTask = "PlyTask";
+  public const string PlySpan = "PlySpan";
+  public const string PlyMap = "PlyMap";
+  public const string PlySet = "PlySet";
+  public const string WhenAll = "ply_when_all_list";
+  public const string NonNullFn = "ply_nonnull_fn";
+  public const string ViewOf = "ply_view_of";
+  public const string ViewSlice = "ply_view_slice";
+  public const string ViewCopy = "ply_view_copy";
+  public const string ViewTryCopy = "ply_view_try_copy";
+  public const string ViewEqual = "ply_view_equal";
+  public const string ViewReinterpret = "ply_view_reinterpret";
+  public const string Pin = "ply_pin";
+  public const string PtrLoad = "ply_ptr_load";
+  public const string PtrStore = "ply_ptr_store";
+  public const string PtrAdd = "ply_ptr_add";
+  public const string Pext = "ply_pext";
+  public const string Pdep = "ply_pdep";
+  public const string ListRemoveLastRef = "ply_list_pop_ref";
 
   public sealed record HelperSpec(string Code, string[] Headers);
 
   public static IReadOnlyList<string> Order { get; } = [
+    PlyTask, PlySpan, PlyMap, PlySet,
     CheckedAdd, CheckedSub, CheckedMul, CheckedNeg, IntDiv, IntRem, ArithShiftRight,
     CheckedConv, FloatToInt, FloatMin, FloatMax, IntAbs, FloatSign, IntSign,
-    BitCast17, Rotl17, Rotr17, Clz17, Ctz17, PopCount17, ByteSwap,
+    BitCast17, Rotl17, Rotr17, Clz17, Ctz17, PopCount17, ByteSwap, Pext, Pdep,
     LoadEndian, StoreEndian, NewArray, ArrayAt, ArrayCopy,
-    Unwrap, NonNull, Cast, ScopeGuard,
+    Unwrap, NonNull, NonNullFn, Cast, ScopeGuard, WhenAll,
+    ViewOf, ViewSlice, ViewCopy, ViewTryCopy, ViewEqual, ViewReinterpret,
+    Pin, PtrLoad, PtrStore, PtrAdd,
     StrCodeUnitAt, StrFromCodeUnits, StrToCodeUnits, StrRepeat, StrSubstring,
     StrCompare, StrIndexOf, StrLastIndexOf, StrStartsWith, StrEndsWith,
     StrReplaceAll, StrReplaceFirst, StrSplit, StrJoin, StrTrim, StrPad,
-    ListRemoveLast, ListInsert, ListRemoveAt, ListIndexOf,
+    ListRemoveLast, ListRemoveLastRef, ListInsert, ListRemoveAt, ListIndexOf,
     GenericCompare, FormatFloat, ToUtf16
   ];
 
@@ -379,8 +401,8 @@ internal static class CppHelpers {
       """, ["<cstddef>", "<type_traits>"]),
 
     [LoadEndian] = new("""
-      template <typename T, bool Little>
-      T ply_load_endian(const std::vector<std::uint8_t>& buf, std::int32_t offset) {
+      template <typename T, bool Little, typename Buf>
+      T ply_load_endian(const Buf& buf, std::int32_t offset) {
         if (offset < 0 || static_cast<std::size_t>(offset) + sizeof(T) > buf.size())
           throw std::out_of_range("index out of range");
         using U = std::conditional_t<sizeof(T) == 2, std::uint16_t,
@@ -398,11 +420,11 @@ internal static class CppHelpers {
           return static_cast<T>(bits);
         }
       }
-      """, ["<cstddef>", "<cstdint>", "<cstring>", "<stdexcept>", "<type_traits>", "<vector>"]),
+      """, ["<cstddef>", "<cstdint>", "<cstring>", "<stdexcept>", "<type_traits>"]),
 
     [StoreEndian] = new("""
-      template <typename T, bool Little>
-      void ply_store_endian(std::vector<std::uint8_t>& buf, std::int32_t offset, T value) {
+      template <typename T, bool Little, typename Buf>
+      void ply_store_endian(Buf&& buf, std::int32_t offset, T value) {
         if (offset < 0 || static_cast<std::size_t>(offset) + sizeof(T) > buf.size())
           throw std::out_of_range("index out of range");
         using U = std::conditional_t<sizeof(T) == 2, std::uint16_t,
@@ -417,7 +439,7 @@ internal static class CppHelpers {
           buf[idx] = static_cast<std::uint8_t>((bits >> (i * 8)) & U{0xFF});
         }
       }
-      """, ["<cstddef>", "<cstdint>", "<cstring>", "<stdexcept>", "<type_traits>", "<vector>"]),
+      """, ["<cstddef>", "<cstdint>", "<cstring>", "<stdexcept>", "<type_traits>"]),
 
     [NewArray] = new("""
       template <typename T>
@@ -429,19 +451,19 @@ internal static class CppHelpers {
       """, ["<cstddef>", "<cstdint>", "<stdexcept>", "<vector>"]),
 
     [ArrayAt] = new("""
-      template <typename T>
-      T& ply_at(std::vector<T>& arr, std::int32_t index) {
+      template <typename C>
+      auto ply_at(C& arr, std::int32_t index) -> decltype(arr[static_cast<std::size_t>(0)]) {
         if (index < 0 || static_cast<std::size_t>(index) >= arr.size())
           throw std::out_of_range("index out of range");
         return arr[static_cast<std::size_t>(index)];
       }
-      template <typename T>
-      const T& ply_at(const std::vector<T>& arr, std::int32_t index) {
+      template <typename C>
+      auto ply_at(const C& arr, std::int32_t index) -> decltype(arr[static_cast<std::size_t>(0)]) {
         if (index < 0 || static_cast<std::size_t>(index) >= arr.size())
           throw std::out_of_range("index out of range");
         return arr[static_cast<std::size_t>(index)];
       }
-      """, ["<cstddef>", "<cstdint>", "<stdexcept>", "<vector>"]),
+      """, ["<cstddef>", "<cstdint>", "<stdexcept>"]),
 
     [ArrayCopy] = new("""
       template <typename T>
@@ -813,7 +835,465 @@ internal static class CppHelpers {
         }
         return out;
       }
-      """, ["<cstddef>", "<cstdint>", "<string>"])
+      """, ["<cstddef>", "<cstdint>", "<string>"]),
+
+    [PlyTask] = new("""
+      template <typename T>
+      struct PlyTask {
+        std::optional<T> value_{};
+        std::exception_ptr error_{};
+
+        static PlyTask from_result(T value) {
+          PlyTask task;
+          task.value_ = std::move(value);
+          return task;
+        }
+
+        static PlyTask from_exception(std::exception_ptr err) {
+          PlyTask task;
+          task.error_ = std::move(err);
+          return task;
+        }
+
+        T await() const {
+          if (this->error_)
+            std::rethrow_exception(this->error_);
+          return *this->value_;
+        }
+      };
+
+      template <>
+      struct PlyTask<void> {
+        std::exception_ptr error_{};
+
+        static PlyTask completed() { return PlyTask{}; }
+
+        static PlyTask from_exception(std::exception_ptr err) {
+          PlyTask task;
+          task.error_ = std::move(err);
+          return task;
+        }
+
+        void await() const {
+          if (this->error_)
+            std::rethrow_exception(this->error_);
+        }
+      };
+      """, ["<exception>", "<optional>", "<utility>"]),
+
+    [WhenAll] = new("""
+      template <typename T>
+      PlyTask<std::vector<T>> ply_when_all_list(std::initializer_list<PlyTask<T>> tasks) {
+        std::vector<T> out;
+        out.reserve(tasks.size());
+        for (const auto& t : tasks) {
+          if (t.error_)
+            return PlyTask<std::vector<T>>::from_exception(t.error_);
+          out.push_back(*t.value_);
+        }
+        return PlyTask<std::vector<T>>::from_result(std::move(out));
+      }
+
+      inline PlyTask<void> ply_when_all_void(std::initializer_list<PlyTask<void>> tasks) {
+        for (const auto& t : tasks) {
+          if (t.error_)
+            return PlyTask<void>::from_exception(t.error_);
+        }
+        return PlyTask<void>::completed();
+      }
+      """, ["<initializer_list>", "<utility>", "<vector>"]),
+
+    [PlySpan] = new("""
+      template <typename T>
+      struct PlySpan {
+        T* data_ = nullptr;
+        std::size_t size_ = 0;
+
+        PlySpan() = default;
+        PlySpan(T* data, std::size_t size) : data_(data), size_(size) {}
+        template <typename U, typename = std::enable_if_t<std::is_convertible_v<U (*)[], T (*)[]>>>
+        PlySpan(std::vector<U>& vec) : data_(vec.data()), size_(vec.size()) {}
+        template <typename U, typename = std::enable_if_t<std::is_convertible_v<const U (*)[], T (*)[]>>>
+        PlySpan(const std::vector<U>& vec) : data_(vec.data()), size_(vec.size()) {}
+        template <typename U, typename = std::enable_if_t<std::is_convertible_v<U (*)[], T (*)[]>>>
+        PlySpan(const PlySpan<U>& other) : data_(other.data()), size_(other.size()) {}
+
+        T* data() const { return this->data_; }
+        std::size_t size() const { return this->size_; }
+        bool empty() const { return this->size_ == 0; }
+        T* begin() const { return this->data_; }
+        T* end() const { return this->data_ + this->size_; }
+        T& operator[](std::size_t index) const { return this->data_[index]; }
+        PlySpan subspan(std::size_t offset, std::size_t count) const { return PlySpan(this->data_ + offset, count); }
+      };
+      """, ["<cstddef>", "<type_traits>", "<vector>"]),
+
+    [PlyMap] = new("""
+      template <typename K, typename V, bool SlotReuse>
+      struct PlyMap {
+        struct Entry {
+          bool occupied = false;
+          K key{};
+          V value{};
+        };
+
+        std::vector<Entry> entries{};
+        std::vector<std::size_t> free_list{};
+        std::size_t count_ = 0;
+
+        static bool key_eq(const K& a, const K& b) {
+          if constexpr (std::is_floating_point_v<K>)
+            return (a == b) || (std::isnan(a) && std::isnan(b));
+          else
+            return a == b;
+        }
+
+        std::size_t find_slot(const K& key) const {
+          for (std::size_t i = 0; i < this->entries.size(); ++i)
+            if (this->entries[i].occupied && key_eq(this->entries[i].key, key))
+              return i;
+          return static_cast<std::size_t>(-1);
+        }
+
+        std::int32_t count() const { return static_cast<std::int32_t>(this->count_); }
+
+        bool contains_key(const K& key) const { return this->find_slot(key) != static_cast<std::size_t>(-1); }
+
+        V& get(const K& key) {
+          const auto slot = this->find_slot(key);
+          if (slot == static_cast<std::size_t>(-1))
+            throw std::out_of_range("key not found");
+          return this->entries[slot].value;
+        }
+
+        const V& get(const K& key) const {
+          const auto slot = this->find_slot(key);
+          if (slot == static_cast<std::size_t>(-1))
+            throw std::out_of_range("key not found");
+          return this->entries[slot].value;
+        }
+
+        std::optional<V> try_get_opt(const K& key) const {
+          const auto slot = this->find_slot(key);
+          if (slot == static_cast<std::size_t>(-1))
+            return std::nullopt;
+          return this->entries[slot].value;
+        }
+
+        V try_get_ref(const K& key) const {
+          const auto slot = this->find_slot(key);
+          if (slot == static_cast<std::size_t>(-1))
+            return V{};
+          return this->entries[slot].value;
+        }
+
+        void insert_new(const K& key, V value) {
+          if constexpr (SlotReuse) {
+            if (!this->free_list.empty()) {
+              const auto slot = this->free_list.back();
+              this->free_list.pop_back();
+              this->entries[slot] = Entry{true, key, std::move(value)};
+              ++this->count_;
+              return;
+            }
+          }
+          this->entries.push_back(Entry{true, key, std::move(value)});
+          ++this->count_;
+        }
+
+        void put(const K& key, V value) {
+          const auto slot = this->find_slot(key);
+          if (slot != static_cast<std::size_t>(-1)) {
+            this->entries[slot].value = std::move(value);
+            return;
+          }
+          this->insert_new(key, std::move(value));
+        }
+
+        void add(const K& key, V value) {
+          if (this->find_slot(key) != static_cast<std::size_t>(-1))
+            throw std::invalid_argument("duplicate key");
+          this->insert_new(key, std::move(value));
+        }
+
+        bool try_add(const K& key, V value) {
+          if (this->find_slot(key) != static_cast<std::size_t>(-1))
+            return false;
+          this->insert_new(key, std::move(value));
+          return true;
+        }
+
+        bool remove(const K& key) {
+          const auto slot = this->find_slot(key);
+          if (slot == static_cast<std::size_t>(-1))
+            return false;
+          this->entries[slot].occupied = false;
+          this->entries[slot].key = K{};
+          this->entries[slot].value = V{};
+          if constexpr (SlotReuse)
+            this->free_list.push_back(slot);
+          --this->count_;
+          return true;
+        }
+
+        void clear() {
+          this->entries.clear();
+          this->free_list.clear();
+          this->count_ = 0;
+        }
+      };
+      """, ["<cmath>", "<cstddef>", "<cstdint>", "<optional>", "<stdexcept>", "<type_traits>", "<utility>", "<vector>"]),
+
+    [PlySet] = new("""
+      template <typename K, bool SlotReuse>
+      struct PlySet {
+        struct Entry {
+          bool occupied = false;
+          K key{};
+        };
+
+        std::vector<Entry> entries{};
+        std::vector<std::size_t> free_list{};
+        std::size_t count_ = 0;
+
+        static bool key_eq(const K& a, const K& b) {
+          if constexpr (std::is_floating_point_v<K>)
+            return (a == b) || (std::isnan(a) && std::isnan(b));
+          else
+            return a == b;
+        }
+
+        std::size_t find_slot(const K& key) const {
+          for (std::size_t i = 0; i < this->entries.size(); ++i)
+            if (this->entries[i].occupied && key_eq(this->entries[i].key, key))
+              return i;
+          return static_cast<std::size_t>(-1);
+        }
+
+        std::int32_t count() const { return static_cast<std::int32_t>(this->count_); }
+
+        bool contains(const K& key) const { return this->find_slot(key) != static_cast<std::size_t>(-1); }
+
+        bool add(const K& key) {
+          if (this->find_slot(key) != static_cast<std::size_t>(-1))
+            return false;
+          if constexpr (SlotReuse) {
+            if (!this->free_list.empty()) {
+              const auto slot = this->free_list.back();
+              this->free_list.pop_back();
+              this->entries[slot] = Entry{true, key};
+              ++this->count_;
+              return true;
+            }
+          }
+          this->entries.push_back(Entry{true, key});
+          ++this->count_;
+          return true;
+        }
+
+        bool remove(const K& key) {
+          const auto slot = this->find_slot(key);
+          if (slot == static_cast<std::size_t>(-1))
+            return false;
+          this->entries[slot].occupied = false;
+          this->entries[slot].key = K{};
+          if constexpr (SlotReuse)
+            this->free_list.push_back(slot);
+          --this->count_;
+          return true;
+        }
+
+        void clear() {
+          this->entries.clear();
+          this->free_list.clear();
+          this->count_ = 0;
+        }
+      };
+      """, ["<cmath>", "<cstddef>", "<cstdint>", "<type_traits>", "<vector>"]),
+
+    [NonNullFn] = new("""
+      template <typename F>
+      const F& ply_nonnull_fn(const F& fn) {
+        if (!fn)
+          throw std::runtime_error("null reference");
+        return fn;
+      }
+      """, ["<stdexcept>"]),
+
+    [ViewOf] = new("""
+      template <typename SpanT, typename Src>
+      SpanT ply_view_of(Src&& src) {
+        using Elem = std::remove_pointer_t<decltype(SpanT{}.data())>;
+        return SpanT(const_cast<Elem*>(src.data()), src.size());
+      }
+      template <typename SpanT, typename Src>
+      SpanT ply_view_of(Src&& src, std::int32_t start) {
+        if (start < 0 || static_cast<std::size_t>(start) > src.size())
+          throw std::out_of_range("slice out of range");
+        using Elem = std::remove_pointer_t<decltype(SpanT{}.data())>;
+        const auto s = static_cast<std::size_t>(start);
+        return SpanT(const_cast<Elem*>(src.data()) + s, src.size() - s);
+      }
+      template <typename SpanT, typename Src>
+      SpanT ply_view_of(Src&& src, std::int32_t start, std::int32_t length) {
+        if (start < 0 || length < 0 || static_cast<std::size_t>(start) + static_cast<std::size_t>(length) > src.size())
+          throw std::out_of_range("slice out of range");
+        using Elem = std::remove_pointer_t<decltype(SpanT{}.data())>;
+        return SpanT(const_cast<Elem*>(src.data()) + static_cast<std::size_t>(start), static_cast<std::size_t>(length));
+      }
+      """, ["<cstddef>", "<cstdint>", "<stdexcept>", "<type_traits>"]),
+
+    [ViewSlice] = new("""
+      template <typename SpanT>
+      SpanT ply_view_slice(SpanT view, std::int32_t start) {
+        if (start < 0 || static_cast<std::size_t>(start) > view.size())
+          throw std::out_of_range("slice out of range");
+        const auto s = static_cast<std::size_t>(start);
+        return view.subspan(s, view.size() - s);
+      }
+      template <typename SpanT>
+      SpanT ply_view_slice(SpanT view, std::int32_t start, std::int32_t length) {
+        if (start < 0 || length < 0 || static_cast<std::size_t>(start) + static_cast<std::size_t>(length) > view.size())
+          throw std::out_of_range("slice out of range");
+        return view.subspan(static_cast<std::size_t>(start), static_cast<std::size_t>(length));
+      }
+      """, ["<cstddef>", "<cstdint>", "<stdexcept>"]),
+
+    [ViewCopy] = new("""
+      template <typename SrcSpan, typename DstSpan>
+      void ply_view_copy(SrcSpan src, DstSpan dst) {
+        if (src.size() > dst.size())
+          throw std::invalid_argument("destination too short");
+        if (src.size() > 0)
+          std::memmove(dst.data(), src.data(), src.size() * sizeof(*src.data()));
+      }
+      """, ["<cstring>", "<stdexcept>"]),
+
+    [ViewTryCopy] = new("""
+      template <typename SrcSpan, typename DstSpan>
+      bool ply_view_try_copy(SrcSpan src, DstSpan dst) {
+        if (src.size() > dst.size())
+          return false;
+        if (src.size() > 0)
+          std::memmove(dst.data(), src.data(), src.size() * sizeof(*src.data()));
+        return true;
+      }
+      """, ["<cstring>"]),
+
+    [ViewEqual] = new("""
+      template <typename LeftSpan, typename RightSpan>
+      bool ply_view_equal(LeftSpan a, RightSpan b) {
+        if (a.size() != b.size())
+          return false;
+        for (std::size_t i = 0; i < a.size(); ++i) {
+          using E = std::decay_t<decltype(a[i])>;
+          if constexpr (std::is_floating_point_v<E>) {
+            if (!(a[i] == b[i] || (std::isnan(a[i]) && std::isnan(b[i]))))
+              return false;
+          } else {
+            if (a[i] != b[i])
+              return false;
+          }
+        }
+        return true;
+      }
+      """, ["<cmath>", "<cstddef>", "<type_traits>"]),
+
+    [ViewReinterpret] = new("""
+      template <typename DstSpan, typename SrcSpan>
+      DstSpan ply_view_reinterpret(SrcSpan src) {
+        using DstElem = std::remove_pointer_t<decltype(DstSpan{}.data())>;
+        using SrcElem = std::remove_pointer_t<decltype(src.data())>;
+        const std::size_t total_bytes = src.size() * sizeof(SrcElem);
+        return DstSpan(reinterpret_cast<DstElem*>(src.data()), total_bytes / sizeof(DstElem));
+      }
+      """, ["<cstddef>", "<type_traits>"]),
+
+    [Pin] = new("""
+      template <typename T, typename Src>
+      T* ply_pin(Src&& src) {
+        return src.empty() ? nullptr : const_cast<T*>(src.data());
+      }
+      template <typename T, typename Src>
+      T* ply_pin(Src&& src, std::int32_t index) {
+        if (index < 0 || static_cast<std::size_t>(index) >= src.size())
+          throw std::out_of_range("index out of range");
+        return const_cast<T*>(src.data() + static_cast<std::size_t>(index));
+      }
+      """, ["<cstddef>", "<cstdint>", "<stdexcept>"]),
+
+    [PtrLoad] = new("""
+      template <typename T>
+      T ply_ptr_load(const T* ptr) {
+        if (ptr == nullptr)
+          throw std::runtime_error("null reference");
+        return *ptr;
+      }
+      """, ["<stdexcept>"]),
+
+    [PtrStore] = new("""
+      template <typename T>
+      void ply_ptr_store(T* ptr, T value) {
+        if (ptr == nullptr)
+          throw std::runtime_error("null reference");
+        *ptr = value;
+      }
+      """, ["<stdexcept>"]),
+
+    [PtrAdd] = new("""
+      template <typename T>
+      T* ply_ptr_add(T* ptr, std::int32_t offset) {
+        return offset == 0 ? ptr : ptr + static_cast<std::ptrdiff_t>(offset);
+      }
+      """, ["<cstddef>", "<cstdint>"]),
+
+    [Pext] = new("""
+      template <typename T>
+      T ply_pext(T source, T mask) {
+        using U = std::make_unsigned_t<T>;
+        const U src = static_cast<U>(source);
+        U m = static_cast<U>(mask);
+        U res = 0;
+        U bit = 1;
+        while (m != 0) {
+          const U lsb = m & static_cast<U>(U{0} - m);
+          if ((src & lsb) != 0)
+            res |= bit;
+          m ^= lsb;
+          bit <<= 1;
+        }
+        return static_cast<T>(res);
+      }
+      """, ["<type_traits>"]),
+
+    [Pdep] = new("""
+      template <typename T>
+      T ply_pdep(T source, T mask) {
+        using U = std::make_unsigned_t<T>;
+        U src = static_cast<U>(source);
+        U m = static_cast<U>(mask);
+        U res = 0;
+        while (m != 0) {
+          const U lsb = m & static_cast<U>(U{0} - m);
+          if ((src & U{1}) != 0)
+            res |= lsb;
+          m ^= lsb;
+          src >>= 1;
+        }
+        return static_cast<T>(res);
+      }
+      """, ["<type_traits>"]),
+
+    [ListRemoveLastRef] = new("""
+      template <typename T>
+      T ply_list_pop_ref(std::vector<T>& list) {
+        if (list.empty())
+          return nullptr;
+        T value = std::move(list.back());
+        list.pop_back();
+        return value;
+      }
+      """, ["<utility>", "<vector>"])
   };
 
   /// <summary>Returns the helper specification for a helper name.</summary>
