@@ -54,6 +54,7 @@
     <ProjectReference Include="..\Polypiler.Core\Polypiler.Core.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Analysis\Polypiler.Core.Analysis.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Backends.Batch\Polypiler.Core.Backends.Batch.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Backends.Cpp\Polypiler.Core.Backends.Cpp.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Backends.CSharp\Polypiler.Core.Backends.CSharp.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Backends.JavaScript\Polypiler.Core.Backends.JavaScript.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Backends.Jvm\Polypiler.Core.Backends.Jvm.csproj" />
@@ -63,6 +64,7 @@
     <ProjectReference Include="..\Polypiler.Core.Backends.Rust\Polypiler.Core.Backends.Rust.csproj" />
     <ProjectReference Include="..\Polypiler.Core.BinaryFormats\Polypiler.Core.BinaryFormats.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Frontends.Batch\Polypiler.Core.Frontends.Batch.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Frontends.Cpp\Polypiler.Core.Frontends.Cpp.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Frontends.CSharp\Polypiler.Core.Frontends.CSharp.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Frontends.JavaScript\Polypiler.Core.Frontends.JavaScript.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Frontends.Jvm\Polypiler.Core.Frontends.Jvm.csproj" />

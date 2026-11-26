@@ -1108,6 +1108,78 @@ codes:
     area: javascript
     owner: PROTOTYPE
     surfaces: standard error of polypiler translate --to javascript
+  - code: PLY1400
+    severity: error
+    exit: InvalidSource
+    title: C++ syntax error
+    message: "C++ syntax error: <detail>"
+    rule: cpp.frontend.syntax
+    area: cpp
+    owner: "#400"
+    surfaces: standard error of polypiler translate --from cpp; stops import
+  - code: PLY1401
+    severity: error
+    exit: UnsupportedConstruct
+    title: C++ construct not supported
+    message: "C++ construct '<construct>' is not supported by the C++ frontend"
+    rule: cpp.frontend.construct
+    area: cpp
+    owner: "#400"
+    surfaces: standard error of polypiler translate --from cpp; stops import
+  - code: PLY1402
+    severity: error
+    exit: UnsupportedConstruct
+    title: C++ type not supported
+    message: "C++ type '<type>' is not supported by the C++ frontend"
+    rule: cpp.frontend.type
+    area: cpp
+    owner: "#400"
+    surfaces: standard error of polypiler translate --from cpp; stops import
+  - code: PLY1403
+    severity: error
+    exit: UnsupportedConstruct
+    title: C++ call not supported
+    message: "C++ call '<call>' is not supported by the C++ frontend"
+    rule: cpp.frontend.call
+    area: cpp
+    owner: "#400"
+    surfaces: standard error of polypiler translate --from cpp; stops import
+  - code: PLY1404
+    severity: error
+    exit: InvalidSource
+    title: unresolved C++ symbol
+    message: "unresolved C++ symbol '<symbol>'"
+    rule: cpp.frontend.symbol
+    area: cpp
+    owner: "#400"
+    surfaces: standard error of polypiler translate --from cpp; stops import
+  - code: PLY1450
+    severity: error
+    exit: UnsupportedConstruct
+    title: construct cannot be emitted as C++
+    message: "construct '<construct>' cannot be emitted as C++"
+    rule: cpp.backend.construct
+    area: cpp
+    owner: "#399"
+    surfaces: standard error of polypiler translate --to cpp; stops emission
+  - code: PLY1451
+    severity: error
+    exit: UnsupportedConstruct
+    title: type has no C++ representation
+    message: "type '<type>' has no C++ representation in profile '<profile>'"
+    rule: cpp.backend.type
+    area: cpp
+    owner: "#399"
+    surfaces: standard error of polypiler translate --to cpp; stops emission
+  - code: PLY1452
+    severity: error
+    exit: UnsupportedConstruct
+    title: intrinsic cannot be emitted as C++
+    message: "intrinsic '<intrinsic>' cannot be emitted as C++"
+    rule: cpp.backend.intrinsic
+    area: cpp
+    owner: "#399"
+    surfaces: standard error of polypiler translate --to cpp; stops emission
   - code: PLY1500
     severity: error
     exit: InvalidSource
