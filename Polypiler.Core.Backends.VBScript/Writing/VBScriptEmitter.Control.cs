@@ -25,7 +25,7 @@ public static partial class VBScriptEmitter {
         }
 
         this.EmitStatement(stmt, text, indent);
-        if (this._tryBodyDepth > 0 && stmt is not (IrReturn or IrBreak or IrContinue))
+        if (this._tryBodyDepth > 0 && stmt is not (IrReturn or IrBreak or IrContinue or IrYieldBreak))
           text.Append(Indent(indent)).Append("If Err.Number <> 0 Then Exit Do\n");
       }
     }
@@ -38,17 +38,16 @@ public static partial class VBScriptEmitter {
           break;
 
         case IrDeclare declare: {
-          var name = this.LocalName(declare.Local);
           var value = declare.Initializer is { } init
             ? this.CopyIfStruct(declare.Local.Type, this.EmitExpr(init, text, indent), text, indent)
             : this.DefaultValue(declare.Local.Type);
-          text.Append(pad).Append(AssignPrefix(declare.Local.Type)).Append(name).Append(" = ").Append(value).Append('\n');
+          this.EmitLocalInit(declare.Local, value, text, indent);
           break;
         }
 
         case IrAssign assign: {
           var value = this.CopyIfStruct(assign.Local.Type, this.EmitExpr(assign.Value, text, indent), text, indent);
-          text.Append(pad).Append(AssignPrefix(assign.Local.Type)).Append(this.LocalName(assign.Local)).Append(" = ").Append(value).Append('\n');
+          this.EmitLocalWrite(assign.Local, value, text, indent);
           break;
         }
 
@@ -131,6 +130,26 @@ public static partial class VBScriptEmitter {
           break;
         }
 
+        case IrForEachCollection forEachCol:
+          this.EmitForEachCollection(forEachCol, text, indent);
+          break;
+
+        case IrYield yieldStmt:
+          this.EmitYield(yieldStmt, text, indent);
+          break;
+
+        case IrYieldBreak:
+          this.EmitYieldBreak(text, indent);
+          break;
+
+        case IrYieldFrom yieldFrom:
+          this.EmitYieldFrom(yieldFrom, text, indent);
+          break;
+
+        case IrForEachSequence forEachSeq:
+          this.EmitForEachSequence(forEachSeq, text, indent);
+          break;
+
         default:
           this.ReportConstruct(statement.GetType().Name);
           break;
@@ -141,7 +160,29 @@ public static partial class VBScriptEmitter {
       var pad = Indent(indent);
       var idx = this.EmitExpr(store.Index, text, indent);
       var val = this.CopyIfStruct(store.Value.Type, this.EmitExpr(store.Value, text, indent), text, indent);
+
+      if (store.Array.Type.IsView) {
+        var span = this.EmitExpr(store.Array, text, indent);
+        text.Append(pad).Append("Call ").Append(span).Append(".SetAt(").Append(idx).Append(", ").Append(val).Append(")\n");
+        return;
+      }
+
+      if (store.Array is IrLocalRef arrBoxRef && this._arrayBoxedLocals.Contains(arrBoxRef.Local)) {
+        text.Append(pad).Append("Call ").Append(this.LocalName(arrBoxRef.Local)).Append(".SetAtChecked(").Append(idx).Append(", ").Append(val).Append(")\n");
+        return;
+      }
+
       var chk = this.Use(VBScriptHelpers.CheckIdx);
+
+      if (store.Array is IrLocalRef boxedArrRef && this._boxedLocals.Contains(boxedArrRef.Local)) {
+        var cell = this.LocalName(boxedArrRef.Local);
+        var tmpArr = this.NewTemp("ply_a");
+        text.Append(pad).Append(tmpArr).Append(" = ").Append(cell).Append(".Val\n");
+        text.Append(pad).Append("Call ").Append(chk).Append('(').Append(tmpArr).Append(", ").Append(idx).Append(")\n");
+        text.Append(pad).Append(AssignPrefix(store.Value.Type)).Append(tmpArr).Append('(').Append(idx).Append(") = ").Append(val).Append('\n');
+        text.Append(pad).Append(cell).Append(".Val = ").Append(tmpArr).Append('\n');
+        return;
+      }
 
       // Field-held arrays in VBScript return a copy when read, so write back to the field!
       if (store.Array is IrFieldLoad fieldLoad) {
@@ -194,7 +235,21 @@ public static partial class VBScriptEmitter {
         text.Append(pad).Append("Call ").Append(callText).Append('\n');
         return;
       }
-      if (expr is IrIntrinsic { Op: IrIntrinsicOp.ArrayCopy or IrIntrinsicOp.ArrayFill or IrIntrinsicOp.ArrayClear or IrIntrinsicOp.StoreLittle or IrIntrinsicOp.StoreBig } subIntrinsic) {
+      if (expr is IrInvoke invoke) {
+        _ = this.EmitInvokeCore(invoke, text, indent, isStatement: true);
+        return;
+      }
+      if (expr is IrAwait awaitExpr && awaitExpr.Type == IrType.Void) {
+        this.Use(VBScriptHelpers.TaskSupport);
+        var operand = this.EmitExpr(awaitExpr.Operand, text, indent);
+        text.Append(pad).Append("Call ply_task_await_void(").Append(operand).Append(")\n");
+        return;
+      }
+      if (expr is IrCollection col && col.Type == IrType.Void) {
+        this.EmitVoidCollection(col, text, indent);
+        return;
+      }
+      if (expr is IrIntrinsic { Op: IrIntrinsicOp.ArrayCopy or IrIntrinsicOp.ArrayFill or IrIntrinsicOp.ArrayClear or IrIntrinsicOp.StoreLittle or IrIntrinsicOp.StoreBig or IrIntrinsicOp.ViewCopy or IrIntrinsicOp.ViewFill or IrIntrinsicOp.PointerStore } subIntrinsic) {
         this.EmitVoidIntrinsic(subIntrinsic, text, indent);
         return;
       }
@@ -281,7 +336,7 @@ public static partial class VBScriptEmitter {
 
     private bool TryEmitForToNext(IrDeclare initDecl, IrFor @for, StringBuilder text, int indent) {
       var iv = initDecl.Local;
-      if (iv.Type != IrType.I32)
+      if (iv.Type != IrType.I32 || @for.PerIteration.Count > 0 || this._boxedLocals.Contains(iv) || this._addrBoxedLocals.Contains(iv))
         return false;
       if (@for.Condition is not IrBinary { Left: IrLocalRef { Local: var condLocal } } cmp || condLocal != iv)
         return false;
@@ -313,6 +368,11 @@ public static partial class VBScriptEmitter {
       var pad = Indent(indent);
       var hasContinue = ContainsDirectJump(@for.Body, wantBreak: false);
       var hasBreak = ContainsDirectJump(@for.Body, wantBreak: true);
+      var perIterBoxed = @for.PerIteration.Where(this._boxedLocals.Contains).ToList();
+
+      foreach (var v in perIterBoxed)
+        this.EmitCloneBoxedCell(v, text, indent);
+
       var preCond = new StringBuilder();
       var condExpr = this.EmitExpr(@for.Condition, preCond, indent + 1);
 
@@ -324,11 +384,21 @@ public static partial class VBScriptEmitter {
         text.Append(Indent(indent + 1)).Append("If Not (").Append(condExpr).Append(") Then Exit Do\n");
       }
 
-      this.EmitLoopBody(@for.Body, @for.Step, hasBreak, hasContinue, text, indent + 1);
+      this.EmitLoopBody(@for.Body, @for.Step, hasBreak, hasContinue, text, indent + 1, perIterBoxed);
       text.Append(pad).Append("Loop\n");
     }
 
-    private void EmitLoopBody(IrBlock body, IrBlock? step, bool hasBreak, bool hasContinue, StringBuilder text, int indent) {
+    private void EmitCloneBoxedCell(IrLocal local, StringBuilder text, int indent) {
+      this.Use(VBScriptHelpers.Cell);
+      var pad = Indent(indent);
+      var cell = this.LocalName(local);
+      var tmp = this.NewTemp("ply_nc");
+      text.Append(pad).Append("Set ").Append(tmp).Append(" = New ply_Cell\n");
+      text.Append(pad).Append(AssignPrefix(local.Type)).Append(tmp).Append(".Val = ").Append(cell).Append(".Val\n");
+      text.Append(pad).Append("Set ").Append(cell).Append(" = ").Append(tmp).Append('\n');
+    }
+
+    private void EmitLoopBody(IrBlock body, IrBlock? step, bool hasBreak, bool hasContinue, StringBuilder text, int indent, IReadOnlyList<IrLocal>? perIterBoxed = null) {
       var pad = Indent(indent);
       if (hasContinue) {
         var brkFlag = hasBreak ? this.NewTemp("ply_brk") : null;
@@ -348,6 +418,10 @@ public static partial class VBScriptEmitter {
         this.EmitBlock(body, text, indent);
         this._loops.Pop();
       }
+
+      if (perIterBoxed is { Count: > 0 })
+        foreach (var v in perIterBoxed)
+          this.EmitCloneBoxedCell(v, text, indent);
 
       if (step is { Statements.Count: > 0 })
         this.EmitBlock(step, text, indent);
@@ -450,10 +524,42 @@ public static partial class VBScriptEmitter {
         return;
       }
 
-      if (value is not null) {
-        text.Append(pad).Append(AssignPrefix(ret.Value!.Type)).Append(this._currentFunctionVbsName).Append(" = ").Append(value).Append('\n');
+      this.EmitFinalReturn(value, ret.Value?.Type, text, indent);
+    }
+
+    private void EmitFinalReturn(string? value, IrType? valueType, StringBuilder text, int indent) {
+      var pad = Indent(indent);
+      if (this._iteratorResultListVar is { } listVar) {
+        this.EmitArrayParamSyncs(text, indent);
+        text.Append(pad).Append("Set ").Append(this._currentFunctionVbsName).Append(" = ").Append(listVar).Append('\n');
+        text.Append(pad).Append("Exit Function\n");
+        return;
+      }
+
+      if (this._inAsyncFunction) {
+        if (value is not null && valueType is not null) {
+          var tmp = this.NewTemp("ply_ar");
+          text.Append(pad).Append(AssignPrefix(valueType)).Append(tmp).Append(" = ").Append(value).Append('\n');
+          text.Append(pad).Append("If Err.Number <> 0 Then Exit Do\n");
+          this.EmitArrayParamSyncs(text, indent);
+          text.Append(pad).Append("On Error GoTo 0\n");
+          text.Append(pad).Append("Set ").Append(this._currentFunctionVbsName).Append(" = ply_task_from_result(").Append(tmp).Append(")\n");
+          text.Append(pad).Append("Exit Function\n");
+        } else {
+          this.EmitArrayParamSyncs(text, indent);
+          text.Append(pad).Append("On Error GoTo 0\n");
+          text.Append(pad).Append("Set ").Append(this._currentFunctionVbsName).Append(" = ply_task_completed()\n");
+          text.Append(pad).Append("Exit Function\n");
+        }
+        return;
+      }
+
+      if (value is not null && valueType is not null) {
+        text.Append(pad).Append(AssignPrefix(valueType)).Append(this._currentFunctionVbsName).Append(" = ").Append(value).Append('\n');
+        this.EmitArrayParamSyncs(text, indent);
         text.Append(pad).Append("Exit Function\n");
       } else {
+        this.EmitArrayParamSyncs(text, indent);
         text.Append(pad).Append("Exit Sub\n");
       }
     }
@@ -473,7 +579,7 @@ public static partial class VBScriptEmitter {
       var usesCnt = hasFinally && this._loops.Count > 0 && (ContainsDirectJump(@try.Body, false) || @try.Catches.Any(c => ContainsDirectJump(c.Body, false)));
 
       var retFlag = usesRet ? this.NewTemp("ply_rf") : null;
-      var retVal = usesRet && this._currentFunction?.ReturnType != IrType.Void ? this.NewTemp("ply_rv") : null;
+      var retVal = usesRet && this._currentReturnType != IrType.Void ? this.NewTemp("ply_rv") : null;
       var brkFlag = usesBrk ? this.NewTemp("ply_bf") : null;
       var cntFlag = usesCnt ? this.NewTemp("ply_cf") : null;
 
@@ -585,14 +691,11 @@ public static partial class VBScriptEmitter {
         if (this._tryFrames.Count > 0) {
           var outer = this._tryFrames.Peek();
           if (retVal is not null && outer.ReturnValue is not null)
-            text.Append(Indent(indent + 1)).Append(AssignPrefix(this._currentFunction!.ReturnType)).Append(outer.ReturnValue).Append(" = ").Append(retVal).Append('\n');
+            text.Append(Indent(indent + 1)).Append(AssignPrefix(this._currentReturnType)).Append(outer.ReturnValue).Append(" = ").Append(retVal).Append('\n');
           text.Append(Indent(indent + 1)).Append(outer.ReturnFlag).Append(" = True\n");
           text.Append(Indent(indent + 1)).Append("Exit Do\n");
-        } else if (retVal is not null) {
-          text.Append(Indent(indent + 1)).Append(AssignPrefix(this._currentFunction!.ReturnType)).Append(this._currentFunctionVbsName).Append(" = ").Append(retVal).Append('\n');
-          text.Append(Indent(indent + 1)).Append("Exit Function\n");
         } else {
-          text.Append(Indent(indent + 1)).Append("Exit Sub\n");
+          this.EmitFinalReturn(retVal, retVal is not null ? this._currentReturnType : null, text, indent + 1);
         }
         text.Append(pad).Append("End If\n");
       }
@@ -614,7 +717,7 @@ public static partial class VBScriptEmitter {
       foreach (var stmt in block.Statements) {
         if (wantBreak && stmt is IrBreak) return true;
         if (!wantBreak && stmt is IrContinue) return true;
-        if (stmt is IrWhile or IrDoWhile or IrFor)
+        if (stmt is IrWhile or IrDoWhile or IrFor or IrForEachCollection or IrForEachSequence)
           continue;
         if (wantBreak && stmt is IrSwitch)
           continue;
@@ -626,7 +729,7 @@ public static partial class VBScriptEmitter {
     }
 
     private static bool ContainsReturn(IrBlock block)
-      => AllStatements(block).Any(s => s is IrReturn);
+      => AllStatements(block).Any(s => s is IrReturn or IrYieldBreak);
 
     private static bool IsLocalModified(IrBlock block, IrLocal local) {
       foreach (var stmt in AllStatements(block)) {

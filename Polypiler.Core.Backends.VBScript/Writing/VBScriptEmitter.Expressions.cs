@@ -19,7 +19,7 @@ public static partial class VBScriptEmitter {
         IrConst c => FormatScalarLiteral(c.Type, c.Value),
         IrStrConst s => VBScriptNaming.StringLiteral(s.Value),
         IrConstRef cr => this._constNames[cr.Constant],
-        IrLocalRef lr => this.LocalName(lr.Local),
+        IrLocalRef lr => this.EmitLocalRead(lr.Local),
         IrGlobalRef gr => this._globalNames[gr.Global],
         IrUnary u => this.EmitUnary(u, pre, indent),
         IrBinary b => this.EmitBinary(b, pre, indent),
@@ -29,7 +29,7 @@ public static partial class VBScriptEmitter {
         IrStep step => this.EmitStep(step, pre, indent),
         IrBind bind => this.EmitBind(bind, pre, indent),
         IrArrayLoad load => this.EmitArrayLoad(load, pre, indent),
-        IrArrayLength len => $"(UBound({this.EmitExpr(len.Array, pre, indent)}) + 1)",
+        IrArrayLength len => this.EmitArrayLength(len, pre, indent),
         IrNewArray newArr => this.EmitNewArray(newArr, pre, indent),
         IrStructNew sn => this.EmitStructNew(sn, pre, indent),
         IrStructDefault sd => $"New {this._typeNames[sd.Type.StructType!]}",
@@ -51,6 +51,14 @@ public static partial class VBScriptEmitter {
         IrAsCast asCast => this.EmitAsCast(asCast, pre, indent),
         IrGenericEquals ge => this.EmitGenericEquals(ge, pre, indent),
         IrGenericCompare gc => this.EmitGenericCompare(gc, pre, indent),
+        IrLambda lambda => this.EmitLambda(lambda, pre, indent),
+        IrFunctionRef fnRef => this.EmitFunctionRef(fnRef),
+        IrBoundMethod bm => this.EmitBoundMethod(bm, pre, indent),
+        IrInvoke invoke => this.EmitInvokeCore(invoke, pre, indent, isStatement: false),
+        IrCollection col => this.EmitCollection(col, pre, indent),
+        IrArraySequence arrSeq => this.EmitArraySequence(arrSeq, pre, indent),
+        IrAsync asyncExpr => this.EmitAsyncExpr(asyncExpr, pre, indent),
+        IrAwait awaitExpr => this.EmitAwait(awaitExpr, pre, indent),
         IrIntrinsic intrinsic => this.EmitIntrinsic(intrinsic, pre, indent),
         _ => this.ReportConstruct(expression.GetType().Name)
       };
@@ -240,15 +248,38 @@ public static partial class VBScriptEmitter {
 
       string place;
       if (step.Target is IrLocalRef localRef) {
-        place = this.LocalName(localRef.Local);
+        if (this._addrBoxedLocals.Contains(localRef.Local)) {
+          var box = this.LocalName(localRef.Local);
+          pre.Append(pad).Append(oldTmp).Append(" = ").Append(box).Append(".GetElem(0)\n");
+          pre.Append(pad).Append(newTmp).Append(" = ").Append(ComputeNew(oldTmp)).Append('\n');
+          pre.Append(pad).Append("Call ").Append(box).Append(".SetElem(0, ").Append(newTmp).Append(")\n");
+          return step.Postfix ? oldTmp : newTmp;
+        }
+        place = this.EmitLocalRead(localRef.Local);
       } else if (step.Target is IrGlobalRef globalRef) {
         place = this._globalNames[globalRef.Global];
       } else {
         var load = (IrArrayLoad)step.Target;
+        if (load.Array.Type.IsView) {
+          var sp = this.EmitExpr(load.Array, pre, indent);
+          var idx = this.EmitExpr(load.Index, pre, indent);
+          pre.Append(pad).Append(oldTmp).Append(" = ").Append(sp).Append(".GetAt(").Append(idx).Append(")\n");
+          pre.Append(pad).Append(newTmp).Append(" = ").Append(ComputeNew(oldTmp)).Append('\n');
+          pre.Append(pad).Append("Call ").Append(sp).Append(".SetAt(").Append(idx).Append(", ").Append(newTmp).Append(")\n");
+          return step.Postfix ? oldTmp : newTmp;
+        }
+        if (load.Array is IrLocalRef boxArr && this._arrayBoxedLocals.Contains(boxArr.Local)) {
+          var buf = this.LocalName(boxArr.Local);
+          var idx = this.EmitExpr(load.Index, pre, indent);
+          pre.Append(pad).Append(oldTmp).Append(" = ").Append(buf).Append(".GetAtChecked(").Append(idx).Append(")\n");
+          pre.Append(pad).Append(newTmp).Append(" = ").Append(ComputeNew(oldTmp)).Append('\n');
+          pre.Append(pad).Append("Call ").Append(buf).Append(".SetAtChecked(").Append(idx).Append(", ").Append(newTmp).Append(")\n");
+          return step.Postfix ? oldTmp : newTmp;
+        }
         var arr = this.EmitExpr(load.Array, pre, indent);
-        var idx = this.EmitExpr(load.Index, pre, indent);
-        pre.Append(pad).Append("Call ").Append(this.Use(VBScriptHelpers.CheckIdx)).Append('(').Append(arr).Append(", ").Append(idx).Append(")\n");
-        place = $"{arr}({idx})";
+        var arrIdx = this.EmitExpr(load.Index, pre, indent);
+        pre.Append(pad).Append("Call ").Append(this.Use(VBScriptHelpers.CheckIdx)).Append('(').Append(arr).Append(", ").Append(arrIdx).Append(")\n");
+        place = $"{arr}({arrIdx})";
       }
 
       pre.Append(pad).Append(oldTmp).Append(" = ").Append(place).Append('\n');
@@ -258,17 +289,36 @@ public static partial class VBScriptEmitter {
     }
 
     private string EmitBind(IrBind bind, StringBuilder pre, int indent) {
-      var name = this.LocalName(bind.Local);
       var val = this.CopyIfStruct(bind.Local.Type, this.EmitExpr(bind.Value, pre, indent), pre, indent);
-      pre.Append(Indent(indent)).Append(AssignPrefix(bind.Local.Type)).Append(name).Append(" = ").Append(val).Append('\n');
-      return name;
+      this.EmitLocalWrite(bind.Local, val, pre, indent);
+      return this.EmitLocalRead(bind.Local);
     }
 
     private string EmitArrayLoad(IrArrayLoad load, StringBuilder pre, int indent) {
+      if (load.Array.Type.IsView) {
+        var sp = this.EmitExpr(load.Array, pre, indent);
+        var idx = this.EmitExpr(load.Index, pre, indent);
+        return $"{sp}.GetAt({idx})";
+      }
+      if (load.Array is IrLocalRef boxArr && this._arrayBoxedLocals.Contains(boxArr.Local)) {
+        var idx = this.EmitExpr(load.Index, pre, indent);
+        return $"{this.LocalName(boxArr.Local)}.GetAtChecked({idx})";
+      }
       var arr = this.EmitExpr(load.Array, pre, indent);
-      var idx = this.EmitExpr(load.Index, pre, indent);
-      pre.Append(Indent(indent)).Append("Call ").Append(this.Use(VBScriptHelpers.CheckIdx)).Append('(').Append(arr).Append(", ").Append(idx).Append(")\n");
-      return this.CopyIfStruct(load.Type, $"{arr}({idx})", pre, indent);
+      var arrIdx = this.EmitExpr(load.Index, pre, indent);
+      if (load.Array is IrLocalRef boxed && this._boxedLocals.Contains(boxed.Local)) {
+        var tmpArr = this.NewTemp("ply_al");
+        pre.Append(Indent(indent)).Append(tmpArr).Append(" = ").Append(arr).Append('\n');
+        arr = tmpArr;
+      }
+      pre.Append(Indent(indent)).Append("Call ").Append(this.Use(VBScriptHelpers.CheckIdx)).Append('(').Append(arr).Append(", ").Append(arrIdx).Append(")\n");
+      return this.CopyIfStruct(load.Type, $"{arr}({arrIdx})", pre, indent);
+    }
+
+    private string EmitArrayLength(IrArrayLength len, StringBuilder pre, int indent) {
+      if (len.Array is IrLocalRef boxArr && this._arrayBoxedLocals.Contains(boxArr.Local))
+        return $"{this.LocalName(boxArr.Local)}.Length";
+      return $"(UBound({this.EmitExpr(len.Array, pre, indent)}) + 1)";
     }
 
     private string EmitNewArray(IrNewArray newArr, StringBuilder pre, int indent) {
@@ -532,15 +582,40 @@ public static partial class VBScriptEmitter {
             return;
           }
           var little = intrinsic.Op == IrIntrinsicOp.StoreLittle ? "True" : "False";
+          if (IrViews.IsEndianOnView(intrinsic)) {
+            this.Use(VBScriptHelpers.SpanSupport);
+            pre.Append(pad).Append("Call ply_span_store_e(")
+              .Append(args[0]).Append(", ").Append(args[1]).Append(", ").Append(args[2]).Append(", ")
+              .Append(valType.Size.ToString(CultureInfo.InvariantCulture)).Append(", ").Append(little).Append(")\n");
+            return;
+          }
           pre.Append(pad).Append("Call ").Append(this.Use(VBScriptHelpers.StoreEndian)).Append('(')
             .Append(args[0]).Append(", ").Append(args[1]).Append(", ").Append(args[2]).Append(", ")
             .Append(valType.Size.ToString(CultureInfo.InvariantCulture)).Append(", ").Append(little).Append(")\n");
+          break;
+        }
+        case IrIntrinsicOp.ViewCopy:
+          pre.Append(pad).Append("Call ").Append(args[0]).Append(".CopyTo(").Append(args[1]).Append(")\n");
+          break;
+        case IrIntrinsicOp.ViewFill:
+          pre.Append(pad).Append("Call ").Append(args[0]).Append(".FillAll(").Append(args[1]).Append(")\n");
+          break;
+        case IrIntrinsicOp.PointerStore: {
+          this.Use(VBScriptHelpers.PtrSupport);
+          var elem = intrinsic.Arguments[1].Type;
+          pre.Append(pad).Append("Call ply_ptr_store(").Append(args[0]).Append(", ").Append(args[1]).Append(", ")
+            .Append(ElemKindCode(elem)).Append(", ").Append(elem.Size.ToString(CultureInfo.InvariantCulture)).Append(")\n");
           break;
         }
       }
     }
 
     private string EmitIntrinsic(IrIntrinsic intrinsic, StringBuilder pre, int indent) {
+      if (IrPointers.IsPointerNode(intrinsic))
+        return this.EmitPointerIntrinsic(intrinsic, pre, indent);
+      if (IrViews.IsViewOperation(intrinsic.Op))
+        return this.EmitViewIntrinsic(intrinsic, pre, indent);
+
       var args = intrinsic.Arguments.Select(a => this.EmitExpr(a, pre, indent)).ToArray();
       switch (intrinsic.Op) {
         case IrIntrinsicOp.ArrayOf:
@@ -612,12 +687,22 @@ public static partial class VBScriptEmitter {
         case IrIntrinsicOp.TrailingZeroCount when intrinsic.Arguments[0].Type.Bits <= 32:
           return $"{this.Use(VBScriptHelpers.Ctz32)}({args[0]}, {intrinsic.Arguments[0].Type.Bits.ToString(CultureInfo.InvariantCulture)})";
 
+        case IrIntrinsicOp.ParallelBitExtract:
+          return this.EmitBitPermutation(intrinsic, args, isDeposit: false);
+
+        case IrIntrinsicOp.ParallelBitDeposit:
+          return this.EmitBitPermutation(intrinsic, args, isDeposit: true);
+
         case IrIntrinsicOp.LoadLittle or IrIntrinsicOp.LoadBig: {
           var t = intrinsic.Type;
           if (!t.IsInteger || t.IsLong)
             return this.ReportIntrinsic(intrinsic.Op.ToString());
           var little = intrinsic.Op == IrIntrinsicOp.LoadLittle ? "True" : "False";
           var signed = t.IsSigned ? "True" : "False";
+          if (IrViews.IsEndianOnView(intrinsic)) {
+            this.Use(VBScriptHelpers.SpanSupport);
+            return $"ply_span_load_e({args[0]}, {args[1]}, {t.Size.ToString(CultureInfo.InvariantCulture)}, {little}, {signed})";
+          }
           return $"{this.Use(VBScriptHelpers.LoadEndian)}({args[0]}, {args[1]}, {t.Size.ToString(CultureInfo.InvariantCulture)}, {little}, {signed})";
         }
 

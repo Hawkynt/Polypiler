@@ -80,6 +80,16 @@ internal static class VBScriptHelpers {
   public const string UnwrapObj = "ply_unwrap_o";
   public const string ErrSupport = "ply_err_support";
   public const string WriteLine = "ply_write_line";
+  public const string Cell = "ply_cell";
+  public const string CollectionSupport = "ply_collections";
+  public const string ArrSeq = "ply_arr_seq";
+  public const string TaskSupport = "ply_task_support";
+  public const string SpanSupport = "ply_span_support";
+  public const string PtrSupport = "ply_ptr_support";
+  public const string Pext32 = "ply_pext_u32";
+  public const string Pdep32 = "ply_pdep_u32";
+  public const string Pext64 = "ply_pext_u64";
+  public const string Pdep64 = "ply_pdep_u64";
 
   private static readonly Dictionary<string, string[]> _dependencies = new(StringComparer.Ordinal) {
     [Mul32] = [U32, I32],
@@ -104,8 +114,17 @@ internal static class VBScriptHelpers {
     [PopCnt32] = [U32],
     [Clz32] = [U32],
     [Ctz32] = [U32],
+    [Pext32] = [U32],
+    [Pdep32] = [U32],
+    [Pext64] = [U32, U64],
+    [Pdep64] = [U32, U64],
     [LoadEndian] = [CheckIdx, I16, I32],
-    [StoreEndian] = [CheckIdx, U32]
+    [StoreEndian] = [CheckIdx, U32],
+    [CollectionSupport] = [CheckNull],
+    [ArrSeq] = [CollectionSupport],
+    [TaskSupport] = [ErrSupport],
+    [SpanSupport] = [I8, U8, I16, U16, I32, U32, I64, U64, NewArr],
+    [PtrSupport] = [SpanSupport]
   };
 
   private static readonly string[] _order = [
@@ -113,11 +132,12 @@ internal static class VBScriptHelpers {
     Div32, Rem32, UDiv32, URem32,
     I64, U64, Div64, Rem64, And64, Or64, Xor64, Not64, Shl64, Shr64, UShr64,
     CheckRange, FloatRem, FloatToInt, Min, Max, AbsSigned, RoundAway, RoundHalfUp, CopySign,
-    Rotl32, Rotr32, PopCnt32, Clz32, Ctz32,
+    Rotl32, Rotr32, PopCnt32, Clz32, Ctz32, Pext32, Pdep32, Pext64, Pdep64,
     NewArr, CheckIdx, ArrCopy, ArrFill, ArrEq, LoadEndian, StoreEndian,
     StrUnit, StrFromUnits, StrToUnits, StrRepeat, StrSub, StrIndexOf, StrLastIndexOf,
     StrStarts, StrEnds, StrContains, StrReplace, StrReplaceFirst, StrSplit, StrTrim, StrPad,
-    CheckNull, Unwrap, UnwrapObj, ErrSupport, WriteLine
+    CheckNull, Unwrap, UnwrapObj, ErrSupport, WriteLine,
+    Cell, CollectionSupport, ArrSeq, TaskSupport, SpanSupport, PtrSupport
   ];
 
   private static readonly Dictionary<string, string> _bodies = new(StringComparer.Ordinal) {
@@ -897,6 +917,1137 @@ internal static class VBScriptHelpers {
       Sub ply_write_line(ByVal s)
         If IsNull(s) Or IsEmpty(s) Then WScript.Echo "" Else WScript.Echo CStr(s)
       End Sub
+      """,
+    [Pext32] = """
+      Function ply_pext_u32(ByVal val, ByVal mask, ByVal bits)
+        Dim v, m, res, p, b, outBit
+        v = ply_u32(val)
+        m = ply_u32(mask)
+        If bits < 32 Then
+          p = 2.0 ^ bits
+          v = v - Int(v / p) * p
+          m = m - Int(m / p) * p
+        End If
+        res = 0.0
+        outBit = 1.0
+        For b = 0 To bits - 1
+          If m - Int(m / 2.0) * 2.0 = 1 Then
+            If v - Int(v / 2.0) * 2.0 = 1 Then res = res + outBit
+            outBit = outBit * 2.0
+          End If
+          v = Int(v / 2.0)
+          m = Int(m / 2.0)
+        Next
+        ply_pext_u32 = res
+      End Function
+      """,
+    [Pdep32] = """
+      Function ply_pdep_u32(ByVal val, ByVal mask, ByVal bits)
+        Dim v, m, res, p, b, posBit
+        v = ply_u32(val)
+        m = ply_u32(mask)
+        If bits < 32 Then
+          p = 2.0 ^ bits
+          v = v - Int(v / p) * p
+          m = m - Int(m / p) * p
+        End If
+        res = 0.0
+        posBit = 1.0
+        For b = 0 To bits - 1
+          If m - Int(m / 2.0) * 2.0 = 1 Then
+            If v - Int(v / 2.0) * 2.0 = 1 Then res = res + posBit
+            v = Int(v / 2.0)
+          End If
+          m = Int(m / 2.0)
+          posBit = posBit * 2.0
+        Next
+        ply_pdep_u32 = res
+      End Function
+      """,
+    [Pext64] = """
+      Function ply_pext_u64(ByVal val, ByVal mask)
+        Dim uv, um, vl, vh, ml, mh, res, b, outBit
+        uv = ply_u64(val)
+        um = ply_u64(mask)
+        vl = ply_u32(uv)
+        vh = ply_u32(Int(uv / 4294967296.0))
+        ml = ply_u32(um)
+        mh = ply_u32(Int(um / 4294967296.0))
+        res = 0.0
+        outBit = 1.0
+        For b = 0 To 31
+          If ml - Int(ml / 2.0) * 2.0 = 1 Then
+            If vl - Int(vl / 2.0) * 2.0 = 1 Then res = res + outBit
+            outBit = outBit * 2.0
+          End If
+          vl = Int(vl / 2.0)
+          ml = Int(ml / 2.0)
+        Next
+        For b = 0 To 31
+          If mh - Int(mh / 2.0) * 2.0 = 1 Then
+            If vh - Int(vh / 2.0) * 2.0 = 1 Then res = res + outBit
+            outBit = outBit * 2.0
+          End If
+          vh = Int(vh / 2.0)
+          mh = Int(mh / 2.0)
+        Next
+        ply_pext_u64 = res
+      End Function
+      """,
+    [Pdep64] = """
+      Function ply_pdep_u64(ByVal val, ByVal mask)
+        Dim uv, um, vl, vh, ml, mh, res, b, posBit, curBit
+        uv = ply_u64(val)
+        um = ply_u64(mask)
+        vl = ply_u32(uv)
+        vh = ply_u32(Int(uv / 4294967296.0))
+        ml = ply_u32(um)
+        mh = ply_u32(Int(um / 4294967296.0))
+        res = 0.0
+        posBit = 1.0
+        curBit = 0
+        For b = 0 To 31
+          If ml - Int(ml / 2.0) * 2.0 = 1 Then
+            If curBit < 32 Then
+              If vl - Int(vl / 2.0) * 2.0 = 1 Then res = res + posBit
+              vl = Int(vl / 2.0)
+            Else
+              If vh - Int(vh / 2.0) * 2.0 = 1 Then res = res + posBit
+              vh = Int(vh / 2.0)
+            End If
+            curBit = curBit + 1
+          End If
+          ml = Int(ml / 2.0)
+          posBit = posBit * 2.0
+        Next
+        For b = 0 To 31
+          If mh - Int(mh / 2.0) * 2.0 = 1 Then
+            If curBit < 32 Then
+              If vl - Int(vl / 2.0) * 2.0 = 1 Then res = res + posBit
+              vl = Int(vl / 2.0)
+            Else
+              If vh - Int(vh / 2.0) * 2.0 = 1 Then res = res + posBit
+              vh = Int(vh / 2.0)
+            End If
+            curBit = curBit + 1
+          End If
+          mh = Int(mh / 2.0)
+          posBit = posBit * 2.0
+        Next
+        ply_pdep_u64 = res
+      End Function
+      """,
+    [Cell] = """
+      Class ply_Cell
+        Public Val
+      End Class
+      """,
+    [CollectionSupport] = """
+      Function ply_key_eq(ByVal a, ByVal b, ByVal eqMode)
+        If IsObject(a) Or IsObject(b) Then
+          If Not (IsObject(a) And IsObject(b)) Then
+            ply_key_eq = False
+          ElseIf (a Is Nothing) And (b Is Nothing) Then
+            ply_key_eq = True
+          ElseIf (a Is Nothing) Or (b Is Nothing) Then
+            ply_key_eq = False
+          ElseIf eqMode = 1 Then
+            ply_key_eq = a.ply_equals(b)
+          Else
+            ply_key_eq = (a Is b)
+          End If
+          Exit Function
+        End If
+        If IsNull(a) Or IsNull(b) Then
+          ply_key_eq = (IsNull(a) And IsNull(b))
+          Exit Function
+        End If
+        If VarType(a) = 8 And VarType(b) = 8 Then
+          ply_key_eq = (StrComp(a, b, 0) = 0)
+          Exit Function
+        End If
+        If VarType(a) = 11 Or VarType(b) = 11 Then
+          ply_key_eq = (VarType(a) = VarType(b) And a = b)
+          Exit Function
+        End If
+        ply_key_eq = (a = b)
+      End Function
+
+      Class ply_List
+        Private m_items()
+        Private m_cap
+        Public Count
+        Public Version
+
+        Private Sub Class_Initialize()
+          m_cap = 0
+          Count = 0
+          Version = 0
+        End Sub
+
+        Private Sub EnsureCap(ByVal need)
+          Dim nc
+          If need <= m_cap Then Exit Sub
+          If m_cap = 0 Then nc = 4 Else nc = m_cap * 2
+          Do While nc < need
+            nc = nc * 2
+          Loop
+          ReDim Preserve m_items(nc - 1)
+          m_cap = nc
+        End Sub
+
+        Public Function GetAt(ByVal i)
+          If i < 0 Or i >= Count Then Err.Raise vbObjectError + 1003, "ArgumentOutOfRangeException", "Index was out of range."
+          If IsObject(m_items(i)) Then Set GetAt = m_items(i) Else GetAt = m_items(i)
+        End Function
+
+        Public Sub SetAt(ByVal i, ByVal v)
+          If i < 0 Or i >= Count Then Err.Raise vbObjectError + 1003, "ArgumentOutOfRangeException", "Index was out of range."
+          If IsObject(v) Then Set m_items(i) = v Else m_items(i) = v
+          Version = Version + 1
+        End Sub
+
+        Public Sub AddItem(ByVal v)
+          Call EnsureCap(Count + 1)
+          If IsObject(v) Then Set m_items(Count) = v Else m_items(Count) = v
+          Count = Count + 1
+          Version = Version + 1
+        End Sub
+
+        Public Sub InsertAt(ByVal idx, ByVal v)
+          Dim i
+          If idx < 0 Or idx > Count Then Err.Raise vbObjectError + 1003, "ArgumentOutOfRangeException", "Index was out of range."
+          Call EnsureCap(Count + 1)
+          For i = Count To idx + 1 Step -1
+            If IsObject(m_items(i - 1)) Then Set m_items(i) = m_items(i - 1) Else m_items(i) = m_items(i - 1)
+          Next
+          If IsObject(v) Then Set m_items(idx) = v Else m_items(idx) = v
+          Count = Count + 1
+          Version = Version + 1
+        End Sub
+
+        Public Sub RemoveAt(ByVal idx)
+          Dim i
+          If idx < 0 Or idx >= Count Then Err.Raise vbObjectError + 1003, "ArgumentOutOfRangeException", "Index was out of range."
+          For i = idx To Count - 2
+            If IsObject(m_items(i + 1)) Then Set m_items(i) = m_items(i + 1) Else m_items(i) = m_items(i + 1)
+          Next
+          Count = Count - 1
+          m_items(Count) = Empty
+          Version = Version + 1
+        End Sub
+
+        Public Function RemoveLast(ByVal isObj)
+          If Count = 0 Then
+            If isObj Then Set RemoveLast = Nothing Else RemoveLast = Null
+            Exit Function
+          End If
+          Count = Count - 1
+          If IsObject(m_items(Count)) Then Set RemoveLast = m_items(Count) Else RemoveLast = m_items(Count)
+          m_items(Count) = Empty
+          Version = Version + 1
+        End Function
+
+        Public Sub ClearAll()
+          Dim i
+          For i = 0 To Count - 1
+            m_items(i) = Empty
+          Next
+          Count = 0
+          Version = Version + 1
+        End Sub
+
+        Public Function IndexOfItem(ByVal v, ByVal eqMode)
+          Dim i
+          For i = 0 To Count - 1
+            If ply_key_eq(m_items(i), v, eqMode) Then
+              IndexOfItem = CLng(i)
+              Exit Function
+            End If
+          Next
+          IndexOfItem = -1
+        End Function
+
+        Public Function ContainsItem(ByVal v, ByVal eqMode)
+          ContainsItem = (IndexOfItem(v, eqMode) >= 0)
+        End Function
+
+        Public Function ToArr(ByVal isStruct)
+          Dim r(), i
+          If Count = 0 Then
+            ToArr = Array()
+            Exit Function
+          End If
+          ReDim r(Count - 1)
+          For i = 0 To Count - 1
+            If isStruct Then
+              Set r(i) = m_items(i).ply_clone()
+            ElseIf IsObject(m_items(i)) Then
+              Set r(i) = m_items(i)
+            Else
+              r(i) = m_items(i)
+            End If
+          Next
+          ToArr = r
+        End Function
+      End Class
+
+      Function ply_new_list()
+        Set ply_new_list = New ply_List
+      End Function
+
+      Function ply_list_from_arr(ByRef arr, ByVal isStruct)
+        Dim l, i
+        If IsNull(arr) Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+        Set l = New ply_List
+        For i = 0 To UBound(arr)
+          If isStruct Then
+            Call l.AddItem(arr(i).ply_clone())
+          Else
+            Call l.AddItem(arr(i))
+          End If
+        Next
+        Set ply_list_from_arr = l
+      End Function
+
+      Class ply_Map
+        Public OrderMode
+        Public Count
+        Public SlotCount
+        Public Version
+        Private m_keys()
+        Private m_vals()
+        Private m_used()
+        Private m_cap
+        Private m_free()
+        Private m_freeCount
+        Private m_freeCap
+
+        Private Sub Class_Initialize()
+          OrderMode = 0
+          Count = 0
+          SlotCount = 0
+          Version = 0
+          m_cap = 0
+          m_freeCount = 0
+          m_freeCap = 0
+        End Sub
+
+        Private Sub EnsureCap(ByVal need)
+          Dim nc
+          If need <= m_cap Then Exit Sub
+          If m_cap = 0 Then nc = 4 Else nc = m_cap * 2
+          Do While nc < need
+            nc = nc * 2
+          Loop
+          ReDim Preserve m_keys(nc - 1)
+          ReDim Preserve m_vals(nc - 1)
+          ReDim Preserve m_used(nc - 1)
+          m_cap = nc
+        End Sub
+
+        Private Sub PushFree(ByVal slot)
+          Dim nc
+          If m_freeCount >= m_freeCap Then
+            If m_freeCap = 0 Then nc = 4 Else nc = m_freeCap * 2
+            ReDim Preserve m_free(nc - 1)
+            m_freeCap = nc
+          End If
+          m_free(m_freeCount) = slot
+          m_freeCount = m_freeCount + 1
+        End Sub
+
+        Private Function FindSlot(ByVal k)
+          Dim i
+          For i = 0 To SlotCount - 1
+            If m_used(i) Then
+              If ply_key_eq(m_keys(i), k, 0) Then
+                FindSlot = i
+                Exit Function
+              End If
+            End If
+          Next
+          FindSlot = -1
+        End Function
+
+        Private Function PutCore(ByVal k, ByVal v, ByVal doReplace)
+          Dim idx, slot
+          idx = FindSlot(k)
+          If idx >= 0 Then
+            If doReplace Then
+              If IsObject(v) Then Set m_vals(idx) = v Else m_vals(idx) = v
+            End If
+            PutCore = False
+            Exit Function
+          End If
+          If OrderMode = 1 And m_freeCount > 0 Then
+            m_freeCount = m_freeCount - 1
+            slot = m_free(m_freeCount)
+          Else
+            Call EnsureCap(SlotCount + 1)
+            slot = SlotCount
+            SlotCount = SlotCount + 1
+          End If
+          If IsObject(k) Then Set m_keys(slot) = k Else m_keys(slot) = k
+          If IsObject(v) Then Set m_vals(slot) = v Else m_vals(slot) = v
+          m_used(slot) = True
+          Count = Count + 1
+          Version = Version + 1
+          PutCore = True
+        End Function
+
+        Public Sub PutEntry(ByVal k, ByVal v)
+          Dim dummy
+          dummy = PutCore(k, v, True)
+        End Sub
+
+        Public Sub AddEntry(ByVal k, ByVal v)
+          If Not PutCore(k, v, False) Then Err.Raise vbObjectError + 1008, "ArgumentException", "An item with the same key has already been added."
+        End Sub
+
+        Public Function TryAddEntry(ByVal k, ByVal v)
+          TryAddEntry = PutCore(k, v, False)
+        End Function
+
+        Public Function GetEntry(ByVal k)
+          Dim idx
+          idx = FindSlot(k)
+          If idx < 0 Then Err.Raise vbObjectError + 1009, "KeyNotFoundException", "The given key was not present in the dictionary."
+          If IsObject(m_vals(idx)) Then Set GetEntry = m_vals(idx) Else GetEntry = m_vals(idx)
+        End Function
+
+        Public Function TryGetEntry(ByVal k, ByVal isObj)
+          Dim idx
+          idx = FindSlot(k)
+          If idx < 0 Then
+            If isObj Then Set TryGetEntry = Nothing Else TryGetEntry = Null
+            Exit Function
+          End If
+          If IsObject(m_vals(idx)) Then Set TryGetEntry = m_vals(idx) Else TryGetEntry = m_vals(idx)
+        End Function
+
+        Public Function HasKey(ByVal k)
+          HasKey = (FindSlot(k) >= 0)
+        End Function
+
+        Public Function RemoveKey(ByVal k)
+          Dim idx
+          idx = FindSlot(k)
+          If idx < 0 Then
+            RemoveKey = False
+            Exit Function
+          End If
+          m_used(idx) = False
+          m_keys(idx) = Empty
+          m_vals(idx) = Empty
+          Count = Count - 1
+          If OrderMode = 1 Then Call PushFree(idx)
+          RemoveKey = True
+        End Function
+
+        Public Sub ClearAll()
+          Dim i
+          For i = 0 To SlotCount - 1
+            m_used(i) = False
+            m_keys(i) = Empty
+            m_vals(i) = Empty
+          Next
+          Count = 0
+          m_freeCount = 0
+          If OrderMode = 1 Then SlotCount = 0
+        End Sub
+
+        Public Function SlotUsed(ByVal i)
+          SlotUsed = m_used(i)
+        End Function
+
+        Public Function KeyAt(ByVal i)
+          If IsObject(m_keys(i)) Then Set KeyAt = m_keys(i) Else KeyAt = m_keys(i)
+        End Function
+
+        Public Function ValAt(ByVal i)
+          If IsObject(m_vals(i)) Then Set ValAt = m_vals(i) Else ValAt = m_vals(i)
+        End Function
+      End Class
+
+      Function ply_new_map(ByVal orderMode)
+        Dim m
+        Set m = New ply_Map
+        m.OrderMode = orderMode
+        Set ply_new_map = m
+      End Function
+
+      Class ply_Set
+        Public OrderMode
+        Public Count
+        Public SlotCount
+        Public Version
+        Private m_keys()
+        Private m_used()
+        Private m_cap
+        Private m_free()
+        Private m_freeCount
+        Private m_freeCap
+
+        Private Sub Class_Initialize()
+          OrderMode = 0
+          Count = 0
+          SlotCount = 0
+          Version = 0
+          m_cap = 0
+          m_freeCount = 0
+          m_freeCap = 0
+        End Sub
+
+        Private Sub EnsureCap(ByVal need)
+          Dim nc
+          If need <= m_cap Then Exit Sub
+          If m_cap = 0 Then nc = 4 Else nc = m_cap * 2
+          Do While nc < need
+            nc = nc * 2
+          Loop
+          ReDim Preserve m_keys(nc - 1)
+          ReDim Preserve m_used(nc - 1)
+          m_cap = nc
+        End Sub
+
+        Private Sub PushFree(ByVal slot)
+          Dim nc
+          If m_freeCount >= m_freeCap Then
+            If m_freeCap = 0 Then nc = 4 Else nc = m_freeCap * 2
+            ReDim Preserve m_free(nc - 1)
+            m_freeCap = nc
+          End If
+          m_free(m_freeCount) = slot
+          m_freeCount = m_freeCount + 1
+        End Sub
+
+        Private Function FindSlot(ByVal k)
+          Dim i
+          For i = 0 To SlotCount - 1
+            If m_used(i) Then
+              If ply_key_eq(m_keys(i), k, 0) Then
+                FindSlot = i
+                Exit Function
+              End If
+            End If
+          Next
+          FindSlot = -1
+        End Function
+
+        Public Function AddVal(ByVal k)
+          Dim slot
+          If FindSlot(k) >= 0 Then
+            AddVal = False
+            Exit Function
+          End If
+          If OrderMode = 1 And m_freeCount > 0 Then
+            m_freeCount = m_freeCount - 1
+            slot = m_free(m_freeCount)
+          Else
+            Call EnsureCap(SlotCount + 1)
+            slot = SlotCount
+            SlotCount = SlotCount + 1
+          End If
+          If IsObject(k) Then Set m_keys(slot) = k Else m_keys(slot) = k
+          m_used(slot) = True
+          Count = Count + 1
+          Version = Version + 1
+          AddVal = True
+        End Function
+
+        Public Function RemoveVal(ByVal k)
+          Dim idx
+          idx = FindSlot(k)
+          If idx < 0 Then
+            RemoveVal = False
+            Exit Function
+          End If
+          m_used(idx) = False
+          m_keys(idx) = Empty
+          Count = Count - 1
+          If OrderMode = 1 Then Call PushFree(idx)
+          RemoveVal = True
+        End Function
+
+        Public Function HasItem(ByVal k)
+          HasItem = (FindSlot(k) >= 0)
+        End Function
+
+        Public Sub ClearAll()
+          Dim i
+          For i = 0 To SlotCount - 1
+            m_used(i) = False
+            m_keys(i) = Empty
+          Next
+          Count = 0
+          m_freeCount = 0
+          If OrderMode = 1 Then SlotCount = 0
+        End Sub
+
+        Public Function SlotUsed(ByVal i)
+          SlotUsed = m_used(i)
+        End Function
+
+        Public Function KeyAt(ByVal i)
+          If IsObject(m_keys(i)) Then Set KeyAt = m_keys(i) Else KeyAt = m_keys(i)
+        End Function
+      End Class
+
+      Function ply_new_set(ByVal orderMode)
+        Dim s
+        Set s = New ply_Set
+        s.OrderMode = orderMode
+        Set ply_new_set = s
+      End Function
+      """,
+    [ArrSeq] = """
+      Class ply_ArrSeq
+        Public Arr
+        Public IsStructElem
+        Public Function Enumerate()
+          Set Enumerate = ply_list_from_arr(Arr, IsStructElem)
+        End Function
+      End Class
+
+      Function ply_arr_seq(ByRef arr, ByVal isStruct)
+        Dim s
+        If IsNull(arr) Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+        Set s = New ply_ArrSeq
+        s.Arr = arr
+        s.IsStructElem = isStruct
+        Set ply_arr_seq = s
+      End Function
+      """,
+    [TaskSupport] = """
+      Class ply_Task
+        Public HasError
+        Public ErrObj
+        Public Result
+        Private Sub Class_Initialize()
+          HasError = False
+          Set ErrObj = Nothing
+          Result = Empty
+        End Sub
+      End Class
+
+      Function ply_task_from_result(ByVal v)
+        Dim t
+        Set t = New ply_Task
+        If IsObject(v) Then Set t.Result = v Else t.Result = v
+        Set ply_task_from_result = t
+      End Function
+
+      Function ply_task_completed()
+        Set ply_task_completed = New ply_Task
+      End Function
+
+      Function ply_task_fault(ByVal e)
+        Dim t
+        Set t = New ply_Task
+        t.HasError = True
+        Set t.ErrObj = e
+        Set ply_task_fault = t
+      End Function
+
+      Function ply_task_await(ByVal t)
+        If t Is Nothing Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+        If t.HasError Then Call ply_throw(t.ErrObj)
+        If IsObject(t.Result) Then Set ply_task_await = t.Result Else ply_task_await = t.Result
+      End Function
+
+      Sub ply_task_await_void(ByVal t)
+        If t Is Nothing Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+        If t.HasError Then Call ply_throw(t.ErrObj)
+      End Sub
+
+      Function ply_task_when_all(ByVal tasks, ByVal isVoid)
+        Dim i, n, t, r()
+        n = UBound(tasks) + 1
+        For i = 0 To n - 1
+          Set t = tasks(i)
+          If t.HasError Then
+            Set ply_task_when_all = ply_task_fault(t.ErrObj)
+            Exit Function
+          End If
+        Next
+        If isVoid Then
+          Set ply_task_when_all = ply_task_completed()
+          Exit Function
+        End If
+        If n = 0 Then
+          Set ply_task_when_all = ply_task_from_result(Array())
+          Exit Function
+        End If
+        ReDim r(n - 1)
+        For i = 0 To n - 1
+          Set t = tasks(i)
+          If IsObject(t.Result) Then Set r(i) = t.Result Else r(i) = t.Result
+        Next
+        Set ply_task_when_all = ply_task_from_result(r)
+      End Function
+      """,
+    [SpanSupport] = """
+      Function ply_wrap_kind(ByVal kind, ByVal lo, ByVal hi)
+        Select Case kind
+          Case 1 : ply_wrap_kind = ply_i8(lo)
+          Case 2 : ply_wrap_kind = ply_u8(lo)
+          Case 3 : ply_wrap_kind = ply_i16(lo)
+          Case 4 : ply_wrap_kind = ply_u16(lo)
+          Case 5 : ply_wrap_kind = ply_i32(lo)
+          Case 6 : ply_wrap_kind = ply_u32(lo)
+          Case 7 : ply_wrap_kind = ply_i64(hi * 4294967296.0 + lo)
+          Case Else : ply_wrap_kind = ply_u64(hi * 4294967296.0 + lo)
+        End Select
+      End Function
+
+      Class ply_Buf
+        Public Data
+        Public Length
+        Public ElemKind
+        Public ElemSize
+        Public IsNullArr
+
+        Private Sub Class_Initialize()
+          Data = Array()
+          Length = 0
+          ElemKind = 5
+          ElemSize = 4
+          IsNullArr = False
+        End Sub
+
+        Public Function GetElem(ByVal i)
+          GetElem = Data(i)
+        End Function
+
+        Public Sub SetElem(ByVal i, ByVal v)
+          Data(i) = v
+        End Sub
+
+        Public Function GetAtChecked(ByVal i)
+          If IsNullArr Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+          If i < 0 Or i >= Length Then Err.Raise vbObjectError + 1003, "IndexOutOfRangeException", "Index was outside the bounds of the array."
+          GetAtChecked = Data(i)
+        End Function
+
+        Public Sub SetAtChecked(ByVal i, ByVal v)
+          If IsNullArr Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+          If i < 0 Or i >= Length Then Err.Raise vbObjectError + 1003, "IndexOutOfRangeException", "Index was outside the bounds of the array."
+          Data(i) = v
+        End Sub
+
+        Public Function GetByte(ByVal bytePos)
+          Dim idx, subIdx, v, u
+          idx = Int(bytePos / ElemSize)
+          subIdx = bytePos - idx * ElemSize
+          v = Data(idx)
+          If ElemSize = 8 Then
+            u = ply_u64(v)
+            If subIdx < 4 Then
+              u = ply_u32(u)
+            Else
+              u = ply_u32(Int(u / 4294967296.0))
+              subIdx = subIdx - 4
+            End If
+          Else
+            u = ply_u32(v)
+          End If
+          u = Int(u / (256.0 ^ subIdx))
+          GetByte = CLng(u - Int(u / 256.0) * 256.0)
+        End Function
+
+        Public Sub SetByte(ByVal bytePos, ByVal bVal)
+          Dim idx, subIdx, v, lo, hi, scale, oldB, nb
+          idx = Int(bytePos / ElemSize)
+          subIdx = bytePos - idx * ElemSize
+          v = Data(idx)
+          nb = ply_u8(bVal)
+          If ElemSize = 8 Then
+            lo = ply_u32(v)
+            hi = ply_u32(Int(ply_u64(v) / 4294967296.0))
+            If subIdx < 4 Then
+              scale = 256.0 ^ subIdx
+              oldB = Int(lo / scale)
+              oldB = oldB - Int(oldB / 256.0) * 256.0
+              lo = lo + (CDbl(nb) - oldB) * scale
+            Else
+              scale = 256.0 ^ (subIdx - 4)
+              oldB = Int(hi / scale)
+              oldB = oldB - Int(oldB / 256.0) * 256.0
+              hi = hi + (CDbl(nb) - oldB) * scale
+            End If
+            Data(idx) = ply_wrap_kind(ElemKind, lo, hi)
+          Else
+            lo = ply_u32(v)
+            scale = 256.0 ^ subIdx
+            oldB = Int(lo / scale)
+            oldB = oldB - Int(oldB / 256.0) * 256.0
+            lo = lo + (CDbl(nb) - oldB) * scale
+            Data(idx) = ply_wrap_kind(ElemKind, lo, 0.0)
+          End If
+        End Sub
+      End Class
+
+      Function ply_buf_wrap(ByRef arr, ByVal elemKind, ByVal elemSize)
+        Dim b
+        Set b = New ply_Buf
+        b.ElemKind = elemKind
+        b.ElemSize = elemSize
+        If IsNull(arr) Then
+          b.IsNullArr = True
+          b.Data = Array()
+          b.Length = 0
+        Else
+          b.IsNullArr = False
+          b.Data = arr
+          b.Length = UBound(arr) + 1
+        End If
+        Set ply_buf_wrap = b
+      End Function
+
+      Function ply_buf_single(ByVal v, ByVal elemKind, ByVal elemSize)
+        Dim b, a(0)
+        a(0) = v
+        Set b = New ply_Buf
+        b.ElemKind = elemKind
+        b.ElemSize = elemSize
+        b.IsNullArr = False
+        b.Data = a
+        b.Length = 1
+        Set ply_buf_single = b
+      End Function
+
+      Function ply_raw_read(ByVal buf, ByVal bytePos, ByVal elemKind, ByVal elemSize)
+        Dim lo, hi, k
+        If elemKind = buf.ElemKind And (bytePos - Int(bytePos / elemSize) * elemSize) = 0 Then
+          ply_raw_read = buf.GetElem(Int(bytePos / elemSize))
+          Exit Function
+        End If
+        lo = 0.0
+        hi = 0.0
+        For k = 0 To elemSize - 1
+          If k < 4 Then
+            lo = lo + CDbl(buf.GetByte(bytePos + k)) * (256.0 ^ k)
+          Else
+            hi = hi + CDbl(buf.GetByte(bytePos + k)) * (256.0 ^ (k - 4))
+          End If
+        Next
+        ply_raw_read = ply_wrap_kind(elemKind, lo, hi)
+      End Function
+
+      Sub ply_raw_write(ByVal buf, ByVal bytePos, ByVal v, ByVal elemKind, ByVal elemSize)
+        Dim lo, hi, k, b
+        If elemKind = buf.ElemKind And (bytePos - Int(bytePos / elemSize) * elemSize) = 0 Then
+          Call buf.SetElem(Int(bytePos / elemSize), v)
+          Exit Sub
+        End If
+        If elemSize = 8 Then
+          lo = ply_u32(v)
+          hi = ply_u32(Int(ply_u64(v) / 4294967296.0))
+        Else
+          lo = ply_u32(v)
+          hi = 0.0
+        End If
+        For k = 0 To elemSize - 1
+          If k < 4 Then
+            b = CLng(lo - Int(lo / 256.0) * 256.0)
+            lo = Int(lo / 256.0)
+          Else
+            b = CLng(hi - Int(hi / 256.0) * 256.0)
+            hi = Int(hi / 256.0)
+          End If
+          Call buf.SetByte(bytePos + k, b)
+        Next
+      End Sub
+
+      Class ply_Span
+        Public Buf
+        Public ByteOffset
+        Public Length
+        Public ElemKind
+        Public ElemSize
+
+        Private Sub Class_Initialize()
+          Set Buf = Nothing
+          ByteOffset = 0
+          Length = 0
+          ElemKind = 5
+          ElemSize = 4
+        End Sub
+
+        Public Function GetAt(ByVal i)
+          If i < 0 Or i >= Length Then Err.Raise vbObjectError + 1003, "IndexOutOfRangeException", "Index was outside the bounds of the array."
+          GetAt = ply_raw_read(Buf, ByteOffset + CDbl(i) * CDbl(ElemSize), ElemKind, ElemSize)
+        End Function
+
+        Public Sub SetAt(ByVal i, ByVal v)
+          If i < 0 Or i >= Length Then Err.Raise vbObjectError + 1003, "IndexOutOfRangeException", "Index was outside the bounds of the array."
+          Call ply_raw_write(Buf, ByteOffset + CDbl(i) * CDbl(ElemSize), v, ElemKind, ElemSize)
+        End Sub
+
+        Public Function Slice(ByVal startIdx, ByVal count)
+          Dim c, s
+          If count < 0 Then c = Length - startIdx Else c = count
+          If startIdx < 0 Or c < 0 Or startIdx + c > Length Then Err.Raise vbObjectError + 1003, "ArgumentOutOfRangeException", "Slice range was out of bounds."
+          Set s = New ply_Span
+          Set s.Buf = Buf
+          s.ByteOffset = ByteOffset + CDbl(startIdx) * CDbl(ElemSize)
+          s.Length = CLng(c)
+          s.ElemKind = ElemKind
+          s.ElemSize = ElemSize
+          Set Slice = s
+        End Function
+
+        Public Sub CopyTo(ByVal dst)
+          If Not TryCopyTo(dst) Then Err.Raise vbObjectError + 1003, "ArgumentOutOfRangeException", "Destination is too short."
+        End Sub
+
+        Public Function TryCopyTo(ByVal dst)
+          Dim i, tmp()
+          If Length > dst.Length Then
+            TryCopyTo = False
+            Exit Function
+          End If
+          If Length > 0 Then
+            ReDim tmp(Length - 1)
+            For i = 0 To Length - 1
+              tmp(i) = GetAt(i)
+            Next
+            For i = 0 To Length - 1
+              Call dst.SetAt(i, tmp(i))
+            Next
+          End If
+          TryCopyTo = True
+        End Function
+
+        Public Sub FillAll(ByVal v)
+          Dim i
+          For i = 0 To Length - 1
+            Call SetAt(i, v)
+          Next
+        End Sub
+
+        Public Function ToArr()
+          Dim i, r()
+          If Length = 0 Then
+            ToArr = Array()
+            Exit Function
+          End If
+          ReDim r(Length - 1)
+          For i = 0 To Length - 1
+            r(i) = GetAt(i)
+          Next
+          ToArr = r
+        End Function
+
+        Public Function SeqEqual(ByVal other)
+          Dim i
+          If Length <> other.Length Then
+            SeqEqual = False
+            Exit Function
+          End If
+          For i = 0 To Length - 1
+            If GetAt(i) <> other.GetAt(i) Then
+              SeqEqual = False
+              Exit Function
+            End If
+          Next
+          SeqEqual = True
+        End Function
+
+        Public Function Reinterpret(ByVal newKind, ByVal newSize)
+          Dim s
+          Set s = New ply_Span
+          Set s.Buf = Buf
+          s.ByteOffset = ByteOffset
+          s.Length = CLng(Int((CDbl(Length) * CDbl(ElemSize)) / CDbl(newSize)))
+          s.ElemKind = newKind
+          s.ElemSize = newSize
+          Set Reinterpret = s
+        End Function
+      End Class
+
+      Function ply_span_empty(ByVal elemKind, ByVal elemSize)
+        Dim s
+        Set s = New ply_Span
+        s.ElemKind = elemKind
+        s.ElemSize = elemSize
+        Set ply_span_empty = s
+      End Function
+
+      Function ply_span_from_buf(ByVal buf, ByVal startIdx, ByVal count)
+        Dim c, s
+        If buf.IsNullArr Then
+          If startIdx <> 0 Or count > 0 Then Err.Raise vbObjectError + 1003, "ArgumentOutOfRangeException", "Span range was out of bounds."
+          Set ply_span_from_buf = ply_span_empty(buf.ElemKind, buf.ElemSize)
+          Exit Function
+        End If
+        If count < 0 Then c = buf.Length - startIdx Else c = count
+        If startIdx < 0 Or c < 0 Or startIdx + c > buf.Length Then Err.Raise vbObjectError + 1003, "ArgumentOutOfRangeException", "Span range was out of bounds."
+        Set s = New ply_Span
+        Set s.Buf = buf
+        s.ByteOffset = CDbl(startIdx) * CDbl(buf.ElemSize)
+        s.Length = CLng(c)
+        s.ElemKind = buf.ElemKind
+        s.ElemSize = buf.ElemSize
+        Set ply_span_from_buf = s
+      End Function
+
+      Function ply_span_from_arr(ByRef arr, ByVal elemKind, ByVal elemSize, ByVal startIdx, ByVal count)
+        Set ply_span_from_arr = ply_span_from_buf(ply_buf_wrap(arr, elemKind, elemSize), startIdx, count)
+      End Function
+
+      Function ply_span_stackalloc(ByVal n, ByVal elemKind, ByVal elemSize)
+        Dim arr
+        arr = ply_new_arr(n, 0)
+        Set ply_span_stackalloc = ply_span_from_buf(ply_buf_wrap(arr, elemKind, elemSize), 0, n)
+      End Function
+
+      Function ply_span_load_e(ByVal sp, ByVal at, ByVal width, ByVal isLittle, ByVal isSigned)
+        Dim i, bi, acc
+        If at < 0 Or at + width > sp.Length Then Err.Raise vbObjectError + 1003, "ArgumentOutOfRangeException", "Index was out of range."
+        acc = 0.0
+        For i = 0 To width - 1
+          If isLittle Then bi = at + i Else bi = at + width - 1 - i
+          acc = acc + CDbl(sp.GetAt(bi)) * (256.0 ^ i)
+        Next
+        If isSigned Then
+          If width = 2 Then ply_span_load_e = ply_i16(acc) Else ply_span_load_e = ply_i32(acc)
+        Else
+          ply_span_load_e = acc
+        End If
+      End Function
+
+      Sub ply_span_store_e(ByVal sp, ByVal at, ByVal val, ByVal width, ByVal isLittle)
+        Dim i, bi, u
+        If at < 0 Or at + width > sp.Length Then Err.Raise vbObjectError + 1003, "ArgumentOutOfRangeException", "Index was out of range."
+        u = ply_u32(val)
+        For i = 0 To width - 1
+          If isLittle Then bi = at + i Else bi = at + width - 1 - i
+          Call sp.SetAt(bi, CLng(u - Int(u / 256.0) * 256.0))
+          u = Int(u / 256.0)
+        Next
+      End Sub
+      """,
+    [PtrSupport] = """
+      Class ply_Ptr
+        Public Buf
+        Public RegionStart
+        Public RegionBytes
+        Public Offset
+        Private Sub Class_Initialize()
+          Set Buf = Nothing
+          RegionStart = 0.0
+          RegionBytes = 0.0
+          Offset = 0.0
+        End Sub
+      End Class
+
+      Function ply_ptr_from_buf(ByVal buf, ByVal regionStart, ByVal regionBytes, ByVal offset)
+        Dim p
+        Set p = New ply_Ptr
+        Set p.Buf = buf
+        p.RegionStart = CDbl(regionStart)
+        p.RegionBytes = CDbl(regionBytes)
+        p.Offset = CDbl(offset)
+        Set ply_ptr_from_buf = p
+      End Function
+
+      Function ply_ptr_pin_span(ByVal sp, ByVal hasIdx, ByVal idx)
+        Dim rBytes
+        rBytes = CDbl(sp.Length) * CDbl(sp.ElemSize)
+        If Not hasIdx Then
+          If sp.Length = 0 Then
+            Set ply_ptr_pin_span = Nothing
+          Else
+            Set ply_ptr_pin_span = ply_ptr_from_buf(sp.Buf, sp.ByteOffset, rBytes, 0.0)
+          End If
+          Exit Function
+        End If
+        If idx < 0 Or idx >= sp.Length Then Err.Raise vbObjectError + 1003, "IndexOutOfRangeException", "Index was outside the bounds of the array."
+        Set ply_ptr_pin_span = ply_ptr_from_buf(sp.Buf, sp.ByteOffset, rBytes, CDbl(idx) * CDbl(sp.ElemSize))
+      End Function
+
+      Function ply_ptr_pin_buf(ByVal buf, ByVal hasIdx, ByVal idx)
+        Dim rBytes
+        If buf.IsNullArr Then
+          If hasIdx Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+          Set ply_ptr_pin_buf = Nothing
+          Exit Function
+        End If
+        rBytes = CDbl(buf.Length) * CDbl(buf.ElemSize)
+        If Not hasIdx Then
+          If buf.Length = 0 Then
+            Set ply_ptr_pin_buf = Nothing
+          Else
+            Set ply_ptr_pin_buf = ply_ptr_from_buf(buf, 0.0, rBytes, 0.0)
+          End If
+          Exit Function
+        End If
+        If idx < 0 Or idx >= buf.Length Then Err.Raise vbObjectError + 1003, "IndexOutOfRangeException", "Index was outside the bounds of the array."
+        Set ply_ptr_pin_buf = ply_ptr_from_buf(buf, 0.0, rBytes, CDbl(idx) * CDbl(buf.ElemSize))
+      End Function
+
+      Function ply_ptr_pin_arr(ByRef arr, ByVal elemKind, ByVal elemSize, ByVal hasIdx, ByVal idx)
+        Set ply_ptr_pin_arr = ply_ptr_pin_buf(ply_buf_wrap(arr, elemKind, elemSize), hasIdx, idx)
+      End Function
+
+      Function ply_ptr_stackalloc(ByVal n, ByVal elemKind, ByVal elemSize)
+        Dim arr, b
+        arr = ply_new_arr(n, 0)
+        Set b = ply_buf_wrap(arr, elemKind, elemSize)
+        Set ply_ptr_stackalloc = ply_ptr_from_buf(b, 0.0, CDbl(n) * CDbl(elemSize), 0.0)
+      End Function
+
+      Function ply_ptr_add(ByVal p, ByVal delta, ByVal elemSize)
+        If p Is Nothing Then
+          Set ply_ptr_add = ply_ptr_from_buf(Nothing, 0.0, 0.0, CDbl(delta) * CDbl(elemSize))
+        Else
+          Set ply_ptr_add = ply_ptr_from_buf(p.Buf, p.RegionStart, p.RegionBytes, p.Offset + CDbl(delta) * CDbl(elemSize))
+        End If
+      End Function
+
+      Function ply_ptr_load(ByVal p, ByVal elemKind, ByVal elemSize)
+        If p Is Nothing Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+        If p.Buf Is Nothing Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+        If p.Offset < 0 Or p.Offset > p.RegionBytes - CDbl(elemSize) Then Err.Raise vbObjectError + 1003, "IndexOutOfRangeException", "Index was outside the bounds of the pointer region."
+        ply_ptr_load = ply_raw_read(p.Buf, p.RegionStart + p.Offset, elemKind, elemSize)
+      End Function
+
+      Sub ply_ptr_store(ByVal p, ByVal v, ByVal elemKind, ByVal elemSize)
+        If p Is Nothing Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+        If p.Buf Is Nothing Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+        If p.Offset < 0 Or p.Offset > p.RegionBytes - CDbl(elemSize) Then Err.Raise vbObjectError + 1003, "IndexOutOfRangeException", "Index was outside the bounds of the pointer region."
+        Call ply_raw_write(p.Buf, p.RegionStart + p.Offset, v, elemKind, elemSize)
+      End Sub
+
+      Function ply_ptr_same_region(ByVal a, ByVal b)
+        Dim ab, bb
+        If a Is Nothing Then Set ab = Nothing Else Set ab = a.Buf
+        If b Is Nothing Then Set bb = Nothing Else Set bb = b.Buf
+        ply_ptr_same_region = (ab Is bb)
+      End Function
+
+      Function ply_ptr_pos(ByVal p)
+        If p Is Nothing Then ply_ptr_pos = 0.0 Else ply_ptr_pos = p.RegionStart + p.Offset
+      End Function
+
+      Function ply_ptr_eq(ByVal a, ByVal b)
+        If Not ply_ptr_same_region(a, b) Then
+          ply_ptr_eq = False
+          Exit Function
+        End If
+        ply_ptr_eq = (ply_ptr_pos(a) = ply_ptr_pos(b))
+      End Function
+
+      Function ply_ptr_cmp(ByVal a, ByVal b)
+        If Not ply_ptr_same_region(a, b) Then Err.Raise vbObjectError + 1005, "InvalidOperationException", "Cannot compare pointers from different regions."
+        ply_ptr_cmp = ply_ptr_pos(a) - ply_ptr_pos(b)
+      End Function
+
+      Function ply_ptr_diff(ByVal a, ByVal b, ByVal elemSize)
+        ply_ptr_diff = Fix(ply_ptr_cmp(a, b) / CDbl(elemSize))
+      End Function
       """
   };
 
