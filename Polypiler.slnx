@@ -8,6 +8,8 @@
   <Project Path="Polypiler.Core.Backends.Batch/Polypiler.Core.Backends.Batch.csproj" />
   <Project Path="Polypiler.Core.Backends.CSharp/Polypiler.Core.Backends.CSharp.csproj" />
   <Project Path="Polypiler.Core.Backends.JavaScript/Polypiler.Core.Backends.JavaScript.csproj" />
+  <Project Path="Polypiler.Core.Backends.Jvm/Polypiler.Core.Backends.Jvm.csproj" />
+  <Project Path="Polypiler.Core.Backends.Msil/Polypiler.Core.Backends.Msil.csproj" />
   <Project Path="Polypiler.Core.Backends.Perl/Polypiler.Core.Backends.Perl.csproj" />
   <Project Path="Polypiler.Core.Backends.Python/Polypiler.Core.Backends.Python.csproj" />
   <Project Path="Polypiler.Core.Backends.Rust/Polypiler.Core.Backends.Rust.csproj" />
@@ -15,6 +17,8 @@
   <Project Path="Polypiler.Core.Frontends.Batch/Polypiler.Core.Frontends.Batch.csproj" />
   <Project Path="Polypiler.Core.Frontends.CSharp/Polypiler.Core.Frontends.CSharp.csproj" />
   <Project Path="Polypiler.Core.Frontends.JavaScript/Polypiler.Core.Frontends.JavaScript.csproj" />
+  <Project Path="Polypiler.Core.Frontends.Jvm/Polypiler.Core.Frontends.Jvm.csproj" />
+  <Project Path="Polypiler.Core.Frontends.Msil/Polypiler.Core.Frontends.Msil.csproj" />
   <Project Path="Polypiler.Core.Frontends.Perl/Polypiler.Core.Frontends.Perl.csproj" />
   <Project Path="Polypiler.Core.Frontends.Python/Polypiler.Core.Frontends.Python.csproj" />
   <Project Path="Polypiler.Core.Frontends.Rust/Polypiler.Core.Frontends.Rust.csproj" />

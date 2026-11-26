@@ -20,5 +20,12 @@ The guest's wildcard trace tests both the paths and the order.
 The `lift.bat` fixture tests the label prefix and a 127-byte SET line. `LIFTDRV.BAT`
 boots a child interpreter and captures its hexadecimal result for comparison with generated C#.
 
+`DosWrap.cs` is the pinned C# emitter fixture. `EMITDRV.BAT` runs the resulting
+`KERNEL.BAT` in a fresh `COMMAND.COM /E:32768 /C` child and checks that the caller's
+`PLYD` remains intact. The generated result is a single uppercase hexadecimal
+`PLYRESULT` line. The emitter budgets 1,024 bytes of inherited entries within the
+32,768-byte environment, including separately the generated entries and the
+environment's final terminator.
+
 The fixtures in this folder are LGPL-3.0-or-later. `PLYRC.COM` is five bytes
 (`B8 2A 4C CD 21`) and exits through DOS interrupt 21h with status 42.
