@@ -207,6 +207,32 @@ public sealed class RustRunnerUnitTests {
     Assert.That(execution.Diagnostics.Single().Message, Does.StartWith("the signature does not fit the declaration"));
   }
 
+  /// <summary>#1437: Windows backslashes in Cargo JSON primary spans normalize to forward slashes, and multiple driver errors stay one PLY1595 preserving every message.</summary>
+  [Test]
+  public async Task Execute_ReportsASignatureMismatchWithWindowsDriverPathsAndMultipleDiagnostics() {
+    var driverPath = RustDriverGenerator.FilePath.Replace("/", "\\\\", StringComparison.Ordinal);
+    var output = Message("error", "E0308", driverPath, "mismatched types")
+      + Message("error", "E0061", driverPath, "this function takes 2 arguments but 1 argument was supplied")
+      + Failed;
+    var parsed = CargoMessageParser.Parse(output);
+    Assert.That(parsed.Select(message => message.File), Is.All.EqualTo(RustDriverGenerator.FilePath));
+    var runner = new RustRunner(new Replay(Result(RunOutcome.Completed, 101, output)), RustBuildOptions.Dev);
+    var execution = await runner.ExecuteAsync(_package, "fixture_package", [_add], [(0, new byte[8])]);
+    var diagnostic = execution.Diagnostics.Single();
+    Assert.That(diagnostic.Code, Is.EqualTo("PLY1595"));
+    Assert.That(diagnostic.Message, Does.Contain("E0308").And.Contain("E0061"));
+  }
+
+  /// <summary>#1437: CRLF line endings in driver stdout parse identically to LF.</summary>
+  [Test]
+  public async Task Execute_ReadsCrLfOutcomes() {
+    var runner = new RustRunner(new Replay(Result(RunOutcome.Completed, 0, Finished.Replace("\n", "\r\n", StringComparison.Ordinal) + "05000000\r\n!attempt to add with overflow\r\n?DivideByZero\r\n")), RustBuildOptions.Dev);
+    var execution = await runner.ExecuteAsync(_package, "fixture_package", [_add with { Fallible = true }], [(0, new byte[8]), (0, new byte[8]), (0, new byte[8])]);
+    Assert.That(execution.Diagnostics, Is.Empty);
+    Assert.That(execution.Outcomes!.Select(outcome => (outcome.Image is null ? null : Convert.ToHexStringLower(outcome.Image), outcome.Panic, outcome.Error)),
+      Is.EqualTo(new (string?, string?, string?)[] { ("05000000", null, null), (null, "attempt to add with overflow", null), (null, null, "DivideByZero") }));
+  }
+
   [TestCase(134, "05000000\n", "PLY1592")]
   [TestCase(0, "05000000\n", "PLY1595")]
   [TestCase(2, "", "PLY1595")]

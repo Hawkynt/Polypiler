@@ -18,6 +18,8 @@ public static partial class PythonEmitter {
     private readonly Dictionary<string, string> _functions = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _constants = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _globals = new(StringComparer.Ordinal);
+    private readonly Dictionary<(string Pattern, string Flags), string> _regexes = [];
+    private readonly List<PyStatement> _regexDefinitions = [];
 
     /// <summary>Every name at the level of the module: functions, constants, globals, helpers and imports, which no local takes.</summary>
     private readonly HashSet<string> _moduleNames = new(StringComparer.Ordinal);
@@ -105,7 +107,8 @@ public static partial class PythonEmitter {
       body.AddRange(this.ExceptionClasses().Select(declaration => declaration with { Leading = PyTrivia.TwoBlank }));
       body.AddRange(types.Select(declaration => declaration with { Leading = PyTrivia.TwoBlank }));
       body.AddRange(this.EnumTables().Select((table, index) => table with { Leading = index == 0 ? PyTrivia.TwoBlank : PyTrivia.None }));
-      body.AddRange(constants.Select((constant, index) => constant with { Leading = index == 0 ? PyTrivia.TwoBlank : PyTrivia.None }));
+      var moduleConstants = constants.Concat(this._regexDefinitions).ToList();
+      body.AddRange(moduleConstants.Select((constant, index) => constant with { Leading = index == 0 ? PyTrivia.TwoBlank : PyTrivia.None }));
       body.AddRange(functions.Select(function => function with { Leading = PyTrivia.TwoBlank }));
       body.AddRange(globals.Select((global, index) => global with { Leading = index == 0 ? PyTrivia.TwoBlank : PyTrivia.None }));
 
@@ -115,7 +118,7 @@ public static partial class PythonEmitter {
       if (this._declaresTypes || this._lazyAnnotations)
         imports.Add(new PyImportFrom("__future__", ["annotations"]) { Leading = PyTrivia.Blank });
 
-      foreach (var library in new[] { "asyncio", "copy", "dataclasses", "enum", "math", "struct" }.Where(names.Contains))
+      foreach (var library in new[] { "asyncio", "copy", "dataclasses", "enum", "math", "re", "struct" }.Where(names.Contains))
         imports.Add(new PyImport(library) { Leading = imports.Count == 0 ? PyTrivia.Blank : PyTrivia.None });
 
       foreach (var (library, members) in new[] { ("collections.abc", new[] { "Callable", "Iterable", "Iterator" }), ("dataclasses", ["dataclass", "field"]), ("typing", ["List"]) }) {
@@ -160,7 +163,7 @@ public static partial class PythonEmitter {
     /// <summary>Takes the names of the helpers and of what the module imports, which nothing of the module may have.</summary>
     private void Reserve() {
       this._moduleNames.UnionWith(PythonHelpers.Order);
-      this._moduleNames.UnionWith(["asyncio", "math", "struct", "List", "__all__", "copy", "dataclasses", "dataclass", "field", "enum", "Callable", "Iterable", "Iterator", "annotations"]);
+      this._moduleNames.UnionWith(["asyncio", "math", "re", "struct", "List", "__all__", "copy", "dataclasses", "dataclass", "field", "enum", "Callable", "Iterable", "Iterator", "annotations"]);
     }
 
     /// <summary>A name at the level of the module that no other name there has.</summary>

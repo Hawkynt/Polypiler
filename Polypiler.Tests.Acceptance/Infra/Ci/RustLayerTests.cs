@@ -222,6 +222,8 @@ public sealed class RustLayerTests {
     var commands = new RustCommands("1.99.0", "nightly-2026-11-01", "/opt/rustup", "/opt/miri");
     foreach (var spec in commands.Smoke.Append(commands.Build()).Append(commands.Miri())) {
       Assert.That(spec.Environment["CARGO_NET_OFFLINE"], Is.EqualTo("true"), spec.ToString());
+      Assert.That(spec.Environment["CARGO_TERM_COLOR"], Is.EqualTo("never"), spec.ToString());
+      Assert.That(spec.Environment["NO_COLOR"], Is.EqualTo("1"), spec.ToString());
       Assert.That(spec.Environment["RUSTUP_TOOLCHAIN"], Is.EqualTo("1.99.0"), spec.ToString());
       Assert.That(spec.Environment["RUSTUP_HOME"], Is.EqualTo("/opt/rustup"), spec.ToString());
     }
@@ -229,6 +231,17 @@ public sealed class RustLayerTests {
     Assert.That(commands.Miri().Environment["MIRI_SYSROOT"], Is.EqualTo("/opt/miri"));
     Assert.That(commands.Run.Environment.ContainsKey("MIRI_SYSROOT"), Is.False);
     Assert.That(commands.HostFolders, Is.EqualTo(new[] { "/opt/rustup", "/opt/miri" }));
+  }
+
+  /// <summary>#1437: ANSI escape sequences from rustfmt diffs are stripped while plain diffs and empty text pass through.</summary>
+  [Test]
+  public void StripAnsi_RemovesEscapeSequencesAndKeepsPlainText() {
+    const string colored = "Diff in src/lib.rs:1:\r\n\x1B[31m-pub fn f(x:i32)->i32{x}\x1B[m\r\n\x1B[32m+pub fn f(x: i32) -> i32 {\x1B[m\r\n";
+    var plain = RustCommands.StripAnsi(colored).ReplaceLineEndings("\n");
+    Assert.That(plain, Does.StartWith("Diff in ").And.Contain("\n-").And.Contain("\n+"));
+    Assert.That(RustCommands.StripAnsi("Diff in src/lib.rs:1:\n-old\n+new\n"), Is.EqualTo("Diff in src/lib.rs:1:\n-old\n+new\n"));
+    Assert.That(RustCommands.StripAnsi(""), Is.EqualTo(""));
+    Assert.Throws<ArgumentNullException>(() => RustCommands.StripAnsi(null!));
   }
 
   [Test]

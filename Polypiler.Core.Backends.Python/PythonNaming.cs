@@ -32,7 +32,7 @@ public static class PythonNaming {
     "hash", "hex", "id", "input", "int", "isinstance", "iter", "len", "list", "map", "max", "min", "next", "object", "oct", "open",
     "ord", "pow", "print", "range", "repr", "reversed", "round", "set", "slice", "sorted", "str", "sum", "super", "tuple", "zip",
     "ArithmeticError", "IndexError", "OverflowError", "ZeroDivisionError", "AssertionError", "ValueError", "TypeError",
-    "asyncio", "math", "struct", "typing", "List", "self", "cls",
+    "asyncio", "math", "re", "struct", "typing", "List", "self", "cls",
     "copy", "dataclasses", "dataclass", "field", "enum", "annotations", "Callable", "Iterable", "Iterator", "collections"
   };
 

@@ -713,6 +713,84 @@ internal static partial class Strings {
               unit
           }
       }
+      """, []),
+    ["ply_regex_test"] = ("""
+      fn ply_regex_test(text: &[u16], ops: &[usize], ranges: &[u16]) -> bool {
+          let count = ops.len() / 3;
+          let mut current = vec![false; count];
+          let mut next = vec![false; count];
+          let mut stack = Vec::new();
+          let mut pos = 0;
+          while pos <= text.len() {
+              if !current[0] {
+                  current[0] = true;
+                  stack.push(0);
+              }
+              let mut head = 0;
+              while head < stack.len() {
+                  let pc = stack[head];
+                  head += 1;
+                  let base = pc * 3;
+                  let op = ops[base];
+                  let a = ops[base + 1];
+                  let b = ops[base + 2];
+                  if op == 0 {
+                      return true;
+                  }
+                  if ((op == 1 && pos == 0) || (op == 2 && pos == text.len())) && !current[pc + 1] {
+                      current[pc + 1] = true;
+                      stack.push(pc + 1);
+                  } else if op == 4 && !current[a] {
+                      current[a] = true;
+                      stack.push(a);
+                  } else if op == 5 {
+                      if !current[a] {
+                          current[a] = true;
+                          stack.push(a);
+                      }
+                      if !current[b] {
+                          current[b] = true;
+                          stack.push(b);
+                      }
+                  }
+              }
+              stack.clear();
+              if pos == text.len() {
+                  return false;
+              }
+              let unit = text[pos];
+              let mut pc = 0;
+              while pc < count {
+                  if current[pc] {
+                      current[pc] = false;
+                      let base = pc * 3;
+                      if ops[base] == 3 {
+                          let mut at = ops[base + 1] * 2;
+                          let end = ops[base + 2] * 2;
+                          while at < end {
+                              if (ranges[at]..=ranges[at + 1]).contains(&unit) {
+                                  next[pc + 1] = true;
+                                  break;
+                              }
+                              at += 2;
+                          }
+                      }
+                  }
+                  pc += 1;
+              }
+              pc = 0;
+              while pc < count {
+                  if next[pc] {
+                      current[pc] = true;
+                      next[pc] = false;
+                      stack.push(pc);
+                  }
+                  pc += 1;
+              }
+              pos += 1;
+          }
+          false
+      }
       """, [])
   };
 

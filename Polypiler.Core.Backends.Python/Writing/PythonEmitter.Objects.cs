@@ -416,8 +416,9 @@ public static partial class PythonEmitter {
       if (this._compared.Contains(type))
         body.AddRange(this.ValueEquality(type, type.AllFields.Where(field => !IrExceptionClass.Exception.Fields.Contains(field)).ToList()));
 
-      // An __init__ that does nothing but what the inherited one does is left out.
-      if (body.Count > 0 && body[0] is PyFunctionDef { Name: "__init__", Parameters.Count: 1 } init
+      // An __init__ that does nothing but what the inherited one does is left out, unless it deliberately skips the base constructor.
+      var skipsBase = type.Base is not null && type.Constructors.Any(constructor => constructor.SkipsBase);
+      if (!skipsBase && body.Count > 0 && body[0] is PyFunctionDef { Name: "__init__", Parameters.Count: 1 } init
         && (init.Body.Count == 0 || init.Body is [PyExpressionStatement { Expression: PyCall { Callee: PyAttribute { Name: "__init__", Target: PyCall { Callee: PyName { Name: "super" } } }, Arguments.Count: 0 } }]))
         body.RemoveAt(0);
 
@@ -427,11 +428,14 @@ public static partial class PythonEmitter {
 
     /// <summary>
     /// The constructors of a class. One is <c>__init__</c>, which first gives every field of the class
-    /// its default; several are methods of the class, private to it, that <c>__init__</c> chooses from
-    /// by the number of its arguments, as JavaScript's one constructor does.
+    /// its default (and every inherited field when the constructor skips its base classes, #1419);
+    /// several are methods of the class, private to it, that <c>__init__</c> chooses from by the
+    /// number of its arguments, as JavaScript's one constructor does.
     /// </summary>
     private List<PyStatement> Constructors(IrClassType type) {
-      var defaults = type.Fields.Select(field => (PyStatement)new PyAssign(new PyAttribute(new PyName("self"), this.MemberName(field)), this.FieldDefault(field.Type)) {
+      var skipsBase = type.Base is not null && type.Constructors.Any(constructor => constructor.SkipsBase);
+      var fields = skipsBase ? type.AllFields : type.Fields;
+      var defaults = fields.Select(field => (PyStatement)new PyAssign(new PyAttribute(new PyName("self"), this.MemberName(field)), this.FieldDefault(field.Type)) {
         Annotation = null
       }).ToList();
       var constructors = type.Constructors.Select(constructor => this._byName.GetValueOrDefault(constructor.Function)).OfType<IrFunction>().ToList();

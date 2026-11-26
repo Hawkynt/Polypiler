@@ -29,7 +29,7 @@ public sealed class RustLayerSteps(CommandLog log) {
   [Given("^the crate " + StepText.Quoted + " whose function ends in " + StepText.Quoted + "$")]
   public void CrateEndingIn(string crate, string text) {
     this.Crate(crate);
-    Assert.That(this.Source("src/lib.rs"), Does.Contain(StepText.Unescape(text) + "\n}"));
+    Assert.That(this.Source("src/lib.rs").ReplaceLineEndings("\n"), Does.Contain(StepText.Unescape(text) + "\n}"));
   }
 
   [Given("^the crate " + StepText.Quoted + @" whose test calls get_unchecked\((\d+)\) on a slice of length (\d+)$")]
@@ -92,12 +92,13 @@ public sealed class RustLayerSteps(CommandLog log) {
   }
 
   [Then("^" + StepText.Quoted + " prints " + StepText.Quoted + "$")]
-  public void Prints(string line, string text) => Assert.That(this._byCommand[line].Stdout, Is.EqualTo(text + "\n"));
+  public void Prints(string line, string text) => Assert.That(this._byCommand[line].Stdout.ReplaceLineEndings("\n"), Is.EqualTo(text + "\n"));
 
   [Then("^stdout contains a diff starting with " + StepText.Quoted + "$")]
   public void DiffStartsWith(string text) {
-    Assert.That(log.Last.Stdout, Does.StartWith(text), log.Last.Output);
-    Assert.That(log.Last.Stdout, Does.Contain("\n-").And.Contain("\n+"));
+    var stdout = RustCommands.StripAnsi(log.Last.Stdout).ReplaceLineEndings("\n");
+    Assert.That(stdout, Does.StartWith(text), log.Last.Output);
+    Assert.That(stdout, Does.Contain("\n-").And.Contain("\n+"));
   }
 
   [Then("^the exit code is not 0$")]

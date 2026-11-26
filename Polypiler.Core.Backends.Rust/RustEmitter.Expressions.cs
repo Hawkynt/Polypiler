@@ -101,6 +101,7 @@ public static partial class RustEmitter {
       IrStrConst or IrConstRef { Type.IsString: true } or IrConditional { Type.IsString: true } => this.StringValue(expression),
       IrArrayLoad { Array: IrConstRef table, Type.IsString: true } load => this.TableText(table, load.Index),
       IrIntrinsic operation when StringOperations.IsString(operation.Op) => this.StringOperation(operation),
+      IrIntrinsic operation when RegexOperations.IsRegex(operation.Op) => this.RegexTest(operation),
       IrLocalRef reference when this._shared.Contains(reference.Local) => this.SharedRead(reference.Local),
       IrLocalRef { Type.IsBigInt: true } reference => this.BigValue(reference),
       IrBigConst constant => this.BigLiteral(constant.Value),

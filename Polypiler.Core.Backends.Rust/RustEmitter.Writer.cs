@@ -109,6 +109,7 @@ public static partial class RustEmitter {
       items.InsertRange(0, this._uses.Select(path => new RsUse(path)));
       items.AddRange(this._enumTableItems);
       items.AddRange(this._whitespace.Values);
+      items.AddRange(this._regexTables);
       items.AddRange(this.BigItems());
       items.AddRange(this._spellings.Values);
       items.AddRange(this._iteratorItems);

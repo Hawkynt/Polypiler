@@ -181,6 +181,22 @@ internal static class RustRun {
     => RustTraps.TrapName(panic) is { } name && Enum.TryParse<IrTrap>(name, out var trap) ? PrototypeFixture.Trap(trap) : "panic: " + panic;
 
   /// <summary>
+  /// Formats a failed Rust runner execution with every diagnostic (and its cause when present) followed by
+  /// every generated file's path and content in input order, so multi-file crates never hide the runner's
+  /// original diagnostic.
+  /// </summary>
+  internal static string FailureMessage(IReadOnlyList<Polypiler.Core.Diagnostic> diagnostics, IReadOnlyList<Polypiler.Core.GeneratedFile> files) {
+    ArgumentNullException.ThrowIfNull(diagnostics);
+    ArgumentNullException.ThrowIfNull(files);
+    var parts = new List<string>(diagnostics.Count + files.Count);
+    foreach (var diagnostic in diagnostics)
+      parts.Add(string.IsNullOrEmpty(diagnostic.Cause) ? diagnostic.ToString() : $"{diagnostic}: {diagnostic.Cause}");
+    foreach (var file in files)
+      parts.Add($"--- {file.Path} ---\n{file.Content}");
+    return string.Join("\n", parts);
+  }
+
+  /// <summary>
   /// What every call does in the crate the backend writes for a module, built with the switches given:
   /// one outcome per call, in order. The module is translated as <c>translate --to rust</c> would. An
   /// error an export returns under the trap policy <c>result</c> is read as the trap it displays, and
@@ -203,7 +219,7 @@ internal static class RustRun {
         Fallible = fallible.Contains(function.Name)
       })],
       [.. calls.Select(call => (index[call.Method], call.Arguments.SelectMany((argument, position) => Bytes(argument, signatures[call.Method].Parameters[position].Type)).ToArray()))]);
-    Assert.That(execution.Diagnostics, Is.Empty, () => string.Join("\n", execution.Diagnostics.Select(diagnostic => $"{diagnostic}: {diagnostic.Cause}")) + "\n" + RustCrates.ModuleText(files));
+    Assert.That(execution.Diagnostics, Is.Empty, () => FailureMessage(execution.Diagnostics, files));
     if (profile.TrapPolicy == RustTrapPolicy.Result)
       Assert.That(calls.Zip(execution.Outcomes!).Where(pair => pair.Second.Panic is not null).Select(pair => $"{pair.First}: {pair.Second.Panic}"), Is.Empty, "no call panics under the trap policy result");
 

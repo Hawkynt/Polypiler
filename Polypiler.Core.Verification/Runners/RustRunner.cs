@@ -235,7 +235,7 @@ public sealed partial class RustRunner {
         : Rejection(step, result.ExitCode, messages, Text(result.Stderr)));
     }
 
-    var lines = stdout.Split('\n').Where(line => line.Length > 0 && !line.StartsWith('{')).ToList();
+    var lines = stdout.Split('\n').Select(line => line.TrimEnd('\r')).Where(line => line.Length > 0 && !line.StartsWith('{')).ToList();
     if (result.ExitCode != 0 || lines.Count != calls.Count)
       return new(null, [Diagnostic.Create(result.ExitCode is 0 or 2 ? RustRunnerDiagnostics.Protocol : RustRunnerDiagnostics.Crashed, null,
         result.ExitCode is 0 or 2 ? $"the driver answered {lines.Count} of {calls.Count} calls (exit code {result.ExitCode})" : result.ExitCode.ToString(CultureInfo.InvariantCulture),

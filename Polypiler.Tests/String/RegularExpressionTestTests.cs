@@ -9,6 +9,12 @@ using Polypiler.Backends.Testing;
 using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.Backends.JavaScript.Printing;
+using Polypiler.Core.Backends.Python;
+using Polypiler.Core.Backends.Python.Printing;
+using Polypiler.Core.Backends.Python.Syntax;
+using Polypiler.Core.Backends.Rust;
+using Polypiler.Core.Backends.Rust.Printing;
+using Polypiler.Core.Backends.Rust.Syntax;
 using Polypiler.Core.Frontends.JavaScript;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
@@ -369,10 +375,144 @@ public sealed class RegularExpressionTestTests {
     Assert.That(IrInterpreter.Call(module, "g", ["x"]), Is.False);
   }
 
+  [TestCase(@"^[0-9A-Fa-f]*$", "", @"^[0-9A-Fa-f]*\Z")]
+  [TestCase("a.b", "", "a[\\x00-\\x09\\x0B\\x0C\\x0E-\u2027\u202A-\uFFFF]b")]
+  [TestCase(@"\d\w", "", @"[0-9][0-9A-Z_a-z]")]
+  [TestCase("k", "i", "[Kk]")]
+  [TestCase("[]", "", "(?!)")]
+  [TestCase(@"\0\t", "", @"\x00\x09")]
+  public void ToPython_WritesEverySetOut(string pattern, string flags, string expected)
+    => Assert.That(RegexOperations.ToPython(pattern, flags), Is.EqualTo(expected));
+
   [Test]
-  public void Python_RefusesTheTestByName() {
-    var translation = PythonFixtures.Translate(TableModule());
-    Assert.That(translation.Problems, Has.Some.Contains("RegexTest"));
+  public void ToProgram_CompilesSubsetAndCapsHugeRepetitions() {
+    foreach (var (pattern, flags, _) in _table) {
+      var program = RegexOperations.ToProgram(pattern, flags);
+      Assert.That(program, Is.Not.Null, $"/{pattern}/{flags}");
+      Assert.That(program!.Instructions[^1].Op, Is.EqualTo(0));
+    }
+
+    Assert.That(RegexOperations.ToProgram("(?:){100}", ""), Is.Not.Null);
+    Assert.That(RegexOperations.ToProgram("(?:){0,5}", ""), Is.Not.Null);
+    Assert.That(RegexOperations.ToProgram("a{5000}", ""), Is.Null);
+    Assert.That(RegexOperations.ToProgram("(?:a|b){2000}", ""), Is.Null);
+    Assert.That(RegexOperations.ToProgram("a{0,5000}", ""), Is.Null);
+    Assert.That(RegexOperations.ToProgram("(?:a|b){0,2000}", ""), Is.Null);
+    Assert.That(RegexOperations.ToProgram("a+", "", 2), Is.Null);
+    Assert.That(RegexOperations.ToProgram("a*", "", 2), Is.Null);
+    Assert.That(RegexOperations.ToProgram("ab", "", 2), Is.Null);
+    Assert.That(RegexOperations.ToProgram("abc", "", 2), Is.Null);
+    Assert.That(RegexOperations.ToProgram("a|b", "", 2), Is.Null);
+    Assert.That(() => RegexOperations.ToProgram("a", "g"), Throws.ArgumentException);
+  }
+
+  [TestCaseSource(typeof(PythonProfile), nameof(PythonProfile.All))]
+  public void Python_WritesCompiledRegexesInEveryProfile(PythonProfile profile) {
+    var translation = PythonFixtures.Translate(TableModule(), profile);
+    Assert.That(translation.Problems, Is.Empty);
+    var text = translation.Source!;
+    Assert.That(text, Does.Contain("import re\n"));
+    Assert.That(text, Does.Contain("_PATTERN_1 = re.compile(\"^[0-9A-Fa-f]*\\\\Z\")"));
+    Assert.That(text, Does.Contain("return _PATTERN_1.search(s) is not None"));
+    var parsed = PythonSyntaxReader.ReadModule(text);
+    Assert.That(PythonPrinter.Print(PythonSyntaxReader.ReadModule(PythonPrinter.Print(parsed))), Is.EqualTo(PythonPrinter.Print(parsed)));
+  }
+
+  [Test]
+  public void Python_DeduplicatesPatternsAndSupportsGlobalInitializer() {
+    var global = new IrGlobal("G", IrType.Bool, RegexOperations.Test(new IrStrConst("ab"), "a", ""));
+    var module = new IrModule("M", [
+      new IrFunction("F", true, IrType.Bool, [_s], [], new IrBlock([
+        new IrReturn(new IrBinary(IrBinaryOp.LogicalAnd, RegexOperations.Test(new IrLocalRef(_s), "a", ""), RegexOperations.Test(new IrLocalRef(_s), "a", "")))]))
+    ]) { Globals = [global] };
+    var translation = PythonFixtures.Translate(module);
+    Assert.That(translation.Problems, Is.Empty);
+    Assert.That(translation.Source!.Split("re.compile(").Length - 1, Is.EqualTo(1), translation.Source);
+  }
+
+  [Test]
+  [Category("EndToEnd")]
+  public void Python_RunsTheTableAsNodeDoes() {
+    var directory = Directory.CreateTempSubdirectory("regex-py-test-");
+    try {
+      var translation = PythonFixtures.Translate(TableModule());
+      Assert.That(translation.Problems, Is.Empty);
+      File.WriteAllText(Path.Combine(directory.FullName, "table.py"), translation.Source!);
+      var subjects = "[" + string.Join(", ", _subjects.Select(PythonPrinter.Quote)) + "]";
+      var calls = string.Join("\n", _table.Select((_, row) => $"print(\"\".join(\"1\" if table.t{row}(s) else \"0\" for s in subjects))"));
+      File.WriteAllText(Path.Combine(directory.FullName, "run.py"), $"import table\nsubjects = {subjects}\n{calls}\n");
+      using var python = Process.Start(new ProcessStartInfo("python3", [Path.Combine(directory.FullName, "run.py")]) { RedirectStandardOutput = true, RedirectStandardError = true })!;
+      var output = python.StandardOutput.ReadToEnd();
+      var error = python.StandardError.ReadToEnd();
+      python.WaitForExit();
+      Assert.That(python.ExitCode, Is.EqualTo(0), error);
+      Assert.That(output.Replace("\r", "", StringComparison.Ordinal).Split('\n', StringSplitOptions.RemoveEmptyEntries), Is.EqualTo(_table.Select(row => row.Matches)), error);
+    } finally {
+      directory.Delete(true);
+    }
+  }
+
+  [TestCaseSource(typeof(RustProfile), nameof(RustProfile.All))]
+  public void Rust_WritesNfaTablesInEveryProfile(RustProfile profile) {
+    foreach (var policy in new[] { RustTrapPolicy.Panic, RustTrapPolicy.Result }) {
+      var configured = profile.WithTrapPolicy(policy);
+      var module = TableModule();
+      Assert.That(RustCrates.Check(module, configured), Is.Empty);
+      var files = RustCrates.Emit(module, configured);
+      var text = RustCrates.ModuleText(files);
+      Assert.That(text, Does.Contain("fn ply_regex_test("));
+      Assert.That(text, Does.Contain("static PLY_REGEX_OPS_1:"));
+      Assert.That(text, Does.Contain("static PLY_REGEX_RANGES_1:"));
+      Assert.That(text, Does.Contain("&[]"));
+      Assert.That(RustPrinter.Print(RustSyntaxReader.Read(text)), Is.EqualTo(text));
+    }
+  }
+
+  [Test]
+  public void Rust_DeduplicatesPatternsAndRefusesOversizedRegexByName() {
+    var duplicate = new IrModule("M", [
+      new IrFunction("F", true, IrType.Bool, [_s], [], new IrBlock([
+        new IrReturn(new IrBinary(IrBinaryOp.LogicalAnd, RegexOperations.Test(new IrLocalRef(_s), "a", ""), RegexOperations.Test(new IrLocalRef(_s), "a", "")))]))
+    ]);
+    var text = RustCrates.ModuleText(RustCrates.Emit(duplicate));
+    Assert.That(text.Split("PLY_REGEX_OPS_").Length - 1, Is.EqualTo(3), text);
+
+    var huge = new IrModule("Huge", [
+      new IrFunction("F", true, IrType.Bool, [_s], [], new IrBlock([new IrReturn(RegexOperations.Test(new IrLocalRef(_s), "a{5000}", ""))]))
+    ]);
+    var problems = RustCrates.Check(huge);
+    Assert.That(problems, Has.Some.Matches<Polypiler.Core.Diagnostic>(diagnostic => diagnostic.Code == RustEmitter.Inexpressible && diagnostic.Message.Contains("a regular expression with too many states", StringComparison.Ordinal)));
+  }
+
+  [Test]
+  [Category("EndToEnd")]
+  public void Rust_RunsTheTableAsNodeDoes() {
+    var directory = Directory.CreateTempSubdirectory("regex-rs-test-");
+    try {
+      var files = RustCrates.Emit(TableModule());
+      foreach (var file in files) {
+        var full = Path.Combine(directory.FullName, file.Path);
+        Directory.CreateDirectory(Path.GetDirectoryName(full)!);
+        File.WriteAllText(full, file.Content);
+      }
+
+      var subjectLiterals = string.Join(",\n    ", _subjects.Select(subject => $"&[{string.Join(", ", subject.Select(unit => $"{(ushort)unit}u16"))}]"));
+      var assertions = string.Join("\n    ", _table.Select((row, index) =>
+        $"assert_eq!(subjects.iter().map(|s| if table::table::t{index}(s) {{ '1' }} else {{ '0' }}).collect::<String>(), \"{row.Matches}\", \"row {index}\");"));
+      Directory.CreateDirectory(Path.Combine(directory.FullName, "tests"));
+      File.WriteAllText(Path.Combine(directory.FullName, "tests", "regex_table.rs"),
+        $"#[test]\nfn table_matches_node() {{\n    let subjects: &[&[u16]] = &[\n    {subjectLiterals}\n    ];\n    {assertions}\n}}\n");
+
+      using var cargo = Process.Start(new ProcessStartInfo("cargo", ["test", "--offline"]) {
+        WorkingDirectory = directory.FullName, RedirectStandardOutput = true, RedirectStandardError = true
+      })!;
+      var stdout = cargo.StandardOutput.ReadToEnd();
+      var stderr = cargo.StandardError.ReadToEnd();
+      cargo.WaitForExit();
+      Assert.That(cargo.ExitCode, Is.EqualTo(0), stdout + "\n" + stderr);
+    } finally {
+      directory.Delete(true);
+    }
   }
 
 }
