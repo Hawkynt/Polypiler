@@ -63,42 +63,33 @@ public sealed class MsilProfileAndCheckTests {
 
   [Test]
   public void Check_ReportsUnsupportedTypesConstructsAndIntrinsics() {
-    // Unsupported type: BigInt parameter
+    // Unsupported type: BigInt parameter (PLY3051)
     var bigIntParam = L("x", IrType.BigInt);
     var bigIntMod = Returning(IrType.BigInt, [bigIntParam], R(bigIntParam));
     Assert.That(MsilEmitter.Check(bigIntMod).Select(d => d.Code), Does.Contain(MsilEmitter.UnsupportedTypeCode));
 
-    // Unsupported type: user class declaration
-    var cls = new IrClassType("UserObj");
-    cls.Define([new IrField("x", IrType.I32, false)]);
-    cls.Inherit(null, []);
-    var ctor = new IrConstructor("UserObj..ctor");
-    cls.DefineMembers([ctor], [], [], []);
-    var self = L("this", IrType.Object(cls));
-    var ctorFn = Function("UserObj..ctor", false, IrType.Void, [self], new IrReturn(null));
-    var makeFn = Function("Make", IrType.Object(cls), [], new IrReturn(new IrNew(IrType.Object(cls), ctor, [])));
-    var clsMod = new IrModule("ClsMod", [ctorFn, makeFn]) { Types = [cls] };
-    var clsProblems = MsilEmitter.Check(clsMod);
-    Assert.That(clsProblems.Select(d => d.Code), Does.Contain(MsilEmitter.UnsupportedTypeCode));
-    Assert.That(clsProblems.Select(d => d.Code), Does.Contain(MsilEmitter.UnsupportedConstructCode));
-
-    // Unsupported intrinsic: ByteSwap (unlegalized)
+    // Unsupported intrinsic: ByteSwap (unlegalized) (PLY3052)
     var p = L("n", IrType.I32);
     var swapMod = Returning(IrType.I32, [p], new IrIntrinsic(IrIntrinsicOp.ByteSwap, IrType.I32, [R(p)]));
     Assert.That(MsilEmitter.Check(swapMod).Select(d => d.Code), Does.Contain(MsilEmitter.UnsupportedIntrinsicCode));
     Assert.That(() => MsilEmitter.Emit(swapMod), Throws.ArgumentException.With.Message.Contains("ByteSwap"));
 
-    // Unsupported intrinsic: RegexTest
+    // Unsupported intrinsic: RegexTest (PLY3052)
     var s = L("s", IrType.String);
     var rxMod = Returning(IrType.Bool, [s], new IrIntrinsic(IrIntrinsicOp.RegexTest, IrType.Bool, [R(s), new IrStrConst("a"), new IrStrConst("")]));
     Assert.That(MsilEmitter.Check(rxMod).Select(d => d.Code), Does.Contain(MsilEmitter.UnsupportedIntrinsicCode));
 
-    // Unsupported intrinsic: FormatEcma on f64
+    // Unsupported intrinsic: FormatEcma on f64 (PLY3052)
     var dParam = L("d", IrType.F64);
     var ecmaFloatMod = Returning(IrType.String, [dParam], new IrIntrinsic(IrIntrinsicOp.FormatEcma, IrType.String, [R(dParam)]));
     Assert.That(MsilEmitter.Check(ecmaFloatMod).Select(d => d.Code), Does.Contain(MsilEmitter.UnsupportedIntrinsicCode));
 
-    // Unsupported construct: native-size by-reference foreign parameter
+    // Unsupported intrinsic: Reinterpret on span (PLY3052)
+    var spanParam = L("sp", IrType.Span(IrType.I32));
+    var reintMod = Returning(IrType.Span(IrType.U8), [spanParam], new IrIntrinsic(IrIntrinsicOp.Reinterpret, IrType.Span(IrType.U8), [R(spanParam)]));
+    Assert.That(MsilEmitter.Check(reintMod).Select(d => d.Code), Does.Contain(MsilEmitter.UnsupportedIntrinsicCode));
+
+    // Unsupported construct: native-size by-reference foreign parameter (PLY3050)
     var nativeByRefMod = new IrModule("NBR", [Function("f", IrType.Void, [], new IrReturn(null))]) {
       ForeignFunctions = [
         new IrForeignFunction("ext", true, "lib", IrType.Void, [
@@ -108,38 +99,10 @@ public sealed class MsilProfileAndCheckTests {
     };
     Assert.That(MsilEmitter.Check(nativeByRefMod).Select(d => d.Code), Does.Contain(MsilEmitter.UnsupportedConstructCode));
 
-    // Unsupported construct: IrFor with PerIteration
-    var idx = L("i", IrType.I32);
-    var perIterFor = new IrFor(Bin(IrBinaryOp.Less, R(idx), I(3)), Block(), Block(new IrAssign(idx, Bin(IrBinaryOp.Add, R(idx), I(1))))) {
-      PerIteration = [idx]
-    };
-    var perIterMod = new IrModule("PI", [Function("f", IrType.Void, [], new IrDeclare(idx, I(0)), perIterFor, new IrReturn(null))]);
-    Assert.That(MsilEmitter.Check(perIterMod).Select(d => d.Code), Does.Contain(MsilEmitter.UnsupportedConstructCode));
-
-    // Unsupported construct: List collection expression
-    var listLocal = L("xs", IrType.List(IrType.I32));
-    var listMod = new IrModule("Lst", [Function("f", IrType.I32, [],
-      new IrDeclare(listLocal, new IrCollection(IrCollectionOp.ListNew, IrType.List(IrType.I32), [])),
-      new IrReturn(new IrCollection(IrCollectionOp.ListCount, IrType.I32, [R(listLocal)])))]);
-    Assert.That(MsilEmitter.Check(listMod).Select(d => d.Code), Does.Contain(MsilEmitter.UnsupportedConstructCode));
-
-    // Unsupported statement: IrForEachCollection
-    var elemLocal = L("e", IrType.I32);
-    var listParam = L("xs", IrType.List(IrType.I32));
-    var feMod = new IrModule("FE", [new IrFunction("f", true, IrType.Void, [listParam], [elemLocal],
-      Block(new IrForEachCollection(R(listParam), EnumerationMode.Checked, elemLocal, null, Block()), new IrReturn(null)))]);
-    Assert.That(MsilEmitter.Check(feMod).Select(d => d.Code), Does.Contain(MsilEmitter.UnsupportedConstructCode));
-
-    // Unsupported catch class (custom exception class)
-    var customEx = new IrClassType("CustomEx");
-    customEx.Define([]);
-    customEx.Inherit(IrExceptionClass.Exception, []);
-    customEx.DefineMembers([], [], [], []);
-    var catchMod = new IrModule("CE", [Function("f", IrType.Void, [],
-      new IrTry(Block(), [new IrCatch(customEx, null, null, Block())], null), new IrReturn(null))]) {
-      Types = [customEx]
-    };
-    Assert.That(MsilEmitter.Check(catchMod).Select(d => d.Code), Does.Contain(MsilEmitter.UnsupportedTypeCode));
+    // Unsupported construct: unlowered LINQ IrSequence expression (PLY3050)
+    var rangeExpr = IrSequenceOps.Of(IrSequenceOp.Range, I(0), I(5));
+    var seqOpMod = Returning(IrType.I32, [], IrSequenceOps.Of(IrSequenceOp.Count, rangeExpr));
+    Assert.That(MsilEmitter.Check(seqOpMod).Select(d => d.Code), Does.Contain(MsilEmitter.UnsupportedConstructCode));
   }
 
   [Test]

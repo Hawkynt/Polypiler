@@ -88,6 +88,19 @@ internal static class MsilTestHarness {
           if (t.Finally is not null)
             Collect(t.Finally);
           break;
+        case IrForEachCollection fe:
+          AddLocal(fe.Element);
+          AddLocal(fe.Value);
+          Collect(fe.Body);
+          break;
+        case IrForEachSequence fes:
+          AddLocal(fes.Element);
+          Collect(fes.Body);
+          break;
+        case IrUsing u:
+          AddLocal(u.Resource);
+          Collect(u.Body);
+          break;
       }
     }
 

@@ -124,6 +124,7 @@ public static class MsilEmitter {
     return intrinsic.Op switch {
       IrIntrinsicOp.Min or IrIntrinsicOp.Max or IrIntrinsicOp.Abs or IrIntrinsicOp.Sign => false,
       IrIntrinsicOp.LoadLittle or IrIntrinsicOp.LoadBig or IrIntrinsicOp.StoreLittle or IrIntrinsicOp.StoreBig => false,
+      IrIntrinsicOp.ParallelBitExtract or IrIntrinsicOp.ParallelBitDeposit => false,
       IrIntrinsicOp.RotateLeft or IrIntrinsicOp.RotateRight or IrIntrinsicOp.LeadingZeroCount
         or IrIntrinsicOp.TrailingZeroCount or IrIntrinsicOp.PopCount when operand.Bits >= 32 => false,
       _ => true
