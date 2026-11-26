@@ -1,0 +1,58 @@
+name: Refresh translation showcase
+
+# Regenerates docs/translation-showcase.md with the latest polypiler build on every pull request so
+# cross-backend examples stay in sync with backend and frontend changes. Pushes the refreshed file
+# back to same-repository PR branches and always uploads it as a downloadable artifact.
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-showcase-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+  refresh-showcase:
+    name: refresh translation showcase
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref }}
+          repository: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name || github.repository }}
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build CLI and tooling
+        run: |
+          dotnet build Polypiler.Cli/Polypiler.Cli.csproj -c Release
+          dotnet build Polypiler.Tooling/Polypiler.Tooling.csproj -c Release
+      - name: Regenerate docs/translation-showcase.md
+        run: time dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build -- report showcase
+      - uses: actions/upload-artifact@v4
+        with:
+          name: translation-showcase
+          path: docs/translation-showcase.md
+          if-no-files-found: error
+      - name: Commit refreshed showcase on same-repo PRs
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'github-actions[bot]' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- docs/translation-showcase.md; then
+            echo "docs/translation-showcase.md is already up to date."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/translation-showcase.md
+          git commit -m "* docs: refresh generated translation showcase"
+          git push origin "HEAD:${GITHUB_HEAD_REF}"

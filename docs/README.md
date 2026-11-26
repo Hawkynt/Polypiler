@@ -59,6 +59,7 @@ Original chapter numbers and section links are retained. The pages here are a re
 - [Licence of emitted code](../LICENSE-OUTPUT.md) — the helpers and portable implementations a translation copies into its output are MIT, so a translated program keeps the licence of its source; the compiler stays LGPL-3.0-or-later.
 - [Error catalogue](errors/README.md) — every diagnostic code with its severity, exit code, cause and what to do, generated from `spec/diagnostics.yaml` by `polypiler-tooling report errors`.
 - [Capability report](capabilities.md) — every source profile against every target profile at the state its gate records prove, `planned` without evidence, generated from `spec/` and `artifacts/gates` by `polypiler-tooling report capabilities` ([JSON](capabilities.json)).
+- [Cross-backend translation showcase](translation-showcase.md) — live C# high-level construct translations across every supported backend (with assembler-like disassembly for binary MSIL and JVM targets), generated from `docs/showcase/` by `polypiler-tooling report showcase`.
 - [Backends: tree, passes, printer](architecture/BACKENDS.md) — the syntax tree each backend builds of its language, the target passes over it and the printer that writes it; how to add a capability row or a pass.
 
 ## Work-item readiness

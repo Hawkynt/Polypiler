@@ -63,7 +63,11 @@ generated code — a row changes only in the pull request that makes it true.
 
 The state of every source-profile and target-profile pair, as far as gate records prove it, is the
 generated [capability report](docs/capabilities.md) ([JSON](docs/capabilities.json)); a pair without
-evidence reads `planned` there.
+evidence reads `planned` there. Live cross-backend translations of high-level C# constructs —
+including structs, records, classes, statics, inheritance, generics, closures, callbacks,
+recursion, overloading, collections, iterators, LINQ, exceptions, async tasks, stdio, spans/pointers
+and native interop across all supported text and disassembled binary backends — are generated in the
+[translation showcase](docs/translation-showcase.md).
 
 ### Languages
 
