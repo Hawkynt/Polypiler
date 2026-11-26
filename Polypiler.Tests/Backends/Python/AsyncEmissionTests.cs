@@ -1,10 +1,16 @@
 using System;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using Polypiler.Backends.Testing;
+using Polypiler.Core;
+using Polypiler.Core.Backends.Python;
 using Polypiler.Core.Backends.Python.Printing;
 using Polypiler.Core.Backends.Python.Syntax;
+using Polypiler.Core.Frontends.CSharp;
 using Polypiler.Core.IR;
+using Polypiler.Core.Optimize.Target;
 using Polypiler.Prototype.Testing;
 using static Polypiler.Tests.Backends.Python.PythonIr;
 
@@ -100,15 +106,181 @@ public sealed class AsyncEmissionTests {
   };
 
   [Test]
-  public void ForeignCall_IsRefusedByName() {
+  public void ForeignCall_EmitsCtypesBindingAndRoundTripsSyntax() {
     var module = Native(new IrExprStmt(new IrForeignCall("Abs", IrType.I32, [I(-1)])), new IrReturn(new IrForeignCall("Abs", IrType.I32, [I(-2)])));
-    Assert.That(Problems(module), Is.EqualTo(new[] { "error PLY1851: 'the native call of abs (libc.so.6)' cannot be expressed in Python profile 'py3.14' (function 'f')" }));
+    Assert.That(Problems(module), Is.Empty);
+    var source = Emit(module);
+    Assert.That(source, Does.Contain("import ctypes\n").And.Contain("ctypes.CDLL(\"libc.so.6\")").And.Contain("getattr(_t1, \"abs\")").And.Contain("ctypes.c_int32"));
+    AssertRoundTrip(module, PythonProfile.Default, source);
   }
 
   [Test]
-  public void LastError_IsRefusedByName() {
+  public void LastError_EmitsCtypesErrorHelper_AcrossProfiles() {
     var module = Native(new IrReturn(new IrLastError(false)));
-    Assert.That(Problems(module, "py3.8"), Is.EqualTo(new[] { "error PLY1851: 'the last error of a native call (Marshal.GetLastWin32Error)' cannot be expressed in Python profile 'py3.8' (function 'f')" }));
+    foreach (var name in new[] { "py3.8", "py3.14" }) {
+      var profile = PythonProfile.Parse(name);
+      Assert.That(PythonEmitter.Check(module, profile), Is.Empty, name);
+      var source = PythonEmitter.Emit(module, profile)[0].Content;
+      Assert.That(source, Does.Contain("import ctypes\n").And.Contain("getattr(ctypes, \"get_last_error\", ctypes.get_errno)()"), name);
+      AssertRoundTrip(module, profile, source);
+    }
+  }
+
+  [Test]
+  public void ForeignCall_AllMarshalKindsStructsAndConventions_EmitAndRoundTrip() {
+    var inner = new IrStructType("Inner", [new IrField("Flag", IrType.Bool, false), new IrField("Code", IrType.U16, false)]) {
+      Layout = new IrStructLayout(IrLayoutKind.Sequential, Pack: 1, Size: 0, Offsets: [])
+    };
+    var outer = new IrStructType("Outer", [new IrField("Sub", IrType.Struct(inner), false), new IrField("Val", IrType.F64, false)]) {
+      Layout = new IrStructLayout(IrLayoutKind.Sequential, Pack: 0, Size: 0, Offsets: [])
+    };
+    var unionStruct = new IrStructType("Overlay", [new IrField("AsInt", IrType.I32, false), new IrField("AsFloat", IrType.F32, false)]) {
+      Layout = new IrStructLayout(IrLayoutKind.Explicit, Pack: 0, Size: 4, Offsets: [0, 0])
+    };
+    var innerType = IrType.Struct(inner);
+    var outerType = IrType.Struct(outer);
+    var unionType = IrType.Struct(unionStruct);
+
+    var fAll = new IrForeignFunction("AllKinds", true, "native", outerType, [
+      new("b8", IrType.I8, IrMarshal.Blittable),
+      new("u8", IrType.U8, IrMarshal.Blittable),
+      new("s16", IrType.I16, IrMarshal.Blittable),
+      new("u32", IrType.U32, IrMarshal.Blittable),
+      new("i64", IrType.I64, IrMarshal.Blittable),
+      new("u64", IrType.U64, IrMarshal.Blittable),
+      new("ni", IrType.I64, new(IrMarshalKind.Blittable) { NativeSize = true }),
+      new("nu", IrType.U64, new(IrMarshalKind.Blittable) { NativeSize = true }),
+      new("f32", IrType.F32, IrMarshal.Blittable),
+      new("ptr", IrType.Pointer(IrType.I32), IrMarshal.Blittable),
+      new("b4", IrType.Bool, new(IrMarshalKind.Bool) { BoolForm = IrBoolForm.Bool }),
+      new("bu1", IrType.Bool, new(IrMarshalKind.Bool) { BoolForm = IrBoolForm.U1 }),
+      new("bi1", IrType.Bool, new(IrMarshalKind.Bool) { BoolForm = IrBoolForm.I1 }),
+      new("h", IrType.I64, new(IrMarshalKind.Handle)),
+      new("utf8", IrType.String, new(IrMarshalKind.String) { Encoding = IrStringEncoding.Utf8 }),
+      new("utf16", IrType.String, new(IrMarshalKind.String) { Encoding = IrStringEncoding.Unicode }),
+      new("inArr", IrType.Array(IrType.I32), new(IrMarshalKind.Array, IrMarshalDirection.In)),
+      new("outArr", IrType.Array(IrType.I32), new(IrMarshalKind.Array, IrMarshalDirection.InOut)),
+      new("refNum", IrType.Array(IrType.I32), new(IrMarshalKind.ByRef, IrMarshalDirection.Out)),
+      new("refIn", IrType.Array(IrType.I32), new(IrMarshalKind.ByRef, IrMarshalDirection.In)),
+      new("refSt", IrType.Array(outerType), new(IrMarshalKind.ByRef, IrMarshalDirection.InOut)),
+      new("refStOut", IrType.Array(innerType), new(IrMarshalKind.ByRef, IrMarshalDirection.Out)),
+      new("ov", unionType, new(IrMarshalKind.Struct))
+    ]) {
+      Convention = IrCallingConvention.StdCall,
+      SetLastError = true,
+      Result = new(IrMarshalKind.Struct)
+    };
+    var fVoid = new IrForeignFunction("VoidCall", false, "native", IrType.Void, [
+      new("r", IrType.Array(IrType.I64), new(IrMarshalKind.ByRef, IrMarshalDirection.InOut) { NativeSize = true })
+    ]);
+    var fBool = new IrForeignFunction("BoolRet", false, "native", IrType.Bool, []) { Result = new(IrMarshalKind.Bool) };
+    var fHandle = new IrForeignFunction("___", false, "native", IrType.I64, []) { EntryPoint = "get_h", Result = new(IrMarshalKind.Handle) };
+
+    var refI64 = L("r", IrType.Array(IrType.I64));
+    var module = new IrModule("InteropAll", [
+      Function("run", IrType.I64, [refI64],
+        new IrExprStmt(new IrForeignCall("VoidCall", IrType.Void, [R(refI64)])),
+        new IrExprStmt(new IrForeignCall("BoolRet", IrType.Bool, [])),
+        new IrReturn(new IrForeignCall("___", IrType.I64, [])))
+    ]) {
+      Types = [inner, outer, unionStruct],
+      ForeignFunctions = [fAll, fVoid, fBool, fHandle]
+    };
+
+    foreach (var name in PythonProfile.Names) {
+      var profile = PythonProfile.Parse(name);
+      Assert.That(PythonEmitter.Check(module, profile), Is.Empty, name);
+      var source = PythonEmitter.Emit(module, profile)[0].Content;
+      Assert.That(source, Does.Contain("ctypes.Structure").And.Contain("ctypes.Union").And.Contain("_pack_ = 1").And.Contain("use_last_error=True").And.Contain("\"WinDLL\""), name);
+      AssertRoundTrip(module, profile, source);
+    }
+  }
+
+  [Test]
+  public void Showcase19NativeInterop_TranslatesAndRoundTripsAcrossAllPythonProfiles() {
+    var mod = ImportShowcase("19-native-interop.cs");
+    foreach (var name in PythonProfile.Names) {
+      var profile = PythonProfile.Parse(name);
+      Assert.That(PythonEmitter.Check(mod, profile), Is.Empty, name);
+      var source = PythonEmitter.Emit(mod, profile)[0].Content;
+      Assert.That(source, Does.Contain("import ctypes\n").And.Contain("class _CtypesNativePoint(ctypes.Structure):").And.Contain("ctypes.CDLL(\"geom\")"), name);
+      AssertRoundTrip(mod, profile, source);
+    }
+  }
+
+  [Test]
+  public void Showcase17Stdio_AndWriteLineVariants_TranslateAndRunLiveUnderPython3() {
+    var mod = ImportShowcase("17-stdio.cs");
+    foreach (var name in PythonProfile.Names) {
+      var profile = PythonProfile.Parse(name);
+      Assert.That(PythonEmitter.Check(mod, profile), Is.Empty, name);
+      var source = PythonEmitter.Emit(mod, profile)[0].Content;
+      Assert.That(source, Does.Contain("print("), name);
+      AssertRoundTrip(mod, profile, source);
+    }
+
+    // Exercise every IrWriteLine operand shape (IrNull, IrStrConst, plain local, call/temp) + live python3 execution.
+    var s = L("s", IrType.String);
+    var variants = new IrModule("WriteVariants", [
+      Function("emitAll", IrType.Void, [s],
+        new IrWriteLine(new IrStrConst("lit")),
+        new IrWriteLine(new IrNull(IrType.String)),
+        new IrWriteLine(R(s)),
+        new IrWriteLine(new IrCall("missing", IrType.String, [])),
+        new IrReturn(null)),
+      Function("missing", IrType.String, [], new IrReturn(new IrNull(IrType.String))) with { IsPublic = false }
+    ]);
+    var varSrc = Emit(variants);
+    AssertRoundTrip(variants, PythonProfile.Default, varSrc);
+
+    if (File.Exists("/usr/bin/python3")) {
+      var stdioSrc = Emit(mod);
+      var output = RunPython3(stdioSrc + "\nassert run() == 14\n");
+      var lines = output.Replace("\r\n", "\n", StringComparison.Ordinal).TrimEnd('\n').Split('\n');
+      Assert.That(lines, Is.EqualTo(new[] { "step 1: sum=1", "step 2: sum=5", "step 3: sum=14" }));
+
+      var varOutput = RunPython3(varSrc + "\nemit_all(None)\nemit_all(\"ok\")\n");
+      var varLines = varOutput.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+      Assert.That(varLines[..8], Is.EqualTo(new[] { "lit", "", "", "", "lit", "", "ok", "" }));
+
+      // Live libc abs(-42) via ctypes on Linux!
+      if (OperatingSystem.IsLinux()) {
+        var libcSrc = Emit(Native(new IrReturn(new IrForeignCall("Abs", IrType.I32, [I(-42)]))));
+        RunPython3(libcSrc + "\nassert f() == 42\n");
+      }
+    }
+  }
+
+  private static void AssertRoundTrip(IrModule module, PythonProfile profile, string source) {
+    var expected = PythonEmitter.Build(module, profile, FloatMode.Accurate, null, TargetPassOptions.None).Tree;
+    var parsed = PythonSyntaxReader.ReadModule(source);
+    Assert.That(PythonSyntaxRewriter.Shape(parsed), Is.EqualTo(PythonSyntaxRewriter.Shape(expected)), profile.Name);
+  }
+
+  private static IrModule ImportShowcase(string fileName) {
+    var dir = new DirectoryInfo(AppContext.BaseDirectory);
+    while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "Polypiler.slnx")))
+      dir = dir.Parent;
+    Assert.That(dir, Is.Not.Null);
+    var result = CSharpFrontend.Import(fileName, File.ReadAllText(Path.Combine(dir!.FullName, "docs", "showcase", fileName)));
+    Assert.That(result.Diagnostics, Is.Empty, () => string.Join("\n", result.Diagnostics));
+    return result.Module!;
+  }
+
+  private static string RunPython3(string script) {
+    var psi = new ProcessStartInfo("/usr/bin/python3") {
+      RedirectStandardOutput = true,
+      RedirectStandardError = true,
+      UseShellExecute = false
+    };
+    psi.ArgumentList.Add("-c");
+    psi.ArgumentList.Add(script);
+    using var proc = Process.Start(psi)!;
+    var stdout = proc.StandardOutput.ReadToEnd();
+    var stderr = proc.StandardError.ReadToEnd();
+    proc.WaitForExit();
+    Assert.That(proc.ExitCode, Is.Zero, () => $"python3 failed:\n{stderr}\n--- SCRIPT ---\n{script}");
+    return stdout;
   }
 
   [TestCase("await f()", "await f()")]
