@@ -250,6 +250,24 @@ internal static class MsilAssemblyBuilder {
     foreach (var recCls in plan.RecordEqualsClasses)
       ctx.RecordEqualsHandles[recCls] = MetadataTokens.MethodDefinitionHandle(methodRow++);
 
+    if (plan.NeedsBitRev32)
+      ctx.BitRev32Handle = MetadataTokens.MethodDefinitionHandle(methodRow++);
+    if (plan.NeedsBitRev64)
+      ctx.BitRev64Handle = MetadataTokens.MethodDefinitionHandle(methodRow++);
+    if (plan.NeedsStrLastIndexOf)
+      ctx.StrLastIndexOfHandle = MetadataTokens.MethodDefinitionHandle(methodRow++);
+    if (plan.NeedsStrSplit)
+      ctx.StrSplitHandle = MetadataTokens.MethodDefinitionHandle(methodRow++);
+    if (plan.NeedsStrTrimEcma)
+      ctx.StrTrimEcmaHandle = MetadataTokens.MethodDefinitionHandle(methodRow++);
+
+    foreach (var enumType in plan.EnumIsDefinedTypes)
+      ctx.EnumIsDefinedHandles[enumType] = MetadataTokens.MethodDefinitionHandle(methodRow++);
+    foreach (var enumType in plan.EnumToStringTypes)
+      ctx.EnumToStringHandles[enumType] = MetadataTokens.MethodDefinitionHandle(methodRow++);
+    foreach (var enumType in plan.EnumParseTypes)
+      ctx.EnumParseHandles[enumType] = MetadataTokens.MethodDefinitionHandle(methodRow++);
+
     foreach (var foreign in module.ForeignFunctions)
       ctx.ForeignHandles[foreign.Name] = MetadataTokens.MethodDefinitionHandle(methodRow++);
   }
@@ -952,6 +970,105 @@ internal static class MsilAssemblyBuilder {
         MethodImplAttributes.IL,
         metadata.GetOrAddString($"$RecEq_{i}"),
         ctx.EncodeMethodSignature(IrType.Bool, [recType, recType]),
+        offset,
+        MetadataTokens.ParameterHandle(nextParamRow));
+      nextMethodRow++;
+    }
+
+    if (plan.NeedsBitRev32) {
+      var offset = MsilMethodCompiler.CompileBitReverseHelper(is64: false, ctx, methodBodies);
+      metadata.AddMethodDefinition(
+        MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig,
+        MethodImplAttributes.IL,
+        metadata.GetOrAddString("$BitRev32"),
+        ctx.EncodeMethodSignature(IrType.U32, [IrType.U32]),
+        offset,
+        MetadataTokens.ParameterHandle(nextParamRow));
+      nextMethodRow++;
+    }
+
+    if (plan.NeedsBitRev64) {
+      var offset = MsilMethodCompiler.CompileBitReverseHelper(is64: true, ctx, methodBodies);
+      metadata.AddMethodDefinition(
+        MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig,
+        MethodImplAttributes.IL,
+        metadata.GetOrAddString("$BitRev64"),
+        ctx.EncodeMethodSignature(IrType.U64, [IrType.U64]),
+        offset,
+        MetadataTokens.ParameterHandle(nextParamRow));
+      nextMethodRow++;
+    }
+
+    if (plan.NeedsStrLastIndexOf) {
+      var offset = MsilMethodCompiler.CompileStrLastIndexOfHelper(ctx, methodBodies);
+      metadata.AddMethodDefinition(
+        MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig,
+        MethodImplAttributes.IL,
+        metadata.GetOrAddString("$StrLastIndexOf"),
+        ctx.EncodeMethodSignature(IrType.I32, [IrType.String, IrType.String, IrType.I32]),
+        offset,
+        MetadataTokens.ParameterHandle(nextParamRow));
+      nextMethodRow++;
+    }
+
+    if (plan.NeedsStrSplit) {
+      var offset = MsilMethodCompiler.CompileStrSplitHelper(ctx, methodBodies);
+      metadata.AddMethodDefinition(
+        MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig,
+        MethodImplAttributes.IL,
+        metadata.GetOrAddString("$StrSplit"),
+        ctx.EncodeMethodSignature(IrType.Array(IrType.String), [IrType.String, IrType.String, IrType.I32]),
+        offset,
+        MetadataTokens.ParameterHandle(nextParamRow));
+      nextMethodRow++;
+    }
+
+    if (plan.NeedsStrTrimEcma) {
+      var offset = MsilMethodCompiler.CompileStrTrimEcmaHelper(ctx, methodBodies);
+      metadata.AddMethodDefinition(
+        MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig,
+        MethodImplAttributes.IL,
+        metadata.GetOrAddString("$StrTrimEcma"),
+        ctx.EncodeMethodSignature(IrType.String, [IrType.String, IrType.Bool, IrType.Bool]),
+        offset,
+        MetadataTokens.ParameterHandle(nextParamRow));
+      nextMethodRow++;
+    }
+
+    for (var i = 0; i < plan.EnumIsDefinedTypes.Count; i++) {
+      var enumType = plan.EnumIsDefinedTypes[i];
+      var offset = MsilMethodCompiler.CompileEnumIsDefinedHelper(enumType, ctx, methodBodies);
+      metadata.AddMethodDefinition(
+        MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig,
+        MethodImplAttributes.IL,
+        metadata.GetOrAddString($"$EnumIsDefined_{i}"),
+        ctx.EncodeMethodSignature(IrType.Bool, [enumType.Type]),
+        offset,
+        MetadataTokens.ParameterHandle(nextParamRow));
+      nextMethodRow++;
+    }
+
+    for (var i = 0; i < plan.EnumToStringTypes.Count; i++) {
+      var enumType = plan.EnumToStringTypes[i];
+      var offset = MsilMethodCompiler.CompileEnumToStringHelper(enumType, ctx, methodBodies);
+      metadata.AddMethodDefinition(
+        MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig,
+        MethodImplAttributes.IL,
+        metadata.GetOrAddString($"$EnumToString_{i}"),
+        ctx.EncodeMethodSignature(IrType.String, [enumType.Type]),
+        offset,
+        MetadataTokens.ParameterHandle(nextParamRow));
+      nextMethodRow++;
+    }
+
+    for (var i = 0; i < plan.EnumParseTypes.Count; i++) {
+      var enumType = plan.EnumParseTypes[i];
+      var offset = MsilMethodCompiler.CompileEnumParseHelper(enumType, ctx, methodBodies);
+      metadata.AddMethodDefinition(
+        MethodAttributes.Assembly | MethodAttributes.Static | MethodAttributes.HideBySig,
+        MethodImplAttributes.IL,
+        metadata.GetOrAddString($"$EnumParse_{i}"),
+        ctx.EncodeMethodSignature(enumType.Type, [IrType.String, IrType.Bool]),
         offset,
         MetadataTokens.ParameterHandle(nextParamRow));
       nextMethodRow++;
