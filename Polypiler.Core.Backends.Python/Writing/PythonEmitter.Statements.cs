@@ -204,9 +204,28 @@ public static partial class PythonEmitter {
         case IrReturn @return:
           written.Add(new PyReturn(@return.Value is null ? null : this.Expression(@return.Value)));
           break;
+        case IrWriteLine write:
+          written.Add(new PyExpressionStatement(new PyCall(Name("print"), [this.WriteLineValue(write.Value)])));
+          break;
         default:
           this.Inexpressible(KindOf(statement));
           break;
+      }
+    }
+
+    /// <summary>The argument of <c>print</c> for an <see cref="IrWriteLine"/>: <c>""</c> for <c>None</c>, evaluating the operand once.</summary>
+    private PyExpression WriteLineValue(IrExpr text) {
+      switch (text) {
+        case IrNull:
+          return new PyString("");
+        case IrStrConst or IrIntrinsic:
+          return this.Expression(text);
+        case IrLocalRef { Local: var local } when !this.IsCell(local):
+          var value = this.Expression(text);
+          return new PyConditional(Compare(value, "is", new PyNone()), new PyString(""), value);
+        default:
+          var held = this.Temporary();
+          return new PyConditional(Compare(new PyNamedExpression(held, this.Expression(text)), "is", new PyNone()), new PyString(""), Name(held));
       }
     }
 

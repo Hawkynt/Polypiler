@@ -253,6 +253,9 @@ public static partial class CppEmitter {
       this._currentFunction = fn;
       this._currentThis = fn.Parameters[0];
       this._locals.Clear();
+      this._capturedLocals = [.. IrClosures.Captured(fn.Body)];
+      this._asyncElementType = null;
+      this._seqVecName = null;
       this._tempCounter = 0;
 
       var taken = new HashSet<string>(StringComparer.Ordinal);
@@ -297,17 +300,31 @@ public static partial class CppEmitter {
         text.Append(this.FormatParamType(p.Type, modes[i], inHeader: false)).Append(' ').Append(this._locals[p]);
       }
       text.Append(')').Append(initList).Append(" {\n");
+      foreach (var p in fn.Parameters.Skip(1)) {
+        if (!this._capturedLocals.Contains(p))
+          continue;
+        this._sourceIncludes.Add("<memory>");
+        var orig = this._locals[p];
+        var cell = CppNaming.Free("ply_cell_" + orig, taken.Contains);
+        taken.Add(cell);
+        this._locals[p] = cell;
+        text.Append("  auto ").Append(cell).Append(" = std::make_shared<").Append(this.CppType(p.Type, inHeader: false)).Append(">(").Append(orig).Append(");\n");
+      }
       this.EmitBlockStatements(fn.Body, text, 1, startIndex);
       text.Append("}\n\n");
 
       this._currentThis = null;
       this._currentFunction = null;
+      this._capturedLocals = [];
     }
 
     private void EmitMethodDefinition(string clsName, IrMethod method, IrFunction fn, StringBuilder text) {
       this._currentFunction = fn;
       this._currentThis = method.IsStatic ? null : fn.Parameters[0];
       this._locals.Clear();
+      this._capturedLocals = [.. IrClosures.Captured(fn.Body)];
+      this._asyncElementType = null;
+      this._seqVecName = null;
       this._tempCounter = 0;
 
       var skip = method.IsStatic ? 0 : 1;
@@ -337,11 +354,14 @@ public static partial class CppEmitter {
         text.Append(this.FormatParamType(p.Type, modes[i], inHeader: false)).Append(' ').Append(this._locals[p]);
       }
       text.Append(") {\n");
-      this.EmitBlockStatements(fn.Body, text, 1);
+      this.EmitFunctionBodyWithSemantics(fn, [.. fn.Parameters.Skip(skip)], usedLocals, taken, text, 1);
       text.Append("}\n\n");
 
       this._currentThis = null;
       this._currentFunction = null;
+      this._capturedLocals = [];
+      this._asyncElementType = null;
+      this._seqVecName = null;
     }
 
     private void EmitClassRecordEqualsDefinition(IrClassType cls, string clsName, StringBuilder text) {

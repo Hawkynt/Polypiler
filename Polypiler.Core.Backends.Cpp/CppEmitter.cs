@@ -120,7 +120,8 @@ public static partial class CppEmitter {
     return intrinsic.Op switch {
       IrIntrinsicOp.Abs or IrIntrinsicOp.Min or IrIntrinsicOp.Max or IrIntrinsicOp.Sign => false,
       IrIntrinsicOp.RotateLeft or IrIntrinsicOp.RotateRight or IrIntrinsicOp.PopCount
-        or IrIntrinsicOp.LeadingZeroCount or IrIntrinsicOp.TrailingZeroCount or IrIntrinsicOp.ByteSwap => false,
+        or IrIntrinsicOp.LeadingZeroCount or IrIntrinsicOp.TrailingZeroCount or IrIntrinsicOp.ByteSwap
+        or IrIntrinsicOp.ParallelBitExtract or IrIntrinsicOp.ParallelBitDeposit => false,
       IrIntrinsicOp.HighWord or IrIntrinsicOp.JoinWords => false,
       IrIntrinsicOp.LoadLittle or IrIntrinsicOp.LoadBig or IrIntrinsicOp.StoreLittle or IrIntrinsicOp.StoreBig => false,
       _ => true

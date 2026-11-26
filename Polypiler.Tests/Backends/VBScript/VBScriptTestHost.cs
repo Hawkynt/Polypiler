@@ -88,6 +88,15 @@ internal static class VBScriptTestHost {
           AddLocal(@using.Resource);
           Collect(@using.Body);
           break;
+        case IrForEachCollection feCol:
+          AddLocal(feCol.Element);
+          AddLocal(feCol.Value);
+          Collect(feCol.Body);
+          break;
+        case IrForEachSequence feSeq:
+          AddLocal(feSeq.Element);
+          Collect(feSeq.Body);
+          break;
       }
     }
 

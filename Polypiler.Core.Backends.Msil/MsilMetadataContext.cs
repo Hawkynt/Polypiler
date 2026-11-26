@@ -1,15 +1,34 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
 using Polypiler.Core.IR;
 
 namespace Polypiler.Core.Backends.Msil;
 
+internal readonly record struct CellTypeHandles(TypeDefinitionHandle Type, FieldDefinitionHandle ValueField, MethodDefinitionHandle Ctor);
+
+internal readonly record struct FnInterfaceHandles(TypeDefinitionHandle Type, MethodDefinitionHandle Invoke);
+
+internal readonly record struct LambdaHandles(TypeDefinitionHandle Type, FieldDefinitionHandle[] CaptureFields, MethodDefinitionHandle Ctor, MethodDefinitionHandle Invoke);
+
+internal readonly record struct FnRefHandles(TypeDefinitionHandle Type, MethodDefinitionHandle Ctor, MethodDefinitionHandle Invoke);
+
+internal readonly record struct BoundMethodHandles(TypeDefinitionHandle Type, FieldDefinitionHandle? ReceiverField, MethodDefinitionHandle Ctor, MethodDefinitionHandle Invoke);
+
+internal readonly record struct SeqInterfaceHandles(TypeDefinitionHandle Type, MethodDefinitionHandle Enumerate);
+
+internal readonly record struct IterHandles(TypeDefinitionHandle Type, FieldDefinitionHandle[] ParamFields, FieldDefinitionHandle? ConsumedField, MethodDefinitionHandle Ctor, MethodDefinitionHandle Enumerate);
+
+internal readonly record struct ArrSeqHandles(TypeDefinitionHandle Type, FieldDefinitionHandle ArrayField, MethodDefinitionHandle Ctor, MethodDefinitionHandle Enumerate);
+
+internal readonly record struct SliceHandles(TypeDefinitionHandle Type, FieldDefinitionHandle ArrayField, FieldDefinitionHandle OffsetField, FieldDefinitionHandle LengthField);
+
+internal readonly record struct PtrHandles(TypeDefinitionHandle Type, FieldDefinitionHandle BackingField, FieldDefinitionHandle ByteOffsetField, FieldDefinitionHandle RegionStartField, FieldDefinitionHandle RegionBytesField);
+
 /// <summary>
 /// Holds the <see cref="MetadataBuilder"/>, cached BCL type/member references, signature encoders,
-/// and module-defined type/field/method handle maps for one emitted assembly.
+/// and module-defined / synthesized type, field, and method handle maps for one emitted assembly.
 /// </summary>
 internal sealed class MsilMetadataContext {
 
@@ -18,13 +37,14 @@ internal sealed class MsilMetadataContext {
   private readonly Dictionary<string, AssemblyReferenceHandle> _assemblyRefs = new(StringComparer.Ordinal);
   private readonly Dictionary<(string Assembly, string Namespace, string Name), TypeReferenceHandle> _typeRefs = new();
   private readonly Dictionary<string, MemberReferenceHandle> _memberRefs = new(StringComparer.Ordinal);
+  private readonly Dictionary<string, MethodSpecificationHandle> _methodSpecs = new(StringComparer.Ordinal);
   private readonly Dictionary<string, ModuleReferenceHandle> _moduleRefs = new(StringComparer.Ordinal);
-  private readonly Dictionary<IrType, TypeSpecificationHandle> _nullableSpecs = new();
-  private readonly Dictionary<IrType, TypeSpecificationHandle> _arraySpecs = new();
+  private readonly Dictionary<string, TypeSpecificationHandle> _typeSpecs = new(StringComparer.Ordinal);
 
-  public MsilMetadataContext(MetadataBuilder metadata, MsilProfile profile) {
+  public MsilMetadataContext(MetadataBuilder metadata, MsilProfile profile, MsilSynthesisPlan plan) {
     this.Metadata = metadata;
     this.Profile = profile;
+    this.Plan = plan;
     this.SystemRuntime = this.GetAssemblyRef("System.Runtime");
   }
 
@@ -32,11 +52,19 @@ internal sealed class MsilMetadataContext {
 
   public MsilProfile Profile { get; }
 
+  public MsilSynthesisPlan Plan { get; }
+
   public AssemblyReferenceHandle SystemRuntime { get; }
 
   public Dictionary<IrTypeDeclaration, TypeDefinitionHandle> DeclaredTypes { get; } = new(ReferenceEqualityComparer.Instance);
 
-  public Dictionary<IrField, FieldDefinitionHandle> StructFields { get; } = new(ReferenceEqualityComparer.Instance);
+  public Dictionary<IrField, FieldDefinitionHandle> FieldHandles { get; } = new(ReferenceEqualityComparer.Instance);
+
+  public Dictionary<IrConstructor, MethodDefinitionHandle> ClassCtorHandles { get; } = new(ReferenceEqualityComparer.Instance);
+
+  public Dictionary<string, MethodDefinitionHandle> ClassCtorByFn { get; } = new(StringComparer.Ordinal);
+
+  public Dictionary<IrMethod, MethodDefinitionHandle> ClassMethodHandles { get; } = new(ReferenceEqualityComparer.Instance);
 
   public Dictionary<IrModuleConst, FieldDefinitionHandle> ConstantFields { get; } = new(ReferenceEqualityComparer.Instance);
 
@@ -49,6 +77,40 @@ internal sealed class MsilMetadataContext {
   public Dictionary<string, MethodDefinitionHandle> ForeignHandles { get; } = new(StringComparer.Ordinal);
 
   public Dictionary<string, IrForeignFunction> ForeignByName { get; } = new(StringComparer.Ordinal);
+
+  public Dictionary<IrType, CellTypeHandles> CellTypes { get; } = new();
+
+  public Dictionary<IrFunctionType, FnInterfaceHandles> FnInterfaces { get; } = new();
+
+  public Dictionary<IrLambda, LambdaHandles> LambdaClasses { get; } = new(ReferenceEqualityComparer.Instance);
+
+  public Dictionary<(string Function, IrFunctionType Signature), FnRefHandles> FnRefClasses { get; } = new();
+
+  public Dictionary<BoundMethodKey, BoundMethodHandles> BoundMethodClasses { get; } = new();
+
+  public Dictionary<IrType, SeqInterfaceHandles> SeqInterfaces { get; } = new();
+
+  public Dictionary<IrFunction, IterHandles> IterClasses { get; } = new(ReferenceEqualityComparer.Instance);
+
+  public Dictionary<IrType, ArrSeqHandles> ArrSeqClasses { get; } = new();
+
+  public Dictionary<IrType, SliceHandles> SliceStructs { get; } = new();
+
+  public PtrHandles PtrStruct { get; set; }
+
+  public MethodDefinitionHandle Pext32Handle { get; set; }
+
+  public MethodDefinitionHandle Pext64Handle { get; set; }
+
+  public MethodDefinitionHandle Pdep32Handle { get; set; }
+
+  public MethodDefinitionHandle Pdep64Handle { get; set; }
+
+  public Dictionary<IrType, MethodDefinitionHandle> PtrLoadHandles { get; } = new();
+
+  public Dictionary<IrType, MethodDefinitionHandle> PtrStoreHandles { get; } = new();
+
+  public Dictionary<IrClassType, MethodDefinitionHandle> RecordEqualsHandles { get; } = new(ReferenceEqualityComparer.Instance);
 
   /// <summary>Gets or adds a cached <see cref="AssemblyReferenceHandle"/> for a .NET BCL assembly.</summary>
   public AssemblyReferenceHandle GetAssemblyRef(string assemblyName) {
@@ -104,21 +166,100 @@ internal sealed class MsilMetadataContext {
     return this.GetBclType("System", cls.Name);
   }
 
-  /// <summary>Gets or adds a <see cref="TypeSpecificationHandle"/> for <c>System.Nullable&lt;T&gt;</c>.</summary>
-  public TypeSpecificationHandle GetNullableSpec(IrType underlying) {
-    if (this._nullableSpecs.TryGetValue(underlying, out var handle))
+  /// <summary>Gets the metadata token (<see cref="TypeReferenceHandle"/> or <see cref="TypeDefinitionHandle"/>) for any class.</summary>
+  public EntityHandle GetClassToken(IrClassType cls)
+    => cls.IsLibrary ? this.GetExceptionTypeRef(cls) : this.DeclaredTypes[cls];
+
+  /// <summary>Gets the metadata token for any interface (mapping <see cref="IrInterfaceType.IsDisposable"/> to <c>System.IDisposable</c>).</summary>
+  public EntityHandle GetInterfaceToken(IrInterfaceType iface)
+    => iface.IsDisposable ? this.GetBclType("System", "IDisposable") : this.DeclaredTypes[iface];
+
+  /// <summary>Gets the metadata token for a class or interface method (mapping <c>IDisposable.Dispose</c> to <c>System.IDisposable::Dispose</c>).</summary>
+  public EntityHandle GetMethodToken(IrMethod method) {
+    if (this.Plan.InterfaceMethodOwners.TryGetValue(method, out var iface) && iface.IsDisposable)
+      return this.GetInstanceMethodRef("System", "IDisposable", "Dispose", IrType.Void);
+
+    return this.ClassMethodHandles[method];
+  }
+
+  /// <summary>Gets or adds a cached <see cref="TypeSpecificationHandle"/>.</summary>
+  public TypeSpecificationHandle GetTypeSpec(string key, Action<SignatureTypeEncoder> encode) {
+    if (this._typeSpecs.TryGetValue(key, out var handle))
       return handle;
 
     var blob = new BlobBuilder();
-    var typeEncoder = new BlobEncoder(blob).TypeSpecificationSignature();
-    var args = typeEncoder.GenericInstantiation(this.GetBclType("System", "Nullable`1"), 1, isValueType: true);
-    this.EncodeType(args.AddArgument(), underlying);
+    encode(new BlobEncoder(blob).TypeSpecificationSignature());
     handle = this.Metadata.AddTypeSpecification(this.Metadata.GetOrAddBlob(blob));
-    this._nullableSpecs[underlying] = handle;
+    this._typeSpecs[key] = handle;
     return handle;
   }
 
-  /// <summary>Gets or adds a type token (<see cref="EntityHandle"/>) for instructions like <c>newarr</c>, <c>initobj</c>, <c>ldelem</c>, <c>stelem</c>, <c>ldelema</c>.</summary>
+  /// <summary>Gets or adds a <see cref="TypeSpecificationHandle"/> for <c>System.Nullable&lt;T&gt;</c>.</summary>
+  public TypeSpecificationHandle GetNullableSpec(IrType underlying)
+    => this.GetTypeSpec($"Nullable<{underlying}>", enc => {
+      var args = enc.GenericInstantiation(this.GetBclType("System", "Nullable`1"), 1, isValueType: true);
+      this.EncodeType(args.AddArgument(), underlying);
+    });
+
+  /// <summary>Gets or adds a <see cref="TypeSpecificationHandle"/> for <c>System.Collections.Generic.List&lt;T&gt;</c>.</summary>
+  public TypeSpecificationHandle GetListSpec(IrType element)
+    => this.GetTypeSpec($"List<{element}>", enc => {
+      var args = enc.GenericInstantiation(this.GetAssemblyType("System.Collections", "System.Collections.Generic", "List`1"), 1, isValueType: false);
+      this.EncodeType(args.AddArgument(), element);
+    });
+
+  /// <summary>Gets or adds a <see cref="TypeSpecificationHandle"/> for <c>System.Collections.Generic.Dictionary&lt;K, V&gt;</c>.</summary>
+  public TypeSpecificationHandle GetDictionarySpec(IrType key, IrType value)
+    => this.GetTypeSpec($"Dict<{key},{value}>", enc => {
+      var args = enc.GenericInstantiation(this.GetAssemblyType("System.Collections", "System.Collections.Generic", "Dictionary`2"), 2, isValueType: false);
+      this.EncodeType(args.AddArgument(), key);
+      this.EncodeType(args.AddArgument(), value);
+    });
+
+  /// <summary>Gets or adds a <see cref="TypeSpecificationHandle"/> for <c>System.Collections.Generic.HashSet&lt;T&gt;</c>.</summary>
+  public TypeSpecificationHandle GetHashSetSpec(IrType element)
+    => this.GetTypeSpec($"HashSet<{element}>", enc => {
+      var args = enc.GenericInstantiation(this.GetAssemblyType("System.Collections", "System.Collections.Generic", "HashSet`1"), 1, isValueType: false);
+      this.EncodeType(args.AddArgument(), element);
+    });
+
+  /// <summary>Gets or adds a <see cref="TypeSpecificationHandle"/> for <c>System.Collections.Generic.KeyValuePair&lt;K, V&gt;</c>.</summary>
+  public TypeSpecificationHandle GetKeyValuePairSpec(IrType key, IrType value)
+    => this.GetTypeSpec($"KVP<{key},{value}>", enc => {
+      var args = enc.GenericInstantiation(this.GetBclType("System.Collections.Generic", "KeyValuePair`2"), 2, isValueType: true);
+      this.EncodeType(args.AddArgument(), key);
+      this.EncodeType(args.AddArgument(), value);
+    });
+
+  /// <summary>Gets or adds a <see cref="TypeSpecificationHandle"/> for <c>System.Collections.Generic.IEnumerable&lt;E&gt;</c>.</summary>
+  public TypeSpecificationHandle GetIEnumerableSpec(string elemKey, Action<SignatureTypeEncoder> encodeElem)
+    => this.GetTypeSpec($"IEnumerable<{elemKey}>", enc => {
+      var args = enc.GenericInstantiation(this.GetBclType("System.Collections.Generic", "IEnumerable`1"), 1, isValueType: false);
+      encodeElem(args.AddArgument());
+    });
+
+  /// <summary>Gets or adds a <see cref="TypeSpecificationHandle"/> for <c>System.Collections.Generic.IEnumerator&lt;E&gt;</c>.</summary>
+  public TypeSpecificationHandle GetIEnumeratorSpec(string elemKey, Action<SignatureTypeEncoder> encodeElem)
+    => this.GetTypeSpec($"IEnumerator<{elemKey}>", enc => {
+      var args = enc.GenericInstantiation(this.GetBclType("System.Collections.Generic", "IEnumerator`1"), 1, isValueType: false);
+      encodeElem(args.AddArgument());
+    });
+
+  /// <summary>Gets or adds a <see cref="TypeSpecificationHandle"/> for <c>System.Threading.Tasks.Task&lt;T&gt;</c>.</summary>
+  public TypeSpecificationHandle GetTaskSpec(IrType element)
+    => this.GetTypeSpec($"Task<{element}>", enc => {
+      var args = enc.GenericInstantiation(this.GetBclType("System.Threading.Tasks", "Task`1"), 1, isValueType: false);
+      this.EncodeType(args.AddArgument(), element);
+    });
+
+  /// <summary>Gets or adds a <see cref="TypeSpecificationHandle"/> for <c>System.Runtime.CompilerServices.TaskAwaiter&lt;T&gt;</c>.</summary>
+  public TypeSpecificationHandle GetTaskAwaiterSpec(IrType element)
+    => this.GetTypeSpec($"TaskAwaiter<{element}>", enc => {
+      var args = enc.GenericInstantiation(this.GetBclType("System.Runtime.CompilerServices", "TaskAwaiter`1"), 1, isValueType: true);
+      this.EncodeType(args.AddArgument(), element);
+    });
+
+  /// <summary>Gets or adds a type token (<see cref="EntityHandle"/>) for instructions like <c>newarr</c>, <c>initobj</c>, <c>ldelem</c>, <c>stelem</c>, <c>isinst</c>, <c>castclass</c>.</summary>
   public EntityHandle GetTypeToken(IrType type) {
     if (type.IsEnum)
       return this.DeclaredTypes[type.EnumType!];
@@ -127,17 +268,25 @@ internal sealed class MsilMetadataContext {
     if (type.IsOptional)
       return this.GetNullableSpec(type.Underlying!);
     if (type.IsObject)
-      return this.GetExceptionTypeRef(type.ClassType!);
-    if (type.IsArray) {
-      if (this._arraySpecs.TryGetValue(type, out var spec))
-        return spec;
-
-      var blob = new BlobBuilder();
-      this.EncodeType(new BlobEncoder(blob).TypeSpecificationSignature(), type);
-      spec = this.Metadata.AddTypeSpecification(this.Metadata.GetOrAddBlob(blob));
-      this._arraySpecs[type] = spec;
-      return spec;
-    }
+      return type.ClassType is { } cls ? this.GetClassToken(cls) : this.GetInterfaceToken(type.InterfaceType!);
+    if (type.IsFunction)
+      return this.FnInterfaces[type.Signature!].Type;
+    if (type.IsLazySequence)
+      return this.SeqInterfaces[type.Element!].Type;
+    if (type.IsView || type.IsMemory)
+      return this.SliceStructs[type.Element!].Type;
+    if (type.IsPointer)
+      return this.PtrStruct.Type;
+    if (type.Kind == IrTypeKind.List)
+      return this.GetListSpec(type.Element!);
+    if (type.Kind == IrTypeKind.Map)
+      return this.GetDictionarySpec(type.Key!, type.Element!);
+    if (type.Kind == IrTypeKind.Set)
+      return this.GetHashSetSpec(type.Element!);
+    if (type.IsAsync)
+      return type.Element == IrType.Void ? this.GetBclType("System.Threading.Tasks", "Task") : this.GetTaskSpec(type.Element!);
+    if (type.IsArray)
+      return this.GetTypeSpec($"arr:{type}", enc => this.EncodeType(enc, type));
 
     return type.Kind switch {
       IrTypeKind.Bool => this.GetBclType("System", "Boolean"),
@@ -205,12 +354,51 @@ internal sealed class MsilMetadataContext {
       case IrTypeKind.Struct:
         encoder.Type(this.DeclaredTypes[type.StructType!], isValueType: true);
         break;
-      case IrTypeKind.Optional:
+      case IrTypeKind.Optional: {
         var args = encoder.GenericInstantiation(this.GetBclType("System", "Nullable`1"), 1, isValueType: true);
         this.EncodeType(args.AddArgument(), type.Underlying!);
         break;
-      case IrTypeKind.Object:
-        encoder.Type(this.GetExceptionTypeRef(type.ClassType!), isValueType: false);
+      }
+      case IrTypeKind.Object: {
+        var token = type.ClassType is { } cls ? this.GetClassToken(cls) : this.GetInterfaceToken(type.InterfaceType!);
+        encoder.Type(token, isValueType: false);
+        break;
+      }
+      case IrTypeKind.Function:
+        encoder.Type(this.FnInterfaces[type.Signature!].Type, isValueType: false);
+        break;
+      case IrTypeKind.List: {
+        var args = encoder.GenericInstantiation(this.GetAssemblyType("System.Collections", "System.Collections.Generic", "List`1"), 1, isValueType: false);
+        this.EncodeType(args.AddArgument(), type.Element!);
+        break;
+      }
+      case IrTypeKind.Map: {
+        var args = encoder.GenericInstantiation(this.GetAssemblyType("System.Collections", "System.Collections.Generic", "Dictionary`2"), 2, isValueType: false);
+        this.EncodeType(args.AddArgument(), type.Key!);
+        this.EncodeType(args.AddArgument(), type.Element!);
+        break;
+      }
+      case IrTypeKind.Set: {
+        var args = encoder.GenericInstantiation(this.GetAssemblyType("System.Collections", "System.Collections.Generic", "HashSet`1"), 1, isValueType: false);
+        this.EncodeType(args.AddArgument(), type.Element!);
+        break;
+      }
+      case IrTypeKind.Sequence:
+        encoder.Type(this.SeqInterfaces[type.Element!].Type, isValueType: false);
+        break;
+      case IrTypeKind.Async:
+        if (type.Element == IrType.Void) {
+          encoder.Type(this.GetBclType("System.Threading.Tasks", "Task"), isValueType: false);
+        } else {
+          var args = encoder.GenericInstantiation(this.GetBclType("System.Threading.Tasks", "Task`1"), 1, isValueType: false);
+          this.EncodeType(args.AddArgument(), type.Element!);
+        }
+        break;
+      case IrTypeKind.Span or IrTypeKind.ReadOnlySpan or IrTypeKind.Memory or IrTypeKind.ReadOnlyMemory:
+        encoder.Type(this.SliceStructs[type.Element!].Type, isValueType: true);
+        break;
+      case IrTypeKind.Pointer:
+        encoder.Type(this.PtrStruct.Type, isValueType: true);
         break;
     }
   }
@@ -222,10 +410,17 @@ internal sealed class MsilMetadataContext {
     return this.Metadata.GetOrAddBlob(blob);
   }
 
-  /// <summary>Encodes a static method signature blob for <paramref name="returnType"/> and <paramref name="parameters"/>.</summary>
-  public BlobHandle EncodeMethodSignature(IrType returnType, IReadOnlyList<IrType> parameters) {
+  /// <summary>Encodes a field signature blob using a custom type encoder.</summary>
+  public BlobHandle EncodeCustomFieldSignature(Action<SignatureTypeEncoder> encode) {
     var blob = new BlobBuilder();
-    new BlobEncoder(blob).MethodSignature().Parameters(
+    encode(new BlobEncoder(blob).FieldSignature());
+    return this.Metadata.GetOrAddBlob(blob);
+  }
+
+  /// <summary>Encodes a method signature blob for <paramref name="returnType"/> and <paramref name="parameters"/>.</summary>
+  public BlobHandle EncodeMethodSignature(IrType returnType, IReadOnlyList<IrType> parameters, bool isInstance = false) {
+    var blob = new BlobBuilder();
+    new BlobEncoder(blob).MethodSignature(isInstanceMethod: isInstance).Parameters(
       parameters.Count,
       ret => {
         if (returnType == IrType.Void)
@@ -237,6 +432,13 @@ internal sealed class MsilMetadataContext {
         foreach (var param in parameters)
           this.EncodeType(p.AddParameter().Type(), param);
       });
+    return this.Metadata.GetOrAddBlob(blob);
+  }
+
+  /// <summary>Encodes a custom method signature blob.</summary>
+  public BlobHandle EncodeCustomMethodSignature(bool isInstance, Action<ReturnTypeEncoder> encodeReturn, int paramCount, Action<ParametersEncoder> encodeParams) {
+    var blob = new BlobBuilder();
+    new BlobEncoder(blob).MethodSignature(isInstanceMethod: isInstance).Parameters(paramCount, encodeReturn, encodeParams);
     return this.Metadata.GetOrAddBlob(blob);
   }
 
@@ -272,29 +474,47 @@ internal sealed class MsilMetadataContext {
   }
 
   /// <summary>Encodes a local variables standalone signature handle, or <see langword="default"/> when empty.</summary>
-  public StandaloneSignatureHandle EncodeLocals(IReadOnlyList<IrType> locals) {
+  public StandaloneSignatureHandle EncodeLocals(IReadOnlyList<Action<SignatureTypeEncoder>> locals) {
     if (locals.Count == 0)
       return default;
 
     var blob = new BlobBuilder();
     var encoder = new BlobEncoder(blob).LocalVariableSignature(locals.Count);
-    foreach (var local in locals)
-      this.EncodeType(encoder.AddVariable().Type(), local);
+    foreach (var encode in locals)
+      encode(encoder.AddVariable().Type());
 
     return this.Metadata.AddStandaloneSignature(this.Metadata.GetOrAddBlob(blob));
   }
 
   /// <summary>Gets or adds a cached BCL <see cref="MemberReferenceHandle"/>.</summary>
-  public MemberReferenceHandle GetMemberRef(string key, EntityHandle parent, string name, Action<MethodSignatureEncoder> encodeSignature) {
+  public MemberReferenceHandle GetMemberRef(string key, EntityHandle parent, string name, Action<MethodSignatureEncoder> encodeSignature, int genericParameterCount = 0) {
     if (this._memberRefs.TryGetValue(key, out var handle))
       return handle;
 
     var blob = new BlobBuilder();
-    encodeSignature(new BlobEncoder(blob).MethodSignature(isInstanceMethod: key.StartsWith("inst:", StringComparison.Ordinal)));
+    encodeSignature(new BlobEncoder(blob).MethodSignature(
+      genericParameterCount: genericParameterCount,
+      isInstanceMethod: key.StartsWith("inst:", StringComparison.Ordinal)));
     handle = this.Metadata.AddMemberReference(parent, this.Metadata.GetOrAddString(name), this.Metadata.GetOrAddBlob(blob));
     this._memberRefs[key] = handle;
     return handle;
   }
+
+  /// <summary>Gets or adds a cached <see cref="MethodSpecificationHandle"/>.</summary>
+  public MethodSpecificationHandle GetMethodSpec(string key, EntityHandle method, int argCount, Action<GenericTypeArgumentsEncoder> encodeArgs) {
+    if (this._methodSpecs.TryGetValue(key, out var handle))
+      return handle;
+
+    var blob = new BlobBuilder();
+    encodeArgs(new BlobEncoder(blob).MethodSpecificationSignature(argCount));
+    handle = this.Metadata.AddMethodSpecification(method, this.Metadata.GetOrAddBlob(blob));
+    this._methodSpecs[key] = handle;
+    return handle;
+  }
+
+  /// <summary>Gets a cached <c>System.Object::.ctor()</c> member reference.</summary>
+  public MemberReferenceHandle GetObjectCtor()
+    => this.GetMemberRef("inst:System.Object..ctor", this.GetBclType("System", "Object"), ".ctor", sig => sig.Parameters(0, r => r.Void(), _ => { }));
 
   /// <summary>Gets a cached static BCL method reference taking the given IR types.</summary>
   public MemberReferenceHandle GetStaticMethodRef(string @namespace, string typeName, string methodName, IrType returnType, params IrType[] paramTypes) {
@@ -370,6 +590,86 @@ internal sealed class MsilMetadataContext {
         if (arity >= 2)
           p.AddParameter().Type().Type(this.GetBclType("System", "Exception"), isValueType: false);
       }));
+  }
+
+  /// <summary>Gets a cached <c>Task.FromResult&lt;T&gt;(T)</c> method specification.</summary>
+  public MethodSpecificationHandle GetTaskFromResult(IrType element) {
+    var taskType = this.GetBclType("System.Threading.Tasks", "Task");
+    var taskGeneric = this.GetBclType("System.Threading.Tasks", "Task`1");
+    var member = this.GetMemberRef(
+      "stat:Task::FromResult<T>(T)",
+      taskType,
+      "FromResult",
+      sig => sig.Parameters(
+        1,
+        ret => ret.Type().GenericInstantiation(taskGeneric, 1, isValueType: false).AddArgument().GenericMethodTypeParameter(0),
+        p => p.AddParameter().Type().GenericMethodTypeParameter(0)),
+      genericParameterCount: 1);
+    return this.GetMethodSpec($"Task.FromResult<{element}>", member, 1, args => this.EncodeType(args.AddArgument(), element));
+  }
+
+  /// <summary>Gets a cached <c>Task.FromException&lt;T&gt;(Exception)</c> method specification.</summary>
+  public MethodSpecificationHandle GetTaskFromException(IrType element) {
+    var taskType = this.GetBclType("System.Threading.Tasks", "Task");
+    var taskGeneric = this.GetBclType("System.Threading.Tasks", "Task`1");
+    var excType = this.GetBclType("System", "Exception");
+    var member = this.GetMemberRef(
+      "stat:Task::FromException<T>(Exception)",
+      taskType,
+      "FromException",
+      sig => sig.Parameters(
+        1,
+        ret => ret.Type().GenericInstantiation(taskGeneric, 1, isValueType: false).AddArgument().GenericMethodTypeParameter(0),
+        p => p.AddParameter().Type().Type(excType, isValueType: false)),
+      genericParameterCount: 1);
+    return this.GetMethodSpec($"Task.FromException<{element}>", member, 1, args => this.EncodeType(args.AddArgument(), element));
+  }
+
+  /// <summary>Gets a cached <c>Task.WhenAll&lt;T&gt;(Task&lt;T&gt;[])</c> method specification.</summary>
+  public MethodSpecificationHandle GetTaskWhenAll(IrType element) {
+    var taskType = this.GetBclType("System.Threading.Tasks", "Task");
+    var taskGeneric = this.GetBclType("System.Threading.Tasks", "Task`1");
+    var member = this.GetMemberRef(
+      "stat:Task::WhenAll<T>(Task<T>[])",
+      taskType,
+      "WhenAll",
+      sig => sig.Parameters(
+        1,
+        ret => ret.Type().GenericInstantiation(taskGeneric, 1, isValueType: false).AddArgument().SZArray().GenericMethodTypeParameter(0),
+        p => p.AddParameter().Type().SZArray().GenericInstantiation(taskGeneric, 1, isValueType: false).AddArgument().GenericMethodTypeParameter(0)),
+      genericParameterCount: 1);
+    return this.GetMethodSpec($"Task.WhenAll<{element}>", member, 1, args => this.EncodeType(args.AddArgument(), element));
+  }
+
+  /// <summary>Gets a cached <c>Task.CompletedTask</c> getter reference.</summary>
+  public MemberReferenceHandle GetTaskCompletedTask() {
+    var taskType = this.GetBclType("System.Threading.Tasks", "Task");
+    return this.GetMemberRef(
+      "stat:Task::get_CompletedTask()",
+      taskType,
+      "get_CompletedTask",
+      sig => sig.Parameters(0, r => r.Type().Type(taskType, isValueType: false), _ => { }));
+  }
+
+  /// <summary>Gets a cached <c>Task.FromException(Exception)</c> reference.</summary>
+  public MemberReferenceHandle GetTaskFromExceptionVoid() {
+    var taskType = this.GetBclType("System.Threading.Tasks", "Task");
+    var excType = this.GetBclType("System", "Exception");
+    return this.GetMemberRef(
+      "stat:Task::FromException(Exception)",
+      taskType,
+      "FromException",
+      sig => sig.Parameters(1, r => r.Type().Type(taskType, isValueType: false), p => p.AddParameter().Type().Type(excType, isValueType: false)));
+  }
+
+  /// <summary>Gets a cached <c>Task.WhenAll(Task[])</c> reference.</summary>
+  public MemberReferenceHandle GetTaskWhenAllVoid() {
+    var taskType = this.GetBclType("System.Threading.Tasks", "Task");
+    return this.GetMemberRef(
+      "stat:Task::WhenAll(Task[])",
+      taskType,
+      "WhenAll",
+      sig => sig.Parameters(1, r => r.Type().Type(taskType, isValueType: false), p => p.AddParameter().Type().SZArray().Type(taskType, isValueType: false)));
   }
 
 }

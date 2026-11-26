@@ -87,6 +87,19 @@ internal static class JvmTestRunner {
           if (trying.Finally is { } cleanup)
             Collect(cleanup);
           break;
+        case IrUsing scope:
+          AddLocal(scope.Resource);
+          Collect(scope.Body);
+          break;
+        case IrForEachCollection each:
+          AddLocal(each.Element);
+          AddLocal(each.Value);
+          Collect(each.Body);
+          break;
+        case IrForEachSequence each:
+          AddLocal(each.Element);
+          Collect(each.Body);
+          break;
       }
     }
 

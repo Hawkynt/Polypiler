@@ -21,6 +21,7 @@ internal static class VBScriptLibrary {
     IrIntrinsicOp.Abs, IrIntrinsicOp.Min, IrIntrinsicOp.Max, IrIntrinsicOp.Sign,
     IrIntrinsicOp.RotateLeft, IrIntrinsicOp.RotateRight,
     IrIntrinsicOp.PopCount, IrIntrinsicOp.LeadingZeroCount, IrIntrinsicOp.TrailingZeroCount,
+    IrIntrinsicOp.ParallelBitExtract, IrIntrinsicOp.ParallelBitDeposit,
     IrIntrinsicOp.LoadLittle, IrIntrinsicOp.LoadBig, IrIntrinsicOp.StoreLittle, IrIntrinsicOp.StoreBig
   ];
 

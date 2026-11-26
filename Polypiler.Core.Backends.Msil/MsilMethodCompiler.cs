@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
 using Polypiler.Core.IR;
 
 namespace Polypiler.Core.Backends.Msil;
 
-/// <summary>Compiles IR functions, module static constructors, and console entry points into verifiable CIL.</summary>
-internal sealed class MsilMethodCompiler {
+/// <summary>Compiles IR functions, class members, synthesized helpers, static constructors, and console entry points into verifiable CIL.</summary>
+internal sealed partial class MsilMethodCompiler {
 
   private sealed record LoopTarget(LabelHandle BreakLabel, LabelHandle? ContinueLabel, int TryDepth);
 
@@ -15,7 +16,10 @@ internal sealed class MsilMethodCompiler {
   private readonly IrType _returnType;
   private readonly Dictionary<IrLocal, int> _paramSlots = new(ReferenceEqualityComparer.Instance);
   private readonly Dictionary<IrLocal, int> _localSlots = new(ReferenceEqualityComparer.Instance);
-  private readonly List<IrType> _localTypes = [];
+  private readonly Dictionary<IrLocal, int> _capturedLocalSlots = new(ReferenceEqualityComparer.Instance);
+  private readonly Dictionary<IrLocal, FieldDefinitionHandle> _outerCaptureFields = new(ReferenceEqualityComparer.Instance);
+  private readonly Dictionary<IrLocal, int> _addressedLocalSlots = new(ReferenceEqualityComparer.Instance);
+  private readonly List<Action<SignatureTypeEncoder>> _localEncoders = [];
   private readonly Stack<LoopTarget> _loops = new();
   private readonly ControlFlowBuilder _flow = new();
   private readonly BlobBuilder _code = new();
@@ -24,26 +28,164 @@ internal sealed class MsilMethodCompiler {
   private int _returnSlot = -1;
   private LabelHandle _returnLabel;
   private bool _hasReturnLabel;
+  private bool _isAsyncMethod;
+  private int _iteratorListSlot = -1;
+  private IrType? _iteratorElemType;
+  private LabelHandle _iteratorEndLabel;
 
-  private MsilMethodCompiler(MsilMetadataContext ctx, IrType returnType, IReadOnlyList<IrLocal> parameters, IReadOnlyList<IrLocal> locals) {
+  private MsilMethodCompiler(
+    MsilMetadataContext ctx,
+    IrType returnType,
+    IReadOnlyList<IrLocal> parameters,
+    IReadOnlyList<IrLocal> locals,
+    int paramArgOffset = 0) {
     this._ctx = ctx;
     this._returnType = returnType;
     this._il = new InstructionEncoder(this._code, this._flow);
-    for (var i = 0; i < parameters.Count; i++)
-      this._paramSlots[parameters[i]] = i;
+
+    for (var i = 0; i < parameters.Count; i++) {
+      var param = parameters[i];
+      this._paramSlots[param] = i + paramArgOffset;
+      if (ctx.Plan.CapturedLocals.Contains(param)) {
+        var cell = ctx.CellTypes[param.Type];
+        this._capturedLocalSlots[param] = this.AllocCustomTemp(enc => enc.Type(cell.Type, isValueType: false));
+      } else if (ctx.Plan.AddressedLocals.Contains(param)) {
+        this._addressedLocalSlots[param] = this.AllocTemp(IrType.Array(param.Type));
+      }
+    }
+
     foreach (var local in locals) {
-      this._localSlots[local] = this._localTypes.Count;
-      this._localTypes.Add(local.Type);
+      if (ctx.Plan.CapturedLocals.Contains(local)) {
+        var cell = ctx.CellTypes[local.Type];
+        this._capturedLocalSlots[local] = this.AllocCustomTemp(enc => enc.Type(cell.Type, isValueType: false));
+      } else if (ctx.Plan.AddressedLocals.Contains(local)) {
+        this._addressedLocalSlots[local] = this.AllocTemp(IrType.Array(local.Type));
+      } else {
+        this._localSlots[local] = this.AllocTemp(local.Type);
+      }
     }
   }
 
   /// <summary>Compiles an <see cref="IrFunction"/> into <paramref name="bodies"/> and returns its IL body offset.</summary>
   public static int CompileFunction(IrFunction function, MsilMetadataContext ctx, MethodBodyStreamEncoder bodies) {
+    if (function.ReturnType.IsLazySequence)
+      return CompileIteratorFactory(function, ctx, bodies);
+    if (function.ReturnType.IsAsync)
+      return CompileAsyncFunction(function, ctx, bodies);
+
     var compiler = new MsilMethodCompiler(ctx, function.ReturnType, function.Parameters, function.Locals);
+    compiler.EmitCapturedParamInit(function.Parameters);
+    compiler.EmitAddressedParamInit(function.Parameters);
     compiler.EmitStmt(function.Body);
     compiler.EmitEpilogue();
-    var localsSig = ctx.EncodeLocals(compiler._localTypes);
+    var localsSig = ctx.EncodeLocals(compiler._localEncoders);
     return bodies.AddMethodBody(compiler._il, maxStack: 64, localVariablesSignature: localsSig);
+  }
+
+  /// <summary>Compiles a class constructor into <paramref name="bodies"/> and returns its IL body offset.</summary>
+  public static int CompileClassConstructor(IrClassType cls, IrConstructor ctor, IrFunction fn, MsilMetadataContext ctx, MethodBodyStreamEncoder bodies) {
+    var compiler = new MsilMethodCompiler(ctx, IrType.Void, fn.Parameters, fn.Locals);
+    compiler.EmitCapturedParamInit(fn.Parameters);
+    compiler.EmitAddressedParamInit(fn.Parameters);
+
+    var chainsToOwn = fn.Body.Statements is [IrExprStmt { Expression: IrCall first }, ..]
+      && ctx.Plan.ClassConstructorsByFn.TryGetValue(first.Function, out var target)
+      && ReferenceEquals(target.Owner, cls);
+
+    if ((cls.Base is null && !chainsToOwn) || ctor.SkipsBase) {
+      compiler._il.LoadArgument(0);
+      compiler._il.Call(ctx.GetObjectCtor());
+    }
+
+    compiler.EmitStmt(fn.Body);
+    compiler.EmitEpilogue();
+    var localsSig = ctx.EncodeLocals(compiler._localEncoders);
+    return bodies.AddMethodBody(compiler._il, maxStack: 64, localVariablesSignature: localsSig);
+  }
+
+  /// <summary>Compiles a structural equality helper for a record class <paramref name="cls"/>.</summary>
+  public static int CompileRecordEqualsHelper(IrClassType cls, MsilMetadataContext ctx, MethodBodyStreamEncoder bodies) {
+    var compiler = new MsilMethodCompiler(ctx, IrType.Bool, [], []);
+    var trueLabel = compiler._il.DefineLabel();
+    var falseLabel = compiler._il.DefineLabel();
+
+    // if (ReferenceEquals(a, b)) return true;
+    compiler._il.LoadArgument(0);
+    compiler._il.LoadArgument(1);
+    compiler._il.Branch(ILOpCode.Beq, trueLabel);
+
+    // if (a == null || b == null) return false;
+    compiler._il.LoadArgument(0);
+    compiler._il.Branch(ILOpCode.Brfalse, falseLabel);
+    compiler._il.LoadArgument(1);
+    compiler._il.Branch(ILOpCode.Brfalse, falseLabel);
+
+    foreach (var field in cls.AllFields) {
+      var token = ctx.FieldHandles[field];
+      if (field.Type.IsStruct) {
+        compiler.EmitStructFieldsEqual(
+          field.Type.StructType!,
+          () => { compiler._il.LoadArgument(0); compiler._il.OpCode(ILOpCode.Ldflda); compiler._il.Token(token); },
+          () => { compiler._il.LoadArgument(1); compiler._il.OpCode(ILOpCode.Ldflda); compiler._il.Token(token); },
+          falseLabel);
+      } else if (field.Type.ClassType is { IsRecord: true } nestedRec) {
+        compiler._il.LoadArgument(0);
+        compiler._il.OpCode(ILOpCode.Ldfld);
+        compiler._il.Token(token);
+        compiler._il.LoadArgument(1);
+        compiler._il.OpCode(ILOpCode.Ldfld);
+        compiler._il.Token(token);
+        compiler._il.Call(ctx.RecordEqualsHandles[nestedRec]);
+        compiler._il.Branch(ILOpCode.Brfalse, falseLabel);
+      } else if (field.Type.IsString) {
+        compiler._il.LoadArgument(0);
+        compiler._il.OpCode(ILOpCode.Ldfld);
+        compiler._il.Token(token);
+        compiler._il.LoadArgument(1);
+        compiler._il.OpCode(ILOpCode.Ldfld);
+        compiler._il.Token(token);
+        compiler._il.LoadConstantI4(4); // StringComparison.Ordinal
+        compiler._il.Call(compiler.GetStringComparisonStaticRef("Equals", IrType.Bool));
+        compiler._il.Branch(ILOpCode.Brfalse, falseLabel);
+      } else if (field.Type == IrType.F32) {
+        compiler._il.LoadArgument(0);
+        compiler._il.OpCode(ILOpCode.Ldflda);
+        compiler._il.Token(token);
+        compiler._il.LoadArgument(1);
+        compiler._il.OpCode(ILOpCode.Ldfld);
+        compiler._il.Token(token);
+        compiler._il.Call(ctx.GetInstanceMethodRef("System", "Single", "Equals", IrType.Bool, IrType.F32));
+        compiler._il.Branch(ILOpCode.Brfalse, falseLabel);
+      } else if (field.Type == IrType.F64) {
+        compiler._il.LoadArgument(0);
+        compiler._il.OpCode(ILOpCode.Ldflda);
+        compiler._il.Token(token);
+        compiler._il.LoadArgument(1);
+        compiler._il.OpCode(ILOpCode.Ldfld);
+        compiler._il.Token(token);
+        compiler._il.Call(ctx.GetInstanceMethodRef("System", "Double", "Equals", IrType.Bool, IrType.F64));
+        compiler._il.Branch(ILOpCode.Brfalse, falseLabel);
+      } else {
+        compiler._il.LoadArgument(0);
+        compiler._il.OpCode(ILOpCode.Ldfld);
+        compiler._il.Token(token);
+        compiler._il.LoadArgument(1);
+        compiler._il.OpCode(ILOpCode.Ldfld);
+        compiler._il.Token(token);
+        compiler._il.Branch(ILOpCode.Bne_un, falseLabel);
+      }
+    }
+
+    compiler._il.MarkLabel(trueLabel);
+    compiler._il.LoadConstantI4(1);
+    compiler._il.OpCode(ILOpCode.Ret);
+
+    compiler._il.MarkLabel(falseLabel);
+    compiler._il.LoadConstantI4(0);
+    compiler._il.OpCode(ILOpCode.Ret);
+
+    var localsSig = ctx.EncodeLocals(compiler._localEncoders);
+    return bodies.AddMethodBody(compiler._il, maxStack: 16, localVariablesSignature: localsSig);
   }
 
   /// <summary>Compiles the static constructor (<c>.cctor</c>) initializing module constants, globals, and optional initializer.</summary>
@@ -67,7 +209,7 @@ internal sealed class MsilMethodCompiler {
       compiler._il.Call(ctx.FunctionHandles[module.Initializer]);
 
     compiler._il.OpCode(ILOpCode.Ret);
-    var localsSig = ctx.EncodeLocals(compiler._localTypes);
+    var localsSig = ctx.EncodeLocals(compiler._localEncoders);
     return bodies.AddMethodBody(compiler._il, maxStack: 64, localVariablesSignature: localsSig);
   }
 
@@ -90,6 +232,38 @@ internal sealed class MsilMethodCompiler {
     return bodies.AddMethodBody(compiler._il, maxStack: 8);
   }
 
+  private void EmitCapturedParamInit(IReadOnlyList<IrLocal> parameters) {
+    foreach (var param in parameters) {
+      if (!this._capturedLocalSlots.TryGetValue(param, out var cellSlot))
+        continue;
+
+      var cell = this._ctx.CellTypes[param.Type];
+      this._il.OpCode(ILOpCode.Newobj);
+      this._il.Token(cell.Ctor);
+      this._il.OpCode(ILOpCode.Dup);
+      this._il.LoadArgument(this._paramSlots[param]);
+      this._il.OpCode(ILOpCode.Stfld);
+      this._il.Token(cell.ValueField);
+      this._il.StoreLocal(cellSlot);
+    }
+  }
+
+  private void EmitAddressedParamInit(IReadOnlyList<IrLocal> parameters) {
+    foreach (var param in parameters) {
+      if (!this._addressedLocalSlots.TryGetValue(param, out var arrSlot))
+        continue;
+
+      this._il.LoadConstantI4(1);
+      this._il.OpCode(ILOpCode.Newarr);
+      this._il.Token(this._ctx.GetTypeToken(param.Type));
+      this._il.OpCode(ILOpCode.Dup);
+      this._il.LoadConstantI4(0);
+      this._il.LoadArgument(this._paramSlots[param]);
+      this.EmitStoreElement(param.Type);
+      this._il.StoreLocal(arrSlot);
+    }
+  }
+
   private void EmitEpilogue() {
     if (this._hasReturnLabel) {
       this._il.MarkLabel(this._returnLabel);
@@ -105,8 +279,14 @@ internal sealed class MsilMethodCompiler {
   }
 
   private int AllocTemp(IrType type) {
-    var slot = this._localTypes.Count;
-    this._localTypes.Add(type);
+    var slot = this._localEncoders.Count;
+    this._localEncoders.Add(enc => this._ctx.EncodeType(enc, type));
+    return slot;
+  }
+
+  private int AllocCustomTemp(Action<SignatureTypeEncoder> encode) {
+    var slot = this._localEncoders.Count;
+    this._localEncoders.Add(encode);
     return slot;
   }
 
@@ -155,6 +335,13 @@ internal sealed class MsilMethodCompiler {
         break;
 
       case IrDeclare declare:
+        this.EnsureCapturedCell(declare.Local);
+        if (this._addressedLocalSlots.TryGetValue(declare.Local, out var addrSlot)) {
+          this._il.LoadConstantI4(1);
+          this._il.OpCode(ILOpCode.Newarr);
+          this._il.Token(this._ctx.GetTypeToken(declare.Local.Type));
+          this._il.StoreLocal(addrSlot);
+        }
         if (declare.Initializer is not null) {
           this.EmitExpr(declare.Initializer);
           this.EmitStoreLocalOrParam(declare.Local);
@@ -173,17 +360,24 @@ internal sealed class MsilMethodCompiler {
         break;
 
       case IrStore store:
-        this.EmitExpr(store.Array);
-        this.EmitExpr(store.Index);
-        this.EmitExpr(store.Value);
-        this.EmitStoreElement(store.Array.Type.Element!);
+        if (store.Array.Type.IsView) {
+          this.EmitViewStore(store);
+        } else {
+          this.EmitExpr(store.Array);
+          this.EmitExpr(store.Index);
+          this.EmitExpr(store.Value);
+          this.EmitStoreElement(store.Array.Type.Element!);
+        }
         break;
 
       case IrFieldStore fieldStore:
-        this.EmitAddress(fieldStore.Target);
+        if (fieldStore.Target.Type.IsObject)
+          this.EmitExpr(fieldStore.Target);
+        else
+          this.EmitAddress(fieldStore.Target);
         this.EmitExpr(fieldStore.Value);
         this._il.OpCode(ILOpCode.Stfld);
-        this._il.Token(this._ctx.StructFields[fieldStore.Field]);
+        this._il.Token(this._ctx.FieldHandles[fieldStore.Field]);
         break;
 
       case IrExprStmt exprStmt:
@@ -240,7 +434,16 @@ internal sealed class MsilMethodCompiler {
       }
 
       case IrReturn ret:
-        if (this._tryDepth > 0) {
+        if (this._isAsyncMethod) {
+          if (this._returnType.Element == IrType.Void) {
+            this._il.Call(this._ctx.GetTaskCompletedTask());
+          } else {
+            this.EmitExpr(ret.Value!);
+            this._il.Call(this._ctx.GetTaskFromResult(this._returnType.Element!));
+          }
+          this._il.StoreLocal(this._returnSlot);
+          this._il.Branch(ILOpCode.Leave, this._returnLabel);
+        } else if (this._tryDepth > 0) {
           this.EnsureReturnTarget();
           if (ret.Value is not null) {
             this.EmitExpr(ret.Value);
@@ -265,6 +468,30 @@ internal sealed class MsilMethodCompiler {
 
       case IrTry trying:
         this.EmitTry(trying);
+        break;
+
+      case IrUsing scope:
+        this.EmitStmt(scope.Lowered());
+        break;
+
+      case IrForEachCollection fe:
+        this.EmitForEachCollection(fe);
+        break;
+
+      case IrYield yielded:
+        this.EmitYield(yielded);
+        break;
+
+      case IrYieldBreak:
+        this.EmitYieldBreak();
+        break;
+
+      case IrYieldFrom delegated:
+        this.EmitYieldFrom(delegated);
+        break;
+
+      case IrForEachSequence feSeq:
+        this.EmitForEachSequence(feSeq);
         break;
     }
   }
@@ -313,6 +540,8 @@ internal sealed class MsilMethodCompiler {
   }
 
   private void EmitFor(IrFor loop) {
+    if (loop.PerIteration.Count > 0)
+      this.EmitRenewPerIteration(loop.PerIteration);
     var condLabel = this._il.DefineLabel();
     var stepLabel = this._il.DefineLabel();
     var breakLabel = this._il.DefineLabel();
@@ -323,6 +552,8 @@ internal sealed class MsilMethodCompiler {
     this.EmitStmt(loop.Body);
     this._loops.Pop();
     this._il.MarkLabel(stepLabel);
+    if (loop.PerIteration.Count > 0)
+      this.EmitRenewPerIteration(loop.PerIteration);
     this.EmitStmt(loop.Step);
     this._il.Branch(ILOpCode.Br, condLabel);
     this._il.MarkLabel(breakLabel);
@@ -422,7 +653,7 @@ internal sealed class MsilMethodCompiler {
     this._il.MarkLabel(tryEnd);
 
     foreach (var handler in catches) {
-      var catchType = this._ctx.GetExceptionTypeRef(handler.Class);
+      var catchType = this._ctx.GetClassToken(handler.Class);
       if (handler.Filter is not null) {
         var filterStart = this._il.DefineLabel();
         var rejectLabel = this._il.DefineLabel();
@@ -435,10 +666,12 @@ internal sealed class MsilMethodCompiler {
         this._il.Token(catchType);
         this._il.OpCode(ILOpCode.Dup);
         this._il.Branch(ILOpCode.Brfalse, rejectLabel);
-        if (handler.Local is not null)
+        if (handler.Local is not null) {
+          this.EnsureCapturedCell(handler.Local);
           this.EmitStoreLocalOrParam(handler.Local);
-        else
+        } else {
           this._il.OpCode(ILOpCode.Pop);
+        }
         this.EmitExpr(handler.Filter);
         this._il.Branch(ILOpCode.Br, filterEnd);
         this._il.MarkLabel(rejectLabel);
@@ -451,6 +684,7 @@ internal sealed class MsilMethodCompiler {
         if (handler.Local is not null) {
           this._il.OpCode(ILOpCode.Castclass);
           this._il.Token(catchType);
+          this.EnsureCapturedCell(handler.Local);
           this.EmitStoreLocalOrParam(handler.Local);
         } else {
           this._il.OpCode(ILOpCode.Pop);
@@ -465,10 +699,12 @@ internal sealed class MsilMethodCompiler {
         var handlerEnd = this._il.DefineLabel();
 
         this._il.MarkLabel(handlerStart);
-        if (handler.Local is not null)
+        if (handler.Local is not null) {
+          this.EnsureCapturedCell(handler.Local);
           this.EmitStoreLocalOrParam(handler.Local);
-        else
+        } else {
           this._il.OpCode(ILOpCode.Pop);
+        }
         this.EmitStmt(handler.Body);
         this._il.Branch(ILOpCode.Leave, afterLabel);
         this._il.MarkLabel(handlerEnd);
@@ -530,9 +766,13 @@ internal sealed class MsilMethodCompiler {
       }
 
       case IrArrayLoad load:
-        this.EmitExpr(load.Array);
-        this.EmitExpr(load.Index);
-        this.EmitLoadElement(load.Type);
+        if (load.Array.Type.IsView) {
+          this.EmitViewLoad(load);
+        } else {
+          this.EmitExpr(load.Array);
+          this.EmitExpr(load.Index);
+          this.EmitLoadElement(load.Type);
+        }
         break;
 
       case IrArrayLength length:
@@ -550,7 +790,14 @@ internal sealed class MsilMethodCompiler {
       case IrCall call:
         foreach (var arg in call.Arguments)
           this.EmitExpr(arg);
-        this._il.Call(this._ctx.FunctionHandles[call.Function]);
+        if (this._ctx.ClassCtorByFn.TryGetValue(call.Function, out var ctorHandle)) {
+          this._il.Call(ctorHandle);
+        } else if (IrExceptionClass.ConstructorOf(call.Function) is { } libCtor) {
+          var libCls = IrExceptionClass.All.First(c => c.Constructors.Contains(libCtor));
+          this._il.Call(this._ctx.GetExceptionCtor(libCls, call.Arguments.Count - 1));
+        } else {
+          this._il.Call(this._ctx.FunctionHandles[call.Function]);
+        }
         break;
 
       case IrForeignCall foreignCall:
@@ -585,7 +832,7 @@ internal sealed class MsilMethodCompiler {
           this._il.LoadLocalAddress(slot);
           this.EmitExpr(structNew.Arguments[i]);
           this._il.OpCode(ILOpCode.Stfld);
-          this._il.Token(this._ctx.StructFields[fields[i]]);
+          this._il.Token(this._ctx.FieldHandles[fields[i]]);
         }
         this._il.LoadLocal(slot);
         break;
@@ -603,12 +850,77 @@ internal sealed class MsilMethodCompiler {
         } else {
           this.EmitExpr(fieldLoad.Target);
           this._il.OpCode(ILOpCode.Ldfld);
-          this._il.Token(this._ctx.StructFields[fieldLoad.Field]);
+          this._il.Token(this._ctx.FieldHandles[fieldLoad.Field]);
         }
         break;
 
       case IrStructEquals structEquals:
-        this.EmitStructEquals(structEquals);
+        if (structEquals.Left.Type.ClassType is { IsRecord: true } recCls) {
+          this.EmitExpr(structEquals.Left);
+          this.EmitExpr(structEquals.Right);
+          this._il.Call(this._ctx.RecordEqualsHandles[recCls]);
+        } else {
+          this.EmitStructEquals(structEquals);
+        }
+        break;
+
+      case IrNew create: {
+        foreach (var arg in create.Arguments)
+          this.EmitExpr(arg);
+        this._il.OpCode(ILOpCode.Newobj);
+        var cls = create.Type.ClassType!;
+        this._il.Token(cls.IsLibrary
+          ? this._ctx.GetExceptionCtor(cls, create.Arguments.Count)
+          : this._ctx.ClassCtorHandles[create.Constructor]);
+        break;
+      }
+
+      case IrMethodCall methodCall: {
+        if (methodCall.Target is not null)
+          this.EmitExpr(methodCall.Target);
+        foreach (var arg in methodCall.Arguments)
+          this.EmitExpr(arg);
+        var token = this._ctx.GetMethodToken(methodCall.Method);
+        var opcode = methodCall.Method.IsStatic || methodCall.Kind == IrMethodCallKind.Base
+          ? ILOpCode.Call
+          : ILOpCode.Callvirt;
+        this._il.OpCode(opcode);
+        this._il.Token(token);
+        break;
+      }
+
+      case IrReferenceEquals refEq:
+        this.EmitExpr(refEq.Left);
+        this.EmitExpr(refEq.Right);
+        this._il.OpCode(ILOpCode.Ceq);
+        break;
+
+      case IrTypeTest typeTest:
+        this.EmitExpr(typeTest.Value);
+        this._il.OpCode(ILOpCode.Isinst);
+        this._il.Token(this._ctx.GetTypeToken(typeTest.Target));
+        this._il.OpCode(ILOpCode.Ldnull);
+        this._il.OpCode(ILOpCode.Cgt_un);
+        break;
+
+      case IrCast cast:
+        this.EmitExpr(cast.Value);
+        this._il.OpCode(ILOpCode.Castclass);
+        this._il.Token(this._ctx.GetTypeToken(cast.Type));
+        break;
+
+      case IrAsCast asCast:
+        this.EmitExpr(asCast.Value);
+        this._il.OpCode(ILOpCode.Isinst);
+        this._il.Token(this._ctx.GetTypeToken(asCast.Type));
+        break;
+
+      case IrGenericEquals geq:
+        this.EmitGenericEquals(geq.Left, geq.Right);
+        break;
+
+      case IrGenericCompare gcmp:
+        this.EmitGenericCompare(gcmp.Left, gcmp.Right);
         break;
 
       case IrNone none:
@@ -666,17 +978,104 @@ internal sealed class MsilMethodCompiler {
         this._il.OpCode(ILOpCode.Throw);
         break;
 
-      case IrNew create:
-        foreach (var arg in create.Arguments)
-          this.EmitExpr(arg);
-        this._il.OpCode(ILOpCode.Newobj);
-        this._il.Token(this._ctx.GetExceptionCtor(create.Type.ClassType!, create.Arguments.Count));
+      case IrLambda lambda:
+        this.EmitLambda(lambda);
+        break;
+
+      case IrFunctionRef fnRef:
+        this.EmitFunctionRef(fnRef);
+        break;
+
+      case IrBoundMethod bound:
+        this.EmitBoundMethod(bound);
+        break;
+
+      case IrInvoke invoke:
+        this.EmitInvoke(invoke);
+        break;
+
+      case IrCollection collection:
+        this.EmitCollection(collection);
+        break;
+
+      case IrArraySequence arrSeq:
+        this.EmitArraySequence(arrSeq);
+        break;
+
+      case IrAwait awaited:
+        this.EmitAwait(awaited);
+        break;
+
+      case IrAsync asyncOp:
+        this.EmitAsyncOp(asyncOp);
         break;
 
       case IrIntrinsic intrinsic:
         this.EmitIntrinsic(intrinsic);
         break;
     }
+  }
+
+  private void EmitGenericEquals(IrExpr left, IrExpr right) {
+    var t = left.Type;
+    if (t.ClassType is { IsRecord: true } recCls) {
+      this.EmitExpr(left);
+      this.EmitExpr(right);
+      this._il.Call(this._ctx.RecordEqualsHandles[recCls]);
+    } else if (t == IrType.F32) {
+      var slot = this.AllocTemp(IrType.F32);
+      this.EmitExpr(left);
+      this._il.StoreLocal(slot);
+      this._il.LoadLocalAddress(slot);
+      this.EmitExpr(right);
+      this._il.Call(this._ctx.GetInstanceMethodRef("System", "Single", "Equals", IrType.Bool, IrType.F32));
+    } else if (t == IrType.F64) {
+      var slot = this.AllocTemp(IrType.F64);
+      this.EmitExpr(left);
+      this._il.StoreLocal(slot);
+      this._il.LoadLocalAddress(slot);
+      this.EmitExpr(right);
+      this._il.Call(this._ctx.GetInstanceMethodRef("System", "Double", "Equals", IrType.Bool, IrType.F64));
+    } else if (t.IsString) {
+      this.EmitExpr(left);
+      this.EmitExpr(right);
+      this._il.LoadConstantI4(4); // StringComparison.Ordinal
+      this._il.Call(this.GetStringComparisonStaticRef("Equals", IrType.Bool));
+    } else {
+      this.EmitExpr(left);
+      this.EmitExpr(right);
+      this._il.OpCode(ILOpCode.Ceq);
+    }
+  }
+
+  private void EmitGenericCompare(IrExpr left, IrExpr right) {
+    var t = left.Type.Integral;
+    if (t.IsString) {
+      this.EmitExpr(left);
+      this.EmitExpr(right);
+      this._il.Call(this._ctx.GetStaticMethodRef("System", "String", "CompareOrdinal", IrType.I32, IrType.String, IrType.String));
+      return;
+    }
+
+    var bclName = t.Kind switch {
+      IrTypeKind.Bool => "Boolean",
+      IrTypeKind.I8 => "SByte",
+      IrTypeKind.U8 => "Byte",
+      IrTypeKind.I16 => "Int16",
+      IrTypeKind.U16 => "UInt16",
+      IrTypeKind.I32 => "Int32",
+      IrTypeKind.U32 => "UInt32",
+      IrTypeKind.I64 => "Int64",
+      IrTypeKind.U64 => "UInt64",
+      IrTypeKind.F32 => "Single",
+      _ => "Double"
+    };
+    var slot = this.AllocTemp(t);
+    this.EmitExpr(left);
+    this._il.StoreLocal(slot);
+    this._il.LoadLocalAddress(slot);
+    this.EmitExpr(right);
+    this._il.Call(this._ctx.GetInstanceMethodRef("System", bclName, "CompareTo", IrType.I32, t));
   }
 
   private void EmitUnary(IrUnary unary) {
@@ -854,7 +1253,6 @@ internal sealed class MsilMethodCompiler {
       return;
     }
 
-    // Wrapping integer conversion.
     switch (dst.Kind) {
       case IrTypeKind.I8:
         this._il.OpCode(ILOpCode.Conv_i1);
@@ -882,7 +1280,6 @@ internal sealed class MsilMethodCompiler {
   }
 
   private void EmitFloatToIntSaturate(IrType src, IrType dst) {
-    // Convert operand to f64 for uniform, exact range checking.
     if (src == IrType.F32)
       this._il.OpCode(ILOpCode.Conv_r8);
 
@@ -900,22 +1297,18 @@ internal sealed class MsilMethodCompiler {
       IrTypeKind.U64 => 18446744073709551616.0,
       _ => (double)IrOperators.Maximum(dst)
     };
-    // NaN check: x != x -> 0
     this._il.LoadLocal(valSlot);
     this._il.LoadLocal(valSlot);
     this._il.Branch(ILOpCode.Bne_un, nanLabel);
 
-    // Lower bound: x <= min -> Min
     this._il.LoadLocal(valSlot);
     this._il.LoadConstantR8(minBound);
     this._il.Branch(ILOpCode.Ble, minLabel);
 
-    // Upper bound: x >= max -> Max
     this._il.LoadLocal(valSlot);
     this._il.LoadConstantR8(maxExclusive);
     this._il.Branch(ILOpCode.Bge, maxLabel);
 
-    // In-range conversion.
     this._il.LoadLocal(valSlot);
     this._il.OpCode(dst.Kind switch {
       IrTypeKind.I8 => ILOpCode.Conv_i1,
@@ -964,18 +1357,47 @@ internal sealed class MsilMethodCompiler {
       this.EmitExpr(arrayLoad.Index);
       this._il.StoreLocal(idxSlot);
 
-      this._il.LoadLocal(arrSlot);
-      this._il.LoadLocal(idxSlot);
-      this.EmitLoadElement(type);
-      this._il.StoreLocal(oldSlot);
+      if (arrayLoad.Array.Type.IsView) {
+        var slice = this._ctx.SliceStructs[type];
+        this.EmitViewIndexCheck(arrSlot, idxSlot, slice);
+        this._il.LoadLocalAddress(arrSlot);
+        this._il.OpCode(ILOpCode.Ldfld);
+        this._il.Token(slice.ArrayField);
+        this._il.LoadLocalAddress(arrSlot);
+        this._il.OpCode(ILOpCode.Ldfld);
+        this._il.Token(slice.OffsetField);
+        this._il.LoadLocal(idxSlot);
+        this._il.OpCode(ILOpCode.Add);
+        this.EmitLoadElement(type);
+        this._il.StoreLocal(oldSlot);
 
-      this.EmitStepCompute(type, oldSlot, step.Increment, step.Trap);
-      this._il.StoreLocal(newSlot);
+        this.EmitStepCompute(type, oldSlot, step.Increment, step.Trap);
+        this._il.StoreLocal(newSlot);
 
-      this._il.LoadLocal(arrSlot);
-      this._il.LoadLocal(idxSlot);
-      this._il.LoadLocal(newSlot);
-      this.EmitStoreElement(type);
+        this._il.LoadLocalAddress(arrSlot);
+        this._il.OpCode(ILOpCode.Ldfld);
+        this._il.Token(slice.ArrayField);
+        this._il.LoadLocalAddress(arrSlot);
+        this._il.OpCode(ILOpCode.Ldfld);
+        this._il.Token(slice.OffsetField);
+        this._il.LoadLocal(idxSlot);
+        this._il.OpCode(ILOpCode.Add);
+        this._il.LoadLocal(newSlot);
+        this.EmitStoreElement(type);
+      } else {
+        this._il.LoadLocal(arrSlot);
+        this._il.LoadLocal(idxSlot);
+        this.EmitLoadElement(type);
+        this._il.StoreLocal(oldSlot);
+
+        this.EmitStepCompute(type, oldSlot, step.Increment, step.Trap);
+        this._il.StoreLocal(newSlot);
+
+        this._il.LoadLocal(arrSlot);
+        this._il.LoadLocal(idxSlot);
+        this._il.LoadLocal(newSlot);
+        this.EmitStoreElement(type);
+      }
     }
 
     this._il.LoadLocal(step.Postfix ? oldSlot : newSlot);
@@ -1048,7 +1470,7 @@ internal sealed class MsilMethodCompiler {
 
   private void EmitStructFieldsEqual(IrStructType structType, Action loadLeftAddr, Action loadRightAddr, LabelHandle falseLabel) {
     foreach (var field in structType.Fields) {
-      var token = this._ctx.StructFields[field];
+      var token = this._ctx.FieldHandles[field];
       if (field.Type.IsStruct) {
         this.EmitStructFieldsEqual(
           field.Type.StructType!,
@@ -1107,6 +1529,9 @@ internal sealed class MsilMethodCompiler {
   }
 
   private void EmitIntrinsic(IrIntrinsic intrinsic) {
+    if (this.TryEmitViewOrPointerIntrinsic(intrinsic))
+      return;
+
     var args = intrinsic.Arguments;
     switch (intrinsic.Op) {
       case IrIntrinsicOp.ArrayOf: {
@@ -1302,11 +1727,17 @@ internal sealed class MsilMethodCompiler {
       }
 
       case IrIntrinsicOp.LoadLittle or IrIntrinsicOp.LoadBig:
-        this.EmitEndianLoad(intrinsic.Type, args[0], args[1], intrinsic.Op == IrIntrinsicOp.LoadLittle);
+        if (args[0].Type.IsView)
+          this.EmitEndianLoadOnView(intrinsic.Type, args[0], args[1], intrinsic.Op == IrIntrinsicOp.LoadLittle);
+        else
+          this.EmitEndianLoad(intrinsic.Type, args[0], args[1], intrinsic.Op == IrIntrinsicOp.LoadLittle);
         break;
 
       case IrIntrinsicOp.StoreLittle or IrIntrinsicOp.StoreBig:
-        this.EmitEndianStore(args[0], args[1], args[2], intrinsic.Op == IrIntrinsicOp.StoreLittle);
+        if (args[0].Type.IsView)
+          this.EmitEndianStoreOnView(args[0], args[1], args[2], intrinsic.Op == IrIntrinsicOp.StoreLittle);
+        else
+          this.EmitEndianStore(args[0], args[1], args[2], intrinsic.Op == IrIntrinsicOp.StoreLittle);
         break;
 
       case IrIntrinsicOp.StrLength:
@@ -1481,7 +1912,6 @@ internal sealed class MsilMethodCompiler {
     var failLabel = this._il.DefineLabel();
     var okLabel = this._il.DefineLabel();
 
-    // Check negative indices / length and range bounds before copying.
     this._il.LoadLocal(srcIdxSlot);
     this._il.LoadConstantI4(0);
     this._il.Branch(ILOpCode.Blt, failLabel);
@@ -1523,17 +1953,7 @@ internal sealed class MsilMethodCompiler {
     this._il.LoadLocal(dstSlot);
     this._il.LoadLocal(dstIdxSlot);
     this._il.LoadLocal(lenSlot);
-    this._il.Call(this._ctx.GetMemberRef(
-      "stat:System.Array::Copy(Array,int,Array,int,int)",
-      this._ctx.GetBclType("System", "Array"),
-      "Copy",
-      sig => sig.Parameters(5, r => r.Void(), p => {
-        p.AddParameter().Type().Type(this._ctx.GetBclType("System", "Array"), isValueType: false);
-        p.AddParameter().Type().Int32();
-        p.AddParameter().Type().Type(this._ctx.GetBclType("System", "Array"), isValueType: false);
-        p.AddParameter().Type().Int32();
-        p.AddParameter().Type().Int32();
-      })));
+    this._il.Call(this.GetArrayCopyRef());
   }
 
   private void EmitEndianLoad(IrType resultType, IrExpr arrayExpr, IrExpr indexExpr, bool littleEndian) {
@@ -1545,7 +1965,11 @@ internal sealed class MsilMethodCompiler {
     this.EmitExpr(indexExpr);
     this._il.StoreLocal(idxSlot);
     this.EmitEndianBoundsCheck(arrSlot, idxSlot, size);
+    this.EmitEndianLoadFromSlots(resultType, arrSlot, idxSlot, littleEndian);
+  }
 
+  private void EmitEndianLoadFromSlots(IrType resultType, int arrSlot, int idxSlot, bool littleEndian) {
+    var size = resultType.Size;
     var is64 = size == 8;
     for (var i = 0; i < size; i++) {
       var byteOffset = littleEndian ? i : size - 1 - i;
@@ -1594,7 +2018,10 @@ internal sealed class MsilMethodCompiler {
     this._il.StoreLocal(bitsSlot);
 
     this.EmitEndianBoundsCheck(arrSlot, idxSlot, size);
+    this.EmitEndianStoreFromSlots(arrSlot, idxSlot, bitsSlot, size, littleEndian);
+  }
 
+  private void EmitEndianStoreFromSlots(int arrSlot, int idxSlot, int bitsSlot, int size, bool littleEndian) {
     for (var i = 0; i < size; i++) {
       var byteOffset = littleEndian ? i : size - 1 - i;
       this._il.LoadLocal(arrSlot);
@@ -1671,10 +2098,20 @@ internal sealed class MsilMethodCompiler {
   private void EmitAddress(IrExpr place) {
     switch (place) {
       case IrLocalRef localRef:
-        if (this._paramSlots.TryGetValue(localRef.Local, out var paramIndex))
+        if (this._outerCaptureFields.ContainsKey(localRef.Local) || this._capturedLocalSlots.ContainsKey(localRef.Local)) {
+          this.EmitLoadCaptureCell(localRef.Local);
+          this._il.OpCode(ILOpCode.Ldflda);
+          this._il.Token(this._ctx.CellTypes[localRef.Local.Type].ValueField);
+        } else if (this._addressedLocalSlots.TryGetValue(localRef.Local, out var addrSlot)) {
+          this._il.LoadLocal(addrSlot);
+          this._il.LoadConstantI4(0);
+          this._il.OpCode(ILOpCode.Ldelema);
+          this._il.Token(this._ctx.GetTypeToken(localRef.Local.Type));
+        } else if (this._paramSlots.TryGetValue(localRef.Local, out var paramIndex)) {
           this._il.LoadArgumentAddress(paramIndex);
-        else
+        } else {
           this._il.LoadLocalAddress(this._localSlots[localRef.Local]);
+        }
         break;
       case IrArrayLoad arrayLoad:
         this.EmitExpr(arrayLoad.Array);
@@ -1683,25 +2120,52 @@ internal sealed class MsilMethodCompiler {
         this._il.Token(this._ctx.GetTypeToken(arrayLoad.Type));
         break;
       case IrFieldLoad fieldLoad:
-        this.EmitAddress(fieldLoad.Target);
+        if (fieldLoad.Target.Type.IsObject)
+          this.EmitExpr(fieldLoad.Target);
+        else
+          this.EmitAddress(fieldLoad.Target);
         this._il.OpCode(ILOpCode.Ldflda);
-        this._il.Token(this._ctx.StructFields[fieldLoad.Field]);
+        this._il.Token(this._ctx.FieldHandles[fieldLoad.Field]);
         break;
     }
   }
 
   private void EmitLoadLocalOrParam(IrLocal local) {
-    if (this._paramSlots.TryGetValue(local, out var paramIndex))
+    if (this._outerCaptureFields.ContainsKey(local) || this._capturedLocalSlots.ContainsKey(local)) {
+      this.EmitLoadCaptureCell(local);
+      this._il.OpCode(ILOpCode.Ldfld);
+      this._il.Token(this._ctx.CellTypes[local.Type].ValueField);
+    } else if (this._addressedLocalSlots.TryGetValue(local, out var addrSlot)) {
+      this._il.LoadLocal(addrSlot);
+      this._il.LoadConstantI4(0);
+      this.EmitLoadElement(local.Type);
+    } else if (this._paramSlots.TryGetValue(local, out var paramIndex)) {
       this._il.LoadArgument(paramIndex);
-    else
+    } else {
       this._il.LoadLocal(this._localSlots[local]);
+    }
   }
 
   private void EmitStoreLocalOrParam(IrLocal local) {
-    if (this._paramSlots.TryGetValue(local, out var paramIndex))
+    if (this._outerCaptureFields.ContainsKey(local) || this._capturedLocalSlots.ContainsKey(local)) {
+      var valSlot = this.AllocTemp(local.Type);
+      this._il.StoreLocal(valSlot);
+      this.EmitLoadCaptureCell(local);
+      this._il.LoadLocal(valSlot);
+      this._il.OpCode(ILOpCode.Stfld);
+      this._il.Token(this._ctx.CellTypes[local.Type].ValueField);
+    } else if (this._addressedLocalSlots.TryGetValue(local, out var addrSlot)) {
+      var valSlot = this.AllocTemp(local.Type);
+      this._il.StoreLocal(valSlot);
+      this._il.LoadLocal(addrSlot);
+      this._il.LoadConstantI4(0);
+      this._il.LoadLocal(valSlot);
+      this.EmitStoreElement(local.Type);
+    } else if (this._paramSlots.TryGetValue(local, out var paramIndex)) {
       this._il.StoreArgument(paramIndex);
-    else
+    } else {
       this._il.StoreLocal(this._localSlots[local]);
+    }
   }
 
   private void EmitConstValue(IrType type, long value) {
@@ -1721,14 +2185,20 @@ internal sealed class MsilMethodCompiler {
     }
   }
 
+  private static bool IsClrValueType(IrType type)
+    => type.IsStruct || type.IsOptional || type.IsView || type.IsMemory || type.IsPointer;
+
+  private static bool IsClrReferenceType(IrType type)
+    => type.IsString || type.IsArray || type.IsObject || type.IsFunction || type.IsCollection || type.IsLazySequence || type.IsAsync;
+
   private void EmitDefaultValue(IrType type) {
-    if (type.IsStruct || type.IsOptional) {
+    if (IsClrValueType(type)) {
       var slot = this.AllocTemp(type);
       this._il.LoadLocalAddress(slot);
       this._il.OpCode(ILOpCode.Initobj);
       this._il.Token(this._ctx.GetTypeToken(type));
       this._il.LoadLocal(slot);
-    } else if (type.IsString || type.IsArray || type.IsObject) {
+    } else if (IsClrReferenceType(type)) {
       this._il.OpCode(ILOpCode.Ldnull);
     } else {
       this.EmitConstValue(type, 0);
@@ -1741,6 +2211,12 @@ internal sealed class MsilMethodCompiler {
   }
 
   private void EmitLoadElement(IrType elementType) {
+    if (IsClrValueType(elementType)) {
+      this._il.OpCode(ILOpCode.Ldelem);
+      this._il.Token(this._ctx.GetTypeToken(elementType));
+      return;
+    }
+
     switch (elementType.Kind) {
       case IrTypeKind.Bool or IrTypeKind.U8:
         this._il.OpCode(ILOpCode.Ldelem_u1);
@@ -1769,10 +2245,6 @@ internal sealed class MsilMethodCompiler {
       case IrTypeKind.F64:
         this._il.OpCode(ILOpCode.Ldelem_r8);
         break;
-      case IrTypeKind.Struct or IrTypeKind.Optional:
-        this._il.OpCode(ILOpCode.Ldelem);
-        this._il.Token(this._ctx.GetTypeToken(elementType));
-        break;
       default:
         this._il.OpCode(ILOpCode.Ldelem_ref);
         break;
@@ -1780,6 +2252,12 @@ internal sealed class MsilMethodCompiler {
   }
 
   private void EmitStoreElement(IrType elementType) {
+    if (IsClrValueType(elementType)) {
+      this._il.OpCode(ILOpCode.Stelem);
+      this._il.Token(this._ctx.GetTypeToken(elementType));
+      return;
+    }
+
     switch (elementType.Kind) {
       case IrTypeKind.Bool or IrTypeKind.I8 or IrTypeKind.U8:
         this._il.OpCode(ILOpCode.Stelem_i1);
@@ -1798,10 +2276,6 @@ internal sealed class MsilMethodCompiler {
         break;
       case IrTypeKind.F64:
         this._il.OpCode(ILOpCode.Stelem_r8);
-        break;
-      case IrTypeKind.Struct or IrTypeKind.Optional:
-        this._il.OpCode(ILOpCode.Stelem);
-        this._il.Token(this._ctx.GetTypeToken(elementType));
         break;
       default:
         this._il.OpCode(ILOpCode.Stelem_ref);

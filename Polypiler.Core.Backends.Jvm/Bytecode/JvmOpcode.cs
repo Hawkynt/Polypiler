@@ -131,6 +131,8 @@ internal enum JvmOpcode : byte {
   IfIcmpge = 0xA2,
   IfIcmpgt = 0xA3,
   IfIcmple = 0xA4,
+  IfAcmpeq = 0xA5,
+  IfAcmpne = 0xA6,
   Goto = 0xA7,
   Tableswitch = 0xAA,
   Lookupswitch = 0xAB,
@@ -142,15 +144,19 @@ internal enum JvmOpcode : byte {
   Return = 0xB1,
   Getstatic = 0xB2,
   Putstatic = 0xB3,
+  Getfield = 0xB4,
+  Putfield = 0xB5,
   Invokevirtual = 0xB6,
   Invokespecial = 0xB7,
   Invokestatic = 0xB8,
+  Invokeinterface = 0xB9,
   New = 0xBB,
   Newarray = 0xBC,
   Anewarray = 0xBD,
   Arraylength = 0xBE,
   Athrow = 0xBF,
   Checkcast = 0xC0,
+  Instanceof = 0xC1,
   Wide = 0xC4,
   Ifnull = 0xC6,
   Ifnonnull = 0xC7
@@ -178,6 +184,7 @@ internal readonly record struct VType(byte Tag, ushort ClassIndex = 0) {
   public const byte DoubleTag = 3;
   public const byte LongTag = 4;
   public const byte NullTag = 5;
+  public const byte UninitializedThisTag = 6;
   public const byte ObjectTag = 7;
 
   public static VType Int => new(IntegerTag);
@@ -185,6 +192,7 @@ internal readonly record struct VType(byte Tag, ushort ClassIndex = 0) {
   public static VType Double => new(DoubleTag);
   public static VType Long => new(LongTag);
   public static VType Null => new(NullTag);
+  public static VType UninitializedThis => new(UninitializedThisTag);
   public static VType Object(ushort classCpIndex) => new(ObjectTag, classCpIndex);
 
   /// <summary>Number of JVM operand-stack words / local-variable slots occupied (2 for long/double, 1 otherwise).</summary>

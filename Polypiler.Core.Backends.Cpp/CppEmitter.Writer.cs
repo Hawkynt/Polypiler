@@ -17,6 +17,7 @@ public static partial class CppEmitter {
     private readonly CppEmitOptions _options = options;
     private readonly SortedSet<string> _headerIncludes = new(StringComparer.Ordinal);
     private readonly SortedSet<string> _sourceIncludes = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _headerHelpers = new(StringComparer.Ordinal);
     private readonly HashSet<string> _usedHelpers = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _functionNames = new(StringComparer.Ordinal);
     private readonly Dictionary<string, IrFunction> _functionMap = new(StringComparer.Ordinal);
@@ -29,9 +30,12 @@ public static partial class CppEmitter {
     private readonly Dictionary<IrEnumType, Dictionary<IrEnumMember, string>> _enumMembers = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<IrField, string> _fieldNames = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<IrLocal, string> _locals = new();
+    private HashSet<IrLocal> _capturedLocals = [];
 
     private IrModule _module = null!;
     private IrFunction? _currentFunction;
+    private IrType? _asyncElementType;
+    private string? _seqVecName;
     private int _tempCounter;
 
     public List<Diagnostic> Problems { get; } = [];
@@ -90,7 +94,7 @@ public static partial class CppEmitter {
       this.EmitModuleConstants(module, constsAndGlobals);
       this.EmitModuleGlobals(module, constsAndGlobals);
 
-      var headerText = BuildHeader(ns, this._headerIncludes, headerBody);
+      var headerText = this.BuildHeader(ns, this._headerIncludes, headerBody);
       var sourceText = this.BuildSource(stem, ns, constsAndGlobals, privateDecls, privateBodies, classImpls, publicBodies, module);
 
       return [
@@ -99,7 +103,7 @@ public static partial class CppEmitter {
       ];
     }
 
-    private static string BuildHeader(string ns, SortedSet<string> includes, StringBuilder body) {
+    private string BuildHeader(string ns, SortedSet<string> includes, StringBuilder body) {
       var text = new StringBuilder();
       text.Append("#pragma once\n\n");
       foreach (var inc in includes)
@@ -107,6 +111,8 @@ public static partial class CppEmitter {
       if (includes.Count > 0)
         text.Append('\n');
       text.Append("namespace ").Append(ns).Append(" {\n\n");
+      foreach (var helperName in CppHelpers.Order.Where(this._headerHelpers.Contains))
+        text.Append(CppHelpers.Get(helperName).Code).Append("\n\n");
       text.Append(body);
       text.Append("} // namespace ").Append(ns).Append('\n');
       return text.ToString();
@@ -129,7 +135,7 @@ public static partial class CppEmitter {
       text.Append('\n');
       text.Append("namespace ").Append(ns).Append(" {\n\n");
 
-      var usedHelpers = CppHelpers.Order.Where(this._usedHelpers.Contains).ToList();
+      var usedHelpers = CppHelpers.Order.Where(name => this._usedHelpers.Contains(name) && !this._headerHelpers.Contains(name)).ToList();
       if (usedHelpers.Count > 0 || constsAndGlobals.Length > 0) {
         text.Append("namespace {\n\n");
         foreach (var helperName in usedHelpers)
@@ -220,7 +226,7 @@ public static partial class CppEmitter {
       var modes = new ParamMode[fn.Parameters.Count];
       for (var i = 0; i < fn.Parameters.Count; ++i) {
         var p = fn.Parameters[i];
-        if (p.Type.IsArray || p.Type.IsList) {
+        if (p.Type.IsArray || p.Type.IsList || p.Type.Kind is IrTypeKind.Map or IrTypeKind.Set) {
           var reassigned = IsLocalReassigned(fn.Body, p);
           if (reassigned)
             modes[i] = ParamMode.Value;
@@ -421,6 +427,9 @@ public static partial class CppEmitter {
     private string EmitFunctionDefinition(IrFunction fn, string cppName) {
       this._currentFunction = fn;
       this._locals.Clear();
+      this._capturedLocals = [.. IrClosures.Captured(fn.Body)];
+      this._asyncElementType = null;
+      this._seqVecName = null;
       this._tempCounter = 0;
 
       var taken = new HashSet<string>(StringComparer.Ordinal);
@@ -450,11 +459,89 @@ public static partial class CppEmitter {
         text.Append(this.FormatParamType(p.Type, modes[i], inHeader: false)).Append(' ').Append(this._locals[p]);
       }
       text.Append(") {\n");
-      this.EmitBlockStatements(fn.Body, text, 1);
+      this.EmitFunctionBodyWithSemantics(fn, fn.Parameters, usedLocals, taken, text, 1);
       text.Append("}\n");
 
       this._currentFunction = null;
+      this._capturedLocals = [];
+      this._asyncElementType = null;
+      this._seqVecName = null;
       return text.ToString();
+    }
+
+    private void EmitFunctionBodyWithSemantics(
+      IrFunction fn,
+      IReadOnlyList<IrLocal> parameters,
+      HashSet<IrLocal> usedLocals,
+      HashSet<string> taken,
+      StringBuilder text,
+      int indent) {
+      var pad = Indent(indent);
+      if (IrSequences.IsIterator(fn)) {
+        var elemType = fn.ReturnType.Element!;
+        var elemCpp = this.CppType(elemType, inHeader: false);
+        var seqVar = this.Temp("ply_seq");
+        this._sourceIncludes.Add("<vector>");
+        var usedParams = parameters.Where(usedLocals.Contains).ToList();
+        var captures = new List<string>();
+        var savedParamNames = new List<(IrLocal Param, string CapturedName, string LocalName)>();
+        if (this._currentThis is not null)
+          captures.Add("this");
+        foreach (var p in usedParams) {
+          var cap = this.Temp("ply_cap");
+          captures.Add($"{cap} = {this._locals[p]}");
+          savedParamNames.Add((p, cap, this._locals[p]));
+        }
+        text.Append(pad).Append("return [").AppendJoin(", ", captures).Append("]() -> std::vector<").Append(elemCpp).Append("> {\n");
+        var innerPad = Indent(indent + 1);
+        foreach (var (p, cap, lname) in savedParamNames) {
+          if (this._capturedLocals.Contains(p)) {
+            this._sourceIncludes.Add("<memory>");
+            var cell = CppNaming.Free("ply_cell_" + lname, taken.Contains);
+            taken.Add(cell);
+            this._locals[p] = cell;
+            text.Append(innerPad).Append("auto ").Append(cell).Append(" = std::make_shared<").Append(this.CppType(p.Type, inHeader: false)).Append(">(").Append(cap).Append(");\n");
+          } else {
+            text.Append(innerPad).Append("auto ").Append(lname).Append(" = ").Append(cap).Append(";\n");
+          }
+        }
+        text.Append(innerPad).Append("std::vector<").Append(elemCpp).Append("> ").Append(seqVar).Append("{};\n");
+        this._seqVecName = seqVar;
+        this.EmitBlockStatements(fn.Body, text, indent + 1);
+        this._seqVecName = null;
+        text.Append(innerPad).Append("return ").Append(seqVar).Append(";\n");
+        text.Append(pad).Append("};\n");
+        return;
+      }
+
+      foreach (var p in parameters) {
+        if (!this._capturedLocals.Contains(p))
+          continue;
+        this._sourceIncludes.Add("<memory>");
+        var orig = this._locals[p];
+        var cell = CppNaming.Free("ply_cell_" + orig, taken.Contains);
+        taken.Add(cell);
+        this._locals[p] = cell;
+        text.Append(pad).Append("auto ").Append(cell).Append(" = std::make_shared<").Append(this.CppType(p.Type, inHeader: false)).Append(">(").Append(orig).Append(");\n");
+      }
+
+      if (fn.IsAsync) {
+        var elemType = fn.ReturnType.Element!;
+        var elemCpp = this.CppType(elemType, inHeader: false);
+        this._sourceIncludes.Add("<exception>");
+        text.Append(pad).Append("try {\n");
+        this._asyncElementType = elemType;
+        this.EmitBlockStatements(fn.Body, text, indent + 1);
+        if (elemType == IrType.Void && (fn.Body.Statements.Count == 0 || fn.Body.Statements[^1] is not IrReturn))
+          text.Append(Indent(indent + 1)).Append("return PlyTask<void>::completed();\n");
+        this._asyncElementType = null;
+        text.Append(pad).Append("} catch (...) {\n");
+        text.Append(Indent(indent + 1)).Append("return PlyTask<").Append(elemCpp).Append(">::from_exception(std::current_exception());\n");
+        text.Append(pad).Append("}\n");
+        return;
+      }
+
+      this.EmitBlockStatements(fn.Body, text, indent);
     }
 
     private string FormatParamType(IrType type, ParamMode mode, bool inHeader) {
@@ -498,6 +585,55 @@ public static partial class CppEmitter {
             return this.ExceptionCppType(cls, inHeader);
           includes.Add("<memory>");
           return $"std::shared_ptr<{this._typeNames[type.Declaration!]}>";
+        case IrTypeKind.Function: {
+          includes.Add("<functional>");
+          var sig = type.Signature!;
+          var retType = this.CppType(sig.Result, inHeader);
+          var parms = string.Join(", ", sig.Parameters.Select(p => this.CppType(p, inHeader)));
+          return $"std::function<{retType}({parms})>";
+        }
+        case IrTypeKind.Map: {
+          this.UseTypeHelper(CppHelpers.PlyMap, inHeader);
+          var k = this.CppType(type.Key!, inHeader);
+          var v = this.CppType(type.Element!, inHeader);
+          var reuse = type.Order == MapOrder.SlotReuse ? "true" : "false";
+          return $"PlyMap<{k}, {v}, {reuse}>";
+        }
+        case IrTypeKind.Set: {
+          this.UseTypeHelper(CppHelpers.PlySet, inHeader);
+          var e = this.CppType(type.Element!, inHeader);
+          var reuse = type.Order == MapOrder.SlotReuse ? "true" : "false";
+          return $"PlySet<{e}, {reuse}>";
+        }
+        case IrTypeKind.Sequence: {
+          includes.Add("<functional>");
+          includes.Add("<vector>");
+          return $"std::function<std::vector<{this.CppType(type.Element!, inHeader)}>()>";
+        }
+        case IrTypeKind.Async: {
+          this.UseTypeHelper(CppHelpers.PlyTask, inHeader);
+          return $"PlyTask<{this.CppType(type.Element!, inHeader)}>";
+        }
+        case IrTypeKind.Span or IrTypeKind.Memory: {
+          var elem = this.CppType(type.Element!, inHeader);
+          if (this._profile.HasSpanHeader) {
+            includes.Add("<span>");
+            return $"std::span<{elem}>";
+          }
+          this.UseTypeHelper(CppHelpers.PlySpan, inHeader);
+          return $"PlySpan<{elem}>";
+        }
+        case IrTypeKind.ReadOnlySpan or IrTypeKind.ReadOnlyMemory: {
+          var elem = this.CppType(type.Element!, inHeader);
+          if (this._profile.HasSpanHeader) {
+            includes.Add("<span>");
+            return $"std::span<const {elem}>";
+          }
+          this.UseTypeHelper(CppHelpers.PlySpan, inHeader);
+          return $"PlySpan<const {elem}>";
+        }
+        case IrTypeKind.Pointer:
+          return $"{this.CppType(type.Element!, inHeader)}*";
         default:
           this.ReportUnsupportedType(type);
           return "int";
@@ -519,7 +655,7 @@ public static partial class CppEmitter {
         this._sourceIncludes.Add("<optional>");
         return "std::nullopt";
       }
-      if (type.IsObject)
+      if (type.IsObject || type.IsPointer)
         return "nullptr";
       if (type == IrType.Bool)
         return "false";
@@ -534,7 +670,19 @@ public static partial class CppEmitter {
       return $"{this.CppType(type, inHeader: false)}{{}}";
     }
 
+    private void UseTypeHelper(string name, bool inHeader) {
+      if (inHeader || this._headerHelpers.Contains(name)) {
+        if (this._headerHelpers.Add(name))
+          foreach (var header in CppHelpers.Get(name).Headers)
+            this._headerIncludes.Add(header);
+      } else {
+        this.UseHelper(name);
+      }
+    }
+
     private void UseHelper(string name) {
+      if (name == CppHelpers.WhenAll && !this._headerHelpers.Contains(CppHelpers.PlyTask))
+        this.UseHelper(CppHelpers.PlyTask);
       if (!this._usedHelpers.Add(name))
         return;
       foreach (var header in CppHelpers.Get(name).Headers)
@@ -545,6 +693,9 @@ public static partial class CppEmitter {
       => prefix + (++this._tempCounter).ToString(CultureInfo.InvariantCulture);
 
     private string LocalName(IrLocal local) => this._locals[local];
+
+    private string LocalAccess(IrLocal local)
+      => this._capturedLocals.Contains(local) ? $"(*{this._locals[local]})" : this._locals[local];
 
     private void ReportUnsupportedType(IrType type)
       => this.Problems.Add(Diagnostic.Create(UnsupportedType, null, type.ToString(), this._profile.Name) with {
@@ -592,6 +743,8 @@ public static partial class CppEmitter {
             return true;
           if (expr is IrStep { Target: IrArrayLoad { Array: IrLocalRef sr } } && sr.Local == local)
             return true;
+          if (expr is IrIntrinsic { Op: IrIntrinsicOp.ViewOf, Type.Kind: IrTypeKind.Span or IrTypeKind.Memory, Arguments: [IrLocalRef vr, ..] } && vr.Local == local)
+            return true;
           if (expr is IrForeignCall fcall && this._foreignMap.TryGetValue(fcall.Function, out var ffn)) {
             for (var i = 0; i < fcall.Arguments.Count; ++i)
               if (fcall.Arguments[i] is IrLocalRef flr && flr.Local == local && ffn.Parameters[i].Marshal.Direction != IrMarshalDirection.In)
@@ -628,20 +781,8 @@ public static partial class CppEmitter {
       }
     }
 
-    private static HashSet<IrLocal> CollectReferencedLocals(IrBlock body) {
-      var used = new HashSet<IrLocal>();
-      foreach (var stmt in AllStatements(body)) {
-        if (stmt is IrAssign a)
-          used.Add(a.Local);
-        foreach (var expr in IrTree.Expressions(stmt)) {
-          if (expr is IrLocalRef r)
-            used.Add(r.Local);
-          else if (expr is IrBind b)
-            used.Add(b.Local);
-        }
-      }
-      return used;
-    }
+    private static HashSet<IrLocal> CollectReferencedLocals(IrBlock body)
+      => [.. IrClosures.Named(body)];
 
     private static IEnumerable<IrStmt> AllStatements(IrBlock block) {
       foreach (var stmt in block.Statements) {

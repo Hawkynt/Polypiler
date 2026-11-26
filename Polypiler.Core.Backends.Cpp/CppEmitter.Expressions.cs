@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Polypiler.Core.IR;
@@ -22,7 +23,7 @@ public static partial class CppEmitter {
         IrConditional cond => $"({this.EmitExpr(cond.Condition)} ? {this.EmitExpr(cond.WhenTrue)} : {this.EmitExpr(cond.WhenFalse)})",
         IrCall call => this.EmitCall(call),
         IrStep step => this.EmitStep(step),
-        IrBind bind => $"[&]() {{ {this.LocalName(bind.Local)} = {this.EmitExpr(bind.Value)}; return {this.LocalName(bind.Local)}; }}()",
+        IrBind bind => $"[&]() {{ {this.LocalAccess(bind.Local)} = {this.EmitExpr(bind.Value)}; return {this.LocalAccess(bind.Local)}; }}()",
         IrArrayLoad load => this.EmitArrayLoad(load),
         IrArrayLength length => this.EmitArrayLength(length),
         IrNewArray newArray => this.EmitNewArray(newArray),
@@ -48,6 +49,14 @@ public static partial class CppEmitter {
         IrCast cast => this.EmitCast(cast),
         IrAsCast asCast => this.EmitAsCast(asCast),
         IrGenericCompare genericCompare => this.EmitGenericCompare(genericCompare),
+        IrGenericEquals genericEquals => this.EmitGenericEquals(genericEquals),
+        IrLambda lambda => this.EmitLambda(lambda),
+        IrInvoke invoke => this.EmitInvoke(invoke),
+        IrFunctionRef funcRef => this.EmitFunctionRef(funcRef),
+        IrBoundMethod bound => this.EmitBoundMethod(bound),
+        IrAwait awaited => $"({this.EmitExpr(awaited.Operand)}).await()",
+        IrAsync asyncExpr => this.EmitAsync(asyncExpr),
+        IrArraySequence arraySeq => this.EmitArraySequence(arraySeq),
         IrForeignCall foreignCall => this.EmitForeignCall(foreignCall),
         _ => this.ReportUnsupportedConstruct(expression.GetType().Name)
       };
@@ -64,7 +73,7 @@ public static partial class CppEmitter {
           return "this->shared_from_this()";
         return $"std::static_pointer_cast<{this._typeNames[this._currentClass]}>(this->shared_from_this())";
       }
-      return this.LocalName(localRef.Local);
+      return this.LocalAccess(localRef.Local);
     }
 
     private string EmitCall(IrCall call) {
@@ -301,7 +310,7 @@ public static partial class CppEmitter {
       }
 
       if (step.Target is IrLocalRef localRef) {
-        var name = this.LocalName(localRef.Local);
+        var name = this.LocalAccess(localRef.Local);
         return step.Postfix
           ? $"[&]() {{ auto ply_old = {name}; {name} = {NextExpr("ply_old")}; return ply_old; }}()"
           : $"({name} = {NextExpr(name)})";
@@ -396,6 +405,10 @@ public static partial class CppEmitter {
           var valCpp = this.CppType(intrinsic.Arguments[2].Type, inHeader: false);
           return $"{CppHelpers.StoreEndian}<{valCpp}, {little}>({args[0]}, {args[1]}, {args[2]})";
         }
+        case >= IrIntrinsicOp.ViewOf and <= IrIntrinsicOp.Reinterpret:
+          return this.EmitViewIntrinsic(intrinsic, args);
+        case >= IrIntrinsicOp.Pin and <= IrIntrinsicOp.PointerCast:
+          return this.EmitPointerIntrinsic(intrinsic, args);
         case >= IrIntrinsicOp.StrLength and <= IrIntrinsicOp.StrPadEnd:
           return this.EmitStringIntrinsic(intrinsic, args);
         case >= IrIntrinsicOp.EnumToString and <= IrIntrinsicOp.EnumValues:
@@ -537,6 +550,14 @@ public static partial class CppEmitter {
           this.UseHelper(CppHelpers.ByteSwap);
           return $"{CppHelpers.ByteSwap}<{cppType}>({args[0]})";
         }
+
+        case IrIntrinsicOp.ParallelBitExtract:
+          this.UseHelper(CppHelpers.Pext);
+          return $"{CppHelpers.Pext}<{this.CppType(type, inHeader: false)}>({args[0]}, {args[1]})";
+
+        case IrIntrinsicOp.ParallelBitDeposit:
+          this.UseHelper(CppHelpers.Pdep);
+          return $"{CppHelpers.Pdep}<{this.CppType(type, inHeader: false)}>({args[0]}, {args[1]})";
 
         case IrIntrinsicOp.HighWord:
           this._sourceIncludes.Add("<cstdint>");
@@ -723,6 +744,10 @@ public static partial class CppEmitter {
           this.UseHelper(CppHelpers.ListRemoveAt);
           return $"{CppHelpers.ListRemoveAt}({args[0]}, {args[1]})";
         case IrCollectionOp.ListRemoveLast:
+          if (collection.Type.IsObject) {
+            this.UseHelper(CppHelpers.ListRemoveLastRef);
+            return $"{CppHelpers.ListRemoveLastRef}({args[0]})";
+          }
           this.UseHelper(CppHelpers.ListRemoveLast);
           return $"{CppHelpers.ListRemoveLast}({args[0]})";
         case IrCollectionOp.ListClear:
@@ -733,9 +758,275 @@ public static partial class CppEmitter {
         case IrCollectionOp.ListIndexOfEquals or IrCollectionOp.ListIndexOfStrict:
           this.UseHelper(CppHelpers.ListIndexOf);
           return $"{CppHelpers.ListIndexOf}({args[0]}, {args[1]})";
+        case IrCollectionOp.MapNew or IrCollectionOp.SetNew:
+          return $"{this.CppType(collection.Type, inHeader: false)}{{}}";
+        case IrCollectionOp.MapCount or IrCollectionOp.SetCount:
+          return $"({args[0]}).count()";
+        case IrCollectionOp.MapGet:
+          return $"({args[0]}).get({args[1]})";
+        case IrCollectionOp.MapTryGet:
+          return collection.Type.IsObject
+            ? $"({args[0]}).try_get_ref({args[1]})"
+            : $"({args[0]}).try_get_opt({args[1]})";
+        case IrCollectionOp.MapContainsKey:
+          return $"({args[0]}).contains_key({args[1]})";
+        case IrCollectionOp.MapPut:
+          return $"({args[0]}).put({args[1]}, {args[2]})";
+        case IrCollectionOp.MapAdd:
+          return $"({args[0]}).add({args[1]}, {args[2]})";
+        case IrCollectionOp.MapTryAdd:
+          return $"({args[0]}).try_add({args[1]}, {args[2]})";
+        case IrCollectionOp.MapRemove or IrCollectionOp.SetRemove:
+          return $"({args[0]}).remove({args[1]})";
+        case IrCollectionOp.MapClear or IrCollectionOp.SetClear:
+          return $"({args[0]}).clear()";
+        case IrCollectionOp.SetAdd:
+          return $"({args[0]}).add({args[1]})";
         default:
-          return this.ReportUnsupportedConstruct(collection.Op.ToString());
+          // SetContains
+          return $"({args[0]}).contains({args[1]})";
       }
+    }
+
+    private string EmitViewIntrinsic(IrIntrinsic intrinsic, string[] args) {
+      switch (intrinsic.Op) {
+        case IrIntrinsicOp.ViewOf: {
+          this.UseHelper(CppHelpers.ViewOf);
+          var dstSpan = this.CppType(intrinsic.Type, inHeader: false);
+          return $"{CppHelpers.ViewOf}<{dstSpan}>({string.Join(", ", args)})";
+        }
+        case IrIntrinsicOp.Slice:
+          this.UseHelper(CppHelpers.ViewSlice);
+          return $"{CppHelpers.ViewSlice}({string.Join(", ", args)})";
+        case IrIntrinsicOp.ViewLength:
+          this._sourceIncludes.Add("<cstdint>");
+          return $"static_cast<std::int32_t>(({args[0]}).size())";
+        case IrIntrinsicOp.ViewCopy:
+          this.UseHelper(CppHelpers.ViewCopy);
+          return $"{CppHelpers.ViewCopy}({args[0]}, {args[1]})";
+        case IrIntrinsicOp.ViewTryCopy:
+          this.UseHelper(CppHelpers.ViewTryCopy);
+          return $"{CppHelpers.ViewTryCopy}({args[0]}, {args[1]})";
+        case IrIntrinsicOp.ViewFill:
+          this._sourceIncludes.Add("<algorithm>");
+          return $"std::fill(({args[0]}).begin(), ({args[0]}).end(), {args[1]})";
+        case IrIntrinsicOp.ViewEqual:
+          this.UseHelper(CppHelpers.ViewEqual);
+          return $"{CppHelpers.ViewEqual}({args[0]}, {args[1]})";
+        case IrIntrinsicOp.ViewToArray: {
+          var elemCpp = this.CppType(intrinsic.Type.Element!, inHeader: false);
+          this._sourceIncludes.Add("<vector>");
+          return $"std::vector<{elemCpp}>(({args[0]}).begin(), ({args[0]}).end())";
+        }
+        default: {
+          // Reinterpret
+          this.UseHelper(CppHelpers.ViewReinterpret);
+          var dstSpan = this.CppType(intrinsic.Type, inHeader: false);
+          return $"{CppHelpers.ViewReinterpret}<{dstSpan}>({args[0]})";
+        }
+      }
+    }
+
+    private string EmitPointerIntrinsic(IrIntrinsic intrinsic, string[] args) {
+      switch (intrinsic.Op) {
+        case IrIntrinsicOp.Pin: {
+          this.UseHelper(CppHelpers.Pin);
+          var elemCpp = this.CppType(intrinsic.Type.Element!, inHeader: false);
+          return $"{CppHelpers.Pin}<{elemCpp}>({string.Join(", ", args)})";
+        }
+        case IrIntrinsicOp.AddressOf:
+          return $"(&({args[0]}))";
+        case IrIntrinsicOp.PointerAdd:
+          this.UseHelper(CppHelpers.PtrAdd);
+          return $"{CppHelpers.PtrAdd}({args[0]}, {args[1]})";
+        case IrIntrinsicOp.PointerDifference:
+          this._sourceIncludes.Add("<cstdint>");
+          return $"static_cast<std::int64_t>(({args[0]}) - ({args[1]}))";
+        case IrIntrinsicOp.PointerEqual:
+          return $"(({args[0]}) == ({args[1]}))";
+        case IrIntrinsicOp.PointerNotEqual:
+          return $"(({args[0]}) != ({args[1]}))";
+        case IrIntrinsicOp.PointerLess:
+          return $"(({args[0]}) < ({args[1]}))";
+        case IrIntrinsicOp.PointerLessOrEqual:
+          return $"(({args[0]}) <= ({args[1]}))";
+        case IrIntrinsicOp.PointerGreater:
+          return $"(({args[0]}) > ({args[1]}))";
+        case IrIntrinsicOp.PointerGreaterOrEqual:
+          return $"(({args[0]}) >= ({args[1]}))";
+        case IrIntrinsicOp.PointerLoad:
+          this.UseHelper(CppHelpers.PtrLoad);
+          return $"{CppHelpers.PtrLoad}({args[0]})";
+        case IrIntrinsicOp.PointerStore:
+          this.UseHelper(CppHelpers.PtrStore);
+          return $"{CppHelpers.PtrStore}({args[0]}, {args[1]})";
+        default:
+          // PointerCast
+          return $"reinterpret_cast<{this.CppType(intrinsic.Type, inHeader: false)}>({args[0]})";
+      }
+    }
+
+    private string EmitLambda(IrLambda lambda) {
+      var savedAsync = this._asyncElementType;
+      var savedSeq = this._seqVecName;
+      var savedLocals = new Dictionary<IrLocal, string>(this._locals);
+      this._asyncElementType = null;
+      this._seqVecName = null;
+
+      var taken = new HashSet<string>(this._locals.Values, StringComparer.Ordinal);
+      foreach (var p in lambda.Parameters) {
+        var name = CppNaming.Free(CppNaming.Identifier(p.Name, "p"), taken.Contains);
+        taken.Add(name);
+        this._locals[p] = name;
+      }
+      foreach (var local in lambda.Locals) {
+        var name = CppNaming.Free(CppNaming.Identifier(local.Name, "v"), taken.Contains);
+        taken.Add(name);
+        this._locals[local] = name;
+      }
+
+      var captures = new List<string>();
+      var hasThis = false;
+      foreach (var cap in lambda.Captures) {
+        if (ReferenceEquals(cap, this._currentThis)) {
+          if (!hasThis) {
+            captures.Add("this");
+            hasThis = true;
+          }
+        } else {
+          captures.Add(this._locals[cap]);
+        }
+      }
+
+      var usedLocals = CollectReferencedLocals(lambda.Body);
+      var paramDecls = new List<string>(lambda.Parameters.Count);
+      var cellBinds = new System.Text.StringBuilder();
+      foreach (var p in lambda.Parameters) {
+        var pname = this._locals[p];
+        var ptype = this.CppType(p.Type, inHeader: false);
+        var attr = usedLocals.Contains(p) ? "" : "[[maybe_unused]] ";
+        paramDecls.Add($"{attr}{ptype} {pname}");
+        if (this._capturedLocals.Contains(p)) {
+          this._sourceIncludes.Add("<memory>");
+          var cell = CppNaming.Free("ply_cell_" + pname, taken.Contains);
+          taken.Add(cell);
+          this._locals[p] = cell;
+          cellBinds.Append("  auto ").Append(cell).Append(" = std::make_shared<").Append(ptype).Append(">(").Append(pname).Append(");\n");
+        }
+      }
+
+      var retType = this.CppType(lambda.ReturnType, inHeader: false);
+      var body = new System.Text.StringBuilder();
+      body.Append(cellBinds);
+      this.EmitBlockStatements(lambda.Body, body, 1);
+
+      this._locals.Clear();
+      foreach (var pair in savedLocals)
+        this._locals[pair.Key] = pair.Value;
+      this._asyncElementType = savedAsync;
+      this._seqVecName = savedSeq;
+
+      return $"[{string.Join(", ", captures)}]({string.Join(", ", paramDecls)}) -> {retType} {{\n{body}}}";
+    }
+
+    private string EmitInvoke(IrInvoke invoke) {
+      this.UseHelper(CppHelpers.NonNullFn);
+      var callee = this.EmitExpr(invoke.Callee);
+      if (invoke.Arguments.Count == 0)
+        return $"{CppHelpers.NonNullFn}({callee})()";
+
+      var fnVar = this.Temp("ply_fn");
+      var binds = new System.Text.StringBuilder();
+      binds.Append("auto ").Append(fnVar).Append(" = ").Append(callee).Append("; ");
+      var argVars = new string[invoke.Arguments.Count];
+      for (var i = 0; i < invoke.Arguments.Count; ++i) {
+        var aVar = this.Temp("ply_a");
+        binds.Append("auto ").Append(aVar).Append(" = ").Append(this.EmitExpr(invoke.Arguments[i])).Append("; ");
+        argVars[i] = aVar;
+      }
+      var retPrefix = invoke.Type == IrType.Void ? "" : "return ";
+      return $"[&]() {{ {binds}{retPrefix}{CppHelpers.NonNullFn}({fnVar})({string.Join(", ", argVars)}); }}()";
+    }
+
+    private string EmitFunctionRef(IrFunctionRef funcRef) {
+      var sig = funcRef.Type.Signature!;
+      var target = this._functionNames[funcRef.Function];
+      var parms = new List<string>(sig.Parameters.Count);
+      var argNames = new List<string>(sig.Parameters.Count);
+      for (var i = 0; i < sig.Parameters.Count; ++i) {
+        var name = "ply_p" + i.ToString(CultureInfo.InvariantCulture);
+        parms.Add($"{this.CppType(sig.Parameters[i], inHeader: false)} {name}");
+        argNames.Add(name);
+      }
+      var ret = this.CppType(sig.Result, inHeader: false);
+      var retPrefix = sig.Result == IrType.Void ? "" : "return ";
+      return $"[]({string.Join(", ", parms)}) -> {ret} {{ {retPrefix}{target}({string.Join(", ", argNames)}); }}";
+    }
+
+    private string EmitBoundMethod(IrBoundMethod bound) {
+      var sig = bound.Type.Signature!;
+      var methodName = this._methodNames[bound.Method];
+      var parms = new List<string>(sig.Parameters.Count);
+      var argNames = new List<string>(sig.Parameters.Count);
+      for (var i = 0; i < sig.Parameters.Count; ++i) {
+        var name = "ply_p" + i.ToString(CultureInfo.InvariantCulture);
+        parms.Add($"{this.CppType(sig.Parameters[i], inHeader: false)} {name}");
+        argNames.Add(name);
+      }
+      var ret = this.CppType(sig.Result, inHeader: false);
+      var retPrefix = sig.Result == IrType.Void ? "" : "return ";
+      if (bound.Receiver is null) {
+        var owner = this._classFunctionOwners[bound.Method.Function];
+        return $"[]({string.Join(", ", parms)}) -> {ret} {{ {retPrefix}{this._typeNames[owner]}::{methodName}({string.Join(", ", argNames)}); }}";
+      }
+
+      this.UseHelper(CppHelpers.NonNull);
+      var recv = this.EmitExpr(bound.Receiver);
+      var cap = this.Temp("ply_r");
+      var callTarget = bound.Kind == IrMethodCallKind.Base
+        ? $"{cap}->{this._typeNames[this._classFunctionOwners[bound.Method.Function]]}::{methodName}"
+        : $"{cap}->{methodName}";
+      return $"[{cap} = {CppHelpers.NonNull}({recv})]({string.Join(", ", parms)}) -> {ret} {{ {retPrefix}{callTarget}({string.Join(", ", argNames)}); }}";
+    }
+
+    private string EmitAsync(IrAsync asyncExpr) {
+      this.UseTypeHelper(CppHelpers.PlyTask, inHeader: false);
+      switch (asyncExpr.Op) {
+        case IrAsyncOp.Completed:
+          return "PlyTask<void>::completed()";
+        case IrAsyncOp.FromResult: {
+          var arg = asyncExpr.Arguments[0];
+          return $"PlyTask<{this.CppType(arg.Type, inHeader: false)}>::from_result({this.EmitExpr(arg)})";
+        }
+        default: {
+          this.UseHelper(CppHelpers.WhenAll);
+          var args = string.Join(", ", asyncExpr.Arguments.Select(this.EmitExpr));
+          if (asyncExpr.Type.Element == IrType.Void)
+            return $"ply_when_all_void({{{args}}})";
+          var elemCpp = this.CppType(asyncExpr.Type.Element!.Element!, inHeader: false);
+          return $"ply_when_all_list<{elemCpp}>({{{args}}})";
+        }
+      }
+    }
+
+    private string EmitArraySequence(IrArraySequence arraySeq) {
+      this._sourceIncludes.Add("<functional>");
+      this._sourceIncludes.Add("<vector>");
+      var elemCpp = this.CppType(arraySeq.Type.Element!, inHeader: false);
+      var arrVar = this.Temp("ply_arr");
+      return $"[{arrVar} = {this.EmitExpr(arraySeq.Array)}]() -> std::vector<{elemCpp}> {{ return {arrVar}; }}";
+    }
+
+    private string EmitGenericEquals(IrGenericEquals eq) {
+      var l = this.EmitExpr(eq.Left);
+      var r = this.EmitExpr(eq.Right);
+      if (eq.Left.Type.IsFloat) {
+        this._sourceIncludes.Add("<cmath>");
+        var lv = this.Temp("ply_el");
+        var rv = this.Temp("ply_er");
+        return $"[&]() {{ const auto {lv} = {l}; const auto {rv} = {r}; return ({lv} == {rv}) || (std::isnan({lv}) && std::isnan({rv})); }}()";
+      }
+      return $"({l} == {r})";
     }
 
     private string EmitGenericCompare(IrGenericCompare cmp) {

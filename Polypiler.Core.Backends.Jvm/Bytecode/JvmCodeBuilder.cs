@@ -10,6 +10,7 @@ namespace Polypiler.Core.Backends.Jvm.Bytecode;
 internal sealed class JvmLabel {
 
   internal bool IsBranchTarget { get; set; }
+  internal bool IsThisUninitialized { get; set; }
   internal VType[]? ExpectedStack { get; set; }
   internal int InstructionIndex { get; set; } = -1;
 
@@ -33,14 +34,19 @@ internal sealed class JvmCodeBuilder {
   private ushort _nextLocalSlot;
   private int _maxStack;
   private bool _reachable = true;
+  private bool _thisUninitialized;
 
   /// <summary>Initializes a method bytecode builder with the method's parameter verification types.</summary>
-  public JvmCodeBuilder(ConstantPool pool, IReadOnlyList<VType> paramTypes) {
+  public JvmCodeBuilder(ConstantPool pool, IReadOnlyList<VType> paramTypes, bool isConstructor = false) {
     this._pool = pool;
     this._paramTypes = [.. paramTypes];
+    this._thisUninitialized = isConstructor;
     foreach (var param in paramTypes)
       this._nextLocalSlot = (ushort)(this._nextLocalSlot + param.Slots);
   }
+
+  /// <summary>The constant pool backing this method builder.</summary>
+  public ConstantPool Pool => this._pool;
 
   /// <summary>Whether control can currently reach the emission cursor.</summary>
   public bool IsReachable => this._reachable;
@@ -181,7 +187,8 @@ internal sealed class JvmCodeBuilder {
     if (!this._reachable)
       return;
 
-    var (baseOp, compactBase) = type.Tag switch {
+    var effectiveType = slot == 0 && this._thisUninitialized ? VType.UninitializedThis : type;
+    var (baseOp, compactBase) = effectiveType.Tag switch {
       VType.IntegerTag => (JvmOpcode.Iload, JvmOpcode.Iload0),
       VType.LongTag => (JvmOpcode.Lload, JvmOpcode.Lload0),
       VType.FloatTag => (JvmOpcode.Fload, JvmOpcode.Fload0),
@@ -189,7 +196,7 @@ internal sealed class JvmCodeBuilder {
       _ => (JvmOpcode.Aload, JvmOpcode.Aload0)
     };
     this.Append(MakeLocalInstruction(baseOp, compactBase, slot));
-    this.Push(type);
+    this.Push(effectiveType);
   }
 
   /// <summary>Emits a local-variable store instruction for the given slot and verification type.</summary>
@@ -273,12 +280,12 @@ internal sealed class JvmCodeBuilder {
     this._stack.Clear();
   }
 
-  /// <summary>Emits a conditional branch opcode (<c>ifeq</c>, <c>if_icmp*</c>, <c>ifnull</c>, etc.).</summary>
+  /// <summary>Emits a conditional branch opcode (<c>ifeq</c>, <c>if_icmp*</c>, <c>if_acmp*</c>, <c>ifnull</c>, etc.).</summary>
   public void EmitBranch(JvmOpcode opcode, JvmLabel target) {
     if (!this._reachable)
       return;
 
-    var popCount = opcode is >= JvmOpcode.IfIcmpeq and <= JvmOpcode.IfIcmple ? 2 : 1;
+    var popCount = opcode is >= JvmOpcode.IfIcmpeq and <= JvmOpcode.IfAcmpne ? 2 : 1;
     this.Pop(popCount);
     this.RecordBranchTarget(target);
     this.Append(Instruction.Branch(opcode, target));
@@ -328,6 +335,18 @@ internal sealed class JvmCodeBuilder {
       this.Push(fieldType);
   }
 
+  /// <summary>Emits <c>getfield</c> or <c>putfield</c>.</summary>
+  public void EmitField(JvmOpcode opcode, string owner, string name, string descriptor, VType fieldType) {
+    if (!this._reachable)
+      return;
+
+    var index = this._pool.AddFieldref(owner, name, descriptor);
+    this.Pop(opcode == JvmOpcode.Putfield ? 2 : 1);
+    this.Append(Instruction.U2(opcode, index));
+    if (opcode == JvmOpcode.Getfield)
+      this.Push(fieldType);
+  }
+
   /// <summary>Emits <c>invokestatic</c>, <c>invokevirtual</c>, or <c>invokespecial</c>.</summary>
   public void EmitInvoke(JvmOpcode opcode, string owner, string name, string descriptor, int argCount, VType? returnType = null) {
     if (!this._reachable)
@@ -335,10 +354,43 @@ internal sealed class JvmCodeBuilder {
 
     var index = this._pool.AddMethodref(owner, name, descriptor);
     var pops = opcode == JvmOpcode.Invokestatic ? argCount : argCount + 1;
+    if (this._thisUninitialized && opcode == JvmOpcode.Invokespecial && name == "<init>"
+        && this._stack[this._stack.Count - pops].Tag == VType.UninitializedThisTag)
+      this._thisUninitialized = false;
+
     this.Pop(pops);
     this.Append(Instruction.U2(opcode, index));
     if (returnType is { } ret)
       this.Push(ret);
+  }
+
+  /// <summary>Emits <c>invokeinterface</c> with a <c>CONSTANT_InterfaceMethodref_info</c> entry.</summary>
+  public void EmitInvokeInterface(string owner, string name, string descriptor, int argCount, int argSlots, VType? returnType = null) {
+    if (!this._reachable)
+      return;
+
+    var index = this._pool.AddInterfaceMethodref(owner, name, descriptor);
+    this.Pop(argCount + 1);
+    this.Append(Instruction.InvokeInterface(index, (byte)(argSlots + 1)));
+    if (returnType is { } ret)
+      this.Push(ret);
+  }
+
+  /// <summary>Emits <c>instanceof</c> for an internal class or interface name.</summary>
+  public void EmitInstanceOf(string internalClassName) {
+    if (!this._reachable)
+      return;
+
+    var classIdx = this._pool.AddClass(internalClassName);
+    this.Pop(1);
+    this.Append(Instruction.U2(JvmOpcode.Instanceof, classIdx));
+    this.Push(VType.Int);
+  }
+
+  /// <summary>Widens the tracked verification type of the top stack entry without emitting bytecode (for upcast merges).</summary>
+  public void CoerceStackTop(VType targetType) {
+    if (this._reachable && this._stack.Count > 0)
+      this._stack[^1] = targetType;
   }
 
   /// <summary>Emits <c>new</c> for an internal class name.</summary>
@@ -417,17 +469,19 @@ internal sealed class JvmCodeBuilder {
     }
 
     VType[] fullLocals = [.. this._paramTypes, .. this._allocatedLocals.Select(l => l.Type)];
-    var framesByOffset = new SortedDictionary<int, VType[]>();
+    var framesByOffset = new SortedDictionary<int, (VType[] Locals, VType[] Stack)>();
     foreach (var label in this._labels) {
       if (!label.IsBranchTarget || label.ExpectedStack is null || label.InstructionIndex < 0)
         continue;
 
       var targetPc = offsets[label.InstructionIndex + shift];
-      if (targetPc > 0 && targetPc < bytecode.Length)
-        framesByOffset[targetPc] = label.ExpectedStack;
+      if (targetPc > 0 && targetPc < bytecode.Length) {
+        var locals = label.IsThisUninitialized ? [VType.UninitializedThis, .. fullLocals.Skip(1)] : fullLocals;
+        framesByOffset[targetPc] = (locals, label.ExpectedStack);
+      }
     }
 
-    var frames = framesByOffset.Select(kvp => new JvmStackMapFrame(kvp.Key, fullLocals, kvp.Value)).ToList();
+    var frames = framesByOffset.Select(kvp => new JvmStackMapFrame(kvp.Key, kvp.Value.Locals, kvp.Value.Stack)).ToList();
     var maxStack = (ushort)Math.Max(this._maxStack, prologueStack);
     return new JvmMethodCode(maxStack, this._nextLocalSlot, bytecode, exceptions, frames);
   }
@@ -488,6 +542,9 @@ internal sealed class JvmCodeBuilder {
 
   private void RecordBranchTarget(JvmLabel target) {
     target.IsBranchTarget = true;
+    if (this._thisUninitialized)
+      target.IsThisUninitialized = true;
+
     if (target.ExpectedStack is null) {
       target.ExpectedStack = [.. this._stack];
     } else {
@@ -534,6 +591,7 @@ internal sealed class JvmCodeBuilder {
     public static Instruction Branch(JvmOpcode op, JvmLabel target) => new(op, 4, target: target);
     public static Instruction TableSwitch(JvmLabel def, int low, JvmLabel[] targets) => new(JvmOpcode.Tableswitch, 5, target: def, low: low, tableTargets: targets);
     public static Instruction LookupSwitch(JvmLabel def, (int, JvmLabel)[] pairs) => new(JvmOpcode.Lookupswitch, 6, target: def, lookupPairs: pairs);
+    public static Instruction InvokeInterface(ushort cpIndex, byte count) => new(JvmOpcode.Invokeinterface, 7, operand: cpIndex, low: count);
 
     public int SizeAt(int pc) => this._kind switch {
       0 => 1,
@@ -542,7 +600,8 @@ internal sealed class JvmCodeBuilder {
       3 => 4,
       4 => 3,
       5 => 1 + Padding(pc) + 12 + (this._tableTargets!.Length * 4),
-      _ => 1 + Padding(pc) + 8 + (this._lookupPairs!.Length * 8)
+      6 => 1 + Padding(pc) + 8 + (this._lookupPairs!.Length * 8),
+      _ => 5
     };
 
     public void Write(byte[] code, int pc, Func<JvmLabel, int> resolve) {
@@ -581,7 +640,7 @@ internal sealed class JvmCodeBuilder {
 
           break;
         }
-        default: {
+        case 6: {
           code[pc] = (byte)JvmOpcode.Lookupswitch;
           var pos = pc + 1 + Padding(pc);
           BinaryPrimitives.WriteInt32BigEndian(code.AsSpan(pos, 4), resolve(this._target!) - pc);
@@ -595,6 +654,12 @@ internal sealed class JvmCodeBuilder {
 
           break;
         }
+        default:
+          code[pc] = (byte)JvmOpcode.Invokeinterface;
+          BinaryPrimitives.WriteUInt16BigEndian(code.AsSpan(pc + 1, 2), this._operand);
+          code[pc + 3] = (byte)this._low;
+          code[pc + 4] = 0;
+          break;
       }
     }
 

@@ -42,6 +42,11 @@ public sealed class PythonFixtureTests {
       return;
     }
 
+    if (run.Module.ForeignFunctions.Count > 0) {
+      Assert.Pass("module declares native foreign functions; native calls are verified by dedicated interop tests");
+      return;
+    }
+
     if (run.Calls.Count == 0) {
       Assert.Pass("no function of the module crosses the boundary with values the driver writes");
       return;

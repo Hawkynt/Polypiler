@@ -252,11 +252,14 @@ public static partial class PerlEmitter {
       var savedIterator = this._isIterator;
       var savedAsync = this._asyncResultVar;
       var savedSeqRet = this._seqReturnFrame;
+      var savedRanges = this._ranges;
+      var savedPoint = this._point;
       this._tryFrames.Clear();
       this._loops.Clear();
       this._isIterator = false;
       this._asyncResultVar = null;
       this._seqReturnFrame = null;
+      this._ranges = null;
 
       var text = new StringBuilder();
       text.Append("sub {\n");
@@ -272,6 +275,8 @@ public static partial class PerlEmitter {
       this._isIterator = savedIterator;
       this._asyncResultVar = savedAsync;
       this._seqReturnFrame = savedSeqRet;
+      this._ranges = savedRanges;
+      this._point = savedPoint;
       return text.ToString();
     }
 

@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 using System.Text;
 using Polypiler.Core.Backends.Jvm.Bytecode;
 using Polypiler.Core.Backends.Jvm.ClassFile;
@@ -7,26 +10,29 @@ using Polypiler.Core.IR;
 namespace Polypiler.Core.Backends.Jvm;
 
 /// <summary>
-/// Maps IR types and exception classes to JVM descriptors, verification types, array element tags,
-/// and JDK exception internal names.
+/// Maps IR types, declarations, and exception classes to JVM descriptors, verification types,
+/// array element tags, synthetic helper class names, and JDK exception internal names.
 /// </summary>
 internal static class JvmTypeMapper {
 
   /// <summary>Whether an <see cref="IrType"/> is supported by the JVM backend.</summary>
-  public static bool IsSupportedType(IrType type) {
-    if (type == IrType.Void || type == IrType.Bool || type.IsNumeric || type.IsString)
-      return true;
-    if (type.IsEnum)
-      return true;
-    if (type.IsOptional && type.Underlying is { } under && (under == IrType.Bool || under.IsNumeric || under.IsEnum))
-      return true;
-    if (type.IsArray && type.Element is { } elem && (elem == IrType.Bool || elem.IsNumeric || elem.IsString || elem.IsEnum))
-      return true;
-    if (type.ClassType is { } cls && IrExceptionClass.IsLibrary(cls))
-      return true;
+  public static bool IsSupportedType(IrType type) => type.Kind switch {
+    IrTypeKind.BigInt => false,
+    IrTypeKind.Optional => IsSupportedType(type.Underlying!),
+    IrTypeKind.Array or IrTypeKind.List or IrTypeKind.Set or IrTypeKind.Sequence or IrTypeKind.Async => IsSupportedType(type.Element!),
+    IrTypeKind.Map => IsSupportedType(type.Key!) && IsSupportedType(type.Element!),
+    IrTypeKind.Function => IsSupportedType(type.Signature!.Result) && type.Signature.Parameters.All(IsSupportedType),
+    _ => true
+  };
 
-    return false;
+  /// <summary>Whether an IR type is represented as a JVM primitive (non-reference) value.</summary>
+  public static bool IsJvmPrimitive(IrType type) {
+    var integral = type.Integral;
+    return integral == IrType.Bool || integral.IsNumeric;
   }
+
+  /// <summary>Returns the number of JVM local/stack slots occupied by a non-void IR type (2 for 64-bit, 1 otherwise).</summary>
+  public static int SlotCount(IrType type) => type.Integral.Kind is IrTypeKind.I64 or IrTypeKind.U64 or IrTypeKind.F64 ? 2 : 1;
 
   /// <summary>Returns the JVM boxed wrapper internal class name and unbox method name for a primitive/enum IR type.</summary>
   public static (string BoxInternalName, string UnboxMethod) BoxInfo(IrType underlying) => underlying.Integral.Kind switch {
@@ -39,60 +45,6 @@ internal static class JvmTypeMapper {
     IrTypeKind.F64 => ("java/lang/Double", "doubleValue"),
     _ => ("java/lang/Integer", "intValue")
   };
-
-  /// <summary>Returns the JVM field/parameter/return descriptor for a supported IR type.</summary>
-  public static string Descriptor(IrType type) {
-    if (type.IsEnum)
-      return Descriptor(type.Integral);
-    if (type.IsOptional)
-      return "L" + BoxInfo(type.Underlying!).BoxInternalName + ";";
-    if (type.IsArray)
-      return "[" + Descriptor(type.Element!);
-    if (type.ClassType is { } cls && IrExceptionClass.IsLibrary(cls))
-      return "L" + ExceptionInternalName(cls) + ";";
-
-    return type.Kind switch {
-      IrTypeKind.Void => "V",
-      IrTypeKind.Bool => "Z",
-      IrTypeKind.I8 or IrTypeKind.U8 => "B",
-      IrTypeKind.I16 => "S",
-      IrTypeKind.U16 => "C",
-      IrTypeKind.I32 or IrTypeKind.U32 => "I",
-      IrTypeKind.I64 or IrTypeKind.U64 => "J",
-      IrTypeKind.F32 => "F",
-      IrTypeKind.F64 => "D",
-      _ => "Ljava/lang/String;"
-    };
-  }
-
-  /// <summary>Returns the JVM method descriptor for an <see cref="IrFunction"/>.</summary>
-  public static string MethodDescriptor(IrFunction function) {
-    var sb = new StringBuilder("(");
-    foreach (var param in function.Parameters)
-      sb.Append(Descriptor(param.Type));
-    sb.Append(')').Append(Descriptor(function.ReturnType));
-    return sb.ToString();
-  }
-
-  /// <summary>Returns the JVMS §4.7.4 verification type for a supported non-void IR type.</summary>
-  public static VType VerificationType(IrType type, ConstantPool pool) {
-    if (type.IsEnum)
-      return VerificationType(type.Integral, pool);
-    if (type.IsOptional)
-      return VType.Object(pool.AddClass(BoxInfo(type.Underlying!).BoxInternalName));
-    if (type.IsArray)
-      return VType.Object(pool.AddClass(Descriptor(type)));
-    if (type.ClassType is { } cls && IrExceptionClass.IsLibrary(cls))
-      return VType.Object(pool.AddClass(ExceptionInternalName(cls)));
-
-    return type.Kind switch {
-      IrTypeKind.I64 or IrTypeKind.U64 => VType.Long,
-      IrTypeKind.F32 => VType.Float,
-      IrTypeKind.F64 => VType.Double,
-      IrTypeKind.String => VType.Object(pool.AddClass("java/lang/String")),
-      _ => VType.Int
-    };
-  }
 
   /// <summary>Returns the JVMS <c>newarray</c> type code for a primitive array element type.</summary>
   public static JvmArrayType PrimitiveArrayType(IrType element) => element.Integral.Kind switch {
@@ -131,14 +83,19 @@ internal static class JvmTypeMapper {
   };
 
   /// <summary>Returns the JVM return opcode for a return type.</summary>
-  public static JvmOpcode ReturnOpcode(IrType type) => type.Integral.Kind switch {
-    IrTypeKind.Void => JvmOpcode.Return,
-    IrTypeKind.I64 or IrTypeKind.U64 => JvmOpcode.Lreturn,
-    IrTypeKind.F32 => JvmOpcode.Freturn,
-    IrTypeKind.F64 => JvmOpcode.Dreturn,
-    IrTypeKind.String or IrTypeKind.Array or IrTypeKind.Object or IrTypeKind.Optional => JvmOpcode.Areturn,
-    _ => JvmOpcode.Ireturn
-  };
+  public static JvmOpcode ReturnOpcode(IrType type) {
+    if (type == IrType.Void)
+      return JvmOpcode.Return;
+    if (!IsJvmPrimitive(type))
+      return JvmOpcode.Areturn;
+
+    return type.Integral.Kind switch {
+      IrTypeKind.I64 or IrTypeKind.U64 => JvmOpcode.Lreturn,
+      IrTypeKind.F32 => JvmOpcode.Freturn,
+      IrTypeKind.F64 => JvmOpcode.Dreturn,
+      _ => JvmOpcode.Ireturn
+    };
+  }
 
   /// <summary>Maps an IR library exception class to its corresponding JDK exception internal name.</summary>
   public static string ExceptionInternalName(IrClassType cls) => cls.Name switch {
@@ -171,13 +128,199 @@ internal static class JvmTypeMapper {
     return sb.ToString();
   }
 
-  /// <summary>Combines an optional dotted Java package name and simple class name into an internal JVM class name.</summary>
-  public static string InternalClassName(string moduleName, string? packageName) {
-    var simple = ClassName(moduleName);
-    if (string.IsNullOrWhiteSpace(packageName))
-      return simple;
+  /// <summary>Sanitizes a type, method, or field name into a valid, collision-free JVMS unqualified identifier.</summary>
+  public static string SanitizeIdentifier(string name) {
+    var sb = new StringBuilder(name.Length);
+    foreach (var ch in name) {
+      if (char.IsLetterOrDigit(ch) || ch is '_' or '$')
+        sb.Append(ch);
+      else
+        sb.Append("$x").Append(((int)ch).ToString("X2", CultureInfo.InvariantCulture));
+    }
 
-    return packageName.Trim().Replace('.', '/') + "/" + simple;
+    return sb.ToString();
+  }
+
+}
+
+/// <summary>
+/// Resolves JVM internal class names, field/method descriptors, and verification types within one IR module.
+/// </summary>
+internal sealed class JvmModuleNames {
+
+  private readonly string _packagePrefix;
+  private readonly string _moduleSimpleName;
+  private readonly Dictionary<IrTypeDeclaration, string> _declNames = new(ReferenceEqualityComparer.Instance);
+
+  /// <summary>Initializes name resolution for <paramref name="module"/> with optional <paramref name="packageName"/>.</summary>
+  public JvmModuleNames(IrModule module, string? packageName) {
+    this._moduleSimpleName = JvmTypeMapper.ClassName(module.Name);
+    this._packagePrefix = string.IsNullOrWhiteSpace(packageName) ? "" : packageName.Trim().Replace('.', '/') + "/";
+    this.ModuleInternalName = this._packagePrefix + this._moduleSimpleName;
+
+    var used = new HashSet<string>(StringComparer.Ordinal) { this.ModuleInternalName };
+    foreach (var decl in module.Types) {
+      if (decl is IrEnumType)
+        continue;
+
+      var simple = JvmTypeMapper.SanitizeIdentifier(decl.Name);
+      var candidate = this._packagePrefix + simple;
+      if (!used.Add(candidate)) {
+        candidate = this._packagePrefix + simple + "$Type";
+        used.Add(candidate);
+      }
+
+      this._declNames[decl] = candidate;
+    }
+  }
+
+  /// <summary>The internal JVM name of the main module class.</summary>
+  public string ModuleInternalName { get; }
+
+  /// <summary>The internal JVM name of the module's restartable sequence interface.</summary>
+  public string SequenceInterfaceName => this.ModuleInternalName + "$Seq";
+
+  /// <summary>Returns the internal JVM name for a declared struct, class, interface, or library exception class.</summary>
+  public string DeclarationInternalName(IrTypeDeclaration decl) {
+    if (decl is IrClassType cls && IrExceptionClass.IsLibrary(cls))
+      return JvmTypeMapper.ExceptionInternalName(cls);
+
+    return this._declNames[decl];
+  }
+
+  /// <summary>Returns the JVM superclass internal name for a user <see cref="IrClassType"/>.</summary>
+  public string SuperClassInternalName(IrClassType cls) {
+    if (cls.Base is null)
+      return "java/lang/Object";
+    if (cls.Base == IrExceptionClass.Exception)
+      return "java/lang/RuntimeException";
+
+    return this.DeclarationInternalName(cls.Base);
+  }
+
+  /// <summary>Builds a deterministic short key for an IR type used in synthetic helper class names.</summary>
+  public string TypeKey(IrType type) {
+    if (type.IsFunction)
+      return "Fn_" + this.FunctionKey(type.Signature!);
+
+    return JvmTypeMapper.SanitizeIdentifier(this.Descriptor(type));
+  }
+
+  /// <summary>Builds a deterministic signature key for an <see cref="IrFunctionType"/>.</summary>
+  public string FunctionKey(IrFunctionType sig)
+    => string.Join("_", sig.Parameters.Select(this.TypeKey)) + "__" + this.TypeKey(sig.Result);
+
+  /// <summary>Returns the internal JVM name of the functional interface for <paramref name="signature"/>.</summary>
+  public string FunctionInterfaceName(IrFunctionType signature)
+    => this.ModuleInternalName + "$Fn_" + this.FunctionKey(signature);
+
+  /// <summary>Returns the internal JVM name of the mutable capture cell class for <paramref name="type"/>.</summary>
+  public string CellClassName(IrType type)
+    => this.ModuleInternalName + "$Cell_" + this.TypeKey(type);
+
+  /// <summary>Returns the internal JVM name of the array-sequence wrapper class for <paramref name="element"/>.</summary>
+  public string ArraySequenceClassName(IrType element)
+    => this.ModuleInternalName + "$ArrSeq_" + this.TypeKey(element);
+
+  /// <summary>Returns the internal JVM name of the span/memory slice helper class for <paramref name="element"/>.</summary>
+  public string SpanClassName(IrType element)
+    => this.ModuleInternalName + "$Span_" + this.TypeKey(element);
+
+  /// <summary>Returns the internal JVM name of the bounded pointer helper class for <paramref name="element"/>.</summary>
+  public string PointerClassName(IrType element)
+    => element == IrType.Void ? "java/lang/Object" : this.ModuleInternalName + "$Ptr_" + this.TypeKey(element);
+
+  /// <summary>Returns the internal JVM class/array name representing a non-primitive IR type.</summary>
+  public string ReferenceInternalName(IrType type) {
+    if (type.IsString)
+      return "java/lang/String";
+    if (type.IsOptional)
+      return type.Underlying!.IsStruct ? this.DeclarationInternalName(type.Underlying.Declaration!) : JvmTypeMapper.BoxInfo(type.Underlying).BoxInternalName;
+    if (type.IsArray)
+      return this.Descriptor(type);
+    if (type.IsStruct || type.IsObject)
+      return this.DeclarationInternalName(type.Declaration!);
+    if (type.IsFunction)
+      return this.FunctionInterfaceName(type.Signature!);
+    if (type.IsList)
+      return "java/util/ArrayList";
+    if (type.Kind == IrTypeKind.Map)
+      return "java/util/LinkedHashMap";
+    if (type.Kind == IrTypeKind.Set)
+      return "java/util/LinkedHashSet";
+    if (type.IsLazySequence)
+      return this.SequenceInterfaceName;
+    if (type.IsAsync)
+      return "java/util/concurrent/CompletableFuture";
+    if (type.IsView || type.IsMemory)
+      return this.SpanClassName(type.Element!);
+
+    return this.PointerClassName(type.Element!);
+  }
+
+  /// <summary>Returns the JVM field/parameter/return descriptor for a supported IR type.</summary>
+  public string Descriptor(IrType type) {
+    if (type.IsEnum)
+      return this.Descriptor(type.Integral);
+    if (type.IsArray)
+      return "[" + this.Descriptor(type.Element!);
+    if (type == IrType.Void)
+      return "V";
+    if (!JvmTypeMapper.IsJvmPrimitive(type))
+      return "L" + this.ReferenceInternalName(type) + ";";
+
+    return type.Kind switch {
+      IrTypeKind.Bool => "Z",
+      IrTypeKind.I8 or IrTypeKind.U8 => "B",
+      IrTypeKind.I16 => "S",
+      IrTypeKind.U16 => "C",
+      IrTypeKind.I32 or IrTypeKind.U32 => "I",
+      IrTypeKind.I64 or IrTypeKind.U64 => "J",
+      IrTypeKind.F32 => "F",
+      _ => "D"
+    };
+  }
+
+  /// <summary>Returns the JVM method descriptor for parameter types and a return type.</summary>
+  public string MethodDescriptor(IReadOnlyList<IrType> parameterTypes, IrType returnType) {
+    var sb = new StringBuilder("(");
+    foreach (var param in parameterTypes)
+      sb.Append(this.Descriptor(param));
+    sb.Append(')').Append(this.Descriptor(returnType));
+    return sb.ToString();
+  }
+
+  /// <summary>Returns the JVM method descriptor for an <see cref="IrFunction"/>, optionally skipping the receiver parameter.</summary>
+  public string MethodDescriptor(IrFunction function, bool skipFirstParam = false) {
+    var sb = new StringBuilder("(");
+    for (var i = skipFirstParam ? 1 : 0; i < function.Parameters.Count; ++i)
+      sb.Append(this.Descriptor(function.Parameters[i].Type));
+    sb.Append(')').Append(this.Descriptor(function.ReturnType));
+    return sb.ToString();
+  }
+
+  /// <summary>Returns the JVM method descriptor for a foreign function declaration.</summary>
+  public string MethodDescriptor(IrForeignFunction foreign) {
+    var sb = new StringBuilder("(");
+    foreach (var param in foreign.Parameters)
+      sb.Append(this.Descriptor(param.Type));
+    sb.Append(')').Append(this.Descriptor(foreign.ReturnType));
+    return sb.ToString();
+  }
+
+  /// <summary>Returns the JVMS §4.7.4 verification type for a supported non-void IR type.</summary>
+  public VType VerificationType(IrType type, ConstantPool pool) {
+    if (type.IsEnum)
+      return this.VerificationType(type.Integral, pool);
+    if (!JvmTypeMapper.IsJvmPrimitive(type))
+      return VType.Object(pool.AddClass(this.ReferenceInternalName(type)));
+
+    return type.Kind switch {
+      IrTypeKind.I64 or IrTypeKind.U64 => VType.Long,
+      IrTypeKind.F32 => VType.Float,
+      IrTypeKind.F64 => VType.Double,
+      _ => VType.Int
+    };
   }
 
 }

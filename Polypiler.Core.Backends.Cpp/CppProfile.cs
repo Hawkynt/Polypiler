@@ -40,6 +40,9 @@ public sealed record CppProfile(string Name, CppStandard Standard) {
   /// <summary>Whether the <c>&lt;bit&gt;</c> header (<c>std::rotl</c>, <c>std::popcount</c>, <c>std::bit_cast</c>, …) is available.</summary>
   public bool HasBitHeader => this.Standard >= CppStandard.Cpp20;
 
+  /// <summary>Whether the <c>&lt;span&gt;</c> header (<c>std::span&lt;T&gt;</c>) is available (C++20+).</summary>
+  public bool HasSpanHeader => this.Standard >= CppStandard.Cpp20;
+
   /// <summary>Whether <c>std::byteswap</c> is available (C++23).</summary>
   public bool HasByteSwap => this.Standard >= CppStandard.Cpp23;
 

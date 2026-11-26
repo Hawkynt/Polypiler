@@ -26,14 +26,37 @@ public static partial class CppEmitter {
 
         case IrDeclare declare: {
           var name = this.LocalName(declare.Local);
+          if (declare.Initializer is IrIntrinsic { Op: IrIntrinsicOp.StackAlloc } sa) {
+            this.UseHelper(CppHelpers.NewArray);
+            var elemCpp = this.CppType(sa.Type.Element!, inHeader: false);
+            var buf = this.Temp("ply_sa");
+            text.Append(pad).Append("std::vector<").Append(elemCpp).Append("> ").Append(buf)
+              .Append(" = ").Append(CppHelpers.NewArray).Append('<').Append(elemCpp).Append(">(")
+              .Append(this.EmitExpr(sa.Arguments[0])).Append(");\n");
+            if (sa.Type.IsPointer) {
+              text.Append(pad).Append(elemCpp).Append("* ").Append(name).Append(" = ")
+                .Append(buf).Append(".empty() ? nullptr : ").Append(buf).Append(".data();\n");
+            } else {
+              var spanType = this.CppType(declare.Local.Type, inHeader: false);
+              text.Append(pad).Append(spanType).Append(' ').Append(name).Append('(')
+                .Append(buf).Append(".data(), ").Append(buf).Append(".size());\n");
+            }
+            break;
+          }
+
           var type = this.CppType(declare.Local.Type, inHeader: false);
           var init = declare.Initializer is { } expr ? this.EmitExpr(expr) : this.DefaultValue(declare.Local.Type);
-          text.Append(pad).Append(type).Append(' ').Append(name).Append(" = ").Append(init).Append(";\n");
+          if (this._capturedLocals.Contains(declare.Local)) {
+            this._sourceIncludes.Add("<memory>");
+            text.Append(pad).Append("auto ").Append(name).Append(" = std::make_shared<").Append(type).Append(">(").Append(init).Append(");\n");
+          } else {
+            text.Append(pad).Append(type).Append(' ').Append(name).Append(" = ").Append(init).Append(";\n");
+          }
           break;
         }
 
         case IrAssign assign:
-          text.Append(pad).Append(this.LocalName(assign.Local)).Append(" = ").Append(this.EmitExpr(assign.Value)).Append(";\n");
+          text.Append(pad).Append(this.LocalAccess(assign.Local)).Append(" = ").Append(this.EmitExpr(assign.Value)).Append(";\n");
           break;
 
         case IrGlobalAssign globalAssign:
@@ -87,10 +110,17 @@ public static partial class CppEmitter {
           break;
 
         case IrReturn ret:
-          if (ret.Value is { } val)
+          if (this._asyncElementType is { } asyncElem) {
+            if (asyncElem == IrType.Void)
+              text.Append(pad).Append("return PlyTask<void>::completed();\n");
+            else
+              text.Append(pad).Append("return PlyTask<").Append(this.CppType(asyncElem, inHeader: false))
+                .Append(">::from_result(").Append(this.EmitExpr(ret.Value!)).Append(");\n");
+          } else if (ret.Value is { } val) {
             text.Append(pad).Append("return ").Append(this.EmitExpr(val)).Append(";\n");
-          else
+          } else {
             text.Append(pad).Append("return;\n");
+          }
           break;
 
         case IrThrow @throw:
@@ -108,6 +138,27 @@ public static partial class CppEmitter {
         case IrForEachCollection each:
           this.EmitForEachCollection(each, text, indent);
           break;
+
+        case IrForEachSequence eachSeq:
+          this.EmitForEachSequence(eachSeq, text, indent);
+          break;
+
+        case IrYield yieldStmt:
+          text.Append(pad).Append(this._seqVecName).Append(".push_back(").Append(this.EmitExpr(yieldStmt.Value)).Append(");\n");
+          break;
+
+        case IrYieldBreak:
+          text.Append(pad).Append("return ").Append(this._seqVecName).Append(";\n");
+          break;
+
+        case IrYieldFrom yieldFrom: {
+          this._sourceIncludes.Add("<utility>");
+          var itemVar = this.Temp("ply_item");
+          text.Append(pad).Append("for (auto&& ").Append(itemVar).Append(" : (").Append(this.EmitExpr(yieldFrom.Sequence)).Append(")()) {\n");
+          text.Append(Indent(indent + 1)).Append(this._seqVecName).Append(".push_back(std::move(").Append(itemVar).Append("));\n");
+          text.Append(pad).Append("}\n");
+          break;
+        }
 
         case IrUsing @using:
           this.EmitUsing(@using, text, indent);
@@ -154,15 +205,22 @@ public static partial class CppEmitter {
     private void EmitFor(IrFor @for, StringBuilder text, int indent) {
       var pad = Indent(indent);
       var cond = this.EmitExpr(@for.Condition);
-      if (@for.Step.Statements.Count == 0) {
+      var capturedPerIter = @for.PerIteration.Where(this._capturedLocals.Contains).ToList();
+      if (capturedPerIter.Count == 0 && @for.Step.Statements.Count == 0) {
         text.Append(pad).Append("while (").Append(cond).Append(") {\n");
-      } else if (@for.Step.Statements is [IrAssign assign]) {
+      } else if (capturedPerIter.Count == 0 && @for.Step.Statements is [IrAssign assign]) {
         text.Append(pad).Append("for (; ").Append(cond).Append("; ")
-          .Append(this.LocalName(assign.Local)).Append(" = ").Append(this.EmitExpr(assign.Value)).Append(") {\n");
-      } else if (@for.Step.Statements is [IrExprStmt exprStmt]) {
+          .Append(this.LocalAccess(assign.Local)).Append(" = ").Append(this.EmitExpr(assign.Value)).Append(") {\n");
+      } else if (capturedPerIter.Count == 0 && @for.Step.Statements is [IrExprStmt exprStmt]) {
         text.Append(pad).Append("for (; ").Append(cond).Append("; ").Append(this.EmitExpr(exprStmt.Expression)).Append(") {\n");
       } else {
         var stepCode = new StringBuilder();
+        foreach (var local in capturedPerIter) {
+          this._sourceIncludes.Add("<memory>");
+          var name = this.LocalName(local);
+          var cppType = this.CppType(local.Type, inHeader: false);
+          stepCode.Append(name).Append(" = std::make_shared<").Append(cppType).Append(">(*").Append(name).Append("); ");
+        }
         this.EmitBlockStatements(@for.Step, stepCode, 0);
         var flat = stepCode.ToString().Replace("\n", " ", StringComparison.Ordinal).Trim();
         text.Append(pad).Append("for (; ").Append(cond).Append("; [&]() { ").Append(flat).Append(" }()) {\n");
@@ -232,15 +290,67 @@ public static partial class CppEmitter {
     }
 
     private void EmitForEachCollection(IrForEachCollection each, StringBuilder text, int indent) {
-      if (!each.Collection.Type.IsList) {
-        this.ReportUnsupportedConstruct("IrForEachCollection(" + each.Collection.Type + ")");
+      var pad = Indent(indent);
+      var innerPad = Indent(indent + 1);
+      var used = CollectReferencedLocals(each.Body);
+      if (each.Collection.Type.IsList) {
+        var elem = each.Element!;
+        var elemType = this.CppType(elem.Type, inHeader: false);
+        var attr = used.Contains(elem) ? "" : "[[maybe_unused]] ";
+        if (this._capturedLocals.Contains(elem)) {
+          this._sourceIncludes.Add("<memory>");
+          var raw = this.Temp("ply_el");
+          text.Append(pad).Append("for (const auto& ").Append(raw).Append(" : ").Append(this.EmitExpr(each.Collection)).Append(") {\n");
+          text.Append(innerPad).Append(attr).Append("auto ").Append(this.LocalName(elem)).Append(" = std::make_shared<").Append(elemType).Append(">(").Append(raw).Append(");\n");
+        } else {
+          text.Append(pad).Append("for (").Append(attr).Append(elemType).Append(' ').Append(this.LocalName(elem)).Append(" : ").Append(this.EmitExpr(each.Collection)).Append(") {\n");
+        }
+        this.EmitBlockStatements(each.Body, text, indent + 1);
+        text.Append(pad).Append("}\n");
         return;
       }
 
+      var entryVar = this.Temp("ply_e");
+      text.Append(pad).Append("for (const auto& ").Append(entryVar).Append(" : (").Append(this.EmitExpr(each.Collection)).Append(").entries) {\n");
+      text.Append(innerPad).Append("if (!").Append(entryVar).Append(".occupied) continue;\n");
+      if (each.Element is { } keyLocal) {
+        var keyType = this.CppType(keyLocal.Type, inHeader: false);
+        var attr = used.Contains(keyLocal) ? "" : "[[maybe_unused]] ";
+        if (this._capturedLocals.Contains(keyLocal)) {
+          this._sourceIncludes.Add("<memory>");
+          text.Append(innerPad).Append(attr).Append("auto ").Append(this.LocalName(keyLocal)).Append(" = std::make_shared<").Append(keyType).Append(">(").Append(entryVar).Append(".key);\n");
+        } else {
+          text.Append(innerPad).Append(attr).Append(keyType).Append(' ').Append(this.LocalName(keyLocal)).Append(" = ").Append(entryVar).Append(".key;\n");
+        }
+      }
+      if (each.Value is { } valLocal) {
+        var valType = this.CppType(valLocal.Type, inHeader: false);
+        var attr = used.Contains(valLocal) ? "" : "[[maybe_unused]] ";
+        if (this._capturedLocals.Contains(valLocal)) {
+          this._sourceIncludes.Add("<memory>");
+          text.Append(innerPad).Append(attr).Append("auto ").Append(this.LocalName(valLocal)).Append(" = std::make_shared<").Append(valType).Append(">(").Append(entryVar).Append(".value);\n");
+        } else {
+          text.Append(innerPad).Append(attr).Append(valType).Append(' ').Append(this.LocalName(valLocal)).Append(" = ").Append(entryVar).Append(".value;\n");
+        }
+      }
+      this.EmitBlockStatements(each.Body, text, indent + 1);
+      text.Append(pad).Append("}\n");
+    }
+
+    private void EmitForEachSequence(IrForEachSequence each, StringBuilder text, int indent) {
       var pad = Indent(indent);
-      var elem = this.LocalName(each.Element!);
-      var elemType = this.CppType(each.Element!.Type, inHeader: false);
-      text.Append(pad).Append("for (").Append(elemType).Append(' ').Append(elem).Append(" : ").Append(this.EmitExpr(each.Collection)).Append(") {\n");
+      var used = CollectReferencedLocals(each.Body);
+      var elem = each.Element;
+      var elemType = this.CppType(elem.Type, inHeader: false);
+      var attr = used.Contains(elem) ? "" : "[[maybe_unused]] ";
+      if (this._capturedLocals.Contains(elem)) {
+        this._sourceIncludes.Add("<memory>");
+        var raw = this.Temp("ply_el");
+        text.Append(pad).Append("for (const auto& ").Append(raw).Append(" : (").Append(this.EmitExpr(each.Sequence)).Append(")()) {\n");
+        text.Append(Indent(indent + 1)).Append(attr).Append("auto ").Append(this.LocalName(elem)).Append(" = std::make_shared<").Append(elemType).Append(">(").Append(raw).Append(");\n");
+      } else {
+        text.Append(pad).Append("for (").Append(attr).Append(elemType).Append(' ').Append(this.LocalName(elem)).Append(" : (").Append(this.EmitExpr(each.Sequence)).Append(")()) {\n");
+      }
       this.EmitBlockStatements(each.Body, text, indent + 1);
       text.Append(pad).Append("}\n");
     }

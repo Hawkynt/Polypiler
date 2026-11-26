@@ -70,8 +70,8 @@ public static partial class PerlEmitter {
           text.Append(pad).Append(this.EmitExpr(exprStmt.Expression)).Append(";\n");
           break;
 
-        case IrWriteLine:
-          this.UnsupportedOp(nameof(IrWriteLine));
+        case IrWriteLine write:
+          this.EmitWriteLine(write, text, indent);
           break;
 
         case IrIf @if:
@@ -141,6 +141,34 @@ public static partial class PerlEmitter {
         case IrUsing @using:
           this.EmitUsing(@using, text, indent);
           break;
+      }
+    }
+
+    private void EmitWriteLine(IrWriteLine write, StringBuilder text, int indent) {
+      var pad = Indent(indent);
+      switch (write.Value) {
+        case IrNull:
+          text.Append(pad).Append("print(\"\\n\");\n");
+          break;
+        case IrStrConst or IrIntrinsic:
+          text.Append(pad).Append("print(").Append(this.EmitExpr(write.Value)).Append(", \"\\n\");\n");
+          break;
+        case IrLocalRef: {
+          var v = this.EmitExpr(write.Value);
+          if (this._profile.HasDefinedOr)
+            text.Append(pad).Append("print((").Append(v).Append(" // ''), \"\\n\");\n");
+          else
+            text.Append(pad).Append("print((defined(").Append(v).Append(") ? ").Append(v).Append(" : ''), \"\\n\");\n");
+          break;
+        }
+        default: {
+          var v = this.EmitExpr(write.Value);
+          if (this._profile.HasDefinedOr)
+            text.Append(pad).Append("print(((").Append(v).Append(") // ''), \"\\n\");\n");
+          else
+            text.Append(pad).Append("do { my $_w = ").Append(v).Append("; print((defined($_w) ? $_w : ''), \"\\n\"); };\n");
+          break;
+        }
       }
     }
 

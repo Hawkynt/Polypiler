@@ -12,11 +12,20 @@ internal static class MsilChecker {
     var problems = new List<Diagnostic>();
 
     foreach (var type in module.Types) {
-      if (type is IrStructType structure) {
-        foreach (var field in structure.Fields)
-          CheckType(field.Type, problems);
-      } else if (type is not IrEnumType) {
-        problems.Add(Diagnostic.Create(MsilEmitter.UnsupportedType, null, type.Name));
+      switch (type) {
+        case IrStructType structure:
+          foreach (var field in structure.Fields)
+            CheckType(field.Type, problems);
+          break;
+        case IrClassType cls:
+          foreach (var field in cls.Fields)
+            CheckType(field.Type, problems);
+          break;
+        case IrEnumType or IrInterfaceType:
+          break;
+        default:
+          problems.Add(Diagnostic.Create(MsilEmitter.UnsupportedType, null, type.Name));
+          break;
       }
     }
 
@@ -55,10 +64,13 @@ internal static class MsilChecker {
     IrTypeKind.Void or IrTypeKind.Bool or IrTypeKind.I8 or IrTypeKind.U8
       or IrTypeKind.I16 or IrTypeKind.U16 or IrTypeKind.I32 or IrTypeKind.U32
       or IrTypeKind.I64 or IrTypeKind.U64 or IrTypeKind.F32 or IrTypeKind.F64
-      or IrTypeKind.String or IrTypeKind.Struct => true,
-    IrTypeKind.Array => IsSupportedType(type.Element!),
+      or IrTypeKind.String or IrTypeKind.Struct or IrTypeKind.Object => true,
+    IrTypeKind.Array or IrTypeKind.List or IrTypeKind.Set or IrTypeKind.Sequence
+      or IrTypeKind.Async or IrTypeKind.Span or IrTypeKind.ReadOnlySpan
+      or IrTypeKind.Memory or IrTypeKind.ReadOnlyMemory or IrTypeKind.Pointer => IsSupportedType(type.Element!),
+    IrTypeKind.Map => IsSupportedType(type.Key!) && IsSupportedType(type.Element!),
     IrTypeKind.Optional => IsSupportedType(type.Underlying!),
-    IrTypeKind.Object => type.ClassType is { } cls && IrExceptionClass.IsLibrary(cls),
+    IrTypeKind.Function => IsSupportedType(type.Signature!.Result) && type.Signature.Parameters.All(IsSupportedType),
     _ => false
   };
 
@@ -73,8 +85,13 @@ internal static class MsilChecker {
       or IrIntrinsicOp.FloatBits or IrIntrinsicOp.BitsFloat => true,
     IrIntrinsicOp.RotateLeft or IrIntrinsicOp.RotateRight or IrIntrinsicOp.LeadingZeroCount
       or IrIntrinsicOp.TrailingZeroCount or IrIntrinsicOp.PopCount => intrinsic.Arguments[0].Type.Bits >= 32,
+    IrIntrinsicOp.ParallelBitExtract or IrIntrinsicOp.ParallelBitDeposit => true,
     IrIntrinsicOp.LoadLittle or IrIntrinsicOp.LoadBig
-      or IrIntrinsicOp.StoreLittle or IrIntrinsicOp.StoreBig => intrinsic.Arguments[0].Type.IsArray,
+      or IrIntrinsicOp.StoreLittle or IrIntrinsicOp.StoreBig => intrinsic.Arguments[0].Type.IsArray || intrinsic.Arguments[0].Type.IsView,
+    IrIntrinsicOp.ViewOf or IrIntrinsicOp.Slice or IrIntrinsicOp.ViewLength or IrIntrinsicOp.StackAlloc
+      or IrIntrinsicOp.ViewCopy or IrIntrinsicOp.ViewTryCopy or IrIntrinsicOp.ViewFill
+      or IrIntrinsicOp.ViewEqual or IrIntrinsicOp.ViewToArray => true,
+    _ when IrPointers.IsPointerOperation(intrinsic.Op) => true,
     IrIntrinsicOp.StrLength or IrIntrinsicOp.StrCodeUnitAt or IrIntrinsicOp.StrConcat
       or IrIntrinsicOp.StrEquals or IrIntrinsicOp.StrCompareOrdinal
       or IrIntrinsicOp.StrStartsWith or IrIntrinsicOp.StrEndsWith or IrIntrinsicOp.StrContains
@@ -136,8 +153,6 @@ internal static class MsilChecker {
         CheckExpr(loop.Condition, problems);
         break;
       case IrFor loop:
-        if (loop.PerIteration.Count > 0)
-          problems.Add(Diagnostic.Create(MsilEmitter.UnsupportedConstruct, null, "per-iteration loop bindings"));
         CheckExpr(loop.Condition, problems);
         CheckStmt(loop.Body, problems);
         CheckStmt(loop.Step, problems);
@@ -147,7 +162,7 @@ internal static class MsilChecker {
         foreach (var section in selection.Sections)
           CheckStmt(section.Body, problems);
         break;
-      case IrBreak or IrContinue or IrRethrow:
+      case IrBreak or IrContinue or IrRethrow or IrYieldBreak:
         break;
       case IrReturn ret:
         if (ret.Value is not null)
@@ -159,14 +174,36 @@ internal static class MsilChecker {
       case IrTry trying:
         CheckStmt(trying.Body, problems);
         foreach (var handler in trying.Catches) {
-          if (!IrExceptionClass.IsLibrary(handler.Class))
-            problems.Add(Diagnostic.Create(MsilEmitter.UnsupportedType, null, handler.Class.Name));
           if (handler.Filter is not null)
             CheckExpr(handler.Filter, problems);
           CheckStmt(handler.Body, problems);
         }
         if (trying.Finally is not null)
           CheckStmt(trying.Finally, problems);
+        break;
+      case IrUsing scope:
+        CheckType(scope.Resource.Type, problems);
+        CheckExpr(scope.Initializer, problems);
+        CheckStmt(scope.Body, problems);
+        break;
+      case IrForEachCollection fe:
+        CheckExpr(fe.Collection, problems);
+        if (fe.Element is not null)
+          CheckType(fe.Element.Type, problems);
+        if (fe.Value is not null)
+          CheckType(fe.Value.Type, problems);
+        CheckStmt(fe.Body, problems);
+        break;
+      case IrYield yielded:
+        CheckExpr(yielded.Value, problems);
+        break;
+      case IrYieldFrom delegated:
+        CheckExpr(delegated.Sequence, problems);
+        break;
+      case IrForEachSequence feSeq:
+        CheckType(feSeq.Element.Type, problems);
+        CheckExpr(feSeq.Sequence, problems);
+        CheckStmt(feSeq.Body, problems);
         break;
       default:
         problems.Add(Diagnostic.Create(MsilEmitter.UnsupportedConstruct, null, stmt.GetType().Name));
@@ -178,7 +215,7 @@ internal static class MsilChecker {
     CheckType(expr.Type, problems);
     switch (expr) {
       case IrConst or IrStrConst or IrConstRef or IrLocalRef or IrGlobalRef
-        or IrStructDefault or IrNone or IrNull or IrLastError:
+        or IrStructDefault or IrNone or IrNull or IrLastError or IrFunctionRef:
         break;
       case IrUnary unary:
         CheckExpr(unary.Operand, problems);
@@ -227,6 +264,38 @@ internal static class MsilChecker {
         CheckExpr(equals.Left, problems);
         CheckExpr(equals.Right, problems);
         break;
+      case IrNew create:
+        foreach (var arg in create.Arguments)
+          CheckExpr(arg, problems);
+        break;
+      case IrMethodCall call:
+        if (call.Target is not null)
+          CheckExpr(call.Target, problems);
+        foreach (var arg in call.Arguments)
+          CheckExpr(arg, problems);
+        break;
+      case IrReferenceEquals eq:
+        CheckExpr(eq.Left, problems);
+        CheckExpr(eq.Right, problems);
+        break;
+      case IrTypeTest test:
+        CheckExpr(test.Value, problems);
+        CheckType(test.Target, problems);
+        break;
+      case IrCast cast:
+        CheckExpr(cast.Value, problems);
+        break;
+      case IrAsCast asCast:
+        CheckExpr(asCast.Value, problems);
+        break;
+      case IrGenericEquals geq:
+        CheckExpr(geq.Left, problems);
+        CheckExpr(geq.Right, problems);
+        break;
+      case IrGenericCompare gcmp:
+        CheckExpr(gcmp.Left, problems);
+        CheckExpr(gcmp.Right, problems);
+        break;
       case IrSome some:
         CheckExpr(some.Value, problems);
         break;
@@ -249,10 +318,34 @@ internal static class MsilChecker {
       case IrThrowExpression throwExpr:
         CheckExpr(throwExpr.Exception, problems);
         break;
-      case IrNew create:
-        if (create.Type.ClassType is not { } cls || !IrExceptionClass.IsLibrary(cls))
-          problems.Add(Diagnostic.Create(MsilEmitter.UnsupportedConstruct, null, $"new {create.Type}"));
-        foreach (var arg in create.Arguments)
+      case IrLambda lambda:
+        foreach (var p in lambda.Parameters)
+          CheckType(p.Type, problems);
+        foreach (var l in lambda.Locals)
+          CheckType(l.Type, problems);
+        CheckStmt(lambda.Body, problems);
+        break;
+      case IrBoundMethod bound:
+        if (bound.Receiver is not null)
+          CheckExpr(bound.Receiver, problems);
+        break;
+      case IrInvoke invoke:
+        CheckExpr(invoke.Callee, problems);
+        foreach (var arg in invoke.Arguments)
+          CheckExpr(arg, problems);
+        break;
+      case IrCollection collection:
+        foreach (var arg in collection.Arguments)
+          CheckExpr(arg, problems);
+        break;
+      case IrArraySequence arrSeq:
+        CheckExpr(arrSeq.Array, problems);
+        break;
+      case IrAwait awaited:
+        CheckExpr(awaited.Operand, problems);
+        break;
+      case IrAsync asyncOp:
+        foreach (var arg in asyncOp.Arguments)
           CheckExpr(arg, problems);
         break;
       case IrIntrinsic intrinsic:

@@ -22,10 +22,13 @@ public sealed class CppProfileAndApiTests {
     Assert.That(CppProfile.Cpp23.ToString(), Is.EqualTo("cpp/cpp23"));
 
     Assert.That(CppProfile.Cpp17.HasBitHeader, Is.False);
+    Assert.That(CppProfile.Cpp17.HasSpanHeader, Is.False);
     Assert.That(CppProfile.Cpp17.HasByteSwap, Is.False);
     Assert.That(CppProfile.Cpp20.HasBitHeader, Is.True);
+    Assert.That(CppProfile.Cpp20.HasSpanHeader, Is.True);
     Assert.That(CppProfile.Cpp20.HasByteSwap, Is.False);
     Assert.That(CppProfile.Cpp23.HasBitHeader, Is.True);
+    Assert.That(CppProfile.Cpp23.HasSpanHeader, Is.True);
     Assert.That(CppProfile.Cpp23.HasByteSwap, Is.True);
 
     Assert.That(CppProfile.Parse(), Is.EqualTo(CppProfile.Cpp20));
@@ -74,40 +77,16 @@ public sealed class CppProfileAndApiTests {
     var problems = CppEmitter.Check(mod, CppProfile.Cpp20);
     Assert.That(problems.Any(p => p.Code == CppEmitter.UnsupportedTypeCode), Is.True);
     Assert.That(() => CppEmitter.Emit(mod, CppProfile.Cpp20), Throws.ArgumentException);
-
-    // Also test Span type
-    var sp = L("s", IrType.Span(IrType.I32));
-    var spMod = new IrModule("Sp", [Function("sp", IrType.I32, [sp], new IrReturn(I(0)))]);
-    Assert.That(CppEmitter.Check(spMod).Any(p => p.Code == CppEmitter.UnsupportedTypeCode), Is.True);
   }
 
   [Test]
   public void CheckAndEmit_UnsupportedConstruct_ReportsPLY1450() {
-    // IrLambda expression is refused with PLY1450
-    var lam = IrLambda.Of([], IrType.I32, [], Block(new IrReturn(I(1))));
-    var fn = Function("makeLam", lam.Type, [], new IrReturn(lam));
-    var mod = new IrModule("Lam", [fn]);
+    // IrLastError expression is refused with PLY1450
+    var fn = Function("lastErr", IrType.I32, [], new IrReturn(new IrLastError(false)));
+    var mod = new IrModule("LastErr", [fn]);
     var problems = CppEmitter.Check(mod);
     Assert.That(problems.Any(p => p.Code == CppEmitter.UnsupportedConstructCode), Is.True);
-
-    // Map collection op & foreach on non-list refused with PLY1450
-    var mapType = IrType.Map(IrType.I32, IrType.I32, MapOrder.Insertion);
-    var m = L("m", mapType);
-    var k = L("k", IrType.I32);
-    var v = L("v", IrType.I32);
-    var mapFn = Function("mapOp", IrType.Void, [],
-      new IrDeclare(m, new IrCollection(IrCollectionOp.MapNew, mapType, [])),
-      new IrForEachCollection(R(m), EnumerationMode.Live, k, v, Block()),
-      new IrReturn(null));
-    var mapMod = new IrModule("MapMod", [mapFn]);
-    var mapProblems = CppEmitter.Check(mapMod);
-    Assert.That(mapProblems.Any(p => p.Code == CppEmitter.UnsupportedConstructCode), Is.True);
-
-    // IrYield statement refused with PLY1450
-    var seqFn = Function("gen", IrType.Sequence(IrType.I32, true), [], new IrYield(I(1)));
-    var seqMod = new IrModule("SeqMod", [seqFn]);
-    var seqProblems = CppEmitter.Check(seqMod);
-    Assert.That(seqProblems.Any(p => p.Code == CppEmitter.UnsupportedConstructCode), Is.True);
+    Assert.That(() => CppEmitter.Emit(mod), Throws.ArgumentException);
   }
 
   [Test]

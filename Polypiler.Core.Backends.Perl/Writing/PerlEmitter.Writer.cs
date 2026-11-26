@@ -486,7 +486,7 @@ public static partial class PerlEmitter {
       if (name is PerlHelpers.FloatDivide or PerlHelpers.FloatRemainder or PerlHelpers.FloatRemainder56
           or PerlHelpers.FloatTrunc or PerlHelpers.FloatRoundAway or PerlHelpers.FloatRoundEven)
         this._usesPosix = true;
-      if (name == PerlHelpers.FloatDivide56)
+      if (name is PerlHelpers.FloatDivide56 or PerlHelpers.FormatFloat)
         this._usedHelpers.Add(PerlHelpers.FloatSignBit);
       if (name == PerlHelpers.TrapMatches)
         this._usedHelpers.Add(PerlHelpers.TrapKind);

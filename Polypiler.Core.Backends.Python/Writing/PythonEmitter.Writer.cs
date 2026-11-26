@@ -58,6 +58,7 @@ public static partial class PythonEmitter {
 
       this.NameTypes(module);
       this.NameFunctions(module);
+      this.NameForeignFunctions(module);
       foreach (var constant in module.Constants)
         this._constants[constant.Name] = this.Take(PythonNaming.Constant(constant.Name));
 
@@ -76,12 +77,16 @@ public static partial class PythonEmitter {
         functions.Add(copied.Contains(function.Name) ? written with { IsHelper = true } : written);
       }
 
+      var foreignWrappers = this.ForeignWrappers(module);
+      var foreignStructs = this.ForeignStructs();
+
       this._function = "";
       var constants = module.Constants.Select(this.Constant).ToList();
       var globals = module.Globals.Select(this.Global).ToList();
 
       var body = new List<PyStatement>();
       var exported = module.Functions.Where(function => function.IsPublic && !this.IsMember(function)).Select(function => this._functions[function.Name])
+        .Concat(module.ForeignFunctions.Where(foreign => foreign.IsPublic).Select(foreign => this._foreignNames[foreign.Name]))
         .Concat(this.PublicTypes(module)).Order(StringComparer.Ordinal);
       body.Add(new PyAssign(new PyName("__all__"), new PyList([.. exported.Select(name => new PyString(name))])) { Leading = PyTrivia.Blank });
       // A helper declares what it calls and raises: other helpers and the exception classes of the library.
@@ -106,9 +111,11 @@ public static partial class PythonEmitter {
       this.Helpers = helpers;
       body.AddRange(this.ExceptionClasses().Select(declaration => declaration with { Leading = PyTrivia.TwoBlank }));
       body.AddRange(types.Select(declaration => declaration with { Leading = PyTrivia.TwoBlank }));
+      body.AddRange(foreignStructs.Select(declaration => declaration with { Leading = PyTrivia.TwoBlank }));
       body.AddRange(this.EnumTables().Select((table, index) => table with { Leading = index == 0 ? PyTrivia.TwoBlank : PyTrivia.None }));
       var moduleConstants = constants.Concat(this._regexDefinitions).ToList();
       body.AddRange(moduleConstants.Select((constant, index) => constant with { Leading = index == 0 ? PyTrivia.TwoBlank : PyTrivia.None }));
+      body.AddRange(foreignWrappers.Select(wrapper => wrapper with { Leading = PyTrivia.TwoBlank }));
       body.AddRange(functions.Select(function => function with { Leading = PyTrivia.TwoBlank }));
       body.AddRange(globals.Select((global, index) => global with { Leading = index == 0 ? PyTrivia.TwoBlank : PyTrivia.None }));
 
@@ -118,7 +125,7 @@ public static partial class PythonEmitter {
       if (this._declaresTypes || this._lazyAnnotations)
         imports.Add(new PyImportFrom("__future__", ["annotations"]) { Leading = PyTrivia.Blank });
 
-      foreach (var library in new[] { "asyncio", "copy", "dataclasses", "enum", "math", "re", "struct" }.Where(names.Contains))
+      foreach (var library in new[] { "asyncio", "copy", "ctypes", "dataclasses", "enum", "math", "re", "struct" }.Where(names.Contains))
         imports.Add(new PyImport(library) { Leading = imports.Count == 0 ? PyTrivia.Blank : PyTrivia.None });
 
       foreach (var (library, members) in new[] { ("collections.abc", new[] { "Callable", "Iterable", "Iterator" }), ("dataclasses", ["dataclass", "field"]), ("typing", ["List"]) }) {
@@ -163,7 +170,7 @@ public static partial class PythonEmitter {
     /// <summary>Takes the names of the helpers and of what the module imports, which nothing of the module may have.</summary>
     private void Reserve() {
       this._moduleNames.UnionWith(PythonHelpers.Order);
-      this._moduleNames.UnionWith(["asyncio", "math", "re", "struct", "List", "__all__", "copy", "dataclasses", "dataclass", "field", "enum", "Callable", "Iterable", "Iterator", "annotations"]);
+      this._moduleNames.UnionWith(["asyncio", "ctypes", "math", "re", "struct", "List", "__all__", "copy", "dataclasses", "dataclass", "field", "enum", "Callable", "Iterable", "Iterator", "annotations"]);
     }
 
     /// <summary>A name at the level of the module that no other name there has.</summary>

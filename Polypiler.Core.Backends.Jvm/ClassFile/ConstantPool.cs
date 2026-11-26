@@ -20,6 +20,7 @@ internal sealed class ConstantPool {
   private const byte TagString = 8;
   private const byte TagFieldref = 9;
   private const byte TagMethodref = 10;
+  private const byte TagInterfaceMethodref = 11;
   private const byte TagNameAndType = 12;
 
   private readonly List<byte[]> _entries = [];
@@ -33,6 +34,7 @@ internal sealed class ConstantPool {
   private readonly Dictionary<(ushort, ushort), ushort> _nameAndTypes = [];
   private readonly Dictionary<(ushort, ushort), ushort> _fieldrefs = [];
   private readonly Dictionary<(ushort, ushort), ushort> _methodrefs = [];
+  private readonly Dictionary<(ushort, ushort), ushort> _interfaceMethodrefs = [];
   private ushort _nextIndex = 1;
 
   /// <summary>Adds or retrieves a <c>CONSTANT_Utf8_info</c> entry encoded in JVMS modified UTF-8.</summary>
@@ -160,6 +162,17 @@ internal sealed class ConstantPool {
 
     var index = this.AppendPair(TagMethodref, key.Item1, key.Item2);
     this._methodrefs[key] = index;
+    return index;
+  }
+
+  /// <summary>Adds or retrieves a <c>CONSTANT_InterfaceMethodref_info</c> entry.</summary>
+  public ushort AddInterfaceMethodref(string ownerInternalName, string methodName, string descriptor) {
+    var key = (this.AddClass(ownerInternalName), this.AddNameAndType(methodName, descriptor));
+    if (this._interfaceMethodrefs.TryGetValue(key, out var existing))
+      return existing;
+
+    var index = this.AppendPair(TagInterfaceMethodref, key.Item1, key.Item2);
+    this._interfaceMethodrefs[key] = index;
     return index;
   }
 

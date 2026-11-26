@@ -117,40 +117,38 @@ public sealed class VBScriptProfileAndNamingTests {
     Assert.That(bigDiags.Select(d => d.Code), Has.Member(VBScriptEmitter.UnsupportedTypeCode));
     Assert.That(() => VBScriptEmitter.Emit(bigMod), Throws.ArgumentException);
 
-    var list = L("xs", IrType.List(IrType.I32));
-    var listMod = new IrModule("Lst", [Function("f", IrType.I32, [list], new IrReturn(I(0)))]);
+    // BigInt nested inside collection, function, async, sequence, and array types also reports PLY2651.
+    var listBig = L("xs", IrType.List(IrType.BigInt));
+    var listMod = new IrModule("LstBig", [Function("f", IrType.I32, [listBig], new IrReturn(I(0)))]);
     Assert.That(VBScriptEmitter.Check(listMod).Select(d => d.Code), Has.Member(VBScriptEmitter.UnsupportedTypeCode));
 
-    var span = L("sp", IrType.Span(IrType.U8));
-    var spanMod = new IrModule("Sp", [Function("f", IrType.I32, [span], new IrReturn(I(0)))]);
-    Assert.That(VBScriptEmitter.Check(spanMod).Select(d => d.Code), Has.Member(VBScriptEmitter.UnsupportedTypeCode));
+    var mapBig = L("mp", IrType.Map(IrType.String, IrType.BigInt, MapOrder.Insertion));
+    var mapMod = new IrModule("MapBig", [Function("f", IrType.I32, [mapBig], new IrReturn(I(0)))]);
+    Assert.That(VBScriptEmitter.Check(mapMod).Select(d => d.Code), Has.Member(VBScriptEmitter.UnsupportedTypeCode));
 
-    var fnType = IrType.Function(IrType.I32, IrType.I32);
-    var fnLocal = L("cb", fnType);
-    var fnMod = new IrModule("Fn", [Function("f", IrType.I32, [fnLocal], new IrReturn(I(0)))]);
+    var fnBig = L("cb", IrType.Function(IrType.BigInt, IrType.I32));
+    var fnMod = new IrModule("FnBig", [Function("f", IrType.I32, [fnBig], new IrReturn(I(0)))]);
     Assert.That(VBScriptEmitter.Check(fnMod).Select(d => d.Code), Has.Member(VBScriptEmitter.UnsupportedTypeCode));
 
-    var asyncMod = new IrModule("Asy", [Function("f", IrType.Async(IrType.I32), [], new IrReturn(I(1)))]);
-    Assert.That(VBScriptEmitter.Check(asyncMod).Select(d => d.Code), Has.Member(VBScriptEmitter.UnsupportedTypeCode));
+    var fnParamBig = L("cbp", IrType.Function(IrType.Void, IrType.BigInt));
+    var fnParamMod = new IrModule("FnPBig", [Function("f", IrType.I32, [fnParamBig], new IrReturn(I(0)))]);
+    Assert.That(VBScriptEmitter.Check(fnParamMod).Select(d => d.Code), Has.Member(VBScriptEmitter.UnsupportedTypeCode));
+
+    var asyncBig = new IrModule("AsyBig", [Function("f", IrType.Async(IrType.BigInt), [], new IrReturn(new IrBigConst(BigInteger.One)))]);
+    Assert.That(VBScriptEmitter.Check(asyncBig).Select(d => d.Code), Has.Member(VBScriptEmitter.UnsupportedTypeCode));
+
+    var seqBig = new IrModule("SeqBig", [Function("f", IrType.Sequence(IrType.BigInt, true), [], new IrYield(new IrBigConst(BigInteger.One)))]);
+    Assert.That(VBScriptEmitter.Check(seqBig).Select(d => d.Code), Has.Member(VBScriptEmitter.UnsupportedTypeCode));
   }
 
   [Test]
   public void UnsupportedConstructs_ReportPLY2650() {
-    // Foreign function on module.
+    // Foreign function and IrForeignCall on module.
     var foreign = new IrForeignFunction("puts", true, "libc", IrType.I32, []);
     var fMod = new IrModule("For", [Function("f", IrType.I32, [], new IrReturn(new IrForeignCall("puts", IrType.I32, [])))]) {
       ForeignFunctions = [foreign]
     };
     Assert.That(VBScriptEmitter.Check(fMod).Select(d => d.Code), Has.Member(VBScriptEmitter.UnsupportedConstructCode));
-
-    // IrForEachSequence statement refused with PLY2650.
-    var seqArr = L("xs", IrType.Array(IrType.I32));
-    var seqEl = L("x", IrType.I32);
-    var seqMod = new IrModule("Seq", [
-      new IrFunction("each", true, IrType.Void, [seqArr], [seqEl],
-        Block(new IrForEachSequence(seqEl, new IrArraySequence(R(seqArr)), Block()), new IrReturn(null)))
-    ]);
-    Assert.That(VBScriptEmitter.Check(seqMod).Select(d => d.Code), Has.Member(VBScriptEmitter.UnsupportedConstructCode));
 
     // BigInt constant expression.
     var bigConstMod = new IrModule("Bc", [Function("f", IrType.I32, [], new IrExprStmt(new IrBigConst(BigInteger.One)), new IrReturn(I(0)))]);

@@ -29,11 +29,24 @@ public static partial class VBScriptEmitter {
     private readonly List<string> _declaredDims = [];
     private readonly Stack<LoopFrame> _loops = new();
     private readonly Stack<TryFrame> _tryFrames = new();
+    private readonly List<string> _syntheticClasses = [];
+    private readonly Dictionary<string, string> _fnRefClasses = new(StringComparer.Ordinal);
+    private readonly Dictionary<(IrMethod Method, IrMethodCallKind Kind), string> _boundMethodClasses = [];
+
+    private HashSet<IrLocal> _boxedLocals = new(ReferenceEqualityComparer.Instance);
+    private HashSet<IrLocal> _addrBoxedLocals = new(ReferenceEqualityComparer.Instance);
+    private HashSet<IrLocal> _arrayBoxedLocals = new(ReferenceEqualityComparer.Instance);
+    private List<(IrLocal Param, string RawName, string BoxName)> _arrayParamSyncs = [];
+    private Dictionary<string, IrFunction> _functionMap = new(StringComparer.Ordinal);
 
     private IrModule _module = null!;
     private IrFunction? _currentFunction;
     private string _currentFunctionVbsName = "";
+    private IrType _currentReturnType = IrType.Void;
+    private bool _inAsyncFunction;
+    private string? _iteratorResultListVar;
     private int _tempCounter;
+    private int _syntheticCounter;
     private int _tryBodyDepth;
     private string? _activeCatchErrVar;
 
@@ -46,8 +59,8 @@ public static partial class VBScriptEmitter {
 
       this.AssignNames(module);
 
-      var functionMap = module.Functions.ToDictionary(f => f.Name, StringComparer.Ordinal);
-      var classBlocks = this.EmitTypeDeclarations(module, functionMap);
+      this._functionMap = module.Functions.ToDictionary(f => f.Name, StringComparer.Ordinal);
+      var classBlocks = this.EmitTypeDeclarations(module, this._functionMap);
       var functionBlocks = new List<string>(module.Functions.Count);
       foreach (var function in module.Functions)
         functionBlocks.Add(this.EmitFunction(function));
@@ -71,6 +84,12 @@ public static partial class VBScriptEmitter {
 
       if (classBlocks.Length > 0)
         text.Append('\n').Append(classBlocks);
+
+      if (this._syntheticClasses.Count > 0) {
+        text.Append('\n');
+        foreach (var synthetic in this._syntheticClasses)
+          text.Append(synthetic).Append('\n');
+      }
 
       foreach (var fn in functionBlocks)
         if (fn.Length > 0)
@@ -363,20 +382,30 @@ public static partial class VBScriptEmitter {
         text.Append("    If StrComp(").Append(fname).Append(", other.").Append(fname).Append(", 0) <> 0 Then ply_equals = False : Exit Function\n");
       else if (field.Type.IsArray)
         text.Append("    If Not ").Append(this.Use(VBScriptHelpers.ArrEq)).Append('(').Append(fname).Append(", other.").Append(fname).Append(") Then ply_equals = False : Exit Function\n");
-      else if (field.Type.IsObject)
+      else if (NeedsSet(field.Type))
         text.Append("    If Not (").Append(fname).Append(" Is other.").Append(fname).Append(") Then ply_equals = False : Exit Function\n");
       else
         text.Append("    If ").Append(fname).Append(" <> other.").Append(fname).Append(" Then ply_equals = False : Exit Function\n");
     }
 
     private string EmitFunction(IrFunction function) {
+      if (IrSequences.IsIterator(function))
+        return this.EmitIteratorFunction(function);
+
       this._currentFunction = function;
       this._currentFunctionVbsName = this._functionNames[function.Name];
+      this._inAsyncFunction = function.IsAsync;
+      this._currentReturnType = function.IsAsync ? function.ReturnType.Element! : function.ReturnType;
+      this._iteratorResultListVar = null;
       this._locals.Clear();
       this._localTaken.Clear();
       this._declaredDims.Clear();
       this._loops.Clear();
       this._tryFrames.Clear();
+      this._boxedLocals.Clear();
+      this._addrBoxedLocals.Clear();
+      this._arrayBoxedLocals.Clear();
+      this._arrayParamSyncs.Clear();
       this._tempCounter = 0;
       this._tryBodyDepth = 0;
       this._activeCatchErrVar = null;
@@ -391,10 +420,41 @@ public static partial class VBScriptEmitter {
       foreach (var l in function.Locals)
         this.CheckType(l.Type, function.Name);
 
+      this.AnalyzeBodyStorage(function.Parameters, function.Locals, function.Body);
+
+      var paramDecls = new List<string>(function.Parameters.Count);
+      var prologue = new StringBuilder();
       foreach (var p in function.Parameters) {
         var pname = VBScriptNaming.Free(VBScriptNaming.Identifier(p.Name), this._localTaken);
         this._locals[p] = pname;
+        if (this._boxedLocals.Contains(p)) {
+          this.Use(VBScriptHelpers.Cell);
+          var rawName = VBScriptNaming.Free("ply_p_" + pname, this._localTaken);
+          paramDecls.Add($"{(p.Type.IsArray ? "ByRef" : "ByVal")} {rawName}");
+          this._declaredDims.Add(pname);
+          prologue.Append("  Set ").Append(pname).Append(" = New ply_Cell\n");
+          prologue.Append("  ").Append(AssignPrefix(p.Type)).Append(pname).Append(".Val = ").Append(rawName).Append('\n');
+        } else if (this._addrBoxedLocals.Contains(p)) {
+          this.Use(VBScriptHelpers.SpanSupport);
+          var rawName = VBScriptNaming.Free("ply_p_" + pname, this._localTaken);
+          paramDecls.Add($"ByVal {rawName}");
+          this._declaredDims.Add(pname);
+          prologue.Append("  Set ").Append(pname).Append(" = ply_buf_single(").Append(rawName).Append(", ")
+            .Append(ElemKindCode(p.Type)).Append(", ").Append(p.Type.Size.ToString(CultureInfo.InvariantCulture)).Append(")\n");
+        } else if (this._arrayBoxedLocals.Contains(p)) {
+          this.Use(VBScriptHelpers.SpanSupport);
+          var rawName = VBScriptNaming.Free("ply_p_" + pname, this._localTaken);
+          paramDecls.Add($"ByRef {rawName}");
+          this._declaredDims.Add(pname);
+          this._arrayParamSyncs.Add((p, rawName, pname));
+          var elem = p.Type.Element!;
+          prologue.Append("  Set ").Append(pname).Append(" = ply_buf_wrap(").Append(rawName).Append(", ")
+            .Append(ElemKindCode(elem)).Append(", ").Append(elem.Size.ToString(CultureInfo.InvariantCulture)).Append(")\n");
+        } else {
+          paramDecls.Add($"{(p.Type.IsArray ? "ByRef" : "ByVal")} {pname}");
+        }
       }
+
       foreach (var l in function.Locals) {
         var lname = VBScriptNaming.Free(VBScriptNaming.Identifier(l.Name), this._localTaken);
         this._locals[l] = lname;
@@ -402,12 +462,41 @@ public static partial class VBScriptEmitter {
       }
 
       var bodyText = new StringBuilder();
-      this.EmitBlock(function.Body, bodyText, 1);
+      if (this._inAsyncFunction) {
+        this.Use(VBScriptHelpers.TaskSupport);
+        var errNum = this.NewTemp("ply_an");
+        var errSrc = this.NewTemp("ply_as");
+        var errDesc = this.NewTemp("ply_ad");
+        bodyText.Append(prologue);
+        bodyText.Append("  On Error Resume Next\n");
+        bodyText.Append("  Do\n");
+        ++this._tryBodyDepth;
+        this.EmitBlock(function.Body, bodyText, 2);
+        --this._tryBodyDepth;
+        bodyText.Append("  Loop Until True\n");
+        bodyText.Append("  ").Append(errNum).Append(" = Err.Number\n");
+        bodyText.Append("  ").Append(errSrc).Append(" = Err.Source\n");
+        bodyText.Append("  ").Append(errDesc).Append(" = Err.Description\n");
+        bodyText.Append("  Err.Clear\n");
+        bodyText.Append("  On Error GoTo 0\n");
+        bodyText.Append("  If ").Append(errNum).Append(" <> 0 Then\n");
+        this.EmitArrayParamSyncs(bodyText, 2);
+        bodyText.Append("    Set ").Append(this._currentFunctionVbsName).Append(" = ply_task_fault(ply_capture_err(")
+          .Append(errNum).Append(", ").Append(errSrc).Append(", ").Append(errDesc).Append("))\n");
+        bodyText.Append("    Exit Function\n");
+        bodyText.Append("  End If\n");
+        this.EmitArrayParamSyncs(bodyText, 1);
+        bodyText.Append("  Set ").Append(this._currentFunctionVbsName).Append(" = ply_task_completed()\n");
+      } else {
+        bodyText.Append(prologue);
+        this.EmitBlock(function.Body, bodyText, 1);
+        this.EmitArrayParamSyncs(bodyText, 1);
+      }
 
       var header = new StringBuilder();
-      var isSub = function.ReturnType == IrType.Void;
+      var isSub = !this._inAsyncFunction && function.ReturnType == IrType.Void;
       header.Append(isSub ? "Sub " : "Function ").Append(this._currentFunctionVbsName).Append('(');
-      header.AppendJoin(", ", function.Parameters.Select(p => $"{(p.Type.IsArray ? "ByRef" : "ByVal")} {this._locals[p]}"));
+      header.AppendJoin(", ", paramDecls);
       header.Append(")\n");
 
       if (this._declaredDims.Count > 0)
@@ -417,7 +506,17 @@ public static partial class VBScriptEmitter {
       header.Append(isSub ? "End Sub\n" : "End Function\n");
 
       this._currentFunction = null;
+      this._inAsyncFunction = false;
+      this._currentReturnType = IrType.Void;
       return header.ToString();
+    }
+
+    private void EmitArrayParamSyncs(StringBuilder text, int indent) {
+      if (this._arrayParamSyncs.Count == 0)
+        return;
+      var pad = Indent(indent);
+      foreach (var (_, rawName, boxName) in this._arrayParamSyncs)
+        text.Append(pad).Append("If Not ").Append(boxName).Append(".IsNullArr Then ").Append(rawName).Append(" = ").Append(boxName).Append(".Data\n");
     }
 
     private bool CheckType(IrType type, string context) {
@@ -425,10 +524,23 @@ public static partial class VBScriptEmitter {
         return this.CheckType(type.Element!, context);
       if (type.IsOptional)
         return this.CheckType(type.Underlying!, context);
+      if (type.IsCollection) {
+        var ok = true;
+        if (type.Key is { } key)
+          ok &= this.CheckType(key, context);
+        return ok & this.CheckType(type.Element!, context);
+      }
+      if (type.IsLazySequence || type.IsAsync || type.IsView || type.IsMemory || type.IsPointer)
+        return type.Element is null || type.Element == IrType.Void || this.CheckType(type.Element, context);
+      if (type.IsFunction) {
+        var sig = type.Signature!;
+        var ok = sig.Result == IrType.Void || this.CheckType(sig.Result, context);
+        foreach (var p in sig.Parameters)
+          ok &= this.CheckType(p, context);
+        return ok;
+      }
 
-      if (type.Kind is IrTypeKind.Async or IrTypeKind.Pointer or IrTypeKind.BigInt or IrTypeKind.Sequence
-          or IrTypeKind.Function or IrTypeKind.Span or IrTypeKind.ReadOnlySpan or IrTypeKind.Memory
-          or IrTypeKind.ReadOnlyMemory or IrTypeKind.List or IrTypeKind.Map or IrTypeKind.Set) {
+      if (type.Kind == IrTypeKind.BigInt) {
         this.Problems.Add(Diagnostic.Create(UnsupportedType, null, type.ToString(), this._profile.Name) with { Cause = context });
         return false;
       }
@@ -472,14 +584,21 @@ public static partial class VBScriptEmitter {
     }
 
     private static bool NeedsSet(IrType type)
-      => type.IsObject || type.IsStruct || (type.IsOptional && NeedsSet(type.Underlying!));
+      => type.IsObject || type.IsStruct || type.IsFunction || type.IsCollection
+         || type.IsLazySequence || type.IsAsync || type.IsView || type.IsMemory || type.IsPointer
+         || (type.IsOptional && NeedsSet(type.Underlying!));
 
     private static string AssignPrefix(IrType type) => NeedsSet(type) ? "Set " : "";
 
     private string DefaultValue(IrType type) {
       if (type.IsOptional)
         return NeedsSet(type) ? "Nothing" : "Null";
-      if (type.IsObject)
+      if (type.IsView || type.IsMemory) {
+        this.Use(VBScriptHelpers.SpanSupport);
+        var elem = type.Element!;
+        return $"ply_span_empty({ElemKindCode(elem)}, {elem.Size.ToString(CultureInfo.InvariantCulture)})";
+      }
+      if (type.IsObject || type.IsFunction || type.IsCollection || type.IsLazySequence || type.IsAsync || type.IsPointer)
         return "Nothing";
       if (type.IsStruct)
         return "New " + this._typeNames[type.StructType!];
