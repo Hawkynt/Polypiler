@@ -68,23 +68,47 @@ public sealed class ShowcaseTests {
   }
 
   [Test]
-  public void DiscoverBackends_FindsAllSupportedBackendsFromCliHelp() {
-    var backends = ShowcaseGenerator.DiscoverBackends(new InProcessCliRunner(), ["polypiler"]);
-    Assert.That(backends, Does.Contain("csharp").And.Contain("javascript").And.Contain("rust")
+  public void DiscoverTargets_FindsAllSupportedBackendsAndDialectsFromCli() {
+    var targets = ShowcaseGenerator.DiscoverTargets(new InProcessCliRunner(), ["polypiler"]);
+    var byBackend = targets.ToDictionary(t => t.Backend, t => t.Profiles, StringComparer.Ordinal);
+    Assert.That(byBackend.Keys, Does.Contain("csharp").And.Contain("javascript").And.Contain("rust")
       .And.Contain("python").And.Contain("perl").And.Contain("cpp")
       .And.Contain("vbscript").And.Contain("batch").And.Contain("msil").And.Contain("jvm"));
+    Assert.That(byBackend["javascript"], Does.Contain("es5").And.Contain("es2022"));
+    Assert.That(byBackend["csharp"], Does.Contain("net2.0").And.Contain("net10.0"));
+    Assert.That(byBackend["batch"], Does.Contain("cmd").And.Contain("dos622"));
+    Assert.That(byBackend["cpp"], Does.Contain("cpp/cpp17").And.Contain("cpp/cpp23"));
   }
 
   [Test]
-  public void DiscoverBackends_ThrowsOnFailureTimeoutOrMissingPattern() {
+  public void DiscoverTargets_ThrowsOnFailureTimeoutInvalidJsonOrEmptyList() {
     var failed = new FakeRunner(_ => new(1, "", "boom", false));
-    Assert.That(() => ShowcaseGenerator.DiscoverBackends(failed, ["polypiler"]), Throws.InvalidOperationException);
+    Assert.That(() => ShowcaseGenerator.DiscoverTargets(failed, ["polypiler"]), Throws.InvalidOperationException);
 
     var timedOut = new FakeRunner(_ => new(-1, "", "", true));
-    Assert.That(() => ShowcaseGenerator.DiscoverBackends(timedOut, ["polypiler"]), Throws.InvalidOperationException);
+    Assert.That(() => ShowcaseGenerator.DiscoverTargets(timedOut, ["polypiler"]), Throws.InvalidOperationException);
 
-    var missing = new FakeRunner(_ => new(0, "usage without target list", "", false));
-    Assert.That(() => ShowcaseGenerator.DiscoverBackends(missing, ["polypiler"]), Throws.InvalidOperationException);
+    var badJson = new FakeRunner(_ => new(0, "not-json", "", false));
+    Assert.That(() => ShowcaseGenerator.DiscoverTargets(badJson, ["polypiler"]), Throws.InvalidOperationException);
+
+    var emptyList = new FakeRunner(_ => new(0, "[]", "", false));
+    Assert.That(() => ShowcaseGenerator.DiscoverTargets(emptyList, ["polypiler"]), Throws.InvalidOperationException);
+  }
+
+  [Test]
+  public void TargetsCommand_ReportsErrorsForMissingOrInvalidBatchFiles() {
+    using var output = new StringWriter();
+    using var error = new StringWriter();
+    Assert.That(Polypiler.Cli.Program.Run(["targets", "--run-batch", this.At("missing.json")], output, error),
+      Is.EqualTo((int)Polypiler.Core.ExitCode.EnvironmentError));
+
+    this.Write("bad.json", "{not-an-array");
+    Assert.That(Polypiler.Cli.Program.Run(["targets", "--run-batch", this.At("bad.json")], output, error),
+      Is.EqualTo((int)Polypiler.Core.ExitCode.UsageError));
+
+    this.Write("null.json", "null");
+    Assert.That(Polypiler.Cli.Program.Run(["targets", "--run-batch", this.At("null.json")], output, error),
+      Is.EqualTo((int)Polypiler.Core.ExitCode.UsageError));
   }
 
   [Test]
@@ -244,45 +268,52 @@ public sealed class ShowcaseTests {
   }
 
   [Test]
-  public void ShowcaseCommand_GeneratesChecksAndHandlesEndToEndAndErrorPaths() {
-    this.Write("examples/01-add.cs", "// Showcase: Add & Multiply\n// Category: Core\n// Summary: Simple ops.\npublic static class K { public static int Add(int a, int b) => a + b; }\n");
-    this.Write("examples/02-boundary.cs", "// Showcase: Unsupported\n// Category: Boundary\n// Summary: Refused.\nusing System.IO;\npublic static class B { public static int N(string p) => File.ReadAllLines(p).Length; }\n");
+  public void ShowcaseCommand_GeneratesChecksAndGroupsDialectsUnderBackends() {
+    this.Write("examples/01-add.cs", "// Showcase: Add & Async\n// Category: Core\n// Summary: Simple ops.\nusing System.Threading.Tasks;\npublic static class K { public static async Task<int> AddAsync(int a, int b) => await Task.FromResult(a + b); }\n");
+    this.Write("examples/02-ops.cs", "// Showcase: Bitwise\n// Category: Core\n// Summary: Rotate.\nusing System.Numerics;\npublic static class O { public static uint Rot(uint x, int n) => BitOperations.RotateLeft(x, n); }\n");
+    this.Write("examples/03-boundary.cs", "// Showcase: Unsupported\n// Category: Boundary\n// Summary: Refused.\nusing System.IO;\npublic static class B { public static int N(string p) => File.ReadAllLines(p).Length; }\n");
     var marker = this.CreateFakePolypilerMarker();
     var runner = new InProcessCliRunner();
 
-    // Generate across text + binary backends
-    var (exit1, out1, err1) = this.RunCommand(runner, "--examples", "examples", "--out", "docs/out.md", "--polypiler", marker, "--targets", "csharp,rust,msil,jvm,batch");
+    // Generate across multi-dialect text + binary backends (showing partial refusal ⚠️ and distinct dialect groups)
+    var (exit1, out1, err1) = this.RunCommand(runner, "--examples", "examples", "--out", "docs/out.md", "--polypiler", marker,
+      "--targets", "csharp:net2.0,csharp:net10.0,javascript:es5,javascript:es2022,rust:rust2018,rust:rust2024,msil,jvm:jvm/21,batch");
     Assert.That(exit1, Is.Zero, err1);
     Assert.That(out1, Does.Contain("written"));
     var markdown = File.ReadAllText(this.At("docs/out.md"));
     Assert.That(markdown, Does.Contain("# Cross-Backend Translation Showcase"));
-    Assert.That(markdown, Does.Contain("Add & Multiply"));
+    Assert.That(markdown, Does.Contain("## Dialect support by backend"));
+    Assert.That(markdown, Does.Contain("⚠️ 1/2"));
     Assert.That(markdown, Does.Contain("<strong>MSIL</strong>"));
     Assert.That(markdown, Does.Contain("<strong>JVM</strong>"));
-    Assert.That(markdown, Does.Contain("Frontend refusal (all backends)"));
+    Assert.That(markdown, Does.Contain("Refused dialects:"));
+    Assert.That(markdown, Does.Contain("Frontend refusal (all backends & dialects)"));
     Assert.That(markdown, Does.Contain("Refused by:"));
 
     // Second run reports unchanged
-    var (exit2, out2, _) = this.RunCommand(runner, "--examples", "examples", "--out", "docs/out.md", "--polypiler", marker, "--targets", "csharp,rust,msil,jvm,batch");
+    var (exit2, out2, _) = this.RunCommand(runner, "--examples", "examples", "--out", "docs/out.md", "--polypiler", marker,
+      "--targets", "csharp:net2.0,csharp:net10.0,javascript:es5,javascript:es2022,rust:rust2018,rust:rust2024,msil,jvm:jvm/21,batch");
     Assert.That(exit2, Is.Zero);
     Assert.That(out2, Does.Contain("unchanged"));
 
     // --check passes on both LF and CRLF
-    var (exit3, out3, _) = this.RunCommand(runner, "--examples", "examples", "--out", "docs/out.md", "--polypiler", marker, "--targets", "csharp,rust,msil,jvm,batch", "--check");
+    var (exit3, out3, _) = this.RunCommand(runner, "--examples", "examples", "--out", "docs/out.md", "--polypiler", marker,
+      "--targets", "csharp:net2.0,csharp:net10.0,javascript:es5,javascript:es2022,rust:rust2018,rust:rust2024,msil,jvm:jvm/21,batch", "--check");
     Assert.That(exit3, Is.Zero);
     Assert.That(out3, Does.Contain("up to date"));
 
     File.WriteAllText(this.At("docs/out.md"), markdown.Replace("\n", "\r\n", StringComparison.Ordinal));
-    var (exitCrlf, _, _) = this.RunCommand(runner, "--examples", "examples", "--out", "docs/out.md", "--polypiler", marker, "--targets", "csharp,rust,msil,jvm,batch", "--check");
+    var (exitCrlf, _, _) = this.RunCommand(runner, "--examples", "examples", "--out", "docs/out.md", "--polypiler", marker,
+      "--targets", "csharp:net2.0,csharp:net10.0,javascript:es5,javascript:es2022,rust:rust2018,rust:rust2024,msil,jvm:jvm/21,batch", "--check");
     Assert.That(exitCrlf, Is.Zero);
 
     // --check fails with PLY0091 when file differs or is missing
     File.WriteAllText(this.At("docs/out.md"), "stale");
-    var (exitDiff, _, errDiff) = this.RunCommand(runner, "--examples", "examples", "--out", "docs/out.md", "--polypiler", marker, "--targets", "csharp", "--check");
+    var (exitDiff, _, errDiff) = this.RunCommand(runner, "--examples", "examples", "--out", "docs/out.md", "--polypiler", marker, "--targets", "csharp:net10.0", "--check");
     Assert.That(exitDiff, Is.EqualTo(Polypiler.Tooling.Program.Failure));
     Assert.That(errDiff, Does.Contain("PLY0091").And.Contain("differs"));
 
-    var (exitMiss, _, errMiss) = this.RunCommand(runner, "--examples", "examples", "--out", "docs/missing.md", "--polypiler", marker, "--targets", "csharp", "--check");
+    var (exitMiss, _, errMiss) = this.RunCommand(runner, "--examples", "examples", "--out", "docs/missing.md", "--polypiler", marker, "--targets", "csharp:net10.0", "--check");
     Assert.That(exitMiss, Is.EqualTo(Polypiler.Tooling.Program.Failure));
     Assert.That(errMiss, Does.Contain("PLY0091").And.Contain("is missing"));
 
@@ -293,7 +324,7 @@ public sealed class ShowcaseTests {
 
     // Default candidate probing inside currentDirectory (Polypiler.Cli/bin/Release/net10.0/polypiler.dll)
     this.CreateFakePolypilerMarker("Polypiler.Cli/bin/Release/net10.0/polypiler.dll");
-    var (exitDefault, _, errDefault) = this.RunCommand(runner, "--examples", "examples", "--out", "docs/default.md", "--targets", "csharp");
+    var (exitDefault, _, errDefault) = this.RunCommand(runner, "--examples", "examples", "--out", "docs/default.md", "--targets", "csharp:net10.0");
     Assert.That(exitDefault, Is.Zero, errDefault);
   }
 
@@ -364,6 +395,7 @@ public sealed class ShowcaseTests {
     Assert.That(this.RunCommand(runner, "--check", "--check").ExitCode, Is.EqualTo(Polypiler.Tooling.Program.UsageError));
     Assert.That(this.RunCommand(runner, "--out", "a.md", "--out", "b.md").ExitCode, Is.EqualTo(Polypiler.Tooling.Program.UsageError));
     Assert.That(this.RunCommand(runner, "--examples", "examples", "--polypiler", marker, "--targets", " , ").ExitCode, Is.EqualTo(Polypiler.Tooling.Program.UsageError));
+    Assert.That(this.RunCommand(runner, "--examples", "examples", "--polypiler", marker, "--targets", "unknown-backend").ExitCode, Is.EqualTo(Polypiler.Tooling.Program.UsageError));
     Assert.That(this.RunCommand(runner, "--examples", "does-not-exist", "--polypiler", marker).ExitCode, Is.EqualTo(Polypiler.Tooling.Program.Failure));
     Assert.That(this.RunCommand(runner, "--examples", "examples", "--polypiler", "missing-exe").ExitCode, Is.EqualTo(Polypiler.Tooling.Program.Failure));
     Assert.That(this.RunCommand(runner, "--examples", "examples").ExitCode, Is.EqualTo(Polypiler.Tooling.Program.Failure));
@@ -372,26 +404,41 @@ public sealed class ShowcaseTests {
     var failDiscovery = new FakeRunner(_ => new(1, "", "help failed", false));
     Assert.That(this.RunCommand(failDiscovery, "--examples", "examples", "--polypiler", marker).ExitCode, Is.EqualTo(Polypiler.Tooling.Program.Failure));
 
-    // Timeout, empty stderr, non-PLY stderr, and missing-manifest outputs during translation
-    var timeoutAndPlainError = new FakeRunner(argv => {
-      if (argv.Contains("--help"))
-        return new(0, "--to <custom|other|empty|nomanifest>", "", false);
-      if (argv.Contains("custom"))
-        return new(-1, "", "", true);
-      if (argv.Contains("other"))
-        return new(1, "", "plain error without code", false);
-      if (argv.Contains("empty"))
-        return new(1, "", "", false);
-      var outIdx = argv.ToList().IndexOf("--output") + 1;
-      Directory.CreateDirectory(argv[outIdx]);
-      File.WriteAllText(Path.Combine(argv[outIdx], "polypiler.manifest.json"), "{}");
-      File.WriteAllText(Path.Combine(argv[outIdx], "out.txt"), "ok");
-      return new(0, "", "", false);
+    // Failing batch execution
+    var failBatch = new FakeRunner(argv => argv.Contains("--run-batch")
+      ? new(1, "", "batch failed", false)
+      : new(0, "[{\"backend\":\"custom\",\"profiles\":[\"v1\"]}]", "", false));
+    Assert.That(this.RunCommand(failBatch, "--examples", "examples", "--polypiler", marker).ExitCode, Is.EqualTo(Polypiler.Tooling.Program.Failure));
+
+    // Non-PLY stderr, empty stderr, and missing-manifest outputs during batch translation
+    var syntheticBatch = new FakeRunner(argv => {
+      if (!argv.Contains("--run-batch"))
+        return new(0, "[{\"backend\":\"custom\",\"profiles\":[\"v1\",\"v2\"]},{\"backend\":\"nomanifest\",\"profiles\":[\"d1\"]}]", "", false);
+      var batchPath = argv[argv.ToList().IndexOf("--run-batch") + 1];
+      var jobs = System.Text.Json.JsonDocument.Parse(File.ReadAllText(batchPath)).RootElement;
+      var results = new List<object>();
+      foreach (var job in jobs.EnumerateArray()) {
+        var id = job.GetProperty("id").GetString()!;
+        var jobArgs = job.GetProperty("args").EnumerateArray().Select(e => e.GetString()!).ToList();
+        var profile = jobArgs[jobArgs.IndexOf("--profile") + 1];
+        var outDir = jobArgs[jobArgs.IndexOf("--output") + 1];
+        if (profile == "v1") {
+          results.Add(new { id, exitCode = 1, stderr = "plain error without code" });
+        } else if (profile == "v2") {
+          results.Add(new { id, exitCode = 1, stderr = "" });
+        } else {
+          Directory.CreateDirectory(outDir);
+          File.WriteAllText(Path.Combine(outDir, "polypiler.manifest.json"), "{}");
+          File.WriteAllText(Path.Combine(outDir, "out.txt"), "ok");
+          results.Add(new { id, exitCode = 0, stderr = "" });
+        }
+      }
+      return new(0, System.Text.Json.JsonSerializer.Serialize(results), "", false);
     });
-    var (exitFake, _, errFake) = this.RunCommand(timeoutAndPlainError, "--examples", "examples", "--out", "docs/fake.md", "--polypiler", marker);
+    var (exitFake, _, errFake) = this.RunCommand(syntheticBatch, "--examples", "examples", "--out", "docs/fake.md", "--polypiler", marker);
     Assert.That(exitFake, Is.Zero, errFake);
     var fakeMd = File.ReadAllText(this.At("docs/fake.md"));
-    Assert.That(fakeMd, Does.Contain("TIMEOUT").And.Contain("plain error without code").And.Contain("translation failed"));
+    Assert.That(fakeMd, Does.Contain("plain error without code").And.Contain("translation failed"));
 
     // Unwritable output path (target path is an existing directory)
     Directory.CreateDirectory(this.At("dir-as-file"));

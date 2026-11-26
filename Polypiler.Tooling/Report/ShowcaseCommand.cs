@@ -10,8 +10,9 @@ using Polypiler.Tooling.Toolchains;
 namespace Polypiler.Tooling.Report;
 
 /// <summary>
-/// <c>polypiler-tooling report showcase</c>: generates or checks the cross-backend C# translation
-/// showcase document by invoking the latest <c>polypiler</c> binary across all discovered backends.
+/// <c>polypiler-tooling report showcase</c>: generates or checks the cross-backend, dialect-grouped
+/// C# translation showcase document by invoking the latest <c>polypiler</c> binary across all
+/// discovered backends and dialect profiles.
 /// </summary>
 public static class ShowcaseCommand {
 
@@ -66,25 +67,66 @@ public static class ShowcaseCommand {
     if (polypiler is null)
       return Fail(error, Diagnostic.Create(ToolchainDiagnostic.UnreadableDescriptor, null, "could not locate the built polypiler executable; build Polypiler.Cli or pass --polypiler <path>"));
 
-    IReadOnlyList<string> backends;
+    IReadOnlyList<ShowcaseTarget> discovered;
     try {
-      backends = values.TryGetValue("--targets", out var targetList)
-        ? [.. targetList.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)]
-        : ShowcaseGenerator.DiscoverBackends(runner, polypiler);
+      discovered = ShowcaseGenerator.DiscoverTargets(runner, polypiler);
     } catch (Exception exception) {
       return Fail(error, Diagnostic.Create(ToolchainDiagnostic.UnreadableDescriptor, null, exception.Message));
     }
 
-    if (backends.Count == 0)
-      return Usage(error, "option '--targets' must name at least one backend");
+    IReadOnlyList<ShowcaseTarget> targets;
+    if (values.TryGetValue("--targets", out var targetList)) {
+      var filter = targetList.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+      if (filter.Length == 0)
+        return Usage(error, "option '--targets' must name at least one backend");
+      targets = FilterTargets(discovered, filter);
+      if (targets.Count == 0)
+        return Usage(error, $"option '--targets' matched no discovered backend in '{targetList}'");
+    } else {
+      targets = discovered;
+    }
 
     var examples = ShowcaseGenerator.LoadExamples(examplesPath);
     var relativeExamples = Path.GetRelativePath(Path.GetDirectoryName(outPath)!, examplesPath).Replace('\\', '/');
-    var markdown = ShowcaseGenerator.Generate(runner, polypiler, examples, backends, relativeExamples);
+    string markdown;
+    try {
+      markdown = ShowcaseGenerator.Generate(runner, polypiler, examples, targets, relativeExamples);
+    } catch (Exception exception) {
+      return Fail(error, Diagnostic.Create(ToolchainDiagnostic.UnreadableDescriptor, null, exception.Message));
+    }
 
     return check
       ? Check(outOption, outPath, markdown, output, error)
       : Write(outOption, outPath, markdown, output, error);
+  }
+
+  private static IReadOnlyList<ShowcaseTarget> FilterTargets(IReadOnlyList<ShowcaseTarget> discovered, IReadOnlyList<string> filter) {
+    var byBackend = discovered.ToDictionary(t => t.Backend, StringComparer.Ordinal);
+    var grouped = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+    var order = new List<string>();
+    foreach (var entry in filter) {
+      var colon = entry.IndexOf(':');
+      var backend = colon < 0 ? entry : entry[..colon];
+      var profile = colon < 0 ? null : entry[(colon + 1)..];
+      if (!byBackend.TryGetValue(backend, out var full))
+        continue;
+
+      if (!grouped.TryGetValue(backend, out var profiles)) {
+        profiles = [];
+        grouped[backend] = profiles;
+        order.Add(backend);
+      }
+
+      if (profile is null) {
+        foreach (var p in full.Profiles)
+          if (!profiles.Contains(p))
+            profiles.Add(p);
+      } else if (full.Profiles.Contains(profile) && !profiles.Contains(profile)) {
+        profiles.Add(profile);
+      }
+    }
+
+    return [.. order.Where(b => grouped[b].Count > 0).Select(b => new ShowcaseTarget(b, grouped[b]))];
   }
 
   private static IReadOnlyList<string>? ResolvePolypiler(string currentDirectory, string? explicitPath) {
