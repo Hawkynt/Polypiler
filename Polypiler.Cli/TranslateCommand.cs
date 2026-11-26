@@ -15,6 +15,7 @@ using Polypiler.Core.Backends.Msil;
 using Polypiler.Core.Backends.Perl;
 using Polypiler.Core.Backends.Python;
 using Polypiler.Core.Backends.Rust;
+using Polypiler.Core.Backends.VBScript;
 using Polypiler.Core.Frontends.Batch;
 using Polypiler.Core.Frontends.Cpp;
 using Polypiler.Core.Frontends.CSharp;
@@ -25,6 +26,7 @@ using Polypiler.Core.Frontends.Perl;
 using Polypiler.Core.Frontends.Python;
 using Polypiler.Core.Frontends.Rust;
 using Polypiler.Core.Frontends.Rust.Cargo;
+using Polypiler.Core.Frontends.VBScript;
 using Polypiler.Core.IR;
 using Polypiler.Core.Backends.CSharp.Passes;
 using Polypiler.Core.Backends.JavaScript.Passes;
@@ -103,6 +105,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   private const string ObjectModelOption = "--object-model";
   private const string OutputTypeOption = "--output-type";
   private const string PackageFormatOption = "--package-format";
+  private const string VBScriptContractOption = "--vbscript-contract";
 
   /// <summary>The caveat that records the overflow mode of a Rust import and where it came from.</summary>
   public const string RustOverflowCaveat = "rs-overflow-checks";
@@ -123,7 +126,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     [Export] = "JavaScript, MSIL and JVM: the functions or methods to translate",
     [ExplainTypes] = "JavaScript: write why every value has its type to standard output",
     [BatchDialectOption] = "Batch source: cmd.exe (the default) or MS-DOS 6.22 COMMAND.COM",
-    [Profile] = "the target profile: a target framework of C#, a language level of JavaScript, a version of Python, an edition of Rust, a Perl version, a C++ standard, an MSIL framework or a JVM classfile version",
+    [Profile] = "the target profile: a target framework of C#, a language level of JavaScript, a version of Python, an edition of Rust, a Perl version, a C++ standard, a VBScript version, an MSIL framework or a JVM classfile version",
     [Module] = "JavaScript: how the file is packaged",
     [Global] = "JavaScript: the global object a script declares",
     [TypedArrays] = "JavaScript: an ECMAScript 5 engine with typed arrays",
@@ -142,7 +145,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     [ByteStorageOption] = "Perl: how u8[] byte buffers are stored (array or string)",
     [ObjectModelOption] = "Perl: object representation for classes and interfaces (blessed, moose or inside-out)",
     [OutputTypeOption] = "MSIL: whether to emit a class library (library) or a runnable console executable (exe)",
-    [PackageFormatOption] = "JVM: whether to emit a JAR archive (jar) or standalone class files (class)"
+    [PackageFormatOption] = "JVM: whether to emit a JAR archive (jar) or standalone class files (class)",
+    [VBScriptContractOption] = "VBScript: file or inline contract line specifying parameter, return or field types"
   };
 
   private readonly Backend[] _backendsOfThis;
@@ -172,7 +176,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     new("batch", [new(BatchDialectOption, "<cmd|dos622>")], BatchDialectMisuse, ImportBatch),
     new("msil", [new(Export, "<name>[,<name>...]")], ExportMisuse, null, ImportMsil),
     new("jvm", [new(Export, "<name>[,<name>...]")], ExportMisuse, null, ImportJvm),
-    new("cpp", [], _ => null, ImportCpp)
+    new("cpp", [], _ => null, ImportCpp),
+    new("vbscript", [new(VBScriptContractOption, "<file-or-line>")], _ => null, ImportVBScript)
   ];
 
   /// <summary>The target languages; another one is another entry.</summary>
@@ -185,7 +190,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     Batch(),
     Msil(Implementations),
     Jvm(Implementations),
-    Cpp(Implementations)
+    Cpp(Implementations),
+    VBScript(Implementations)
   ];
 
   /// <summary>
@@ -216,7 +222,7 @@ public sealed partial class TranslateCommand : ICliCommand {
       return new Option<bool>(option.Name) { Description = description };
 
     var helpName = option.Value[1..option.Value.IndexOf('>')];
-    return option.Name is DisableOpt or Export or Instantiate or Bind or PerlContractOption
+    return option.Name is DisableOpt or Export or Instantiate or Bind or PerlContractOption or VBScriptContractOption
       ? new Option<string[]>(option.Name) { Description = description, HelpName = helpName }
       : new Option<string>(option.Name) { Description = description, HelpName = helpName, Required = _required.Contains(option.Name) };
   }
@@ -236,7 +242,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// <param name="capabilities">The table the JavaScript backend chooses its constructs from.</param>
   /// <returns>The process exit code.</returns>
   public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, JavaScriptCapabilities capabilities)
-    => Run(arguments, output, error, [JavaScript(capabilities, Implementations), CSharp(CSharpCapabilities.Default, Implementations), Python(PythonCapabilities.Standard, Implementations), Rust(RustCapabilities.Default, Implementations), Perl(Implementations), Batch(), Msil(Implementations), Jvm(Implementations), Cpp(Implementations)]);
+    => Run(arguments, output, error, [JavaScript(capabilities, Implementations), CSharp(CSharpCapabilities.Default, Implementations), Python(PythonCapabilities.Standard, Implementations), Rust(RustCapabilities.Default, Implementations), Perl(Implementations), Batch(), Msil(Implementations), Jvm(Implementations), Cpp(Implementations), VBScript(Implementations)]);
 
   /// <summary>Runs the command with portable floating-point implementations of the caller's in place of the precomputed ones.</summary>
   /// <param name="arguments">The arguments after the word <c>translate</c>.</param>
@@ -248,7 +254,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// </param>
   /// <returns>The process exit code.</returns>
   public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Func<IrModule> implementations)
-    => Run(arguments, output, error, [JavaScript(JavaScriptCapabilities.Standard, implementations), CSharp(CSharpCapabilities.Default, implementations), Python(PythonCapabilities.Standard, implementations), Rust(RustCapabilities.Default, implementations), Perl(implementations), Batch(), Msil(implementations), Jvm(implementations), Cpp(implementations)]);
+    => Run(arguments, output, error, [JavaScript(JavaScriptCapabilities.Standard, implementations), CSharp(CSharpCapabilities.Default, implementations), Python(PythonCapabilities.Standard, implementations), Rust(RustCapabilities.Default, implementations), Perl(implementations), Batch(), Msil(implementations), Jvm(implementations), Cpp(implementations), VBScript(implementations)]);
 
   /// <summary>Runs <c>polypiler translate</c> with the arguments, the command made with the given backends.</summary>
   private static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Backend[] backends) {
@@ -269,7 +275,7 @@ public sealed partial class TranslateCommand : ICliCommand {
       if (parse.GetResult(option) is { Implicit: false })
         options[option.Name] = option switch {
           Option<bool> => "",
-          Option<string[]> list => string.Join(option.Name == PerlContractOption ? '\n' : ',', parse.GetValue(list)!),
+          Option<string[]> list => string.Join(option.Name is PerlContractOption or VBScriptContractOption ? '\n' : ',', parse.GetValue(list)!),
           _ => parse.GetValue((Option<string>)option)!
         };
 
@@ -614,6 +620,31 @@ public sealed partial class TranslateCommand : ICliCommand {
     return (imported.Module, failure, []);
   }
 
+  private static (IrModule? Module, int ExitCode, IReadOnlyList<ManifestMessage> Caveats) ImportVBScript(
+    string file, string source, IReadOnlyDictionary<string, string> options, CliContext context) {
+    var contractLines = new StringBuilder();
+    if (options.TryGetValue(VBScriptContractOption, out var rawContracts)) {
+      foreach (var item in rawContracts.Split('\n', StringSplitOptions.RemoveEmptyEntries)) {
+        var resolved = context.Resolve(item);
+        if (File.Exists(resolved)) {
+          contractLines.AppendLine(File.ReadAllText(resolved));
+        } else if (item.Contains(':')) {
+          contractLines.AppendLine(item);
+        } else {
+          if (!CliPaths.RequireInput(item, context))
+            return (null, (int)ExitCode.EnvironmentError, []);
+        }
+      }
+    }
+
+    var imported = VBScriptFrontend.Import(file, source, contractLines.Length > 0 ? new VBScriptImportOptions { Contracts = contractLines.ToString() } : null);
+    foreach (var diagnostic in imported.Diagnostics)
+      context.Report(diagnostic);
+
+    var failure = imported.Diagnostics.Any(diagnostic => diagnostic.ExitCode == ExitCode.InvalidSource) ? InvalidSource : UnsupportedConstruct;
+    return (imported.Module, failure, []);
+  }
+
   /// <summary>The text of a file a JavaScript module requires, or <see langword="null"/> when there is none.</summary>
   private static string? Required(string file) => File.Exists(file) ? File.ReadAllText(file) : null;
 
@@ -795,6 +826,22 @@ public sealed partial class TranslateCommand : ICliCommand {
 
   private static (CppProfile? Profile, string? Error) CppProfileOf(IReadOnlyDictionary<string, string> options) {
     CppProfile.TryParse(options.GetValueOrDefault(Profile), out var profile, out var error);
+    return (profile, error);
+  }
+
+  /// <summary>The VBScript 5.8 backend; <c>--profile</c> selects <c>vbscript/5.8</c>.</summary>
+  private static Backend VBScript(Func<IrModule> implementations) => new("vbscript",
+    VBScriptEmitter.Runtime,
+    options => VBScriptProfileOf(options).Profile!.ToString(),
+    RuleTarget.Neutral,
+    [new(Profile, Choice(VBScriptProfile.Names)), new(Float, FloatChoice)],
+    options => FloatMisuse(options) ?? VBScriptProfileOf(options).Error,
+    (module, options) => VBScriptEmitter.Legalize(module, implementations, VBScriptProfileOf(options).Profile!, FloatModeOf(options)),
+    (module, options) => VBScriptEmitter.Check(module, VBScriptProfileOf(options).Profile!),
+    (module, options, _, _) => VBScriptEmitter.EmitTarget(module, VBScriptProfileOf(options).Profile!));
+
+  private static (VBScriptProfile? Profile, string? Error) VBScriptProfileOf(IReadOnlyDictionary<string, string> options) {
+    VBScriptProfile.TryParse(options.GetValueOrDefault(Profile), out var profile, out var error);
     return (profile, error);
   }
 

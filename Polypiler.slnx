@@ -14,6 +14,7 @@
   <Project Path="Polypiler.Core.Backends.Perl/Polypiler.Core.Backends.Perl.csproj" />
   <Project Path="Polypiler.Core.Backends.Python/Polypiler.Core.Backends.Python.csproj" />
   <Project Path="Polypiler.Core.Backends.Rust/Polypiler.Core.Backends.Rust.csproj" />
+  <Project Path="Polypiler.Core.Backends.VBScript/Polypiler.Core.Backends.VBScript.csproj" />
   <Project Path="Polypiler.Core.BinaryFormats/Polypiler.Core.BinaryFormats.csproj" />
   <Project Path="Polypiler.Core.Frontends.Batch/Polypiler.Core.Frontends.Batch.csproj" />
   <Project Path="Polypiler.Core.Frontends.Cpp/Polypiler.Core.Frontends.Cpp.csproj" />
@@ -24,6 +25,7 @@
   <Project Path="Polypiler.Core.Frontends.Perl/Polypiler.Core.Frontends.Perl.csproj" />
   <Project Path="Polypiler.Core.Frontends.Python/Polypiler.Core.Frontends.Python.csproj" />
   <Project Path="Polypiler.Core.Frontends.Rust/Polypiler.Core.Frontends.Rust.csproj" />
+  <Project Path="Polypiler.Core.Frontends.VBScript/Polypiler.Core.Frontends.VBScript.csproj" />
   <Project Path="Polypiler.Core.IR/Polypiler.Core.IR.csproj" />
   <Project Path="Polypiler.Core.Legalize/Polypiler.Core.Legalize.csproj" />
   <Project Path="Polypiler.Core.MachineSemantics/Polypiler.Core.MachineSemantics.csproj" />

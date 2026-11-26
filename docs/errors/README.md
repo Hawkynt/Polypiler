@@ -279,6 +279,19 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY1858](PLY1858.md) | error | 3 (UnsupportedConstruct) | `control construct '<construct>' has no Python form (function '<function>')` | BE-PY-CONTROL |
 | [PLY1874](PLY1874.md) | error | 3 (UnsupportedConstruct) | `exports '<a>' and '<b>' both map to the Python name '<name>'; or: export '<a>' has no valid Python name` | BE-PY-FUNCTIONS |
 
+## PLY2600–PLY2699 · visualbasic
+
+| Code | Severity | Exit code | Message | Owner |
+| --- | --- | --- | --- | --- |
+| [PLY2600](PLY2600.md) | error | 4 (InvalidSource) | `VBScript syntax error: <detail>` | #1133 |
+| [PLY2601](PLY2601.md) | error | 3 (UnsupportedConstruct) | `VBScript construct '<construct>' is not supported` | #1133 |
+| [PLY2602](PLY2602.md) | error | 3 (UnsupportedConstruct) | `VBScript call '<call>' is not supported` | #1133 |
+| [PLY2603](PLY2603.md) | error | 4 (InvalidSource) | `unresolved VBScript symbol '<symbol>'` | #1133 |
+| [PLY2604](PLY2604.md) | error | 4 (InvalidSource) | `invalid VBScript contract: <detail>` | #1133 |
+| [PLY2650](PLY2650.md) | error | 3 (UnsupportedConstruct) | `construct '<construct>' cannot be emitted as VBScript` | #1133 |
+| [PLY2651](PLY2651.md) | error | 3 (UnsupportedConstruct) | `type '<type>' has no VBScript representation in profile '<profile>'` | #1133 |
+| [PLY2652](PLY2652.md) | error | 3 (UnsupportedConstruct) | `intrinsic '<intrinsic>' cannot be emitted as VBScript` | #1133 |
+
 ## PLY2800–PLY2899 · batch
 
 | Code | Severity | Exit code | Message | Owner |
