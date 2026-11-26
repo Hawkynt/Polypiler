@@ -249,8 +249,14 @@ public static partial class PerlEmitter {
     private string EmitLambda(IrLambda lambda) {
       var savedTry = new Stack<TryFrame>(this._tryFrames.Reverse());
       var savedLoops = new Stack<LoopFrame>(this._loops.Reverse());
+      var savedIterator = this._isIterator;
+      var savedAsync = this._asyncResultVar;
+      var savedSeqRet = this._seqReturnFrame;
       this._tryFrames.Clear();
       this._loops.Clear();
+      this._isIterator = false;
+      this._asyncResultVar = null;
+      this._seqReturnFrame = null;
 
       var text = new StringBuilder();
       text.Append("sub {\n");
@@ -263,6 +269,9 @@ public static partial class PerlEmitter {
 
       foreach (var frame in savedTry) this._tryFrames.Push(frame);
       foreach (var loop in savedLoops) this._loops.Push(loop);
+      this._isIterator = savedIterator;
+      this._asyncResultVar = savedAsync;
+      this._seqReturnFrame = savedSeqRet;
       return text.ToString();
     }
 
@@ -282,7 +291,7 @@ public static partial class PerlEmitter {
       var brkFlag = this._loops.Count > 0 ? this.Temp("_brk") : null;
       var cntFlag = this._loops.Count > 0 ? this.Temp("_cnt") : null;
 
-      var usesRet = ContainsReturn(@try.Body) || @try.Catches.Any(c => ContainsReturn(c.Body));
+      var usesRet = ContainsReturnOrYieldExit(@try.Body) || @try.Catches.Any(c => ContainsReturnOrYieldExit(c.Body));
       var usesBrk = brkFlag is not null && (ContainsDirectLoopJump(@try.Body, true) || @try.Catches.Any(c => ContainsDirectLoopJump(c.Body, true)));
       var usesCnt = cntFlag is not null && (ContainsDirectLoopJump(@try.Body, false) || @try.Catches.Any(c => ContainsDirectLoopJump(c.Body, false)));
 
@@ -345,29 +354,31 @@ public static partial class PerlEmitter {
         text.Append(pad).Append("die ").Append(errVar).Append(" unless ").Append(okVar).Append(";\n");
 
       if (usesRet) {
-        if (this._tryFrames.Count > 0) {
-          var outer = this._tryFrames.Peek();
-          text.Append(pad).Append("if (").Append(retFlag).Append(") { ")
-            .Append(outer.ReturnValue).Append(" = ").Append(retVal).Append("; ")
-            .Append(outer.ReturnFlag).Append(" = 1; return 1; }\n");
-        } else {
-          var retStmt = this._currentFunction?.ReturnType == IrType.Void ? "return;" : $"return {retVal};";
-          text.Append(pad).Append("if (").Append(retFlag).Append(") { ").Append(retStmt).Append(" }\n");
-        }
+        var resultType = this._currentFunction?.ReturnType is { IsAsync: true } asyncType ? asyncType.Element! : this._currentFunction?.ReturnType;
+        var replayVal = this._isIterator || resultType == IrType.Void ? null : retVal;
+        text.Append(pad).Append("if (").Append(retFlag).Append(") {\n");
+        this.EmitOuterReturn(replayVal, text, indent + 1);
+        text.Append(pad).Append("}\n");
       }
       if (usesBrk) {
         var loop = this._loops.Peek();
-        text.Append(pad).Append("last ").Append(loop.Label).Append(" if ").Append(brkFlag).Append(";\n");
+        var jump = this._tryFrames.Count > loop.TryDepth
+          ? $"{this._tryFrames.Peek().BreakFlag} = 1; return 1;"
+          : loop.IsSequence ? "return 0;" : $"last {loop.Label};";
+        text.Append(pad).Append("if (").Append(brkFlag).Append(") { ").Append(jump).Append(" }\n");
       }
       if (usesCnt) {
         var loop = this._loops.Peek();
-        var jump = loop.ContinueLabel is not null ? $"last {loop.ContinueLabel}" : $"next {loop.Label}";
-        text.Append(pad).Append(jump).Append(" if ").Append(cntFlag).Append(";\n");
+        var jump = this._tryFrames.Count > loop.TryDepth
+          ? $"{this._tryFrames.Peek().ContinueFlag} = 1; return 1;"
+          : loop.IsSequence ? "return 1;"
+          : loop.ContinueLabel is not null ? $"last {loop.ContinueLabel};" : $"next {loop.Label};";
+        text.Append(pad).Append("if (").Append(cntFlag).Append(") { ").Append(jump).Append(" }\n");
       }
     }
 
-    private static bool ContainsReturn(IrBlock block)
-      => AllStatements(block).Any(s => s is IrReturn);
+    private static bool ContainsReturnOrYieldExit(IrBlock block)
+      => AllStatements(block).Any(s => s is IrReturn or IrYield or IrYieldBreak or IrYieldFrom);
 
   }
 

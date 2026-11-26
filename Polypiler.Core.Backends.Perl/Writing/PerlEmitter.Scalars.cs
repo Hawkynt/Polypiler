@@ -56,8 +56,24 @@ public static partial class PerlEmitter {
         IrAsCast asCast => this.EmitAsCast(asCast),
         IrGenericEquals genEq => this.EmitGenericEquals(genEq),
         IrGenericCompare genCmp => this.EmitGenericCompare(genCmp),
+        IrAwait awaited => $"{this.HelperCall(PerlHelpers.TaskAwait)}({this.EmitExpr(awaited.Operand)})",
+        IrAsync asyncExpr => this.EmitAsyncExpr(asyncExpr),
+        IrArraySequence arraySeq => this.EmitArraySequence(arraySeq),
         _ => this.UnsupportedOp(expression.GetType().Name)
       };
+    }
+
+    private string EmitAsyncExpr(IrAsync asyncExpr) => asyncExpr.Op switch {
+      IrAsyncOp.Completed => "{ done => 1, value => undef }",
+      IrAsyncOp.FromResult => $"{this.HelperCall(PerlHelpers.TaskFromResult)}({this.CopyIfStruct(asyncExpr.Arguments[0].Type, this.EmitExpr(asyncExpr.Arguments[0]))})",
+      _ => $"{this.HelperCall(PerlHelpers.TaskWhenAll)}({(asyncExpr.Type.Element == IrType.Void ? "1" : "0")}{(asyncExpr.Arguments.Count > 0 ? ", " + string.Join(", ", asyncExpr.Arguments.Select(this.EmitExpr)) : "")})"
+    };
+
+    private string EmitArraySequence(IrArraySequence arraySeq) {
+      var arr = this.EmitExpr(arraySeq.Array);
+      if (arraySeq.Array.Type.Element == IrType.U8 && this._profile.ByteStorage == PerlByteStorage.String)
+        return $"do {{ my $_a = {arr}; sub {{ my ($_yield) = @_; for my $_i (0 .. length($$_a) - 1) {{ return unless $_yield->(ord(substr($$_a, $_i, 1))); }} }} }}";
+      return $"do {{ my $_a = {arr}; sub {{ my ($_yield) = @_; for my $_el (@$_a) {{ return unless $_yield->($_el); }} }} }}";
     }
 
     private string EmitCoalesce(IrCoalesce coalesce) {

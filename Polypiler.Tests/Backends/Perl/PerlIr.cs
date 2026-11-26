@@ -69,6 +69,10 @@ internal static class PerlIr {
           AddLocal(loop.Value);
           Collect(loop.Body);
           break;
+        case IrForEachSequence loop:
+          AddLocal(loop.Element);
+          Collect(loop.Body);
+          break;
         case IrSwitch selection:
           foreach (var section in selection.Sections)
             Collect(section.Body);
