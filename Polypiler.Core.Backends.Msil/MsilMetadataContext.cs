@@ -15,21 +15,17 @@ internal sealed class MsilMetadataContext {
 
   private static readonly byte[] _systemRuntimePublicKeyToken = [0xb0, 0x3f, 0x5f, 0x7f, 0x11, 0xd5, 0x0a, 0x3a];
 
-  private readonly Dictionary<(string Namespace, string Name), TypeReferenceHandle> _typeRefs = new();
+  private readonly Dictionary<string, AssemblyReferenceHandle> _assemblyRefs = new(StringComparer.Ordinal);
+  private readonly Dictionary<(string Assembly, string Namespace, string Name), TypeReferenceHandle> _typeRefs = new();
   private readonly Dictionary<string, MemberReferenceHandle> _memberRefs = new(StringComparer.Ordinal);
+  private readonly Dictionary<string, ModuleReferenceHandle> _moduleRefs = new(StringComparer.Ordinal);
   private readonly Dictionary<IrType, TypeSpecificationHandle> _nullableSpecs = new();
   private readonly Dictionary<IrType, TypeSpecificationHandle> _arraySpecs = new();
 
   public MsilMetadataContext(MetadataBuilder metadata, MsilProfile profile) {
     this.Metadata = metadata;
     this.Profile = profile;
-    this.SystemRuntime = metadata.AddAssemblyReference(
-      name: metadata.GetOrAddString("System.Runtime"),
-      version: profile.RuntimeVersion,
-      culture: default,
-      publicKeyOrToken: metadata.GetOrAddBlob(_systemRuntimePublicKeyToken),
-      flags: 0,
-      hashValue: default);
+    this.SystemRuntime = this.GetAssemblyRef("System.Runtime");
   }
 
   public MetadataBuilder Metadata { get; }
@@ -50,14 +46,48 @@ internal sealed class MsilMetadataContext {
 
   public Dictionary<string, IrFunction> FunctionsByName { get; } = new(StringComparer.Ordinal);
 
+  public Dictionary<string, MethodDefinitionHandle> ForeignHandles { get; } = new(StringComparer.Ordinal);
+
+  public Dictionary<string, IrForeignFunction> ForeignByName { get; } = new(StringComparer.Ordinal);
+
+  /// <summary>Gets or adds a cached <see cref="AssemblyReferenceHandle"/> for a .NET BCL assembly.</summary>
+  public AssemblyReferenceHandle GetAssemblyRef(string assemblyName) {
+    if (this._assemblyRefs.TryGetValue(assemblyName, out var handle))
+      return handle;
+
+    handle = this.Metadata.AddAssemblyReference(
+      name: this.Metadata.GetOrAddString(assemblyName),
+      version: this.Profile.RuntimeVersion,
+      culture: default,
+      publicKeyOrToken: this.Metadata.GetOrAddBlob(_systemRuntimePublicKeyToken),
+      flags: 0,
+      hashValue: default);
+    this._assemblyRefs[assemblyName] = handle;
+    return handle;
+  }
+
+  /// <summary>Gets or adds a cached <see cref="ModuleReferenceHandle"/> for a P/Invoke native library.</summary>
+  public ModuleReferenceHandle GetModuleRef(string library) {
+    if (this._moduleRefs.TryGetValue(library, out var handle))
+      return handle;
+
+    handle = this.Metadata.AddModuleReference(this.Metadata.GetOrAddString(library));
+    this._moduleRefs[library] = handle;
+    return handle;
+  }
+
   /// <summary>Gets or adds a <see cref="TypeReferenceHandle"/> in <c>System.Runtime</c>.</summary>
-  public TypeReferenceHandle GetBclType(string @namespace, string name) {
-    var key = (@namespace, name);
+  public TypeReferenceHandle GetBclType(string @namespace, string name)
+    => this.GetAssemblyType("System.Runtime", @namespace, name);
+
+  /// <summary>Gets or adds a <see cref="TypeReferenceHandle"/> in <paramref name="assemblyName"/>.</summary>
+  public TypeReferenceHandle GetAssemblyType(string assemblyName, string @namespace, string name) {
+    var key = (assemblyName, @namespace, name);
     if (this._typeRefs.TryGetValue(key, out var handle))
       return handle;
 
     handle = this.Metadata.AddTypeReference(
-      this.SystemRuntime,
+      this.GetAssemblyRef(assemblyName),
       this.Metadata.GetOrAddString(@namespace),
       this.Metadata.GetOrAddString(name));
     this._typeRefs[key] = handle;
@@ -208,6 +238,37 @@ internal sealed class MsilMetadataContext {
           this.EncodeType(p.AddParameter().Type(), param);
       });
     return this.Metadata.GetOrAddBlob(blob);
+  }
+
+  /// <summary>Encodes a P/Invoke method signature blob for <paramref name="foreign"/>.</summary>
+  public BlobHandle EncodeForeignMethodSignature(IrForeignFunction foreign) {
+    var blob = new BlobBuilder();
+    new BlobEncoder(blob).MethodSignature().Parameters(
+      foreign.Parameters.Count,
+      ret => {
+        if (foreign.ReturnType == IrType.Void)
+          ret.Void();
+        else
+          this.EncodeForeignType(ret.Type(), foreign.ReturnType, foreign.Result);
+      },
+      p => {
+        foreach (var param in foreign.Parameters) {
+          if (param.Marshal.Kind == IrMarshalKind.ByRef)
+            this.EncodeType(p.AddParameter().Type(isByRef: true), param.Type.Element!);
+          else
+            this.EncodeForeignType(p.AddParameter().Type(), param.Type, param.Marshal);
+        }
+      });
+    return this.Metadata.GetOrAddBlob(blob);
+  }
+
+  private void EncodeForeignType(SignatureTypeEncoder encoder, IrType type, IrMarshal marshal) {
+    if (marshal.Kind == IrMarshalKind.Handle || (marshal.NativeSize && type.IsSigned))
+      encoder.IntPtr();
+    else if (marshal.NativeSize)
+      encoder.UIntPtr();
+    else
+      this.EncodeType(encoder, type);
   }
 
   /// <summary>Encodes a local variables standalone signature handle, or <see langword="default"/> when empty.</summary>

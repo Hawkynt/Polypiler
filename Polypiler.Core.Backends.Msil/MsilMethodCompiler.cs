@@ -192,6 +192,15 @@ internal sealed class MsilMethodCompiler {
           this._il.OpCode(ILOpCode.Pop);
         break;
 
+      case IrWriteLine write:
+        this.EmitExpr(write.Value);
+        this._il.Call(this._ctx.GetMemberRef(
+          "stat:System.Console::WriteLine(string)",
+          this._ctx.GetAssemblyType("System.Console", "System", "Console"),
+          "WriteLine",
+          sig => sig.Parameters(1, r => r.Void(), p => p.AddParameter().Type().String())));
+        break;
+
       case IrIf conditional:
         this.EmitIf(conditional);
         break;
@@ -543,6 +552,20 @@ internal sealed class MsilMethodCompiler {
           this.EmitExpr(arg);
         this._il.Call(this._ctx.FunctionHandles[call.Function]);
         break;
+
+      case IrForeignCall foreignCall:
+        this.EmitForeignCall(foreignCall);
+        break;
+
+      case IrLastError lastError: {
+        var methodName = lastError.PInvoke ? "GetLastPInvokeError" : "GetLastWin32Error";
+        this._il.Call(this._ctx.GetMemberRef(
+          $"stat:System.Runtime.InteropServices.Marshal::{methodName}()",
+          this._ctx.GetAssemblyType("System.Runtime.InteropServices", "System.Runtime.InteropServices", "Marshal"),
+          methodName,
+          sig => sig.Parameters(0, r => r.Type().Int32(), _ => { })));
+        break;
+      }
 
       case IrStep step:
         this.EmitStep(step);
@@ -1379,7 +1402,62 @@ internal sealed class MsilMethodCompiler {
         this.EmitExpr(args[1]);
         this._il.Call(this._ctx.GetStaticMethodRef("System", "String", "Join", IrType.String, IrType.String, IrType.Array(IrType.String)));
         break;
+
+      case IrIntrinsicOp.FormatDotNet or IrIntrinsicOp.FormatEcma:
+        this.EmitFormatDotNet(args[0]);
+        break;
     }
+  }
+
+  private void EmitForeignCall(IrForeignCall call) {
+    var foreign = this._ctx.ForeignByName[call.Function];
+    for (var i = 0; i < call.Arguments.Count; i++) {
+      var arg = call.Arguments[i];
+      var marshal = foreign.Parameters[i].Marshal;
+      this.EmitExpr(arg);
+      if (marshal.Kind == IrMarshalKind.ByRef) {
+        this._il.LoadConstantI4(0);
+        this._il.OpCode(ILOpCode.Ldelema);
+        this._il.Token(this._ctx.GetTypeToken(arg.Type.Element!));
+      } else if (marshal.Kind == IrMarshalKind.Handle || marshal.NativeSize) {
+        this._il.OpCode(arg.Type.IsSigned ? ILOpCode.Conv_i : ILOpCode.Conv_u);
+      }
+    }
+
+    this._il.Call(this._ctx.ForeignHandles[call.Function]);
+    if (foreign.ReturnType != IrType.Void && (foreign.Result.Kind == IrMarshalKind.Handle || foreign.Result.NativeSize))
+      this._il.OpCode(foreign.ReturnType.IsSigned ? ILOpCode.Conv_i8 : ILOpCode.Conv_u8);
+  }
+
+  private void EmitFormatDotNet(IrExpr value) {
+    var type = value.Type.Integral;
+    var slot = this.AllocTemp(type);
+    this.EmitExpr(value);
+    this._il.StoreLocal(slot);
+    this._il.LoadLocalAddress(slot);
+    this._il.Call(this._ctx.GetMemberRef(
+      "stat:System.Globalization.CultureInfo::get_InvariantCulture()",
+      this._ctx.GetBclType("System.Globalization", "CultureInfo"),
+      "get_InvariantCulture",
+      sig => sig.Parameters(0, r => r.Type().Type(this._ctx.GetBclType("System.Globalization", "CultureInfo"), isValueType: false), _ => { })));
+    var bclName = type.Kind switch {
+      IrTypeKind.I8 => "SByte",
+      IrTypeKind.U8 => "Byte",
+      IrTypeKind.I16 => "Int16",
+      IrTypeKind.U16 => "UInt16",
+      IrTypeKind.I32 => "Int32",
+      IrTypeKind.U32 => "UInt32",
+      IrTypeKind.I64 => "Int64",
+      IrTypeKind.U64 => "UInt64",
+      IrTypeKind.F32 => "Single",
+      _ => "Double"
+    };
+    this._il.Call(this._ctx.GetMemberRef(
+      $"inst:System.{bclName}::ToString(IFormatProvider)",
+      this._ctx.GetBclType("System", bclName),
+      "ToString",
+      sig => sig.Parameters(1, r => r.Type().String(), p =>
+        p.AddParameter().Type().Type(this._ctx.GetBclType("System", "IFormatProvider"), isValueType: false))));
   }
 
   private void EmitArrayCopy(IReadOnlyList<IrExpr> args) {

@@ -20,8 +20,14 @@ internal static class MsilChecker {
       }
     }
 
-    if (module.ForeignFunctions.Count > 0)
-      problems.Add(Diagnostic.Create(MsilEmitter.UnsupportedConstruct, null, "foreign functions"));
+    foreach (var foreign in module.ForeignFunctions) {
+      CheckType(foreign.ReturnType, problems);
+      foreach (var parameter in foreign.Parameters) {
+        CheckType(parameter.Type, problems);
+        if (parameter.Marshal is { Kind: IrMarshalKind.ByRef, NativeSize: true })
+          problems.Add(Diagnostic.Create(MsilEmitter.UnsupportedConstruct, null, "native-size by-reference foreign parameter"));
+      }
+    }
 
     foreach (var constant in module.Constants)
       CheckType(constant.Type, problems);
@@ -72,7 +78,9 @@ internal static class MsilChecker {
     IrIntrinsicOp.StrLength or IrIntrinsicOp.StrCodeUnitAt or IrIntrinsicOp.StrConcat
       or IrIntrinsicOp.StrEquals or IrIntrinsicOp.StrCompareOrdinal
       or IrIntrinsicOp.StrStartsWith or IrIntrinsicOp.StrEndsWith or IrIntrinsicOp.StrContains
-      or IrIntrinsicOp.StrIndexOf or IrIntrinsicOp.StrSubstring or IrIntrinsicOp.StrJoin => true,
+      or IrIntrinsicOp.StrIndexOf or IrIntrinsicOp.StrSubstring or IrIntrinsicOp.StrJoin
+      or IrIntrinsicOp.FormatDotNet => true,
+    IrIntrinsicOp.FormatEcma => intrinsic.Arguments[0].Type.IsInteger,
     _ => false
   };
 
@@ -109,6 +117,9 @@ internal static class MsilChecker {
         break;
       case IrExprStmt exprStmt:
         CheckExpr(exprStmt.Expression, problems);
+        break;
+      case IrWriteLine write:
+        CheckExpr(write.Value, problems);
         break;
       case IrIf conditional:
         CheckExpr(conditional.Condition, problems);
@@ -167,7 +178,7 @@ internal static class MsilChecker {
     CheckType(expr.Type, problems);
     switch (expr) {
       case IrConst or IrStrConst or IrConstRef or IrLocalRef or IrGlobalRef
-        or IrStructDefault or IrNone or IrNull:
+        or IrStructDefault or IrNone or IrNull or IrLastError:
         break;
       case IrUnary unary:
         CheckExpr(unary.Operand, problems);
@@ -195,6 +206,10 @@ internal static class MsilChecker {
         CheckExpr(create.Length, problems);
         break;
       case IrCall call:
+        foreach (var arg in call.Arguments)
+          CheckExpr(arg, problems);
+        break;
+      case IrForeignCall call:
         foreach (var arg in call.Arguments)
           CheckExpr(arg, problems);
         break;

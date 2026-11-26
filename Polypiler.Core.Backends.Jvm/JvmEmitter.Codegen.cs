@@ -294,6 +294,19 @@ public static partial class JvmEmitter {
             if (exprStmt.Expression.Type != IrType.Void)
               this.Code.EmitPop();
             break;
+          case IrWriteLine write: {
+            var printStreamType = VType.Object(this.Pool.AddClass("java/io/PrintStream"));
+            var notNullLabel = this.Code.DefineLabel();
+            this.Code.EmitStaticField(JvmOpcode.Getstatic, "java/lang/System", "out", "Ljava/io/PrintStream;", printStreamType);
+            this.EmitExpr(write.Value);
+            this.Code.EmitDup();
+            this.Code.EmitBranch(JvmOpcode.Ifnonnull, notNullLabel);
+            this.Code.EmitPop();
+            this.Code.EmitConstString("");
+            this.Code.MarkLabel(notNullLabel);
+            this.Code.EmitInvoke(JvmOpcode.Invokevirtual, "java/io/PrintStream", "println", "(Ljava/lang/String;)V", 1);
+            break;
+          }
           case IrIf conditional:
             this.EmitIf(conditional);
             break;

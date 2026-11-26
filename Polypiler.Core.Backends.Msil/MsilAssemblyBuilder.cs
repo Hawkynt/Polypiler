@@ -79,19 +79,27 @@ internal static class MsilAssemblyBuilder {
     // Emit declared structs.
     var systemValueType = ctx.GetBclType("System", "ValueType");
     foreach (var structType in structs) {
-      metadata.AddTypeDefinition(
-        TypeAttributes.Public | TypeAttributes.SequentialLayout | TypeAttributes.Sealed | TypeAttributes.BeforeFieldInit,
+      var layout = structType.Layout;
+      var layoutAttr = layout?.Kind == IrLayoutKind.Explicit ? TypeAttributes.ExplicitLayout : TypeAttributes.SequentialLayout;
+      var structHandle = metadata.AddTypeDefinition(
+        TypeAttributes.Public | layoutAttr | TypeAttributes.Sealed | TypeAttributes.BeforeFieldInit,
         default,
         metadata.GetOrAddString(SanitizeName(structType.Name)),
         systemValueType,
         MetadataTokens.FieldDefinitionHandle(nextFieldRow),
         MetadataTokens.MethodDefinitionHandle(nextMethodRow));
 
-      foreach (var field in structType.Fields) {
+      if (layout is not null && (layout.Pack > 0 || layout.Size > 0))
+        metadata.AddTypeLayout(structHandle, (ushort)layout.Pack, (uint)layout.Size);
+
+      for (var i = 0; i < structType.Fields.Count; i++) {
+        var field = structType.Fields[i];
         var fieldHandle = metadata.AddFieldDefinition(
           FieldAttributes.Public,
           metadata.GetOrAddString(field.Name),
           ctx.EncodeFieldSignature(field.Type));
+        if (layout is { Kind: IrLayoutKind.Explicit })
+          metadata.AddFieldLayout(fieldHandle, layout.Offsets[i]);
         ctx.StructFields[field] = fieldHandle;
         nextFieldRow++;
       }
@@ -130,7 +138,7 @@ internal static class MsilAssemblyBuilder {
       nextFieldRow++;
     }
 
-    // Pre-assign method handles for .cctor, every IR function, and the console entry point.
+    // Pre-assign method handles for .cctor, every IR function, foreign P/Invoke declarations, and the console entry point.
     var methodRow = nextMethodRow;
     if (needsCctor)
       methodRow++;
@@ -138,6 +146,11 @@ internal static class MsilAssemblyBuilder {
     foreach (var fn in module.Functions) {
       ctx.FunctionHandles[fn.Name] = MetadataTokens.MethodDefinitionHandle(methodRow++);
       ctx.FunctionsByName[fn.Name] = fn;
+    }
+
+    foreach (var foreign in module.ForeignFunctions) {
+      ctx.ForeignHandles[foreign.Name] = MetadataTokens.MethodDefinitionHandle(methodRow++);
+      ctx.ForeignByName[foreign.Name] = foreign;
     }
 
     var ilStream = new BlobBuilder();
@@ -175,6 +188,45 @@ internal static class MsilAssemblyBuilder {
         metadata.AddParameter(ParameterAttributes.None, metadata.GetOrAddString(fn.Parameters[i].Name), i + 1);
         nextParamRow++;
       }
+    }
+
+    // Emit every P/Invoke foreign declaration (RVA = 0 via bodyOffset: -1).
+    foreach (var foreign in module.ForeignFunctions) {
+      var attributes = (foreign.IsPublic ? MethodAttributes.Public : MethodAttributes.Private)
+        | MethodAttributes.Static | MethodAttributes.HideBySig | MethodAttributes.PinvokeImpl;
+
+      var methodHandle = metadata.AddMethodDefinition(
+        attributes,
+        MethodImplAttributes.PreserveSig,
+        metadata.GetOrAddString(foreign.Name),
+        ctx.EncodeForeignMethodSignature(foreign),
+        bodyOffset: -1,
+        MetadataTokens.ParameterHandle(nextParamRow));
+
+      if (foreign.ReturnType != IrType.Void && TryGetMarshallingBlob(foreign.Result, foreign.CharSet, out var retMarshal)) {
+        var retParam = metadata.AddParameter(ParameterAttributes.HasFieldMarshal, default, 0);
+        metadata.AddMarshallingDescriptor(retParam, metadata.GetOrAddBlob(retMarshal));
+        nextParamRow++;
+      }
+
+      for (var i = 0; i < foreign.Parameters.Count; i++) {
+        var param = foreign.Parameters[i];
+        var paramAttrs = MapForeignParameterAttributes(param.Marshal);
+        var hasMarshal = TryGetMarshallingBlob(param.Marshal, foreign.CharSet, out var paramMarshal);
+        if (hasMarshal)
+          paramAttrs |= ParameterAttributes.HasFieldMarshal;
+
+        var paramHandle = metadata.AddParameter(paramAttrs, metadata.GetOrAddString(param.Name), i + 1);
+        if (hasMarshal)
+          metadata.AddMarshallingDescriptor(paramHandle, metadata.GetOrAddBlob(paramMarshal));
+        nextParamRow++;
+      }
+
+      metadata.AddMethodImport(
+        methodHandle,
+        MapMethodImportAttributes(foreign),
+        metadata.GetOrAddString(foreign.Symbol),
+        ctx.GetModuleRef(foreign.Library));
     }
 
     // Emit CLI entry point for ConsoleExe.
@@ -238,6 +290,67 @@ internal static class MsilAssemblyBuilder {
 
     return module.Functions.FirstOrDefault(fn => fn.Name == "Main" && IsEligible(fn))
       ?? module.Functions.FirstOrDefault(fn => string.Equals(fn.Name, "main", StringComparison.OrdinalIgnoreCase) && IsEligible(fn));
+  }
+
+  private static MethodImportAttributes MapMethodImportAttributes(IrForeignFunction foreign) {
+    var attrs = foreign.Convention switch {
+      IrCallingConvention.Cdecl => MethodImportAttributes.CallingConventionCDecl,
+      IrCallingConvention.StdCall => MethodImportAttributes.CallingConventionStdCall,
+      IrCallingConvention.ThisCall => MethodImportAttributes.CallingConventionThisCall,
+      IrCallingConvention.FastCall => MethodImportAttributes.CallingConventionFastCall,
+      _ => MethodImportAttributes.CallingConventionWinApi
+    };
+
+    attrs |= foreign.CharSet switch {
+      IrStringEncoding.Ansi => MethodImportAttributes.CharSetAnsi,
+      IrStringEncoding.Unicode => MethodImportAttributes.CharSetUnicode,
+      _ => MethodImportAttributes.None
+    };
+
+    if (foreign.SetLastError == true)
+      attrs |= MethodImportAttributes.SetLastError;
+    if (foreign.ExactSpelling == true)
+      attrs |= MethodImportAttributes.ExactSpelling;
+
+    return attrs;
+  }
+
+  private static ParameterAttributes MapForeignParameterAttributes(IrMarshal marshal) {
+    if (marshal.Kind is not (IrMarshalKind.Array or IrMarshalKind.ByRef))
+      return ParameterAttributes.None;
+
+    return marshal.Direction switch {
+      IrMarshalDirection.In => ParameterAttributes.In,
+      IrMarshalDirection.Out => ParameterAttributes.Out,
+      _ => ParameterAttributes.In | ParameterAttributes.Out
+    };
+  }
+
+  private static bool TryGetMarshallingBlob(IrMarshal marshal, IrStringEncoding? charSet, out byte[] blob) {
+    if (marshal.Kind == IrMarshalKind.Bool && marshal.BoolForm != IrBoolForm.Bool) {
+      blob = [marshal.BoolForm == IrBoolForm.U1 ? (byte)0x06 : (byte)0x05];
+      return true;
+    }
+
+    if (marshal.Kind == IrMarshalKind.String) {
+      if (marshal.Encoding == IrStringEncoding.Utf8) {
+        blob = [0x30]; // UnmanagedType.LPUTF8Str
+        return true;
+      }
+
+      if (marshal.Encoding == IrStringEncoding.Unicode && charSet != IrStringEncoding.Unicode) {
+        blob = [0x15]; // UnmanagedType.LPWStr
+        return true;
+      }
+
+      if (marshal.Encoding == IrStringEncoding.Ansi && charSet == IrStringEncoding.Unicode) {
+        blob = [0x14]; // UnmanagedType.LPStr
+        return true;
+      }
+    }
+
+    blob = [];
+    return false;
   }
 
   private static object BoxEnumConstant(IrType underlying, long value) => underlying.Kind switch {
