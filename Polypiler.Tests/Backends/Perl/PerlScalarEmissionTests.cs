@@ -178,10 +178,6 @@ public sealed class PerlScalarEmissionTests {
 
   [Test]
   public void UnsupportedTypeAndOperation_ReportPLY1750AndPLY1751() {
-    var s = L("s", IrType.Sequence(IrType.I32, true));
-    var seqMod = Returning(IrType.I32, [s], I(0));
-    Assert.That(Problems(seqMod), Has.Some.Contains("PLY1750"));
-
     var bi = L("bi", IrType.BigInt);
     Assert.That(Problems(Returning(IrType.BigInt, [bi], R(bi))), Has.Some.Contains("PLY1750"));
 

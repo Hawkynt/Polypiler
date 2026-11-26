@@ -89,6 +89,7 @@ public static partial class RustEmitter {
       if (member is { Kind: MemberKind.Maker })
         return this.Maker(new RsFunction(name, "pub", parameters, null, new RsBlock([], null)), member);
 
+      var returnType = function.ReturnType.IsAsync ? function.ReturnType.Element! : function.ReturnType;
       var returns = this.ResultType(function);
       if (this._throwing.Contains(function.Name))
         returns = Fallible(returns, this.FailureType);
@@ -110,11 +111,12 @@ public static partial class RustEmitter {
         statements.Add(this.SharedDeclaration(parameter, new RsPath(this._locals[parameter]) { Type = parameter.Type }));
       statements.AddRange(this.NestedFunctions());
       this.Statements(function.Body.Statements, statements);
-      if (this._throwing.Contains(function.Name) && function.ReturnType == IrType.Void && !(statements.Count > 0 && Diverges(statements[^1])))
+      if (this._throwing.Contains(function.Name) && returnType == IrType.Void && !(statements.Count > 0 && Diverges(statements[^1])))
         statements.Add(new RsExpressionStatement(this.Returned(null)));
-      var body = Tidy.Function(new RsBlock(statements, null), function.ReturnType == IrType.Void && !this._throwing.Contains(function.Name));
+      var body = Tidy.Function(new RsBlock(statements, null), returnType == IrType.Void && !this._throwing.Contains(function.Name));
       var lifetime = Lifetime(function, this._arrayFacts).Length > 0 ? "'a" : "";
       var written = new RsFunction(name, function.IsPublic || this._free.ContainsKey(function.Name) ? "pub" : "", parameters, returns, body) {
+        IsAsync = function.IsAsync,
         Generics = generics.Length > 0 ? generics : this._definition?.Generics(lifetime) ?? (lifetime.Length > 0 ? $"<{lifetime}>" : ""),
         Where = this._definition?.Where ?? []
       };
@@ -223,6 +225,9 @@ public static partial class RustEmitter {
           break;
         case IrExprStmt expression:
           this.CountIn(expression.Expression, bindings, depth);
+          break;
+        case IrWriteLine write:
+          this.CountIn(write.Value, bindings, depth);
           break;
         case IrStore store:
           this.CountIn(store.Array, bindings, depth);

@@ -69,6 +69,9 @@ public static partial class JvmEmitter {
         case IrExprStmt exprStmt:
           CheckExpr(exprStmt.Expression, problems);
           break;
+        case IrWriteLine write:
+          CheckExpr(write.Value, problems);
+          break;
         case IrIf conditional:
           CheckExpr(conditional.Condition, problems);
           CheckStmt(conditional.Then, problems);

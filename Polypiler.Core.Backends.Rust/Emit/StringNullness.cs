@@ -38,6 +38,8 @@ internal sealed class StringNullness {
     IrBind bind => this._variables.Contains((function, bind.Local)),
     IrFieldLoad load => this._fields.Contains(load.Field),
     IrCall call => this._results.Contains(call.Function),
+    IrAwait { Operand: IrCall call } => this._results.Contains(call.Function),
+    IrAwait { Operand: IrAsync { Op: IrAsyncOp.FromResult } result } => this.MayBeNull(function, result.Arguments[0]),
     IrConditional choice => this.MayBeNull(function, choice.WhenTrue) || this.MayBeNull(function, choice.WhenFalse),
     _ => false
   };

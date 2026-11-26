@@ -122,6 +122,22 @@ public static partial class PerlEmitter {
           this.EmitForEachCollection(each, text, indent);
           break;
 
+        case IrForEachSequence eachSeq:
+          this.EmitForEachSequence(eachSeq, text, indent);
+          break;
+
+        case IrYield yieldStmt:
+          this.EmitYield(yieldStmt, text, indent);
+          break;
+
+        case IrYieldBreak:
+          this.EmitOuterReturn(null, text, indent);
+          break;
+
+        case IrYieldFrom yieldFrom:
+          this.EmitYieldFrom(yieldFrom, text, indent);
+          break;
+
         case IrUsing @using:
           this.EmitUsing(@using, text, indent);
           break;
@@ -133,15 +149,15 @@ public static partial class PerlEmitter {
       // Statement modifier form (#430): single break/continue/return with no else.
       if (@if.Else is null && this._tryFrames.Count == 0 && @if.Then.Statements.Count == 1) {
         var single = @if.Then.Statements[0];
-        if (single is IrContinue && this._loops.Count > 0 && this._loops.Peek().ContinueLabel is null) {
+        if (single is IrContinue && this._loops.Count > 0 && !this._loops.Peek().IsSequence && this._loops.Peek().ContinueLabel is null) {
           text.Append(pad).Append("next if ").Append(this.EmitCondition(@if.Condition)).Append(";\n");
           return;
         }
-        if (single is IrBreak && this._loops.Count > 0) {
+        if (single is IrBreak && this._loops.Count > 0 && !this._loops.Peek().IsSequence) {
           text.Append(pad).Append("last if ").Append(this.EmitCondition(@if.Condition)).Append(";\n");
           return;
         }
-        if (single is IrReturn ret) {
+        if (single is IrReturn ret && this._seqReturnFrame is null && this._asyncResultVar is null && !this._isIterator) {
           var retText = ret.Value is { } val ? "return " + this.CopyIfStruct(val.Type, this.EmitExpr(val)) : "return";
           text.Append(pad).Append(retText).Append(" if ").Append(this.EmitCondition(@if.Condition)).Append(";\n");
           return;
@@ -400,6 +416,10 @@ public static partial class PerlEmitter {
         text.Append(pad).Append(frame.BreakFlag).Append(" = 1; return 1;\n");
         return;
       }
+      if (loop.IsSequence) {
+        text.Append(pad).Append("return 0;\n");
+        return;
+      }
       text.Append(pad).Append("last ").Append(loop.Label).Append(";\n");
     }
 
@@ -411,6 +431,10 @@ public static partial class PerlEmitter {
         text.Append(pad).Append(frame.ContinueFlag).Append(" = 1; return 1;\n");
         return;
       }
+      if (loop.IsSequence) {
+        text.Append(pad).Append("return 1;\n");
+        return;
+      }
       if (loop.ContinueLabel is not null)
         text.Append(pad).Append("last ").Append(loop.ContinueLabel).Append(";\n");
       else
@@ -418,19 +442,98 @@ public static partial class PerlEmitter {
     }
 
     private void EmitReturn(IrReturn ret, StringBuilder text, int indent) {
-      var pad = Indent(indent);
       var value = ret.Value is { } expr ? this.CopyIfStruct(expr.Type, this.EmitExpr(expr)) : null;
+      this.EmitOuterReturn(value, text, indent);
+    }
+
+    private void EmitOuterReturn(string? value, StringBuilder text, int indent) {
+      var pad = Indent(indent);
       if (this._tryFrames.Count > 0) {
         var frame = this._tryFrames.Peek();
-        if (value is not null)
+        if (value is not null && frame.ReturnValue is not null)
           text.Append(pad).Append(frame.ReturnValue).Append(" = ").Append(value).Append(";\n");
         text.Append(pad).Append(frame.ReturnFlag).Append(" = 1; return 1;\n");
         return;
       }
-      if (value is not null)
-        text.Append(pad).Append("return ").Append(value).Append(";\n");
-      else
+      if (this._seqReturnFrame is { } seqRet) {
+        if (value is not null)
+          text.Append(pad).Append(seqRet.ReturnValue).Append(" = ").Append(value).Append(";\n");
+        text.Append(pad).Append(seqRet.ReturnFlag).Append(" = 1; return 0;\n");
+        return;
+      }
+      if (this._asyncResultVar is { } asyncVal) {
+        if (value is not null)
+          text.Append(pad).Append(asyncVal).Append(" = ").Append(value).Append(";\n");
+        text.Append(pad).Append("return 1;\n");
+        return;
+      }
+      if (this._isIterator || value is null) {
         text.Append(pad).Append("return;\n");
+        return;
+      }
+      text.Append(pad).Append("return ").Append(value).Append(";\n");
+    }
+
+    private void EmitYield(IrYield yieldStmt, StringBuilder text, int indent) {
+      var pad = Indent(indent);
+      var value = this.CopyIfStruct(yieldStmt.Value.Type, this.EmitExpr(yieldStmt.Value));
+      text.Append(pad).Append("if (!$_yield->(").Append(value).Append(")) {\n");
+      this.EmitOuterReturn(null, text, indent + 1);
+      text.Append(pad).Append("}\n");
+    }
+
+    private void EmitYieldFrom(IrYieldFrom yieldFrom, StringBuilder text, int indent) {
+      var pad = Indent(indent);
+      var innerPad = Indent(indent + 1);
+      var seq = this.EmitExpr(yieldFrom.Sequence);
+      var stop = this.Temp("_stop");
+      text.Append(pad).Append("my ").Append(stop).Append(" = 0;\n");
+      text.Append(pad).Append('(').Append(seq).Append(")->(sub {\n");
+      text.Append(innerPad).Append("if (!$_yield->($_[0])) { ").Append(stop).Append(" = 1; return 0; }\n");
+      text.Append(innerPad).Append("return 1;\n");
+      text.Append(pad).Append("});\n");
+      text.Append(pad).Append("if (").Append(stop).Append(") {\n");
+      this.EmitOuterReturn(null, text, indent + 1);
+      text.Append(pad).Append("}\n");
+    }
+
+    private void EmitForEachSequence(IrForEachSequence each, StringBuilder text, int indent) {
+      var pad = Indent(indent);
+      var innerPad = Indent(indent + 1);
+      var seqVar = this.Temp("_seq");
+      var elemVar = this.LocalName(each.Element);
+      var hasExit = ContainsReturnOrYieldExit(each.Body);
+      var retFlag = hasExit ? this.Temp("_sret") : null;
+      var retVal = hasExit ? this.Temp("_srval") : null;
+
+      text.Append(pad).Append("my ").Append(seqVar).Append(" = ").Append(this.EmitExpr(each.Sequence)).Append(";\n");
+      if (hasExit)
+        text.Append(pad).Append("my (").Append(retFlag).Append(", ").Append(retVal).Append(") = (0, undef);\n");
+
+      var savedTries = new Stack<TryFrame>(this._tryFrames.Reverse());
+      var savedSeqRet = this._seqReturnFrame;
+      this._tryFrames.Clear();
+      this._seqReturnFrame = hasExit ? new SeqReturnFrame(retFlag!, retVal!) : null;
+      this._loops.Push(new(this.NextLabel("SEQ"), null, 0, IsSequence: true));
+
+      text.Append(pad).Append(seqVar).Append("->(sub {\n");
+      text.Append(innerPad).Append("my (").Append(elemVar).Append(") = @_;\n");
+      this.EmitBlockStatements(each.Body, text, indent + 1);
+      text.Append(innerPad).Append("return 1;\n");
+      text.Append(pad).Append("});\n");
+
+      this._loops.Pop();
+      this._seqReturnFrame = savedSeqRet;
+      foreach (var frame in savedTries)
+        this._tryFrames.Push(frame);
+
+      if (hasExit) {
+        var resultType = this._currentFunction?.ReturnType is { IsAsync: true } asyncType ? asyncType.Element! : this._currentFunction?.ReturnType;
+        var replayVal = this._isIterator || resultType == IrType.Void ? null : retVal;
+        text.Append(pad).Append("if (").Append(retFlag).Append(") {\n");
+        this.EmitOuterReturn(replayVal, text, indent + 1);
+        text.Append(pad).Append("}\n");
+      }
     }
 
     private string EmitCondition(IrExpr condition) {
@@ -443,7 +546,7 @@ public static partial class PerlEmitter {
       foreach (var stmt in block.Statements) {
         if (wantBreak && stmt is IrBreak) return true;
         if (!wantBreak && stmt is IrContinue) return true;
-        if (stmt is IrWhile or IrDoWhile or IrFor or IrForEachCollection)
+        if (stmt is IrWhile or IrDoWhile or IrFor or IrForEachCollection or IrForEachSequence)
           continue;
         if (wantBreak && stmt is IrSwitch)
           continue;

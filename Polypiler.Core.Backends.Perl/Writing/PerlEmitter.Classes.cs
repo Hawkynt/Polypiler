@@ -403,6 +403,9 @@ public static partial class PerlEmitter {
       this._locals.Clear();
       this._loops.Clear();
       this._tryFrames.Clear();
+      this._isIterator = false;
+      this._asyncResultVar = null;
+      this._seqReturnFrame = null;
       this._tempCounter = 0;
       this._labelCounter = 0;
 
@@ -427,13 +430,13 @@ public static partial class PerlEmitter {
       if (function.Parameters.Count > 0)
         text.Append("        my (").AppendJoin(", ", function.Parameters.Select(p => this._locals[p])).Append(") = @_;\n");
 
-      this.EmitBlockStatements(function.Body, text, 2);
-
-      if (function.ReturnType == IrType.Void && !EndsWithReturn(function.Body))
-        text.Append("        return;\n");
+      this.EmitFunctionBody(function, text, 2);
 
       text.Append("    }\n\n");
       this._currentFunction = null;
+      this._isIterator = false;
+      this._asyncResultVar = null;
+      this._seqReturnFrame = null;
       this._ranges = null;
     }
 

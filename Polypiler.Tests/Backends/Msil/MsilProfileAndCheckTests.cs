@@ -93,11 +93,20 @@ public sealed class MsilProfileAndCheckTests {
     var rxMod = Returning(IrType.Bool, [s], new IrIntrinsic(IrIntrinsicOp.RegexTest, IrType.Bool, [R(s), new IrStrConst("a"), new IrStrConst("")]));
     Assert.That(MsilEmitter.Check(rxMod).Select(d => d.Code), Does.Contain(MsilEmitter.UnsupportedIntrinsicCode));
 
-    // Unsupported construct: foreign function
-    var foreignMod = new IrModule("F", [Function("f", IrType.Void, [], new IrReturn(null))]) {
-      ForeignFunctions = [new IrForeignFunction("ext", true, "lib", IrType.I32, [])]
+    // Unsupported intrinsic: FormatEcma on f64
+    var dParam = L("d", IrType.F64);
+    var ecmaFloatMod = Returning(IrType.String, [dParam], new IrIntrinsic(IrIntrinsicOp.FormatEcma, IrType.String, [R(dParam)]));
+    Assert.That(MsilEmitter.Check(ecmaFloatMod).Select(d => d.Code), Does.Contain(MsilEmitter.UnsupportedIntrinsicCode));
+
+    // Unsupported construct: native-size by-reference foreign parameter
+    var nativeByRefMod = new IrModule("NBR", [Function("f", IrType.Void, [], new IrReturn(null))]) {
+      ForeignFunctions = [
+        new IrForeignFunction("ext", true, "lib", IrType.Void, [
+          new IrForeignParameter("p", IrType.Array(IrType.I64), new IrMarshal(IrMarshalKind.ByRef, IrMarshalDirection.InOut) { NativeSize = true })
+        ])
+      ]
     };
-    Assert.That(MsilEmitter.Check(foreignMod).Select(d => d.Code), Does.Contain(MsilEmitter.UnsupportedConstructCode));
+    Assert.That(MsilEmitter.Check(nativeByRefMod).Select(d => d.Code), Does.Contain(MsilEmitter.UnsupportedConstructCode));
 
     // Unsupported construct: IrFor with PerIteration
     var idx = L("i", IrType.I32);

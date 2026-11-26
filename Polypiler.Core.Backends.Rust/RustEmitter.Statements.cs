@@ -167,6 +167,12 @@ public static partial class RustEmitter {
         case IrExprStmt { Expression: IrStep { Target: IrLocalRef target } step }:
           into.Add(new RsExpressionStatement(this.StepAssignment(target, step)));
           return false;
+        case IrExprStmt { Expression: IrAwait { Operand: IrAsync { Op: IrAsyncOp.Completed } } }:
+          return false;
+        case IrExprStmt { Expression: IrAwait { Operand: IrAsync { Op: IrAsyncOp.WhenAll } all, Type.Kind: IrTypeKind.Void } }:
+          foreach (var task in all.Arguments)
+            into.Add(new RsExpressionStatement(this.AwaitCall((IrCall)task)));
+          return false;
         case IrExprStmt expression: {
           var written = this.Expression(expression.Expression);
           // A call that propagates inside a try body, its value unused: the error alone, if let Err(error) = f(x) { break 't0 error; }.
@@ -174,6 +180,15 @@ public static partial class RustEmitter {
             written = new RsIf(new RsLetCondition("Err(error)", propagated.Scrutinee), new RsBlock([new RsExpressionStatement(failure.Body)], null), null);
           into.Add(new RsExpressionStatement(written));
           return Diverges(into[^1]);
+        }
+        case IrWriteLine write:
+          this.WriteLine(write, into);
+          return false;
+        case IrIf { Else: null, Condition: IrUnary { Op: IrUnaryOp.LogicalNot, Operand: IrReferenceEquals { Left: IrLocalRef { Local: var heldLocal }, Right: IrNull } } } choice
+          when heldLocal.Type.IsObject && !this.MayBeNull(heldLocal): {
+          var before = into.Count;
+          this.Statements(choice.Then.Statements, into);
+          return into.Count > before && Diverges(into[^1]);
         }
         case IrIf choice:
           into.Add(new RsExpressionStatement(this.If(choice)));
@@ -217,19 +232,21 @@ public static partial class RustEmitter {
           this._locals[held] = this.Temporary("value");
           this.Statement(new IrDeclare(held, thrower), into);
           return this.Statement(result with { Value = new IrLocalRef(held) }, into);
-        case IrReturn result:
+        case IrReturn result: {
+          var returnType = this._function.ReturnType.IsAsync ? this._function.ReturnType.Element! : this._function.ReturnType;
           into.Add(new RsExpressionStatement(this.Leaving(result.Value switch {
             null => null,
             { Type.IsArray: true } value => this.ArrayResult(this._function, value),
             { Type.IsString: true } value when this._stringNulls.ReturnsNull(this._function.Name) => this.NullableStringValue(value),
             { Type.IsString: true } value => this.StringValue(value, true),
             IrLocalRef { Type.IsBigInt: true } value when !this._shared.Contains(value.Local) => new RsPath(this._locals[value.Local]) { Type = IrType.BigInt },
-            { Type.IsObject: true } value => this.ObjectValueAs(value, this._nullness.ReturnsNull(this._function.Name), this._function.ReturnType),
+            { Type.IsObject: true } value => this.ObjectValueAs(value, this._nullness.ReturnsNull(this._function.Name), returnType),
             { Type.IsFunction: true } value => this.FunctionValue(value),
             { Type.IsCollection: true } value => this.CollectionValue(value),
             var value => this.Expression(value)
           })));
           return true;
+        }
         case IrRethrow:
           into.Add(new RsExpressionStatement(this._caught.Count == 0 ? this.Refuse("a rethrow outside a catch clause") : this.Escape(this.Cloned(new RsReference(false, new RsPath(this._caught[^1]))))));
           return true;

@@ -543,7 +543,8 @@ public static partial class RustEmitter {
         return;
       }
 
-      var returns = this._function.ReturnType != IrType.Void;
+      var returnType = this._function.ReturnType.IsAsync ? this._function.ReturnType.Element! : this._function.ReturnType;
+      var returns = returnType != IrType.Void;
       if (ways == 1 && !completes) {
         body = Spliced(RustSyntaxRewriter.Rewrite(body, node => node is RsBreak { Value: RsCall { Callee: RsPath { Name: ReturnedMark or ThrownMark or JumpedMark } } marked } exit && exit.Label == frame.Label
           ? exit with { Value = marked.Arguments.Count > 0 && Mark(exit) != JumpedMark ? marked.Arguments[0] : null }
@@ -561,7 +562,7 @@ public static partial class RustEmitter {
           into.Add(value is null ? new RsExpressionStatement(block) : new RsLet(value, false, null, block));
         this.Statements(final, into);
         into.AddRange(thrown ? [new RsExpressionStatement(this.Escape(new RsPath(value!), true))]
-          : marks.Contains(ReturnedMark) ? [new RsExpressionStatement(this.Leaving(value is null ? null : new RsPath(value) { Type = this._function.ReturnType }))]
+          : marks.Contains(ReturnedMark) ? [new RsExpressionStatement(this.Leaving(value is null ? null : new RsPath(value) { Type = returnType }))]
           : this.Replay(frame.Jumps[0]));
         return;
       }
@@ -596,7 +597,7 @@ public static partial class RustEmitter {
       if (returned is not null) {
         var value = returns ? this.Temporary("value") : null;
         RsExpression condition = value is null ? new RsPath(returned) : new RsLetCondition($"Some({value})", new RsPath(returned));
-        into.Add(new RsExpressionStatement(new RsIf(condition, new RsBlock([new RsExpressionStatement(this.Leaving(value is null ? null : new RsPath(value) { Type = this._function.ReturnType }))], null), null)));
+        into.Add(new RsExpressionStatement(new RsIf(condition, new RsBlock([new RsExpressionStatement(this.Leaving(value is null ? null : new RsPath(value) { Type = returnType }))], null), null)));
       }
 
       if (jumped is not null) {

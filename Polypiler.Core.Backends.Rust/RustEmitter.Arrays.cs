@@ -67,22 +67,23 @@ public static partial class RustEmitter {
 
     /// <summary>The result type of a function, <see langword="null"/> for none.</summary>
     private string? ResultType(IrFunction function) {
-      if (function.ReturnType == IrType.Void)
+      var returnType = function.ReturnType.IsAsync ? function.ReturnType.Element! : function.ReturnType;
+      if (returnType == IrType.Void)
         return null;
-      if (IsError(function.ReturnType))
+      if (IsError(returnType))
         return ((RsPath)this.Refuse("an exception returned as a value")).Name;
-      if (function.ReturnType.IsObject)
-        return this.ObjectType(function.ReturnType, this._nullness.ReturnsNull(function.Name));
-      if (function.ReturnType.IsString && this._stringNulls.ReturnsNull(function.Name))
+      if (returnType.IsObject)
+        return this.ObjectType(returnType, this._nullness.ReturnsNull(function.Name));
+      if (returnType.IsString && this._stringNulls.ReturnsNull(function.Name))
         return NullableString;
-      if (function.ReturnType.IsCollection)
-        return this.CollectionType(function.ReturnType);
-      if (!function.ReturnType.IsArray)
-        return this.Type(function.ReturnType);
+      if (returnType.IsCollection)
+        return this.CollectionType(returnType);
+      if (!returnType.IsArray)
+        return this.Type(returnType);
       if (this._arrayNulls.ReturnsNull(function.Name))
-        return this._arrayFacts.Result == ArrayHolder.Owned ? this.NullableArrayType(function.ReturnType, false) : ((RsPath)this.Refuse("a borrowed array result that may be null")).Name;
+        return this._arrayFacts.Result == ArrayHolder.Owned ? this.NullableArrayType(returnType, false) : ((RsPath)this.Refuse("a borrowed array result that may be null")).Name;
 
-      var element = this.ElementType(function.ReturnType);
+      var element = this.ElementType(returnType);
       return this._arrayFacts.Result == ArrayHolder.Borrowed
         ? $"&{Lifetime(function, this._arrayFacts)}{(ResultIsMutable(function, this._arrayFacts) ? "mut " : "")}[{element}]"
         : $"Vec<{element}>";
@@ -174,6 +175,12 @@ public static partial class RustEmitter {
         case IrFieldLoad { Target.Type.IsStruct: true }:
           return this.Refuse("the array of a struct field held by a second owner");
         case IrIntrinsic { Op: IrIntrinsicOp.StrSplit or IrIntrinsicOp.StrToCodeUnits or IrIntrinsicOp.EnumNames or IrIntrinsicOp.EnumValues or IrIntrinsicOp.ViewToArray }:
+          return this.Expression(array);
+        case IrAwait { Operand: IrAsync { Op: IrAsyncOp.WhenAll } }:
+          return this.Expression(array);
+        case IrAwait { Operand: IrAsync { Op: IrAsyncOp.FromResult } result }:
+          return this.Vector(result.Arguments[0], move);
+        case IrAwait { Operand: IrCall }:
           return this.Expression(array);
         case IrCall call:
           return new RsMethodCall(this.Expression(call), "to_vec", []) { Type = array.Type };
@@ -390,7 +397,7 @@ public static partial class RustEmitter {
     };
 
     /// <summary>Whether evaluating an expression may change a variable or call a function.</summary>
-    private static bool HasEffect(IrExpr expression) => IrTree.Nodes(expression).Any(node => node is IrStep or IrCall or IrMethodCall or IrInvoke);
+    private static bool HasEffect(IrExpr expression) => IrTree.Nodes(expression).Any(node => node is IrStep or IrCall or IrMethodCall or IrInvoke or IrAwait or IrForeignCall);
 
     /// <summary>A name for a binding the translation adds, unused by the function.</summary>
     private string Temporary(string stem) {

@@ -93,7 +93,7 @@ public sealed class RustHelperInlining : ITargetPass<RustCrate, RustProfile> {
 
   /// <summary>The body of a helper that may be inlined, or <see langword="null"/>.</summary>
   private static RsExpression? Inlinable(RsFunction function) {
-    if (!function.IsHelper || function.Body is not { Statements.Count: 0, Tail: { } body } || RustTargetPasses.Size(body) > Budget)
+    if (!function.IsHelper || function.IsAsync || function.Body is not { Statements.Count: 0, Tail: { } body } || RustTargetPasses.Size(body) > Budget)
       return null;
 
     var nodes = RustSyntaxRewriter.DescendantsAndSelf(body).ToList();

@@ -135,7 +135,17 @@ public sealed class StandardOutputTests {
     AssertRefusesOutput(JavaScriptEmitter.Check(module, JavaScriptProfile.Parse("es2022")));
     AssertRefusesOutput(PerlEmitter.Check(module));
     AssertRefusesOutput(PythonEmitter.Check(module, PythonProfile.Parse("py3.14")));
-    AssertRefusesOutput(RustEmitter.Check(module, RustProfile.Rust2024));
+  }
+
+  [Test]
+  public void RustBackendEmitsPrintlnForStandardOutput() {
+    var module = FromOracle();
+    foreach (var profile in RustProfile.All) {
+      Assert.That(RustEmitter.Check(module, profile), Is.Empty, profile.Name);
+      var files = RustEmitter.Emit(module, profile);
+      var source = files.First(file => file.Path.StartsWith("src/", StringComparison.Ordinal) && file.Path != "src/lib.rs").Content;
+      Assert.That(source, Does.Contain("println!"), profile.Name);
+    }
   }
 
   private static void AssertRefusesOutput(IReadOnlyList<Diagnostic> diagnostics)

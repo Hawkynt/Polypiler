@@ -88,6 +88,13 @@ public static class RustPrinter {
       case RsFunction function:
         Function(text, function, indent);
         break;
+      case RsExternBlock external:
+        text.Append(pad).Append(external.IsUnsafe ? "unsafe " : "").Append("extern ").Append(Quoted(external.Abi)).Append(external.Items.Count == 0 ? " {}\n" : " {\n");
+        if (external.Items.Count > 0) {
+          Items(text, external.Items, indent + Indent, false);
+          text.Append(pad).Append("}\n");
+        }
+        break;
       case RsConst { IsThreadLocal: true } local: {
         // rustfmt leaves the body of a macro in braces as it is: the static on one line.
         var value = Flat(local.Value) ?? Expression(local.Value, indent + Indent, indent + Indent);
@@ -180,7 +187,7 @@ public static class RustPrinter {
   /// </summary>
   private static void Function(StringBuilder text, RsFunction function, int indent) {
     var pad = new string(' ', indent);
-    var head = $"{pad}{Visibility(function.Visibility)}fn {function.Name}{function.Generics}(";
+    var head = $"{pad}{Visibility(function.Visibility)}{(function.IsAsync ? "async " : "")}fn {function.Name}{function.Generics}(";
     var result = function.Returns is null ? "" : " -> " + function.Returns;
     var parameters = string.Join(", ", function.Parameters.Select(Parameter));
     var empty = function.Body.Statements.Count == 0 && function.Body.Tail is null;
@@ -377,6 +384,8 @@ public static class RustPrinter {
         return Arguments(tuple.Elements) is { } items ? $"({items})" : null;
       case RsTry attempt:
         return Flat(attempt.Operand) is { } tried ? tried + "?" : null;
+      case RsAwait awaited:
+        return Flat(awaited.Operand) is { } awaitedText ? awaitedText + ".await" : null;
       case RsLetCondition condition:
         return Flat(condition.Value) is { } matched ? $"let {condition.Pattern} = {matched}" : null;
       case RsClosure { Body: not RsBlockExpression } closure:
@@ -632,6 +641,8 @@ public static class RustPrinter {
         return "(" + VerticalArguments(tuple.Elements, indent) + ")";
       case RsTry attempt:
         return Expression(attempt.Operand, indent, column, trailing + 1) + "?";
+      case RsAwait awaited:
+        return Expression(awaited.Operand, indent, column, trailing + 6) + ".await";
       case RsLetCondition condition:
         return $"let {condition.Pattern} = " + Expression(condition.Value, indent, column + condition.Pattern.Length + 7, trailing);
       case RsWhile loop:
@@ -741,6 +752,7 @@ public static class RustPrinter {
     RsMethodCall call => call with { Receiver = Guarded(call.Receiver) },
     RsCast cast => cast with { Operand = Guarded(cast.Operand) },
     RsIndex index => index with { Target = Guarded(index.Target) },
+    RsAwait awaited => awaited with { Operand = Guarded(awaited.Operand) },
     _ => condition
   };
 
@@ -813,6 +825,7 @@ public static class RustPrinter {
     // chain from a variable, an array or a macro stands on lines of its own.
     RsMethodCall or RsField => function && count == 1 && Chain(last).Receiver is RsCall or RsParenthesized,
     RsTry attempt => Overflows(attempt.Operand, count, function),
+    RsAwait awaited => Overflows(awaited.Operand, count, function),
     RsUnary unary => Overflows(unary.Operand, count, function),
     RsReference reference => Overflows(reference.Operand, count, function),
     RsCast cast => Overflows(cast.Operand, count, function),

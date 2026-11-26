@@ -34,13 +34,16 @@ internal static class PerlHelpers {
   public const string TrapMatches = "_trap_matches";
   public const string StrTrim = "_ply_str_trim";
   public const string StrPad = "_ply_str_pad";
+  public const string TaskFromResult = "_ply_task_from_result";
+  public const string TaskAwait = "_ply_await";
+  public const string TaskWhenAll = "_ply_when_all";
 
   public static IReadOnlyList<string> Order { get; } = [
     FloatSignBit, FloatDivide, FloatDivide56, FloatRemainder, FloatRemainder56,
     FloatTrunc, FloatRoundAway, FloatRoundEven, FloatCopySign, FloatIsNormal,
     SwapEndian, RoundF32, IntToF32, ArrayCopy, ArrayEq,
     ViewSlice, ViewCopy, ViewEqual, TrapKind, TrapMessage, TrapMatches,
-    StrTrim, StrPad
+    StrTrim, StrPad, TaskFromResult, TaskAwait, TaskWhenAll
   ];
 
   public static IReadOnlyDictionary<string, string> Bodies { get; } = new Dictionary<string, string> {
@@ -256,6 +259,30 @@ internal static class PerlHelpers {
           return $s if $need <= 0 || length($fill) == 0;
           my $pad = substr($fill x (int(($need + length($fill) - 1) / length($fill))), 0, $need);
           return $at_start ? $pad . $s : $s . $pad;
+      }
+      """,
+    [TaskFromResult] = """
+      sub _ply_task_from_result {
+          my ($val) = @_;
+          return { done => 1, value => $val };
+      }
+      """,
+    [TaskAwait] = """
+      sub _ply_await {
+          my ($task) = @_;
+          die $task->{error} if exists $task->{error};
+          return $task->{value};
+      }
+      """,
+    [TaskWhenAll] = """
+      sub _ply_when_all {
+          my ($is_void, @tasks) = @_;
+          my @results;
+          for my $t (@tasks) {
+              return { done => 1, error => $t->{error} } if exists $t->{error};
+              push @results, $t->{value} unless $is_void;
+          }
+          return $is_void ? { done => 1, value => undef } : { done => 1, value => \@results };
       }
       """
   };

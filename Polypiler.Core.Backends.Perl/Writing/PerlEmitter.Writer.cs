@@ -30,6 +30,9 @@ public static partial class PerlEmitter {
     private RangeAnalysis? _ranges;
     private ProgramPoint _point;
     private bool _integerFunction;
+    private bool _isIterator;
+    private string? _asyncResultVar;
+    private SeqReturnFrame? _seqReturnFrame;
     private bool _usesPosix;
     private bool _usesCarp;
     private int _tempCounter;
@@ -287,6 +290,9 @@ public static partial class PerlEmitter {
       this._locals.Clear();
       this._loops.Clear();
       this._tryFrames.Clear();
+      this._isIterator = false;
+      this._asyncResultVar = null;
+      this._seqReturnFrame = null;
       this._tempCounter = 0;
       this._labelCounter = 0;
 
@@ -348,15 +354,61 @@ public static partial class PerlEmitter {
         }
       }
 
-      this.EmitBlockStatements(function.Body, text, 1);
-
-      if (function.ReturnType == IrType.Void && !EndsWithReturn(function.Body))
-        text.Append("    return;\n");
+      this.EmitFunctionBody(function, text, 1);
 
       text.Append("}\n");
       this._currentFunction = null;
+      this._isIterator = false;
+      this._asyncResultVar = null;
+      this._seqReturnFrame = null;
       this._ranges = null;
       return text.ToString();
+    }
+
+    private void EmitFunctionBody(IrFunction function, StringBuilder text, int indent) {
+      var pad = Indent(indent);
+      if (IrSequences.IsIterator(function)) {
+        var saved = new List<(string Param, string Saved)>(function.Parameters.Count);
+        foreach (var parameter in function.Parameters) {
+          var local = this._locals[parameter];
+          var copy = this.Temp("_p");
+          text.Append(pad).Append("my ").Append(copy).Append(" = ").Append(local).Append(";\n");
+          saved.Add((local, copy));
+        }
+
+        text.Append(pad).Append("return sub {\n");
+        var innerPad = Indent(indent + 1);
+        text.Append(innerPad).Append("my ($_yield) = @_;\n");
+        foreach (var (param, copy) in saved)
+          text.Append(innerPad).Append("my ").Append(param).Append(" = ").Append(copy).Append(";\n");
+
+        this._isIterator = true;
+        this.EmitBlockStatements(function.Body, text, indent + 1);
+        this._isIterator = false;
+        text.Append(innerPad).Append("return;\n");
+        text.Append(pad).Append("};\n");
+        return;
+      }
+
+      if (function.IsAsync) {
+        var valVar = this.Temp("_aval");
+        var okVar = this.Temp("_aok");
+        text.Append(pad).Append("my ").Append(valVar).Append(" = undef;\n");
+        text.Append(pad).Append("my ").Append(okVar).Append(" = eval {\n");
+        this._asyncResultVar = valVar;
+        this.EmitBlockStatements(function.Body, text, indent + 1);
+        this._asyncResultVar = null;
+        text.Append(Indent(indent + 1)).Append("1;\n");
+        text.Append(pad).Append("};\n");
+        text.Append(pad).Append("return { done => 1, error => $@ } unless ").Append(okVar).Append(";\n");
+        text.Append(pad).Append("return { done => 1, value => ").Append(valVar).Append(" };\n");
+        return;
+      }
+
+      this.EmitBlockStatements(function.Body, text, indent);
+
+      if (function.ReturnType == IrType.Void && !EndsWithReturn(function.Body))
+        text.Append(pad).Append("return;\n");
     }
 
     private static bool IsIntegerOnlyFunction(IrFunction function) {
@@ -376,7 +428,8 @@ public static partial class PerlEmitter {
     }
 
     private static bool NeedsMixed(IrType type)
-      => type.IsFloat || type == IrType.U64 || type.IsPointer || type.IsView || type.IsMemory;
+      => type.IsFloat || type == IrType.U64 || type.IsPointer || type.IsView || type.IsMemory
+        || ((type.IsAsync || type.IsLazySequence) && NeedsMixed(type.Element!));
 
     private static bool IsArrayWritten(IrBlock body, IrLocal parameter) {
       foreach (var stmt in AllStatements(body)) {
@@ -415,13 +468,13 @@ public static partial class PerlEmitter {
     }
 
     private bool CheckType(IrType type, string functionName, bool isExport) {
-      if (isExport && (type.IsFunction || type.IsAsync)) {
+      if (isExport && type.IsFunction) {
         this.Problems.Add(Diagnostic.Create(ExportUnsupported, null, functionName, type.ToString()) with {
-          Cause = type.IsFunction ? "OBJ-CLOSURES" : "OBJ-COROUTINES"
+          Cause = "OBJ-CLOSURES"
         });
         return false;
       }
-      if (type.IsAsync || type.IsLazySequence || type.IsBigInt) {
+      if (type.IsBigInt) {
         this.Problems.Add(Diagnostic.Create(TypeUnsupported, null, type.ToString(), this._profile.Name) with { Cause = $"function {functionName}" });
         return false;
       }
@@ -470,9 +523,11 @@ public static partial class PerlEmitter {
 
     private static string Indent(int level) => new(' ', level * 4);
 
-    private sealed record LoopFrame(string Label, string? ContinueLabel, int TryDepth);
+    private sealed record LoopFrame(string Label, string? ContinueLabel, int TryDepth, bool IsSequence = false);
 
     private sealed record TryFrame(string? ReturnFlag, string? ReturnValue, string? BreakFlag, string? ContinueFlag);
+
+    private sealed record SeqReturnFrame(string ReturnFlag, string ReturnValue);
 
   }
 

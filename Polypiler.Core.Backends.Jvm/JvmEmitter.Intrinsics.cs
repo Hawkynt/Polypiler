@@ -20,7 +20,9 @@ public static partial class JvmEmitter {
         or IrIntrinsicOp.ByteSwap or IrIntrinsicOp.HighWord or IrIntrinsicOp.JoinWords
         or IrIntrinsicOp.ArrayOf or IrIntrinsicOp.ArrayCopy or IrIntrinsicOp.ArrayClear or IrIntrinsicOp.ArrayFill
         or IrIntrinsicOp.StrLength or IrIntrinsicOp.StrConcat or IrIntrinsicOp.StrEquals
-        or IrIntrinsicOp.StrCodeUnitAt or IrIntrinsicOp.StrSubstring or IrIntrinsicOp.StrCompareOrdinal => true,
+        or IrIntrinsicOp.StrCodeUnitAt or IrIntrinsicOp.StrSubstring or IrIntrinsicOp.StrCompareOrdinal
+        or IrIntrinsicOp.FormatDotNet => true,
+      IrIntrinsicOp.FormatEcma => intrinsic.Arguments[0].Type.IsInteger,
       IrIntrinsicOp.LoadLittle or IrIntrinsicOp.LoadBig or IrIntrinsicOp.StoreLittle or IrIntrinsicOp.StoreBig
         => intrinsic.Arguments[0].Type.IsArray,
       _ => false
@@ -238,6 +240,34 @@ public static partial class JvmEmitter {
             this.Code.EmitInvoke(JvmOpcode.Invokestatic, "java/lang/Integer", "signum", "(I)I", 1, VType.Int);
             break;
           }
+          case IrIntrinsicOp.FormatDotNet or IrIntrinsicOp.FormatEcma:
+            this.EmitFormatNumber(args[0]);
+            break;
+        }
+      }
+
+      private void EmitFormatNumber(IrExpr value) {
+        var strType = VType.Object(this.Pool.AddClass("java/lang/String"));
+        this.EmitExpr(value);
+        switch (value.Type.Integral.Kind) {
+          case IrTypeKind.U32:
+            this.Code.EmitInvoke(JvmOpcode.Invokestatic, "java/lang/Integer", "toUnsignedString", "(I)Ljava/lang/String;", 1, strType);
+            break;
+          case IrTypeKind.I64:
+            this.Code.EmitInvoke(JvmOpcode.Invokestatic, "java/lang/Long", "toString", "(J)Ljava/lang/String;", 1, strType);
+            break;
+          case IrTypeKind.U64:
+            this.Code.EmitInvoke(JvmOpcode.Invokestatic, "java/lang/Long", "toUnsignedString", "(J)Ljava/lang/String;", 1, strType);
+            break;
+          case IrTypeKind.F32:
+            this.Code.EmitInvoke(JvmOpcode.Invokestatic, "java/lang/Float", "toString", "(F)Ljava/lang/String;", 1, strType);
+            break;
+          case IrTypeKind.F64:
+            this.Code.EmitInvoke(JvmOpcode.Invokestatic, "java/lang/Double", "toString", "(D)Ljava/lang/String;", 1, strType);
+            break;
+          default:
+            this.Code.EmitInvoke(JvmOpcode.Invokestatic, "java/lang/Integer", "toString", "(I)Ljava/lang/String;", 1, strType);
+            break;
         }
       }
 

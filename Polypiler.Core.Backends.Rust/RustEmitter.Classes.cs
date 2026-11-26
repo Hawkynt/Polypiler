@@ -200,7 +200,7 @@ public static partial class RustEmitter {
           return (this.Expression(call), this._nullness.ReturnsNull(call.Function) ? Held.OptionalValue : Held.Value);
         case IrFieldLoad load:
           return (this.Expression(load), Held.OptionalValue);
-        case IrCollection or IrMethodCall:
+        case IrCollection or IrMethodCall or IrAwait:
           return (this.Expression(value), this.MayBeNull(value) ? Held.OptionalValue : Held.Value);
         case IrGlobalRef global when this.IsThreadLocal(global.Global):
           return (this.Expression(global), Held.OptionalValue);

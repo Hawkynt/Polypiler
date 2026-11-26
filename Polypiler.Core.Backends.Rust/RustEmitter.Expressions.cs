@@ -23,7 +23,7 @@ public static partial class RustEmitter {
   /// </summary>
   public static int Precedence(RsExpression expression) => expression switch {
     RsLiteral literal when literal.Text.StartsWith('-') => 13,
-    RsLiteral or RsString or RsPath or RsParenthesized or RsCall or RsMethodCall or RsMacro or RsIndex or RsArray or RsField or RsStructLiteral or RsTuple or RsTry => 15,
+    RsLiteral or RsString or RsPath or RsParenthesized or RsCall or RsMethodCall or RsMacro or RsIndex or RsArray or RsField or RsStructLiteral or RsTuple or RsTry or RsAwait => 15,
     RsUnary or RsReference => 13,
     RsCast => 12,
     RsBinary binary => RustPrinter.Precedence(binary.Operator),
@@ -172,6 +172,9 @@ public static partial class RustEmitter {
       IrStructEquals equality when IsBuffer(equality.Left.Type) => this.Refuse("the equality of a struct holding an array"),
       IrStructEquals equality when equality.Left.Type.IsStruct => this.Binary(this.Expression(equality.Left), "==", this.Expression(equality.Right), IrType.Bool),
       IrThrowExpression thrown => this.Throw(thrown.Exception),
+      IrAwait awaited => this.Await(awaited),
+      IrForeignCall call => this.ForeignCall(call),
+      IrLastError => this.Refuse("LastError"),
       _ => this.Refuse(expression.GetType().Name[2..])
     };
 
