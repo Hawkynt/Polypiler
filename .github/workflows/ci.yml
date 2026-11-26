@@ -56,6 +56,10 @@ jobs:
         run: |
           mkdir -p artifacts/gates
           time dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build -- report capabilities --gates artifacts/gates --check
+      - name: Build Polypiler.Cli
+        run: dotnet build Polypiler.Cli/Polypiler.Cli.csproj -c Release
+      - name: report showcase --check
+        run: time dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build -- report showcase --check
 
   # The fence around the LGPL compiler: no GPL-derived, reference-only or denied code in a Polypiler.*
   # folder, and every provenance-notice entry there names its origin and licence (PLY0024, PLY0029).
