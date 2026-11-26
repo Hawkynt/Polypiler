@@ -30,6 +30,7 @@ internal static class JvmLibrary {
         or IrIntrinsicOp.RotateLeft or IrIntrinsicOp.RotateRight
         or IrIntrinsicOp.LeadingZeroCount or IrIntrinsicOp.TrailingZeroCount or IrIntrinsicOp.PopCount
         or IrIntrinsicOp.ByteSwap or IrIntrinsicOp.HighWord or IrIntrinsicOp.JoinWords
+        or IrIntrinsicOp.ParallelBitExtract or IrIntrinsicOp.ParallelBitDeposit
         or IrIntrinsicOp.LoadLittle or IrIntrinsicOp.LoadBig
         or IrIntrinsicOp.StoreLittle or IrIntrinsicOp.StoreBig => false,
       _ => true

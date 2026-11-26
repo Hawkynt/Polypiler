@@ -18,13 +18,26 @@ public static partial class JvmEmitter {
         or IrIntrinsicOp.RotateLeft or IrIntrinsicOp.RotateRight
         or IrIntrinsicOp.LeadingZeroCount or IrIntrinsicOp.TrailingZeroCount or IrIntrinsicOp.PopCount
         or IrIntrinsicOp.ByteSwap or IrIntrinsicOp.HighWord or IrIntrinsicOp.JoinWords
+        or IrIntrinsicOp.ParallelBitExtract or IrIntrinsicOp.ParallelBitDeposit
         or IrIntrinsicOp.ArrayOf or IrIntrinsicOp.ArrayCopy or IrIntrinsicOp.ArrayClear or IrIntrinsicOp.ArrayFill
         or IrIntrinsicOp.StrLength or IrIntrinsicOp.StrConcat or IrIntrinsicOp.StrEquals
         or IrIntrinsicOp.StrCodeUnitAt or IrIntrinsicOp.StrSubstring or IrIntrinsicOp.StrCompareOrdinal
-        or IrIntrinsicOp.FormatDotNet => true,
+        or IrIntrinsicOp.FormatDotNet
+        or IrIntrinsicOp.ViewOf or IrIntrinsicOp.Slice or IrIntrinsicOp.ViewLength or IrIntrinsicOp.StackAlloc
+        or IrIntrinsicOp.ViewCopy or IrIntrinsicOp.ViewTryCopy or IrIntrinsicOp.ViewFill
+        or IrIntrinsicOp.ViewEqual or IrIntrinsicOp.ViewToArray
+        or IrIntrinsicOp.Pin or IrIntrinsicOp.AddressOf or IrIntrinsicOp.PointerAdd or IrIntrinsicOp.PointerDifference
+        or IrIntrinsicOp.PointerEqual or IrIntrinsicOp.PointerNotEqual
+        or IrIntrinsicOp.PointerLess or IrIntrinsicOp.PointerLessOrEqual
+        or IrIntrinsicOp.PointerGreater or IrIntrinsicOp.PointerGreaterOrEqual
+        or IrIntrinsicOp.PointerLoad or IrIntrinsicOp.PointerStore => true,
+      IrIntrinsicOp.PointerCast => intrinsic.Arguments[0].Type.Element == intrinsic.Type.Element
+        || intrinsic.Arguments[0].Type.Element == IrType.Void
+        || intrinsic.Type.Element == IrType.Void,
+      IrIntrinsicOp.Reinterpret => intrinsic.Arguments[0].Type.Element == intrinsic.Type.Element,
       IrIntrinsicOp.FormatEcma => intrinsic.Arguments[0].Type.IsInteger,
       IrIntrinsicOp.LoadLittle or IrIntrinsicOp.LoadBig or IrIntrinsicOp.StoreLittle or IrIntrinsicOp.StoreBig
-        => intrinsic.Arguments[0].Type.IsArray,
+        => intrinsic.Arguments[0].Type.IsArray || intrinsic.Arguments[0].Type.IsView,
       _ => false
     };
 
@@ -138,6 +151,12 @@ public static partial class JvmEmitter {
             this.Code.EmitOp(JvmOpcode.Land, 2, VType.Long);
             this.Code.EmitOp(JvmOpcode.Lor, 2, VType.Long);
             break;
+          case IrIntrinsicOp.ParallelBitExtract:
+            this.EmitParallelBitPermute(args[0], args[1], extract: true);
+            break;
+          case IrIntrinsicOp.ParallelBitDeposit:
+            this.EmitParallelBitPermute(args[0], args[1], extract: false);
+            break;
           case IrIntrinsicOp.LoadLittle:
             this.EmitEndianLoad(args[0], args[1], intrinsic.Type, littleEndian: true);
             break;
@@ -153,7 +172,7 @@ public static partial class JvmEmitter {
           case IrIntrinsicOp.ArrayOf: {
             var elem = intrinsic.Type.Element!;
             this.Code.EmitConstInt(args.Count);
-            EmitArrayAlloc(this.Code, elem, JvmTypeMapper.Descriptor(intrinsic.Type));
+            this._owner.EmitArrayAlloc(this.Code, elem, this.Names.Descriptor(intrinsic.Type));
             for (var i = 0; i < args.Count; ++i) {
               this.Code.EmitDup();
               this.Code.EmitConstInt(i);
@@ -172,7 +191,7 @@ public static partial class JvmEmitter {
             var elem = args[0].Type.Element!;
             this.EmitExpr(args[0]);
             this.EmitExpr(args[1]);
-            var elemDesc = JvmTypeMapper.Descriptor(elem);
+            var elemDesc = this.Names.Descriptor(elem);
             this.Code.EmitInvoke(JvmOpcode.Invokestatic, "java/util/Arrays", "fill", $"([{elemDesc}{elemDesc})V", 2);
             break;
           }
@@ -180,7 +199,7 @@ public static partial class JvmEmitter {
             var elem = args[0].Type.Element!;
             this.EmitExpr(args[0]);
             EmitScalarConst(this.Code, elem, 0);
-            var elemDesc = JvmTypeMapper.Descriptor(elem);
+            var elemDesc = this.Names.Descriptor(elem);
             this.Code.EmitInvoke(JvmOpcode.Invokestatic, "java/util/Arrays", "fill", $"([{elemDesc}{elemDesc})V", 2);
             break;
           }
@@ -243,8 +262,884 @@ public static partial class JvmEmitter {
           case IrIntrinsicOp.FormatDotNet or IrIntrinsicOp.FormatEcma:
             this.EmitFormatNumber(args[0]);
             break;
+          case IrIntrinsicOp.ViewOf or IrIntrinsicOp.Slice:
+            this.EmitViewSlice(intrinsic);
+            break;
+          case IrIntrinsicOp.ViewLength: {
+            var spanClass = this._owner.EnsureSpanClass(args[0].Type.Element!);
+            this.EmitExpr(args[0]);
+            this.Code.EmitField(JvmOpcode.Getfield, spanClass, "length", "I", VType.Int);
+            break;
+          }
+          case IrIntrinsicOp.StackAlloc:
+            this.EmitStackAlloc(intrinsic);
+            break;
+          case IrIntrinsicOp.ViewCopy or IrIntrinsicOp.ViewTryCopy:
+            this.EmitViewCopy(args[0], args[1], tryCopy: intrinsic.Op == IrIntrinsicOp.ViewTryCopy);
+            break;
+          case IrIntrinsicOp.ViewFill:
+            this.EmitViewFill(args[0], args[1]);
+            break;
+          case IrIntrinsicOp.ViewEqual:
+            this.EmitViewEqual(args[0], args[1]);
+            break;
+          case IrIntrinsicOp.ViewToArray:
+            this.EmitViewToArray(args[0]);
+            break;
+          case IrIntrinsicOp.Reinterpret:
+            this.EmitExpr(args[0]);
+            break;
+          case IrIntrinsicOp.Pin:
+            this.EmitPin(intrinsic);
+            break;
+          case IrIntrinsicOp.AddressOf:
+            this.EmitAddressOf(intrinsic);
+            break;
+          case IrIntrinsicOp.PointerAdd:
+            this.EmitPointerAdd(intrinsic);
+            break;
+          case IrIntrinsicOp.PointerDifference:
+            this.EmitPointerDifference(args[0], args[1]);
+            break;
+          case IrIntrinsicOp.PointerEqual or IrIntrinsicOp.PointerNotEqual
+            or IrIntrinsicOp.PointerLess or IrIntrinsicOp.PointerLessOrEqual
+            or IrIntrinsicOp.PointerGreater or IrIntrinsicOp.PointerGreaterOrEqual:
+            this.EmitPointerCompare(intrinsic.Op, args[0], args[1]);
+            break;
+          case IrIntrinsicOp.PointerLoad:
+            this.EmitPointerLoad(args[0]);
+            break;
+          case IrIntrinsicOp.PointerStore:
+            this.EmitPointerStore(args[0], args[1]);
+            break;
+          case IrIntrinsicOp.PointerCast:
+            this.EmitExpr(args[0]);
+            if (intrinsic.Type.Element != IrType.Void && args[0].Type.Element == IrType.Void)
+              this.Code.EmitCheckCast(this._owner.EnsurePointerClass(intrinsic.Type.Element!));
+            break;
         }
       }
+
+      private void EmitParallelBitPermute(IrExpr valueExpr, IrExpr maskExpr, bool extract) {
+        var type = valueExpr.Type.Integral;
+        var isLong = type.IsLong;
+        var width = type.Bits;
+        var vtype = isLong ? VType.Long : VType.Int;
+        var srcSlot = this.Code.AllocateLocal(vtype);
+        var maskSlot = this.Code.AllocateLocal(vtype);
+        var resSlot = this.Code.AllocateLocal(vtype);
+        var posSlot = this.Code.AllocateLocal(VType.Int);
+        var nextSlot = this.Code.AllocateLocal(VType.Int);
+
+        this.EmitExpr(valueExpr);
+        this.Code.EmitStore(srcSlot, vtype);
+        this.EmitExpr(maskExpr);
+        this.Code.EmitStore(maskSlot, vtype);
+        if (isLong)
+          this.Code.EmitConstLong(0L);
+        else
+          this.Code.EmitConstInt(0);
+        this.Code.EmitStore(resSlot, vtype);
+        this.Code.EmitConstInt(0);
+        this.Code.EmitStore(posSlot, VType.Int);
+        this.Code.EmitConstInt(0);
+        this.Code.EmitStore(nextSlot, VType.Int);
+
+        var loopStart = this.Code.DefineLabel();
+        var skipBit = this.Code.DefineLabel();
+        var loopEnd = this.Code.DefineLabel();
+        this.Code.MarkLabel(loopStart);
+        this.Code.EmitLoad(posSlot, VType.Int);
+        this.Code.EmitConstInt(width);
+        this.Code.EmitBranch(JvmOpcode.IfIcmpge, loopEnd);
+
+        // Check if ((mask >>> pos) & 1) != 0
+        this.Code.EmitLoad(maskSlot, vtype);
+        this.Code.EmitLoad(posSlot, VType.Int);
+        if (isLong) {
+          this.Code.EmitOp(JvmOpcode.Lushr, 2, VType.Long);
+          this.Code.EmitConstLong(1L);
+          this.Code.EmitOp(JvmOpcode.Land, 2, VType.Long);
+          this.Code.EmitConstLong(0L);
+          this.Code.EmitOp(JvmOpcode.Lcmp, 2, VType.Int);
+        } else {
+          this.Code.EmitOp(JvmOpcode.Iushr, 2, VType.Int);
+          this.Code.EmitConstInt(1);
+          this.Code.EmitOp(JvmOpcode.Iand, 2, VType.Int);
+        }
+
+        this.Code.EmitBranch(JvmOpcode.Ifeq, skipBit);
+
+        // res |= ((src >>> (extract ? pos : next)) & 1) << (extract ? next : pos); next++;
+        this.Code.EmitLoad(resSlot, vtype);
+        this.Code.EmitLoad(srcSlot, vtype);
+        this.Code.EmitLoad(extract ? posSlot : nextSlot, VType.Int);
+        if (isLong) {
+          this.Code.EmitOp(JvmOpcode.Lushr, 2, VType.Long);
+          this.Code.EmitConstLong(1L);
+          this.Code.EmitOp(JvmOpcode.Land, 2, VType.Long);
+          this.Code.EmitLoad(extract ? nextSlot : posSlot, VType.Int);
+          this.Code.EmitOp(JvmOpcode.Lshl, 2, VType.Long);
+          this.Code.EmitOp(JvmOpcode.Lor, 2, VType.Long);
+        } else {
+          this.Code.EmitOp(JvmOpcode.Iushr, 2, VType.Int);
+          this.Code.EmitConstInt(1);
+          this.Code.EmitOp(JvmOpcode.Iand, 2, VType.Int);
+          this.Code.EmitLoad(extract ? nextSlot : posSlot, VType.Int);
+          this.Code.EmitOp(JvmOpcode.Ishl, 2, VType.Int);
+          this.Code.EmitOp(JvmOpcode.Ior, 2, VType.Int);
+        }
+
+        this.Code.EmitStore(resSlot, vtype);
+        this.Code.EmitLoad(nextSlot, VType.Int);
+        this.Code.EmitConstInt(1);
+        this.Code.EmitOp(JvmOpcode.Iadd, 2, VType.Int);
+        this.Code.EmitStore(nextSlot, VType.Int);
+
+        this.Code.MarkLabel(skipBit);
+        this.Code.EmitLoad(posSlot, VType.Int);
+        this.Code.EmitConstInt(1);
+        this.Code.EmitOp(JvmOpcode.Iadd, 2, VType.Int);
+        this.Code.EmitStore(posSlot, VType.Int);
+        this.Code.EmitGoto(loopStart);
+
+        this.Code.MarkLabel(loopEnd);
+        this.Code.EmitLoad(resSlot, vtype);
+        if (!isLong && width < 32)
+          this.EmitIntWrapConvert(IrType.I32, type);
+      }
+
+      // --------------------------------------------------------- Spans & Views
+
+      private void EmitViewSlice(IrIntrinsic intrinsic) {
+        var elem = intrinsic.Type.Element!;
+        var spanClass = this._owner.EnsureSpanClass(elem);
+        var arrType = IrType.Array(elem);
+        var arrDesc = this.Names.Descriptor(arrType);
+        var arrVType = this.VTypeOf(arrType);
+        var baseArrSlot = this.Code.AllocateLocal(arrVType);
+        var baseOffSlot = this.Code.AllocateLocal(VType.Int);
+        var baseLenSlot = this.Code.AllocateLocal(VType.Int);
+
+        var src = intrinsic.Arguments[0];
+        if (src.Type.IsArray) {
+          this.EmitExpr(src);
+          this.Code.EmitStore(baseArrSlot, arrVType);
+          this.Code.EmitConstInt(0);
+          this.Code.EmitStore(baseOffSlot, VType.Int);
+          this.Code.EmitLoad(baseArrSlot, arrVType);
+          this.Code.EmitOp(JvmOpcode.Arraylength, 1, VType.Int);
+          this.Code.EmitStore(baseLenSlot, VType.Int);
+        } else {
+          var srcSpanVType = VType.Object(this.Pool.AddClass(spanClass));
+          var srcSpanSlot = this.Code.AllocateLocal(srcSpanVType);
+          this.EmitExpr(src);
+          this.Code.EmitStore(srcSpanSlot, srcSpanVType);
+          this.Code.EmitLoad(srcSpanSlot, srcSpanVType);
+          this.Code.EmitField(JvmOpcode.Getfield, spanClass, "array", arrDesc, arrVType);
+          this.Code.EmitStore(baseArrSlot, arrVType);
+          this.Code.EmitLoad(srcSpanSlot, srcSpanVType);
+          this.Code.EmitField(JvmOpcode.Getfield, spanClass, "offset", "I", VType.Int);
+          this.Code.EmitStore(baseOffSlot, VType.Int);
+          this.Code.EmitLoad(srcSpanSlot, srcSpanVType);
+          this.Code.EmitField(JvmOpcode.Getfield, spanClass, "length", "I", VType.Int);
+          this.Code.EmitStore(baseLenSlot, VType.Int);
+        }
+
+        if (intrinsic.Arguments.Count == 1) {
+          this.Code.EmitNew(spanClass);
+          this.Code.EmitDup();
+          this.Code.EmitLoad(baseArrSlot, arrVType);
+          this.Code.EmitLoad(baseOffSlot, VType.Int);
+          this.Code.EmitLoad(baseLenSlot, VType.Int);
+          this.Code.EmitInvoke(JvmOpcode.Invokespecial, spanClass, "<init>", $"({arrDesc}II)V", 3);
+          return;
+        }
+
+        var startSlot = this.Code.AllocateLocal(VType.Int);
+        var lenSlot = this.Code.AllocateLocal(VType.Int);
+        this.EmitExpr(intrinsic.Arguments[1]);
+        this.Code.EmitStore(startSlot, VType.Int);
+        if (intrinsic.Arguments.Count == 3) {
+          this.EmitExpr(intrinsic.Arguments[2]);
+          this.Code.EmitStore(lenSlot, VType.Int);
+        } else {
+          this.Code.EmitLoad(baseLenSlot, VType.Int);
+          this.Code.EmitLoad(startSlot, VType.Int);
+          this.Code.EmitOp(JvmOpcode.Isub, 2, VType.Int);
+          this.Code.EmitStore(lenSlot, VType.Int);
+        }
+
+        // Bounds check: start < 0 || len < 0 || (long)start + len > baseLen
+        var trapLabel = this.Code.DefineLabel();
+        var okLabel = this.Code.DefineLabel();
+        this.Code.EmitLoad(startSlot, VType.Int);
+        this.Code.EmitBranch(JvmOpcode.Iflt, trapLabel);
+        this.Code.EmitLoad(lenSlot, VType.Int);
+        this.Code.EmitBranch(JvmOpcode.Iflt, trapLabel);
+        this.Code.EmitLoad(startSlot, VType.Int);
+        this.Code.EmitOp(JvmOpcode.I2l, 1, VType.Long);
+        this.Code.EmitLoad(lenSlot, VType.Int);
+        this.Code.EmitOp(JvmOpcode.I2l, 1, VType.Long);
+        this.Code.EmitOp(JvmOpcode.Ladd, 2, VType.Long);
+        this.Code.EmitLoad(baseLenSlot, VType.Int);
+        this.Code.EmitOp(JvmOpcode.I2l, 1, VType.Long);
+        this.Code.EmitOp(JvmOpcode.Lcmp, 2, VType.Int);
+        this.Code.EmitBranch(JvmOpcode.Ifgt, trapLabel);
+        this.Code.EmitGoto(okLabel);
+        this.Code.MarkLabel(trapLabel);
+        this.EmitThrowIllegalArgument("Slice range is out of bounds.");
+        this.Code.MarkLabel(okLabel);
+
+        this.Code.EmitNew(spanClass);
+        this.Code.EmitDup();
+        this.Code.EmitLoad(baseArrSlot, arrVType);
+        this.Code.EmitLoad(baseOffSlot, VType.Int);
+        this.Code.EmitLoad(startSlot, VType.Int);
+        this.Code.EmitOp(JvmOpcode.Iadd, 2, VType.Int);
+        this.Code.EmitLoad(lenSlot, VType.Int);
+        this.Code.EmitInvoke(JvmOpcode.Invokespecial, spanClass, "<init>", $"({arrDesc}II)V", 3);
+      }
+
+      private void EmitViewLoad(IrExpr viewExpr, IrExpr indexExpr) {
+        var elem = viewExpr.Type.Element!;
+        var spanClass = this._owner.EnsureSpanClass(elem);
+        var spanVType = VType.Object(this.Pool.AddClass(spanClass));
+        var arrDesc = this.Names.Descriptor(IrType.Array(elem));
+        var arrVType = this.VTypeOf(IrType.Array(elem));
+        var spanSlot = this.Code.AllocateLocal(spanVType);
+        var idxSlot = this.Code.AllocateLocal(VType.Int);
+
+        this.EmitExpr(viewExpr);
+        this.Code.EmitStore(spanSlot, spanVType);
+        this.EmitExpr(indexExpr);
+        this.Code.EmitStore(idxSlot, VType.Int);
+        this.EmitSpanIndexCheck(spanSlot, spanVType, spanClass, idxSlot);
+
+        this.Code.EmitLoad(spanSlot, spanVType);
+        this.Code.EmitField(JvmOpcode.Getfield, spanClass, "array", arrDesc, arrVType);
+        this.Code.EmitLoad(spanSlot, spanVType);
+        this.Code.EmitField(JvmOpcode.Getfield, spanClass, "offset", "I", VType.Int);
+        this.Code.EmitLoad(idxSlot, VType.Int);
+        this.Code.EmitOp(JvmOpcode.Iadd, 2, VType.Int);
+        this.Code.EmitOp(JvmTypeMapper.ArrayLoadOpcode(elem), 2, this.VTypeOf(elem));
+        if (elem.Integral == IrType.U8) {
+          this.Code.EmitConstInt(0xFF);
+          this.Code.EmitOp(JvmOpcode.Iand, 2, VType.Int);
+        }
+      }
+
+      private void EmitViewStore(IrExpr viewExpr, IrExpr indexExpr, IrExpr valueExpr) {
+        var elem = viewExpr.Type.Element!;
+        var spanClass = this._owner.EnsureSpanClass(elem);
+        var spanVType = VType.Object(this.Pool.AddClass(spanClass));
+        var arrDesc = this.Names.Descriptor(IrType.Array(elem));
+        var arrVType = this.VTypeOf(IrType.Array(elem));
+        var elemVType = this.VTypeOf(elem);
+        var spanSlot = this.Code.AllocateLocal(spanVType);
+        var idxSlot = this.Code.AllocateLocal(VType.Int);
+        var valSlot = this.Code.AllocateLocal(elemVType);
+
+        this.EmitExpr(viewExpr);
+        this.Code.EmitStore(spanSlot, spanVType);
+        this.EmitExpr(indexExpr);
+        this.Code.EmitStore(idxSlot, VType.Int);
+        this.EmitExpr(valueExpr);
+        this.Code.EmitStore(valSlot, elemVType);
+        this.EmitSpanIndexCheck(spanSlot, spanVType, spanClass, idxSlot);
+
+        this.Code.EmitLoad(spanSlot, spanVType);
+        this.Code.EmitField(JvmOpcode.Getfield, spanClass, "array", arrDesc, arrVType);
+        this.Code.EmitLoad(spanSlot, spanVType);
+        this.Code.EmitField(JvmOpcode.Getfield, spanClass, "offset", "I", VType.Int);
+        this.Code.EmitLoad(idxSlot, VType.Int);
+        this.Code.EmitOp(JvmOpcode.Iadd, 2, VType.Int);
+        this.Code.EmitLoad(valSlot, elemVType);
+        this.Code.EmitOp(JvmTypeMapper.ArrayStoreOpcode(elem), 3);
+      }
+
+      private void EmitSpanIndexCheck(ushort spanSlot, VType spanVType, string spanClass, ushort idxSlot) {
+        var trapLabel = this.Code.DefineLabel();
+        var okLabel = this.Code.DefineLabel();
+        this.Code.EmitLoad(idxSlot, VType.Int);
+        this.Code.EmitBranch(JvmOpcode.Iflt, trapLabel);
+        this.Code.EmitLoad(idxSlot, VType.Int);
+        this.Code.EmitLoad(spanSlot, spanVType);
+        this.Code.EmitField(JvmOpcode.Getfield, spanClass, "length", "I", VType.Int);
+        this.Code.EmitBranch(JvmOpcode.IfIcmpge, trapLabel);
+        this.Code.EmitGoto(okLabel);
+        this.Code.MarkLabel(trapLabel);
+        this.EmitThrowIndexOutOfBounds("Span index out of range.");
+        this.Code.MarkLabel(okLabel);
+      }
+
+      private void EmitStackAlloc(IrIntrinsic intrinsic) {
+        var elem = intrinsic.Type.Element!;
+        var lenSlot = this.Code.AllocateLocal(VType.Int);
+        var arrType = IrType.Array(elem);
+        var arrDesc = this.Names.Descriptor(arrType);
+        var arrVType = this.VTypeOf(arrType);
+        var arrSlot = this.Code.AllocateLocal(arrVType);
+
+        this.EmitExpr(intrinsic.Arguments[0]);
+        this.Code.EmitStore(lenSlot, VType.Int);
+        var okLabel = this.Code.DefineLabel();
+        this.Code.EmitLoad(lenSlot, VType.Int);
+        this.Code.EmitBranch(JvmOpcode.Ifge, okLabel);
+        this.EmitThrowArithmetic("Stackalloc length must not be negative.");
+        this.Code.MarkLabel(okLabel);
+        this.Code.EmitLoad(lenSlot, VType.Int);
+        this._owner.EmitArrayAlloc(this.Code, elem, arrDesc);
+        this.Code.EmitStore(arrSlot, arrVType);
+
+        if (intrinsic.Type.IsPointer) {
+          var ptrClass = this._owner.EnsurePointerClass(elem);
+          this.Code.EmitNew(ptrClass);
+          this.Code.EmitDup();
+          this.Code.EmitLoad(arrSlot, arrVType);
+          this.Code.EmitConstInt(0);
+          this.Code.EmitConstInt(0);
+          this.Code.EmitLoad(lenSlot, VType.Int);
+          this.Code.EmitInvoke(JvmOpcode.Invokespecial, ptrClass, "<init>", $"({arrDesc}III)V", 4);
+        } else {
+          var spanClass = this._owner.EnsureSpanClass(elem);
+          this.Code.EmitNew(spanClass);
+          this.Code.EmitDup();
+          this.Code.EmitLoad(arrSlot, arrVType);
+          this.Code.EmitConstInt(0);
+          this.Code.EmitLoad(lenSlot, VType.Int);
+          this.Code.EmitInvoke(JvmOpcode.Invokespecial, spanClass, "<init>", $"({arrDesc}II)V", 3);
+        }
+      }
+
+      private void EmitViewCopy(IrExpr srcExpr, IrExpr dstExpr, bool tryCopy) {
+        var elem = srcExpr.Type.Element!;
+        var spanClass = this._owner.EnsureSpanClass(elem);
+        var spanVType = VType.Object(this.Pool.AddClass(spanClass));
+        var arrDesc = this.Names.Descriptor(IrType.Array(elem));
+        var arrVType = this.VTypeOf(IrType.Array(elem));
+        var srcSlot = this.Code.AllocateLocal(spanVType);
+        var dstSlot = this.Code.AllocateLocal(spanVType);
+
+        this.EmitExpr(srcExpr);
+        this.Code.EmitStore(srcSlot, spanVType);
+        this.EmitExpr(dstExpr);
+        this.Code.EmitStore(dstSlot, spanVType);
+
+        var okLabel = this.Code.DefineLabel();
+        var endLabel = this.Code.DefineLabel();
+        this.Code.EmitLoad(srcSlot, spanVType);
+        this.Code.EmitField(JvmOpcode.Getfield, spanClass, "length", "I", VType.Int);
+        this.Code.EmitLoad(dstSlot, spanVType);
+        this.Code.EmitField(JvmOpcode.Getfield, spanClass, "length", "I", VType.Int);
+        this.Code.EmitBranch(JvmOpcode.IfIcmple, okLabel);
+        if (tryCopy) {
+          this.Code.EmitConstInt(0);
+          this.Code.EmitGoto(endLabel);
+        } else {
+          this.EmitThrowIllegalArgument("Destination span is shorter than source span.");
+        }
+
+        this.Code.MarkLabel(okLabel);
+        this.Code.EmitLoad(srcSlot, spanVType);
+        this.Code.EmitField(JvmOpcode.Getfield, spanClass, "array", arrDesc, arrVType);
+        this.Code.EmitLoad(srcSlot, spanVType);
+        this.Code.EmitField(JvmOpcode.Getfield, spanClass, "offset", "I", VType.Int);
+        this.Code.EmitLoad(dstSlot, spanVType);
+        this.Code.EmitField(JvmOpcode.Getfield, spanClass, "array", arrDesc, arrVType);
+        this.Code.EmitLoad(dstSlot, spanVType);
+        this.Code.EmitField(JvmOpcode.Getfield, spanClass, "offset", "I", VType.Int);
+        this.Code.EmitLoad(srcSlot, spanVType);
+        this.Code.EmitField(JvmOpcode.Getfield, spanClass, "length", "I", VType.Int);
+        this.Code.EmitInvoke(JvmOpcode.Invokestatic, "java/lang/System", "arraycopy", "(Ljava/lang/Object;ILjava/lang/Object;II)V", 5);
+        if (tryCopy) {
+          this.Code.EmitConstInt(1);
+          this.Code.MarkLabel(endLabel);
+        }
+      }
+
+      private void EmitViewFill(IrExpr viewExpr, IrExpr valExpr) {
+        var elem = viewExpr.Type.Element!;
+        var spanClass = this._owner.EnsureSpanClass(elem);
+        var spanVType = VType.Object(this.Pool.AddClass(spanClass));
+        var arrDesc = this.Names.Descriptor(IrType.Array(elem));
+        var arrVType = this.VTypeOf(IrType.Array(elem));
+        var elemVType = this.VTypeOf(elem);
+        var spanSlot = this.Code.AllocateLocal(spanVType);
+        var valSlot = this.Code.AllocateLocal(elemVType);
+        var iSlot = this.Code.AllocateLocal(VType.Int);
+
+        this.EmitExpr(viewExpr);
+        this.Code.EmitStore(spanSlot, spanVType);
+        this.EmitExpr(valExpr);
+        this.Code.EmitStore(valSlot, elemVType);
+        this.Code.EmitConstInt(0);
+        this.Code.EmitStore(iSlot, VType.Int);
+
+        var start = this.Code.DefineLabel();
+        var end = this.Code.DefineLabel();
+        this.Code.MarkLabel(start);
+        this.Code.EmitLoad(iSlot, VType.Int);
+        this.Code.EmitLoad(spanSlot, spanVType);
+        this.Code.EmitField(JvmOpcode.Getfield, spanClass, "length", "I", VType.Int);
+        this.Code.EmitBranch(JvmOpcode.IfIcmpge, end);
+        this.Code.EmitLoad(spanSlot, spanVType);
+        this.Code.EmitField(JvmOpcode.Getfield, spanClass, "array", arrDesc, arrVType);
+        this.Code.EmitLoad(spanSlot, spanVType);
+        this.Code.EmitField(JvmOpcode.Getfield, spanClass, "offset", "I", VType.Int);
+        this.Code.EmitLoad(iSlot, VType.Int);
+        this.Code.EmitOp(JvmOpcode.Iadd, 2, VType.Int);
+        this.Code.EmitLoad(valSlot, elemVType);
+        this.Code.EmitOp(JvmTypeMapper.ArrayStoreOpcode(elem), 3);
+        this.Code.EmitLoad(iSlot, VType.Int);
+        this.Code.EmitConstInt(1);
+        this.Code.EmitOp(JvmOpcode.Iadd, 2, VType.Int);
+        this.Code.EmitStore(iSlot, VType.Int);
+        this.Code.EmitGoto(start);
+        this.Code.MarkLabel(end);
+      }
+
+      private void EmitViewEqual(IrExpr leftExpr, IrExpr rightExpr) {
+        var elem = leftExpr.Type.Element!;
+        var spanClass = this._owner.EnsureSpanClass(elem);
+        var spanVType = VType.Object(this.Pool.AddClass(spanClass));
+        var arrDesc = this.Names.Descriptor(IrType.Array(elem));
+        var arrVType = this.VTypeOf(IrType.Array(elem));
+        var lSlot = this.Code.AllocateLocal(spanVType);
+        var rSlot = this.Code.AllocateLocal(spanVType);
+        var iSlot = this.Code.AllocateLocal(VType.Int);
+        var lenSlot = this.Code.AllocateLocal(VType.Int);
+
+        this.EmitExpr(leftExpr);
+        this.Code.EmitStore(lSlot, spanVType);
+        this.EmitExpr(rightExpr);
+        this.Code.EmitStore(rSlot, spanVType);
+
+        var falseLabel = this.Code.DefineLabel();
+        var endLabel = this.Code.DefineLabel();
+        this.Code.EmitLoad(lSlot, spanVType);
+        this.Code.EmitField(JvmOpcode.Getfield, spanClass, "length", "I", VType.Int);
+        this.Code.EmitDup();
+        this.Code.EmitStore(lenSlot, VType.Int);
+        this.Code.EmitLoad(rSlot, spanVType);
+        this.Code.EmitField(JvmOpcode.Getfield, spanClass, "length", "I", VType.Int);
+        this.Code.EmitBranch(JvmOpcode.IfIcmpne, falseLabel);
+
+        this.Code.EmitConstInt(0);
+        this.Code.EmitStore(iSlot, VType.Int);
+        var loopStart = this.Code.DefineLabel();
+        var loopDone = this.Code.DefineLabel();
+        this.Code.MarkLabel(loopStart);
+        this.Code.EmitLoad(iSlot, VType.Int);
+        this.Code.EmitLoad(lenSlot, VType.Int);
+        this.Code.EmitBranch(JvmOpcode.IfIcmpge, loopDone);
+
+        this.Code.EmitLoad(lSlot, spanVType);
+        this.Code.EmitField(JvmOpcode.Getfield, spanClass, "array", arrDesc, arrVType);
+        this.Code.EmitLoad(lSlot, spanVType);
+        this.Code.EmitField(JvmOpcode.Getfield, spanClass, "offset", "I", VType.Int);
+        this.Code.EmitLoad(iSlot, VType.Int);
+        this.Code.EmitOp(JvmOpcode.Iadd, 2, VType.Int);
+        this.Code.EmitOp(JvmTypeMapper.ArrayLoadOpcode(elem), 2, this.VTypeOf(elem));
+
+        this.Code.EmitLoad(rSlot, spanVType);
+        this.Code.EmitField(JvmOpcode.Getfield, spanClass, "array", arrDesc, arrVType);
+        this.Code.EmitLoad(rSlot, spanVType);
+        this.Code.EmitField(JvmOpcode.Getfield, spanClass, "offset", "I", VType.Int);
+        this.Code.EmitLoad(iSlot, VType.Int);
+        this.Code.EmitOp(JvmOpcode.Iadd, 2, VType.Int);
+        this.Code.EmitOp(JvmTypeMapper.ArrayLoadOpcode(elem), 2, this.VTypeOf(elem));
+
+        this._owner.EmitFieldEqualityBranchOnMismatch(this.Code, this.Pool, elem, falseLabel);
+        this.Code.EmitLoad(iSlot, VType.Int);
+        this.Code.EmitConstInt(1);
+        this.Code.EmitOp(JvmOpcode.Iadd, 2, VType.Int);
+        this.Code.EmitStore(iSlot, VType.Int);
+        this.Code.EmitGoto(loopStart);
+
+        this.Code.MarkLabel(loopDone);
+        this.Code.EmitConstInt(1);
+        this.Code.EmitGoto(endLabel);
+        this.Code.MarkLabel(falseLabel);
+        this.Code.EmitConstInt(0);
+        this.Code.MarkLabel(endLabel);
+      }
+
+      private void EmitViewToArray(IrExpr viewExpr) {
+        var elem = viewExpr.Type.Element!;
+        var spanClass = this._owner.EnsureSpanClass(elem);
+        var spanVType = VType.Object(this.Pool.AddClass(spanClass));
+        var arrType = IrType.Array(elem);
+        var arrDesc = this.Names.Descriptor(arrType);
+        var arrVType = this.VTypeOf(arrType);
+        var spanSlot = this.Code.AllocateLocal(spanVType);
+        var outSlot = this.Code.AllocateLocal(arrVType);
+
+        this.EmitExpr(viewExpr);
+        this.Code.EmitStore(spanSlot, spanVType);
+        this.Code.EmitLoad(spanSlot, spanVType);
+        this.Code.EmitField(JvmOpcode.Getfield, spanClass, "length", "I", VType.Int);
+        this._owner.EmitArrayAlloc(this.Code, elem, arrDesc);
+        this.Code.EmitStore(outSlot, arrVType);
+
+        this.Code.EmitLoad(spanSlot, spanVType);
+        this.Code.EmitField(JvmOpcode.Getfield, spanClass, "array", arrDesc, arrVType);
+        this.Code.EmitLoad(spanSlot, spanVType);
+        this.Code.EmitField(JvmOpcode.Getfield, spanClass, "offset", "I", VType.Int);
+        this.Code.EmitLoad(outSlot, arrVType);
+        this.Code.EmitConstInt(0);
+        this.Code.EmitLoad(spanSlot, spanVType);
+        this.Code.EmitField(JvmOpcode.Getfield, spanClass, "length", "I", VType.Int);
+        this.Code.EmitInvoke(JvmOpcode.Invokestatic, "java/lang/System", "arraycopy", "(Ljava/lang/Object;ILjava/lang/Object;II)V", 5);
+        this.Code.EmitLoad(outSlot, arrVType);
+      }
+
+      // --------------------------------------------------------- Bounded pointers
+
+      private void EmitPin(IrIntrinsic intrinsic) {
+        var src = intrinsic.Arguments[0];
+        var elem = intrinsic.Type.Element!;
+        var ptrClass = this._owner.EnsurePointerClass(elem);
+        var ptrVType = VType.Object(this.Pool.AddClass(ptrClass));
+        var arrDesc = this.Names.Descriptor(IrType.Array(elem));
+        var arrVType = this.VTypeOf(IrType.Array(elem));
+        var arrSlot = this.Code.AllocateLocal(arrVType);
+        var baseOffSlot = this.Code.AllocateLocal(VType.Int);
+        var lenSlot = this.Code.AllocateLocal(VType.Int);
+        var hasIndex = intrinsic.Arguments.Count == 2;
+
+        var nullLabel = this.Code.DefineLabel();
+        var doneLabel = this.Code.DefineLabel();
+
+        if (src.Type.IsArray) {
+          this.EmitExpr(src);
+          this.Code.EmitStore(arrSlot, arrVType);
+          this.Code.EmitLoad(arrSlot, arrVType);
+          if (hasIndex) {
+            var notNull = this.Code.DefineLabel();
+            this.Code.EmitBranch(JvmOpcode.Ifnonnull, notNull);
+            this.Code.EmitNew("java/lang/NullPointerException");
+            this.Code.EmitDup();
+            this.Code.EmitInvoke(JvmOpcode.Invokespecial, "java/lang/NullPointerException", "<init>", "()V", 0);
+            this.Code.EmitAthrow();
+            this.Code.MarkLabel(notNull);
+          } else {
+            this.Code.EmitBranch(JvmOpcode.Ifnull, nullLabel);
+          }
+
+          this.Code.EmitConstInt(0);
+          this.Code.EmitStore(baseOffSlot, VType.Int);
+          this.Code.EmitLoad(arrSlot, arrVType);
+          this.Code.EmitOp(JvmOpcode.Arraylength, 1, VType.Int);
+          this.Code.EmitStore(lenSlot, VType.Int);
+        } else {
+          var spanClass = this._owner.EnsureSpanClass(elem);
+          var spanVType = VType.Object(this.Pool.AddClass(spanClass));
+          var spanSlot = this.Code.AllocateLocal(spanVType);
+          this.EmitExpr(src);
+          this.Code.EmitStore(spanSlot, spanVType);
+          this.Code.EmitLoad(spanSlot, spanVType);
+          this.Code.EmitField(JvmOpcode.Getfield, spanClass, "array", arrDesc, arrVType);
+          this.Code.EmitStore(arrSlot, arrVType);
+          this.Code.EmitLoad(spanSlot, spanVType);
+          this.Code.EmitField(JvmOpcode.Getfield, spanClass, "offset", "I", VType.Int);
+          this.Code.EmitStore(baseOffSlot, VType.Int);
+          this.Code.EmitLoad(spanSlot, spanVType);
+          this.Code.EmitField(JvmOpcode.Getfield, spanClass, "length", "I", VType.Int);
+          this.Code.EmitStore(lenSlot, VType.Int);
+        }
+
+        if (hasIndex) {
+          var idxSlot = this.Code.AllocateLocal(VType.Int);
+          this.EmitExpr(intrinsic.Arguments[1]);
+          this.Code.EmitStore(idxSlot, VType.Int);
+          var trapLabel = this.Code.DefineLabel();
+          var okLabel = this.Code.DefineLabel();
+          this.Code.EmitLoad(idxSlot, VType.Int);
+          this.Code.EmitBranch(JvmOpcode.Iflt, trapLabel);
+          this.Code.EmitLoad(idxSlot, VType.Int);
+          this.Code.EmitLoad(lenSlot, VType.Int);
+          this.Code.EmitBranch(JvmOpcode.IfIcmpge, trapLabel);
+          this.Code.EmitGoto(okLabel);
+          this.Code.MarkLabel(trapLabel);
+          this.EmitThrowIndexOutOfBounds("Pin index out of range.");
+          this.Code.MarkLabel(okLabel);
+
+          this.Code.EmitNew(ptrClass);
+          this.Code.EmitDup();
+          this.Code.EmitLoad(arrSlot, arrVType);
+          this.Code.EmitLoad(baseOffSlot, VType.Int);
+          this.Code.EmitLoad(idxSlot, VType.Int);
+          this.Code.EmitOp(JvmOpcode.Iadd, 2, VType.Int);
+          this.Code.EmitLoad(baseOffSlot, VType.Int);
+          this.Code.EmitLoad(baseOffSlot, VType.Int);
+          this.Code.EmitLoad(lenSlot, VType.Int);
+          this.Code.EmitOp(JvmOpcode.Iadd, 2, VType.Int);
+          this.Code.EmitInvoke(JvmOpcode.Invokespecial, ptrClass, "<init>", $"({arrDesc}III)V", 4);
+          return;
+        }
+
+        this.Code.EmitLoad(lenSlot, VType.Int);
+        this.Code.EmitBranch(JvmOpcode.Ifeq, nullLabel);
+        this.Code.EmitNew(ptrClass);
+        this.Code.EmitDup();
+        this.Code.EmitLoad(arrSlot, arrVType);
+        this.Code.EmitLoad(baseOffSlot, VType.Int);
+        this.Code.EmitLoad(baseOffSlot, VType.Int);
+        this.Code.EmitLoad(baseOffSlot, VType.Int);
+        this.Code.EmitLoad(lenSlot, VType.Int);
+        this.Code.EmitOp(JvmOpcode.Iadd, 2, VType.Int);
+        this.Code.EmitInvoke(JvmOpcode.Invokespecial, ptrClass, "<init>", $"({arrDesc}III)V", 4);
+        this.Code.EmitGoto(doneLabel);
+        this.Code.MarkLabel(nullLabel);
+        this.Code.EmitNull();
+        this.Code.CoerceStackTop(ptrVType);
+        this.Code.MarkLabel(doneLabel);
+      }
+
+      private void EmitAddressOf(IrIntrinsic intrinsic) {
+        var local = ((IrLocalRef)intrinsic.Arguments[0]).Local;
+        var elem = local.Type;
+        var ptrClass = this._owner.EnsurePointerClass(elem);
+        var arrDesc = this.Names.Descriptor(IrType.Array(elem));
+        var addr = this._addressedLocals[local];
+        this.Code.EmitNew(ptrClass);
+        this.Code.EmitDup();
+        this.Code.EmitLoad(addr.ArraySlot, addr.ArrayVType);
+        this.Code.EmitConstInt(0);
+        this.Code.EmitConstInt(0);
+        this.Code.EmitConstInt(1);
+        this.Code.EmitInvoke(JvmOpcode.Invokespecial, ptrClass, "<init>", $"({arrDesc}III)V", 4);
+      }
+
+      private void EmitPointerAdd(IrIntrinsic intrinsic) {
+        var elem = intrinsic.Type.Element!;
+        var ptrClass = this._owner.EnsurePointerClass(elem);
+        var ptrVType = VType.Object(this.Pool.AddClass(ptrClass));
+        var arrDesc = this.Names.Descriptor(IrType.Array(elem));
+        var arrVType = this.VTypeOf(IrType.Array(elem));
+        var ptrSlot = this.Code.AllocateLocal(ptrVType);
+        var deltaSlot = this.Code.AllocateLocal(VType.Int);
+
+        this.EmitExpr(intrinsic.Arguments[0]);
+        this.Code.EmitStore(ptrSlot, ptrVType);
+        this.EmitExpr(intrinsic.Arguments[1]);
+        this.Code.EmitStore(deltaSlot, VType.Int);
+
+        var nullLabel = this.Code.DefineLabel();
+        var endLabel = this.Code.DefineLabel();
+        this.Code.EmitLoad(ptrSlot, ptrVType);
+        this.Code.EmitBranch(JvmOpcode.Ifnull, nullLabel);
+
+        this.Code.EmitNew(ptrClass);
+        this.Code.EmitDup();
+        this.Code.EmitLoad(ptrSlot, ptrVType);
+        this.Code.EmitField(JvmOpcode.Getfield, ptrClass, "array", arrDesc, arrVType);
+        this.Code.EmitLoad(ptrSlot, ptrVType);
+        this.Code.EmitField(JvmOpcode.Getfield, ptrClass, "offset", "I", VType.Int);
+        this.Code.EmitLoad(deltaSlot, VType.Int);
+        this.Code.EmitOp(JvmOpcode.Iadd, 2, VType.Int);
+        this.Code.EmitLoad(ptrSlot, ptrVType);
+        this.Code.EmitField(JvmOpcode.Getfield, ptrClass, "minOffset", "I", VType.Int);
+        this.Code.EmitLoad(ptrSlot, ptrVType);
+        this.Code.EmitField(JvmOpcode.Getfield, ptrClass, "maxOffset", "I", VType.Int);
+        this.Code.EmitInvoke(JvmOpcode.Invokespecial, ptrClass, "<init>", $"({arrDesc}III)V", 4);
+        this.Code.EmitGoto(endLabel);
+
+        this.Code.MarkLabel(nullLabel);
+        this.Code.EmitNew(ptrClass);
+        this.Code.EmitDup();
+        this.Code.EmitNull();
+        this.Code.EmitLoad(deltaSlot, VType.Int);
+        this.Code.EmitConstInt(0);
+        this.Code.EmitConstInt(0);
+        this.Code.EmitInvoke(JvmOpcode.Invokespecial, ptrClass, "<init>", $"({arrDesc}III)V", 4);
+        this.Code.MarkLabel(endLabel);
+      }
+
+      private void EmitPointerBoundsCheck(ushort ptrSlot, VType ptrVType, string ptrClass, string arrDesc, VType arrVType) {
+        var nullTrap = this.Code.DefineLabel();
+        var oobTrap = this.Code.DefineLabel();
+        var okLabel = this.Code.DefineLabel();
+
+        this.Code.EmitLoad(ptrSlot, ptrVType);
+        this.Code.EmitBranch(JvmOpcode.Ifnull, nullTrap);
+        this.Code.EmitLoad(ptrSlot, ptrVType);
+        this.Code.EmitField(JvmOpcode.Getfield, ptrClass, "array", arrDesc, arrVType);
+        this.Code.EmitBranch(JvmOpcode.Ifnull, nullTrap);
+        this.Code.EmitLoad(ptrSlot, ptrVType);
+        this.Code.EmitField(JvmOpcode.Getfield, ptrClass, "offset", "I", VType.Int);
+        this.Code.EmitLoad(ptrSlot, ptrVType);
+        this.Code.EmitField(JvmOpcode.Getfield, ptrClass, "minOffset", "I", VType.Int);
+        this.Code.EmitBranch(JvmOpcode.IfIcmplt, oobTrap);
+        this.Code.EmitLoad(ptrSlot, ptrVType);
+        this.Code.EmitField(JvmOpcode.Getfield, ptrClass, "offset", "I", VType.Int);
+        this.Code.EmitLoad(ptrSlot, ptrVType);
+        this.Code.EmitField(JvmOpcode.Getfield, ptrClass, "maxOffset", "I", VType.Int);
+        this.Code.EmitBranch(JvmOpcode.IfIcmpge, oobTrap);
+        this.Code.EmitGoto(okLabel);
+
+        this.Code.MarkLabel(nullTrap);
+        this.Code.EmitNew("java/lang/NullPointerException");
+        this.Code.EmitDup();
+        this.Code.EmitConstString("Null pointer dereference.");
+        this.Code.EmitInvoke(JvmOpcode.Invokespecial, "java/lang/NullPointerException", "<init>", "(Ljava/lang/String;)V", 1);
+        this.Code.EmitAthrow();
+
+        this.Code.MarkLabel(oobTrap);
+        this.EmitThrowIndexOutOfBounds("Pointer dereference out of bounds.");
+        this.Code.MarkLabel(okLabel);
+      }
+
+      private void EmitPointerLoad(IrExpr ptrExpr) {
+        var elem = ptrExpr.Type.Element!;
+        var ptrClass = this._owner.EnsurePointerClass(elem);
+        var ptrVType = VType.Object(this.Pool.AddClass(ptrClass));
+        var arrDesc = this.Names.Descriptor(IrType.Array(elem));
+        var arrVType = this.VTypeOf(IrType.Array(elem));
+        var ptrSlot = this.Code.AllocateLocal(ptrVType);
+
+        this.EmitExpr(ptrExpr);
+        this.Code.EmitStore(ptrSlot, ptrVType);
+        this.EmitPointerBoundsCheck(ptrSlot, ptrVType, ptrClass, arrDesc, arrVType);
+
+        this.Code.EmitLoad(ptrSlot, ptrVType);
+        this.Code.EmitField(JvmOpcode.Getfield, ptrClass, "array", arrDesc, arrVType);
+        this.Code.EmitLoad(ptrSlot, ptrVType);
+        this.Code.EmitField(JvmOpcode.Getfield, ptrClass, "offset", "I", VType.Int);
+        this.Code.EmitOp(JvmTypeMapper.ArrayLoadOpcode(elem), 2, this.VTypeOf(elem));
+        if (elem.Integral == IrType.U8) {
+          this.Code.EmitConstInt(0xFF);
+          this.Code.EmitOp(JvmOpcode.Iand, 2, VType.Int);
+        }
+      }
+
+      private void EmitPointerStore(IrExpr ptrExpr, IrExpr valExpr) {
+        var elem = ptrExpr.Type.Element!;
+        var ptrClass = this._owner.EnsurePointerClass(elem);
+        var ptrVType = VType.Object(this.Pool.AddClass(ptrClass));
+        var arrDesc = this.Names.Descriptor(IrType.Array(elem));
+        var arrVType = this.VTypeOf(IrType.Array(elem));
+        var elemVType = this.VTypeOf(elem);
+        var ptrSlot = this.Code.AllocateLocal(ptrVType);
+        var valSlot = this.Code.AllocateLocal(elemVType);
+
+        this.EmitExpr(ptrExpr);
+        this.Code.EmitStore(ptrSlot, ptrVType);
+        this.EmitExpr(valExpr);
+        this.Code.EmitStore(valSlot, elemVType);
+        this.EmitPointerBoundsCheck(ptrSlot, ptrVType, ptrClass, arrDesc, arrVType);
+
+        this.Code.EmitLoad(ptrSlot, ptrVType);
+        this.Code.EmitField(JvmOpcode.Getfield, ptrClass, "array", arrDesc, arrVType);
+        this.Code.EmitLoad(ptrSlot, ptrVType);
+        this.Code.EmitField(JvmOpcode.Getfield, ptrClass, "offset", "I", VType.Int);
+        this.Code.EmitLoad(valSlot, elemVType);
+        this.Code.EmitOp(JvmTypeMapper.ArrayStoreOpcode(elem), 3);
+      }
+
+      private (ushort LeftArr, ushort LeftOff, ushort RightArr, ushort RightOff) ExtractPointerPair(IrExpr leftExpr, IrExpr rightExpr) {
+        var elem = leftExpr.Type.Element!;
+        var ptrClass = this._owner.EnsurePointerClass(elem);
+        var ptrVType = VType.Object(this.Pool.AddClass(ptrClass));
+        var arrDesc = this.Names.Descriptor(IrType.Array(elem));
+        var arrVType = this.VTypeOf(IrType.Array(elem));
+        var lPtr = this.Code.AllocateLocal(ptrVType);
+        var rPtr = this.Code.AllocateLocal(ptrVType);
+        var lArr = this.Code.AllocateLocal(arrVType);
+        var rArr = this.Code.AllocateLocal(arrVType);
+        var lOff = this.Code.AllocateLocal(VType.Int);
+        var rOff = this.Code.AllocateLocal(VType.Int);
+
+        this.EmitExpr(leftExpr);
+        this.Code.EmitStore(lPtr, ptrVType);
+        this.EmitExpr(rightExpr);
+        this.Code.EmitStore(rPtr, ptrVType);
+
+        this.EmitExtractOnePointer(lPtr, ptrVType, ptrClass, arrDesc, arrVType, lArr, lOff);
+        this.EmitExtractOnePointer(rPtr, ptrVType, ptrClass, arrDesc, arrVType, rArr, rOff);
+        return (lArr, lOff, rArr, rOff);
+      }
+
+      private void EmitExtractOnePointer(ushort ptrSlot, VType ptrVType, string ptrClass, string arrDesc, VType arrVType, ushort arrSlot, ushort offSlot) {
+        var isNull = this.Code.DefineLabel();
+        var done = this.Code.DefineLabel();
+        this.Code.EmitLoad(ptrSlot, ptrVType);
+        this.Code.EmitBranch(JvmOpcode.Ifnull, isNull);
+        this.Code.EmitLoad(ptrSlot, ptrVType);
+        this.Code.EmitField(JvmOpcode.Getfield, ptrClass, "array", arrDesc, arrVType);
+        this.Code.EmitStore(arrSlot, arrVType);
+        this.Code.EmitLoad(ptrSlot, ptrVType);
+        this.Code.EmitField(JvmOpcode.Getfield, ptrClass, "offset", "I", VType.Int);
+        this.Code.EmitStore(offSlot, VType.Int);
+        this.Code.EmitGoto(done);
+        this.Code.MarkLabel(isNull);
+        this.Code.EmitNull();
+        this.Code.EmitStore(arrSlot, arrVType);
+        this.Code.EmitConstInt(0);
+        this.Code.EmitStore(offSlot, VType.Int);
+        this.Code.MarkLabel(done);
+      }
+
+      private void EmitPointerDifference(IrExpr leftExpr, IrExpr rightExpr) {
+        var arrVType = this.VTypeOf(IrType.Array(leftExpr.Type.Element!));
+        var (lArr, lOff, rArr, rOff) = this.ExtractPointerPair(leftExpr, rightExpr);
+        var sameLabel = this.Code.DefineLabel();
+        this.Code.EmitLoad(lArr, arrVType);
+        this.Code.EmitLoad(rArr, arrVType);
+        this.Code.EmitBranch(JvmOpcode.IfAcmpeq, sameLabel);
+        this.EmitThrowIllegalState("Cannot subtract pointers into different regions.");
+        this.Code.MarkLabel(sameLabel);
+        this.Code.EmitLoad(lOff, VType.Int);
+        this.Code.EmitOp(JvmOpcode.I2l, 1, VType.Long);
+        this.Code.EmitLoad(rOff, VType.Int);
+        this.Code.EmitOp(JvmOpcode.I2l, 1, VType.Long);
+        this.Code.EmitOp(JvmOpcode.Lsub, 2, VType.Long);
+      }
+
+      private void EmitPointerCompare(IrIntrinsicOp op, IrExpr leftExpr, IrExpr rightExpr) {
+        var arrVType = this.VTypeOf(IrType.Array(leftExpr.Type.Element!));
+        var (lArr, lOff, rArr, rOff) = this.ExtractPointerPair(leftExpr, rightExpr);
+        var trueLabel = this.Code.DefineLabel();
+        var endLabel = this.Code.DefineLabel();
+
+        if (!IrPointers.Orders(op)) {
+          var sameArrLabel = this.Code.DefineLabel();
+          this.Code.EmitLoad(lArr, arrVType);
+          this.Code.EmitLoad(rArr, arrVType);
+          this.Code.EmitBranch(JvmOpcode.IfAcmpeq, sameArrLabel);
+          this.Code.EmitConstInt(op == IrIntrinsicOp.PointerNotEqual ? 1 : 0);
+          this.Code.EmitGoto(endLabel);
+          this.Code.MarkLabel(sameArrLabel);
+          this.Code.EmitLoad(lOff, VType.Int);
+          this.Code.EmitLoad(rOff, VType.Int);
+          this.Code.EmitBranch(op == IrIntrinsicOp.PointerEqual ? JvmOpcode.IfIcmpeq : JvmOpcode.IfIcmpne, trueLabel);
+        } else {
+          var sameArrLabel = this.Code.DefineLabel();
+          this.Code.EmitLoad(lArr, arrVType);
+          this.Code.EmitLoad(rArr, arrVType);
+          this.Code.EmitBranch(JvmOpcode.IfAcmpeq, sameArrLabel);
+          this.EmitThrowIllegalState("Cannot order pointers into different regions.");
+          this.Code.MarkLabel(sameArrLabel);
+          this.Code.EmitLoad(lOff, VType.Int);
+          this.Code.EmitLoad(rOff, VType.Int);
+          var branch = op switch {
+            IrIntrinsicOp.PointerLess => JvmOpcode.IfIcmplt,
+            IrIntrinsicOp.PointerLessOrEqual => JvmOpcode.IfIcmple,
+            IrIntrinsicOp.PointerGreater => JvmOpcode.IfIcmpgt,
+            _ => JvmOpcode.IfIcmpge
+          };
+          this.Code.EmitBranch(branch, trueLabel);
+        }
+
+        this.Code.EmitConstInt(0);
+        this.Code.EmitGoto(endLabel);
+        this.Code.MarkLabel(trueLabel);
+        this.Code.EmitConstInt(1);
+        this.Code.MarkLabel(endLabel);
+      }
+
+      // --------------------------------------------------------- Existing math/bit/endian intrinsics
 
       private void EmitFormatNumber(IrExpr value) {
         var strType = VType.Object(this.Pool.AddClass("java/lang/String"));
@@ -429,7 +1324,6 @@ public static partial class JvmEmitter {
         var halfBits = BitConverter.DoubleToInt64Bits(0.5);
         var oneBits = BitConverter.DoubleToInt64Bits(1.0);
 
-        // If x < 0.0: c = ceil(x); return (c - x >= 0.5) ? c - 1.0 : c
         this.Code.EmitLoad(xSlot, VType.Double);
         this.Code.EmitConstDoubleBits(0L);
         this.Code.EmitOp(JvmOpcode.Dcmpg, 2, VType.Int);
@@ -453,7 +1347,6 @@ public static partial class JvmEmitter {
         this.Code.EmitLoad(rSlot, VType.Double);
         this.Code.EmitGoto(endLabel);
 
-        // Else (x >= 0.0 or NaN): f = floor(x); return (x - f >= 0.5) ? f + 1.0 : f
         this.Code.MarkLabel(nonNegLabel);
         this.Code.EmitLoad(xSlot, VType.Double);
         this.Code.EmitInvoke(JvmOpcode.Invokestatic, "java/lang/Math", "floor", "(D)D", 1, VType.Double);
@@ -598,7 +1491,6 @@ public static partial class JvmEmitter {
           this.Code.EmitOp(JvmOpcode.Iand, 2, VType.Int);
           this.Code.EmitStore(cSlot, VType.Int);
 
-          // Rotate narrow width: ((v << c) | (v >>> (bits - c))) & mask  (or reversed for right)
           this.Code.EmitLoad(vSlot, VType.Int);
           this.Code.EmitLoad(cSlot, VType.Int);
           this.Code.EmitOp(left ? JvmOpcode.Ishl : JvmOpcode.Iushr, 2, VType.Int);
@@ -679,34 +1571,73 @@ public static partial class JvmEmitter {
         }
       }
 
-      private void EmitEndianBoundsCheck(ushort arrSlot, VType arrType, ushort idxSlot, int byteCount) {
+      private (ushort ArrSlot, ushort BaseOffSlot, ushort LenSlot) PrepareByteSource(IrExpr srcExpr) {
+        var arrType = VType.Object(this.Pool.AddClass("[B"));
+        var arrSlot = this.Code.AllocateLocal(arrType);
+        var baseOffSlot = this.Code.AllocateLocal(VType.Int);
+        var lenSlot = this.Code.AllocateLocal(VType.Int);
+        if (srcExpr.Type.IsView) {
+          var spanClass = this._owner.EnsureSpanClass(IrType.U8);
+          var spanVType = VType.Object(this.Pool.AddClass(spanClass));
+          var spanSlot = this.Code.AllocateLocal(spanVType);
+          this.EmitExpr(srcExpr);
+          this.Code.EmitStore(spanSlot, spanVType);
+          this.Code.EmitLoad(spanSlot, spanVType);
+          this.Code.EmitField(JvmOpcode.Getfield, spanClass, "array", "[B", arrType);
+          this.Code.EmitStore(arrSlot, arrType);
+          this.Code.EmitLoad(spanSlot, spanVType);
+          this.Code.EmitField(JvmOpcode.Getfield, spanClass, "offset", "I", VType.Int);
+          this.Code.EmitStore(baseOffSlot, VType.Int);
+          this.Code.EmitLoad(spanSlot, spanVType);
+          this.Code.EmitField(JvmOpcode.Getfield, spanClass, "length", "I", VType.Int);
+          this.Code.EmitStore(lenSlot, VType.Int);
+        } else {
+          this.EmitExpr(srcExpr);
+          this.Code.EmitStore(arrSlot, arrType);
+          this.Code.EmitConstInt(0);
+          this.Code.EmitStore(baseOffSlot, VType.Int);
+          this.Code.EmitLoad(arrSlot, arrType);
+          this.Code.EmitOp(JvmOpcode.Arraylength, 1, VType.Int);
+          this.Code.EmitStore(lenSlot, VType.Int);
+        }
+
+        return (arrSlot, baseOffSlot, lenSlot);
+      }
+
+      private void EmitEndianBoundsCheck(ushort lenSlot, ushort idxSlot, int byteCount, bool isView) {
         var trapLabel = this.Code.DefineLabel();
         var okLabel = this.Code.DefineLabel();
         this.Code.EmitLoad(idxSlot, VType.Int);
         this.Code.EmitBranch(JvmOpcode.Iflt, trapLabel);
         this.Code.EmitLoad(idxSlot, VType.Int);
-        this.Code.EmitLoad(arrSlot, arrType);
-        this.Code.EmitOp(JvmOpcode.Arraylength, 1, VType.Int);
+        this.Code.EmitLoad(lenSlot, VType.Int);
         this.Code.EmitConstInt(byteCount);
         this.Code.EmitOp(JvmOpcode.Isub, 2, VType.Int);
         this.Code.EmitBranch(JvmOpcode.IfIcmpgt, trapLabel);
         this.Code.EmitGoto(okLabel);
         this.Code.MarkLabel(trapLabel);
-        this.EmitThrowIndexOutOfBounds("Byte buffer access out of range.");
+        if (isView)
+          this.EmitThrowIllegalArgument("Byte view access out of range.");
+        else
+          this.EmitThrowIndexOutOfBounds("Byte buffer access out of range.");
         this.Code.MarkLabel(okLabel);
       }
 
-      private void EmitEndianLoad(IrExpr arrExpr, IrExpr idxExpr, IrType resultType, bool littleEndian) {
+      private void EmitEndianLoad(IrExpr srcExpr, IrExpr idxExpr, IrType resultType, bool littleEndian) {
         var arrType = VType.Object(this.Pool.AddClass("[B"));
-        var arrSlot = this.Code.AllocateLocal(arrType);
+        var (arrSlot, baseOffSlot, lenSlot) = this.PrepareByteSource(srcExpr);
         var idxSlot = this.Code.AllocateLocal(VType.Int);
         var byteCount = resultType.Size;
 
-        this.EmitExpr(arrExpr);
-        this.Code.EmitStore(arrSlot, arrType);
         this.EmitExpr(idxExpr);
         this.Code.EmitStore(idxSlot, VType.Int);
-        this.EmitEndianBoundsCheck(arrSlot, arrType, idxSlot, byteCount);
+        this.EmitEndianBoundsCheck(lenSlot, idxSlot, byteCount, srcExpr.Type.IsView);
+
+        // Compute effective index = baseOff + idx
+        this.Code.EmitLoad(baseOffSlot, VType.Int);
+        this.Code.EmitLoad(idxSlot, VType.Int);
+        this.Code.EmitOp(JvmOpcode.Iadd, 2, VType.Int);
+        this.Code.EmitStore(idxSlot, VType.Int);
 
         var wide = byteCount == 8;
         for (var i = 0; i < byteCount; ++i) {
@@ -749,17 +1680,15 @@ public static partial class JvmEmitter {
           this.Code.EmitInvoke(JvmOpcode.Invokestatic, "java/lang/Double", "longBitsToDouble", "(J)D", 1, VType.Double);
       }
 
-      private void EmitEndianStore(IrExpr arrExpr, IrExpr idxExpr, IrExpr valExpr, bool littleEndian) {
+      private void EmitEndianStore(IrExpr srcExpr, IrExpr idxExpr, IrExpr valExpr, bool littleEndian) {
         var arrType = VType.Object(this.Pool.AddClass("[B"));
-        var arrSlot = this.Code.AllocateLocal(arrType);
+        var (arrSlot, baseOffSlot, lenSlot) = this.PrepareByteSource(srcExpr);
         var idxSlot = this.Code.AllocateLocal(VType.Int);
         var valType = valExpr.Type.Integral;
         var byteCount = valType.Size;
         var wide = byteCount == 8;
         var valSlot = this.Code.AllocateLocal(wide ? VType.Long : VType.Int);
 
-        this.EmitExpr(arrExpr);
-        this.Code.EmitStore(arrSlot, arrType);
         this.EmitExpr(idxExpr);
         this.Code.EmitStore(idxSlot, VType.Int);
         this.EmitExpr(valExpr);
@@ -769,7 +1698,12 @@ public static partial class JvmEmitter {
           this.Code.EmitInvoke(JvmOpcode.Invokestatic, "java/lang/Double", "doubleToRawLongBits", "(D)J", 1, VType.Long);
         this.Code.EmitStore(valSlot, wide ? VType.Long : VType.Int);
 
-        this.EmitEndianBoundsCheck(arrSlot, arrType, idxSlot, byteCount);
+        this.EmitEndianBoundsCheck(lenSlot, idxSlot, byteCount, srcExpr.Type.IsView);
+
+        this.Code.EmitLoad(baseOffSlot, VType.Int);
+        this.Code.EmitLoad(idxSlot, VType.Int);
+        this.Code.EmitOp(JvmOpcode.Iadd, 2, VType.Int);
+        this.Code.EmitStore(idxSlot, VType.Int);
 
         for (var i = 0; i < byteCount; ++i) {
           var shift = (littleEndian ? i : byteCount - 1 - i) * 8;

@@ -326,20 +326,16 @@ public sealed class JvmIntrinsicsAndCSharpE2ETests {
     Assert.That(JvmEmitter.Check(illTyped), Is.Not.Empty);
     Assert.That(() => JvmEmitter.Emit(illTyped), Throws.ArgumentException);
 
-    // 3. Unsupported declared struct type + foreign function + unsupported statement (IrYield) + unsupported expression (IrStructDefault) + unsupported intrinsic (RegexTest & LoadLittle on view)
-    var st = new IrStructType("Point");
-    st.Define([new IrField("X", IrType.I32, false)]);
-    var vLoc = L("v", IrType.Span(IrType.U8));
+    // 3. Unsupported type (BigInt -> PLY3151), unsupported construct (IrLastError -> PLY3150), unsupported intrinsic (RegexTest & mismatched PointerCast -> PLY3152)
+    var bigParam = L("b", IrType.BigInt);
+    var ptrParam = L("p", IrType.Pointer(IrType.I32));
 
     var unsupportedMod = new IrModule("Unsupported", [
-      Function("UseStruct", IrType.Struct(st), [], new IrReturn(new IrStructDefault(IrType.Struct(st)))),
-      Function("UseYield", IrType.Sequence(IrType.I32, true), [], new IrYield(I(1))),
+      Function("UseBigInt", IrType.BigInt, [bigParam], new IrReturn(R(bigParam))),
+      Function("UseLastError", IrType.I32, [], new IrReturn(new IrLastError(true))),
       Function("UseRegex", IrType.Bool, [], new IrReturn(new IrIntrinsic(IrIntrinsicOp.RegexTest, IrType.Bool, [new IrStrConst("a"), new IrStrConst("a"), new IrStrConst("")]))),
-      Function("UseViewEndian", IrType.I32, [vLoc], new IrReturn(new IrIntrinsic(IrIntrinsicOp.LoadLittle, IrType.I32, [R(vLoc), I(0)])))
-    ]) {
-      Types = [st],
-      ForeignFunctions = [new IrForeignFunction("ext_fn", true, "lib", IrType.Void, [])]
-    };
+      Function("UseBadPtrCast", IrType.Void, [ptrParam], new IrExprStmt(new IrIntrinsic(IrIntrinsicOp.PointerCast, IrType.Pointer(IrType.U8), [R(ptrParam)])))
+    ]);
 
     var diagnostics = JvmEmitter.Check(unsupportedMod);
     Assert.That(diagnostics.Select(d => d.Code), Has.Member(JvmEmitter.UnsupportedTypeCode));

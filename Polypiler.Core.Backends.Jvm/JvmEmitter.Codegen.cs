@@ -14,65 +14,122 @@ public static partial class JvmEmitter {
     private readonly IrModule _module;
     private readonly JvmProfile _profile;
     private readonly JvmEmitOptions _options;
+    private readonly JvmModuleNames _names;
     private readonly string _internalClassName;
     private readonly ConstantPool _pool = new();
     private readonly Dictionary<string, IrFunction> _functions;
+    private readonly Dictionary<string, IrForeignFunction> _foreignFunctions;
+    private readonly Dictionary<IrMethod, IrTypeDeclaration> _methodOwners = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<string, IrClassType> _ctorOwners = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _memberFunctions = new(StringComparer.Ordinal);
     private readonly Dictionary<IrModuleConst, string> _constFieldNames = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<IrGlobal, string> _globalFieldNames = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<string, byte[]> _extraClasses = new(StringComparer.Ordinal);
+    private int _syntheticCounter;
 
     public ModuleEmitter(IrModule module, JvmProfile profile, JvmEmitOptions options) {
       this._module = module;
       this._profile = profile;
       this._options = options;
-      this._internalClassName = JvmTypeMapper.InternalClassName(module.Name, options.PackageName);
+      this._names = new JvmModuleNames(module, options.PackageName);
+      this._internalClassName = this._names.ModuleInternalName;
       this._functions = module.Functions.ToDictionary(f => f.Name, StringComparer.Ordinal);
+      this._foreignFunctions = module.ForeignFunctions.ToDictionary(f => f.Name, StringComparer.Ordinal);
+
+      foreach (var decl in module.Types) {
+        if (decl is IrInterfaceType iface) {
+          foreach (var method in iface.Methods) {
+            this._methodOwners[method] = iface;
+            this._memberFunctions.Add(method.Function);
+          }
+        } else if (decl is IrClassType cls) {
+          foreach (var ctor in cls.Constructors) {
+            this._ctorOwners[ctor.Function] = cls;
+            this._memberFunctions.Add(ctor.Function);
+          }
+
+          foreach (var method in cls.Methods) {
+            this._methodOwners[method] = cls;
+            this._memberFunctions.Add(method.Function);
+          }
+        }
+      }
     }
 
     /// <summary>Compiles the module into <c>.class</c> or deterministic <c>.jar</c> generated files.</summary>
     public IReadOnlyList<GeneratedFile> EmitFiles() {
+      // Emit companion classes for all declared structs, interfaces, and classes.
+      foreach (var decl in this._module.Types) {
+        if (decl is IrStructType st)
+          this.EmitStructClass(st);
+        else if (decl is IrInterfaceType iface)
+          this.EmitInterfaceClass(iface);
+        else if (decl is IrClassType cls)
+          this.EmitClass(cls);
+      }
+
       var writer = new ClassFileWriter(this._pool, this._profile.MajorVersion, this._internalClassName);
       this.DeclareFields(writer);
       this.EmitDefaultConstructor(writer);
       this.EmitStaticInitializerIfNeeded(writer);
 
-      foreach (var function in this._module.Functions)
+      foreach (var foreign in this._module.ForeignFunctions)
+        this.EmitForeignDeclaration(writer, foreign);
+
+      foreach (var function in this._module.Functions) {
+        if (this._memberFunctions.Contains(function.Name))
+          continue;
+
         this.EmitFunction(writer, function);
+      }
 
       var hasMain = this.EmitMainBridgeIfNeeded(writer);
       var classBytes = writer.ToBytes();
       var classEntryPath = this._internalClassName + ".class";
 
+      var allEntries = new List<(string Path, byte[] Bytes)>(1 + this._extraClasses.Count) {
+        (classEntryPath, classBytes)
+      };
+      foreach (var kvp in this._extraClasses.OrderBy(e => e.Key, StringComparer.Ordinal))
+        allEntries.Add((kvp.Key, kvp.Value));
+
       var format = this._options.PackageFormat ?? this._profile.PackageFormat;
       if (format == JvmPackageFormat.Class)
-        return [new GeneratedFile(classEntryPath, "") { BinaryContent = classBytes }];
+        return [.. allEntries.Select(e => new GeneratedFile(e.Path, "") { BinaryContent = e.Bytes })];
 
       var mainClass = this._options.MainClass ?? (hasMain ? this._internalClassName.Replace('/', '.') : null);
-      var jarBytes = JarWriter.Write([(classEntryPath, classBytes)], mainClass);
+      var jarBytes = JarWriter.Write(allEntries, mainClass);
       var jarName = JvmTypeMapper.ClassName(this._module.Name) + ".jar";
       return [new GeneratedFile(jarName, "") { BinaryContent = jarBytes }];
     }
+
+    private void RegisterExtraClass(string internalName, byte[] bytes)
+      => this._extraClasses[internalName + ".class"] = bytes;
+
+    private string NextSyntheticName(string prefix)
+      => $"{this._internalClassName}${prefix}{++this._syntheticCounter}";
 
     private void DeclareFields(ClassFileWriter writer) {
       foreach (var constant in this._module.Constants) {
         if (!constant.Type.IsArray)
           continue;
 
-        var fieldName = "$const_" + constant.Name;
+        var fieldName = "$const_" + JvmTypeMapper.SanitizeIdentifier(constant.Name);
         this._constFieldNames[constant] = fieldName;
-        writer.AddField(new JvmFieldDef(ClassFileWriter.AccPrivate | ClassFileWriter.AccStatic | ClassFileWriter.AccFinal, fieldName, JvmTypeMapper.Descriptor(constant.Type)));
+        writer.AddField(new JvmFieldDef(ClassFileWriter.AccStatic | ClassFileWriter.AccFinal, fieldName, this._names.Descriptor(constant.Type)));
       }
 
       foreach (var global in this._module.Globals) {
-        var fieldName = global.Name;
+        var fieldName = JvmTypeMapper.SanitizeIdentifier(global.Name);
         this._globalFieldNames[global] = fieldName;
         var flags = (ushort)(ClassFileWriter.AccPublic | ClassFileWriter.AccStatic);
-        writer.AddField(new JvmFieldDef(flags, fieldName, JvmTypeMapper.Descriptor(global.Type)));
+        writer.AddField(new JvmFieldDef(flags, fieldName, this._names.Descriptor(global.Type)));
       }
     }
 
     private void EmitDefaultConstructor(ClassFileWriter writer) {
       var thisType = VType.Object(this._pool.AddClass(this._internalClassName));
-      var code = new JvmCodeBuilder(this._pool, [thisType]);
+      var code = new JvmCodeBuilder(this._pool, [thisType], isConstructor: true);
       code.EmitLoad(0, thisType);
       code.EmitInvoke(JvmOpcode.Invokespecial, "java/lang/Object", "<init>", "()V", 0);
       code.EmitReturn(JvmOpcode.Return);
@@ -86,7 +143,7 @@ public static partial class JvmEmitter {
       if (!hasArrayConsts && !hasInitializedGlobals && !hasModuleInit)
         return;
 
-      var ctx = new MethodContext(this, [], IrType.Void);
+      var ctx = new MethodContext(this, this._pool, [], IrType.Void);
       foreach (var constant in this._module.Constants) {
         if (!this._constFieldNames.TryGetValue(constant, out var fieldName))
           continue;
@@ -94,7 +151,7 @@ public static partial class JvmEmitter {
         var elem = constant.Type.Element!;
         var count = elem.IsString ? constant.Strings.Count : constant.Values.Count;
         ctx.Code.EmitConstInt(count);
-        EmitArrayAlloc(ctx.Code, elem, JvmTypeMapper.Descriptor(constant.Type));
+        this.EmitArrayAlloc(ctx.Code, elem, this._names.Descriptor(constant.Type));
         for (var i = 0; i < count; ++i) {
           ctx.Code.EmitDup();
           ctx.Code.EmitConstInt(i);
@@ -105,7 +162,7 @@ public static partial class JvmEmitter {
           ctx.Code.EmitOp(JvmTypeMapper.ArrayStoreOpcode(elem), 3);
         }
 
-        ctx.Code.EmitStaticField(JvmOpcode.Putstatic, this._internalClassName, fieldName, JvmTypeMapper.Descriptor(constant.Type), JvmTypeMapper.VerificationType(constant.Type, this._pool));
+        ctx.Code.EmitStaticField(JvmOpcode.Putstatic, this._internalClassName, fieldName, this._names.Descriptor(constant.Type), this._names.VerificationType(constant.Type, this._pool));
       }
 
       foreach (var global in this._module.Globals) {
@@ -113,43 +170,77 @@ public static partial class JvmEmitter {
           continue;
 
         ctx.EmitExpr(global.Initializer);
-        ctx.Code.EmitStaticField(JvmOpcode.Putstatic, this._internalClassName, this._globalFieldNames[global], JvmTypeMapper.Descriptor(global.Type), JvmTypeMapper.VerificationType(global.Type, this._pool));
+        ctx.Code.EmitStaticField(JvmOpcode.Putstatic, this._internalClassName, this._globalFieldNames[global], this._names.Descriptor(global.Type), this._names.VerificationType(global.Type, this._pool));
       }
 
       if (this._module.Initializer is { } initName)
-        ctx.Code.EmitInvoke(JvmOpcode.Invokestatic, this._internalClassName, initName, "()V", 0);
+        ctx.Code.EmitInvoke(JvmOpcode.Invokestatic, this._internalClassName, JvmTypeMapper.SanitizeIdentifier(initName), "()V", 0);
 
       ctx.Code.EmitReturn(JvmOpcode.Return);
       writer.AddMethod(new JvmMethodDef(ClassFileWriter.AccStatic, "<clinit>", "()V", ctx.Code.Build()));
     }
 
-    private void EmitFunction(ClassFileWriter writer, IrFunction function) {
-      var ctx = new MethodContext(this, function.Parameters, function.ReturnType);
-      foreach (var local in function.Locals)
-        ctx.BindLocal(local);
+    private void EmitForeignDeclaration(ClassFileWriter writer, IrForeignFunction foreign) {
+      var flags = (ushort)((foreign.IsPublic ? ClassFileWriter.AccPublic : 0) | ClassFileWriter.AccStatic | ClassFileWriter.AccNative);
+      writer.AddMethod(new JvmMethodDef(flags, JvmTypeMapper.SanitizeIdentifier(foreign.Name), this._names.MethodDescriptor(foreign), null));
+    }
 
-      // Normalize u8 parameters (JVM passes signed byte in int slot; mask to 0..255).
-      foreach (var param in function.Parameters) {
-        if (param.Type.Integral == IrType.U8) {
-          var slot = ctx.SlotOf(param);
-          ctx.Code.EmitLoad(slot, VType.Int);
-          ctx.Code.EmitConstInt(0xFF);
-          ctx.Code.EmitOp(JvmOpcode.Iand, 2, VType.Int);
-          ctx.Code.EmitStore(slot, VType.Int);
+    private void EmitFunction(ClassFileWriter writer, IrFunction function) {
+      var flags = (ushort)((function.IsPublic ? ClassFileWriter.AccPublic : 0) | ClassFileWriter.AccStatic);
+      var methodName = JvmTypeMapper.SanitizeIdentifier(function.Name);
+      var descriptor = this._names.MethodDescriptor(function);
+
+      if (IrSequences.IsIterator(function)) {
+        var iterClass = this.EmitIteratorClass(function);
+        var ctx = new MethodContext(this, this._pool, function.Parameters, function.ReturnType);
+        ctx.Code.EmitNew(iterClass);
+        ctx.Code.EmitDup();
+        foreach (var param in function.Parameters) {
+          var vtype = ctx.VTypeOf(param.Type);
+          ctx.Code.EmitLoad(ctx.SlotOf(param), vtype);
+          if (param.Type.IsStruct)
+            this.EmitStructCopyCall(ctx.Code, param.Type.StructType!);
         }
+
+        var ctorDesc = this._names.MethodDescriptor([.. function.Parameters.Select(p => p.Type)], IrType.Void);
+        ctx.Code.EmitInvoke(JvmOpcode.Invokespecial, iterClass, "<init>", ctorDesc, function.Parameters.Count);
+        ctx.Code.EmitReturn(JvmOpcode.Areturn);
+        writer.AddMethod(new JvmMethodDef(flags, methodName, descriptor, ctx.Code.Build()));
+        return;
       }
 
-      ctx.EmitStmt(function.Body);
-      if (ctx.Code.IsReachable && function.ReturnType == IrType.Void)
+      var bodyCtx = this.EmitExecutableBody(this._pool, function.Parameters, function.Locals, function.ReturnType, function.Body, receiver: null, isConstructor: false);
+      writer.AddMethod(new JvmMethodDef(flags, methodName, descriptor, bodyCtx.Code.Build()));
+    }
+
+    private MethodContext EmitExecutableBody(
+      ConstantPool pool,
+      IReadOnlyList<IrLocal> parameters,
+      IReadOnlyList<IrLocal> locals,
+      IrType returnType,
+      IrBlock body,
+      (string InternalName, IrLocal? ParamLocal)? receiver,
+      bool isConstructor,
+      IReadOnlyList<(IrLocal Captured, string FieldName, string CellClass)>? closureCaptures = null) {
+      var ctx = new MethodContext(this, pool, parameters, returnType, receiver, isConstructor, closureCaptures);
+      ctx.PrepareBodyStorage(parameters, locals, body);
+
+      if (returnType.IsAsync) {
+        ctx.EmitAsyncBody(body);
+        return ctx;
+      }
+
+      ctx.EmitStmt(body);
+      if (ctx.Code.IsReachable && returnType == IrType.Void)
         ctx.Code.EmitReturn(JvmOpcode.Return);
 
-      var flags = (ushort)((function.IsPublic ? ClassFileWriter.AccPublic : ClassFileWriter.AccPrivate) | ClassFileWriter.AccStatic);
-      writer.AddMethod(new JvmMethodDef(flags, function.Name, JvmTypeMapper.MethodDescriptor(function), ctx.Code.Build()));
+      return ctx;
     }
 
     private bool EmitMainBridgeIfNeeded(ClassFileWriter writer) {
       var candidate = this._module.Functions.FirstOrDefault(f =>
-        f.IsPublic
+        !this._memberFunctions.Contains(f.Name)
+        && f.IsPublic
         && (f.Name is "main" or "Main")
         && (f.ReturnType == IrType.Void || f.ReturnType == IrType.I32)
         && (f.Parameters.Count == 0 || (f.Parameters.Count == 1 && f.Parameters[0].Type == IrType.Array(IrType.String))));
@@ -165,7 +256,7 @@ public static partial class JvmEmitter {
         code.EmitLoad(0, strArrayType);
 
       var retVType = candidate.ReturnType == IrType.Void ? (VType?)null : VType.Int;
-      code.EmitInvoke(JvmOpcode.Invokestatic, this._internalClassName, candidate.Name, JvmTypeMapper.MethodDescriptor(candidate), candidate.Parameters.Count, retVType);
+      code.EmitInvoke(JvmOpcode.Invokestatic, this._internalClassName, candidate.Name, this._names.MethodDescriptor(candidate), candidate.Parameters.Count, retVType);
       if (candidate.ReturnType == IrType.I32) {
         var zeroLabel = code.DefineLabel();
         code.EmitDup();
@@ -181,11 +272,11 @@ public static partial class JvmEmitter {
       return true;
     }
 
-    private static void EmitArrayAlloc(JvmCodeBuilder code, IrType elem, string arrayDesc) {
-      if (elem.IsString)
-        code.EmitNewObjectArray("java/lang/String", arrayDesc);
-      else
+    private void EmitArrayAlloc(JvmCodeBuilder code, IrType elem, string arrayDesc) {
+      if (JvmTypeMapper.IsJvmPrimitive(elem))
         code.EmitNewPrimitiveArray(JvmTypeMapper.PrimitiveArrayType(elem), arrayDesc);
+      else
+        code.EmitNewObjectArray(this._names.ReferenceInternalName(elem), arrayDesc);
     }
 
     private static void EmitScalarConst(JvmCodeBuilder code, IrType type, long value) {
@@ -217,42 +308,210 @@ public static partial class JvmEmitter {
     private sealed partial class MethodContext {
 
       private readonly ModuleEmitter _owner;
+      private readonly ConstantPool _pool;
       private readonly IrType _returnType;
+      private readonly string? _receiverInternalName;
+      private ushort? _yieldListSlot;
       private readonly Dictionary<IrLocal, ushort> _slots = new(ReferenceEqualityComparer.Instance);
       private readonly Dictionary<IrLocal, VType> _localVTypes = new(ReferenceEqualityComparer.Instance);
+      private readonly Dictionary<IrLocal, (ushort CellSlot, string CellClass)> _capturedCells = new(ReferenceEqualityComparer.Instance);
+      private readonly Dictionary<IrLocal, (string FieldName, string CellClass)> _closureCaptures = new(ReferenceEqualityComparer.Instance);
+      private readonly Dictionary<IrLocal, (ushort ArraySlot, VType ArrayVType)> _addressedLocals = new(ReferenceEqualityComparer.Instance);
       private readonly Stack<(JvmLabel BreakLabel, JvmLabel? ContinueLabel, int FinallyDepth)> _controls = new();
       private readonly List<IrBlock> _finallyBlocks = [];
       private readonly Stack<ushort> _catchExSlots = new();
 
       public JvmCodeBuilder Code { get; }
 
-      public ConstantPool Pool => this._owner._pool;
+      public ConstantPool Pool => this._pool;
 
-      public MethodContext(ModuleEmitter owner, IReadOnlyList<IrLocal> parameters, IrType returnType) {
+      public JvmModuleNames Names => this._owner._names;
+
+      public MethodContext(
+        ModuleEmitter owner,
+        ConstantPool pool,
+        IReadOnlyList<IrLocal> parameters,
+        IrType returnType,
+        (string InternalName, IrLocal? ParamLocal)? receiver = null,
+        bool isConstructor = false,
+        IReadOnlyList<(IrLocal Captured, string FieldName, string CellClass)>? closureCaptures = null) {
         this._owner = owner;
+        this._pool = pool;
         this._returnType = returnType;
-        var paramVTypes = new VType[parameters.Count];
+        this._receiverInternalName = receiver?.InternalName;
+
+        var paramVTypes = new List<VType>(parameters.Count + (receiver is not null ? 1 : 0));
         ushort slot = 0;
-        for (var i = 0; i < parameters.Count; ++i) {
-          var vtype = JvmTypeMapper.VerificationType(parameters[i].Type, owner._pool);
-          paramVTypes[i] = vtype;
+        var paramStart = 0;
+        if (receiver is { } recv) {
+          var thisVType = VType.Object(pool.AddClass(recv.InternalName));
+          paramVTypes.Add(thisVType);
+          if (recv.ParamLocal is { } recvLocal) {
+            this._slots[recvLocal] = 0;
+            this._localVTypes[recvLocal] = thisVType;
+            paramStart = 1;
+          }
+
+          slot = 1;
+        }
+
+        for (var i = paramStart; i < parameters.Count; ++i) {
+          var vtype = owner._names.VerificationType(parameters[i].Type, pool);
+          paramVTypes.Add(vtype);
           this._slots[parameters[i]] = slot;
           this._localVTypes[parameters[i]] = vtype;
           slot = (ushort)(slot + vtype.Slots);
         }
 
-        this.Code = new JvmCodeBuilder(owner._pool, paramVTypes);
+        if (closureCaptures is not null)
+          foreach (var (cap, fieldName, cellClass) in closureCaptures)
+            this._closureCaptures[cap] = (fieldName, cellClass);
+
+        this.Code = new JvmCodeBuilder(pool, paramVTypes, isConstructor);
+      }
+
+      public void PrepareBodyStorage(IReadOnlyList<IrLocal> parameters, IReadOnlyList<IrLocal> locals, IrBlock body) {
+        var captured = IrClosures.Captured(body);
+        var addressed = FindAddressedLocals(body);
+
+        // Bind declared locals first so slots are allocated cleanly.
+        foreach (var local in locals) {
+          if (captured.Contains(local)) {
+            var cellClass = this._owner.EnsureCellClass(local.Type);
+            var cellVType = VType.Object(this.Pool.AddClass(cellClass));
+            var cellSlot = this.Code.AllocateLocal(cellVType);
+            this._capturedCells[local] = (cellSlot, cellClass);
+          } else if (addressed.Contains(local)) {
+            var arrType = IrType.Array(local.Type);
+            var arrVType = this.VTypeOf(arrType);
+            var arrSlot = this.Code.AllocateLocal(arrVType);
+            this._addressedLocals[local] = (arrSlot, arrVType);
+          } else {
+            this.BindLocal(local);
+          }
+        }
+
+        // Normalize u8 parameters, copy mutable struct parameters, and box captured/addressed parameters.
+        foreach (var param in parameters) {
+          if (this._closureCaptures.ContainsKey(param))
+            continue;
+          if (!this._slots.TryGetValue(param, out var paramSlot))
+            continue;
+
+          if (param.Type.Integral == IrType.U8) {
+            this.Code.EmitLoad(paramSlot, VType.Int);
+            this.Code.EmitConstInt(0xFF);
+            this.Code.EmitOp(JvmOpcode.Iand, 2, VType.Int);
+            this.Code.EmitStore(paramSlot, VType.Int);
+          } else if (param.Type.IsStruct && !param.Type.StructType!.IsReadOnly) {
+            this.Code.EmitLoad(paramSlot, this._localVTypes[param]);
+            this._owner.EmitStructCopyCall(this.Code, param.Type.StructType!);
+            this.Code.EmitStore(paramSlot, this._localVTypes[param]);
+          }
+
+          if (captured.Contains(param)) {
+            var cellClass = this._owner.EnsureCellClass(param.Type);
+            var cellVType = VType.Object(this.Pool.AddClass(cellClass));
+            var cellSlot = this.Code.AllocateLocal(cellVType);
+            this.Code.EmitNew(cellClass);
+            this.Code.EmitDup();
+            this.Code.EmitLoad(paramSlot, this._localVTypes[param]);
+            this.Code.EmitInvoke(JvmOpcode.Invokespecial, cellClass, "<init>", $"({this.Names.Descriptor(param.Type)})V", 1);
+            this.Code.EmitStore(cellSlot, cellVType);
+            this._capturedCells[param] = (cellSlot, cellClass);
+          } else if (addressed.Contains(param)) {
+            var arrType = IrType.Array(param.Type);
+            var arrVType = this.VTypeOf(arrType);
+            var arrSlot = this.Code.AllocateLocal(arrVType);
+            this.Code.EmitConstInt(1);
+            this._owner.EmitArrayAlloc(this.Code, param.Type, this.Names.Descriptor(arrType));
+            this.Code.EmitDup();
+            this.Code.EmitConstInt(0);
+            this.Code.EmitLoad(paramSlot, this._localVTypes[param]);
+            this.Code.EmitOp(JvmTypeMapper.ArrayStoreOpcode(param.Type), 3);
+            this.Code.EmitStore(arrSlot, arrVType);
+            this._addressedLocals[param] = (arrSlot, arrVType);
+          }
+        }
+      }
+
+      private static HashSet<IrLocal> FindAddressedLocals(IrBlock body) {
+        var set = new HashSet<IrLocal>(ReferenceEqualityComparer.Instance);
+        foreach (var node in IrTree.Nodes(body))
+          if (node is IrIntrinsic { Op: IrIntrinsicOp.AddressOf, Arguments: [IrLocalRef target] })
+            set.Add(target.Local);
+        return set;
       }
 
       public void BindLocal(IrLocal local) {
-        var vtype = JvmTypeMapper.VerificationType(local.Type, this.Pool);
+        var vtype = this.VTypeOf(local.Type);
         this._slots[local] = this.Code.AllocateLocal(vtype);
         this._localVTypes[local] = vtype;
       }
 
       public ushort SlotOf(IrLocal local) => this._slots[local];
 
-      public VType VTypeOf(IrType type) => JvmTypeMapper.VerificationType(type, this.Pool);
+      public VType VTypeOf(IrType type) => this.Names.VerificationType(type, this.Pool);
+
+      public void EmitLoadLocal(IrLocal local, bool copyStruct = true) {
+        if (this._closureCaptures.TryGetValue(local, out var cap)) {
+          var cellVType = VType.Object(this.Pool.AddClass(cap.CellClass));
+          this.Code.EmitLoad(0, VType.Object(this.Pool.AddClass(this._receiverInternalName!)));
+          this.Code.EmitField(JvmOpcode.Getfield, this._receiverInternalName!, cap.FieldName, $"L{cap.CellClass};", cellVType);
+          this.Code.EmitField(JvmOpcode.Getfield, cap.CellClass, "value", this.Names.Descriptor(local.Type), this.VTypeOf(local.Type));
+        } else if (this._capturedCells.TryGetValue(local, out var cell)) {
+          var cellVType = VType.Object(this.Pool.AddClass(cell.CellClass));
+          this.Code.EmitLoad(cell.CellSlot, cellVType);
+          this.Code.EmitField(JvmOpcode.Getfield, cell.CellClass, "value", this.Names.Descriptor(local.Type), this.VTypeOf(local.Type));
+        } else if (this._addressedLocals.TryGetValue(local, out var addr)) {
+          this.Code.EmitLoad(addr.ArraySlot, addr.ArrayVType);
+          this.Code.EmitConstInt(0);
+          this.Code.EmitOp(JvmTypeMapper.ArrayLoadOpcode(local.Type), 2, this.VTypeOf(local.Type));
+        } else {
+          this.Code.EmitLoad(this._slots[local], this._localVTypes[local]);
+        }
+
+        if (local.Type.Integral == IrType.U8) {
+          this.Code.EmitConstInt(0xFF);
+          this.Code.EmitOp(JvmOpcode.Iand, 2, VType.Int);
+        } else if (copyStruct && local.Type.IsStruct) {
+          this._owner.EmitStructCopyCall(this.Code, local.Type.StructType!);
+        }
+      }
+
+      public void EmitStoreLocalValue(IrLocal local, Action emitValue) {
+        if (this._closureCaptures.TryGetValue(local, out var cap)) {
+          var cellVType = VType.Object(this.Pool.AddClass(cap.CellClass));
+          this.Code.EmitLoad(0, VType.Object(this.Pool.AddClass(this._receiverInternalName!)));
+          this.Code.EmitField(JvmOpcode.Getfield, this._receiverInternalName!, cap.FieldName, $"L{cap.CellClass};", cellVType);
+          emitValue();
+          this.Code.EmitField(JvmOpcode.Putfield, cap.CellClass, "value", this.Names.Descriptor(local.Type), this.VTypeOf(local.Type));
+        } else if (this._capturedCells.TryGetValue(local, out var cell)) {
+          var cellVType = VType.Object(this.Pool.AddClass(cell.CellClass));
+          this.Code.EmitLoad(cell.CellSlot, cellVType);
+          emitValue();
+          this.Code.EmitField(JvmOpcode.Putfield, cell.CellClass, "value", this.Names.Descriptor(local.Type), this.VTypeOf(local.Type));
+        } else if (this._addressedLocals.TryGetValue(local, out var addr)) {
+          this.Code.EmitLoad(addr.ArraySlot, addr.ArrayVType);
+          this.Code.EmitConstInt(0);
+          emitValue();
+          this.Code.EmitOp(JvmTypeMapper.ArrayStoreOpcode(local.Type), 3);
+        } else {
+          emitValue();
+          this.Code.EmitStore(this._slots[local], this._localVTypes[local]);
+        }
+      }
+
+      public void EmitLoadCellRef(IrLocal local) {
+        if (this._closureCaptures.TryGetValue(local, out var cap)) {
+          var cellVType = VType.Object(this.Pool.AddClass(cap.CellClass));
+          this.Code.EmitLoad(0, VType.Object(this.Pool.AddClass(this._receiverInternalName!)));
+          this.Code.EmitField(JvmOpcode.Getfield, this._receiverInternalName!, cap.FieldName, $"L{cap.CellClass};", cellVType);
+        } else {
+          var cell = this._capturedCells[local];
+          this.Code.EmitLoad(cell.CellSlot, VType.Object(this.Pool.AddClass(cell.CellClass)));
+        }
+      }
 
       public void EmitStmt(IrStmt stmt) {
         if (!this.Code.IsReachable)
@@ -268,26 +527,29 @@ public static partial class JvmEmitter {
 
             break;
           case IrDeclare decl:
-            if (decl.Initializer is { } init) {
-              this.EmitExpr(init);
-              this.Code.EmitStore(this._slots[decl.Local], this._localVTypes[decl.Local]);
-            }
-
+            this.EmitDeclare(decl);
             break;
           case IrAssign assign:
-            this.EmitExpr(assign.Value);
-            this.Code.EmitStore(this._slots[assign.Local], this._localVTypes[assign.Local]);
+            this.EmitStoreLocalValue(assign.Local, () => this.EmitExpr(assign.Value));
             break;
           case IrGlobalAssign assign:
             this.EmitExpr(assign.Value);
             this.Code.EmitStaticField(JvmOpcode.Putstatic, this._owner._internalClassName, this._owner._globalFieldNames[assign.Global],
-              JvmTypeMapper.Descriptor(assign.Global.Type), this.VTypeOf(assign.Global.Type));
+              this.Names.Descriptor(assign.Global.Type), this.VTypeOf(assign.Global.Type));
             break;
           case IrStore store:
-            this.EmitExpr(store.Array);
-            this.EmitExpr(store.Index);
-            this.EmitExpr(store.Value);
-            this.Code.EmitOp(JvmTypeMapper.ArrayStoreOpcode(store.Array.Type.Element!), 3);
+            if (store.Array.Type.IsView) {
+              this.EmitViewStore(store.Array, store.Index, store.Value);
+            } else {
+              this.EmitExpr(store.Array);
+              this.EmitExpr(store.Index);
+              this.EmitExpr(store.Value);
+              this.Code.EmitOp(JvmTypeMapper.ArrayStoreOpcode(store.Array.Type.Element!), 3);
+            }
+
+            break;
+          case IrFieldStore fieldStore:
+            this.EmitFieldStore(fieldStore);
             break;
           case IrExprStmt exprStmt:
             this.EmitExpr(exprStmt.Expression);
@@ -342,6 +604,57 @@ public static partial class JvmEmitter {
           case IrTry attempt:
             this.EmitTry(attempt);
             break;
+          case IrUsing scope:
+            this.EmitStmt(scope.Lowered());
+            break;
+          case IrForEachCollection loop:
+            this.EmitForEachCollection(loop);
+            break;
+          case IrYield produced:
+            this.EmitYield(produced);
+            break;
+          case IrYieldBreak:
+            this.EmitYieldBreak();
+            break;
+          case IrYieldFrom delegated:
+            this.EmitYieldFrom(delegated);
+            break;
+          case IrForEachSequence loop:
+            this.EmitForEachSequence(loop);
+            break;
+        }
+      }
+
+      private void EmitDeclare(IrDeclare decl) {
+        var local = decl.Local;
+        if (this._capturedCells.TryGetValue(local, out var cell)) {
+          var cellVType = VType.Object(this.Pool.AddClass(cell.CellClass));
+          this.Code.EmitNew(cell.CellClass);
+          this.Code.EmitDup();
+          this.Code.EmitInvoke(JvmOpcode.Invokespecial, cell.CellClass, "<init>", "()V", 0);
+          this.Code.EmitStore(cell.CellSlot, cellVType);
+          if (decl.Initializer is { } init)
+            this.EmitStoreLocalValue(local, () => this.EmitExpr(init));
+          else if (local.Type.IsStruct && local.Type.StructType!.HasDefault)
+            this.EmitStoreLocalValue(local, () => this.EmitStructDefault(local.Type.StructType!));
+          return;
+        }
+
+        if (this._addressedLocals.TryGetValue(local, out var addr)) {
+          this.Code.EmitConstInt(1);
+          this._owner.EmitArrayAlloc(this.Code, local.Type, this.Names.Descriptor(IrType.Array(local.Type)));
+          this.Code.EmitStore(addr.ArraySlot, addr.ArrayVType);
+          if (decl.Initializer is { } init)
+            this.EmitStoreLocalValue(local, () => this.EmitExpr(init));
+          return;
+        }
+
+        if (decl.Initializer is { } initializer) {
+          this.EmitExpr(initializer);
+          this.Code.EmitStore(this._slots[local], this._localVTypes[local]);
+        } else if (local.Type.IsStruct && local.Type.StructType!.HasDefault) {
+          this.EmitStructDefault(local.Type.StructType!);
+          this.Code.EmitStore(this._slots[local], this._localVTypes[local]);
         }
       }
 
@@ -392,6 +705,7 @@ public static partial class JvmEmitter {
         var condLabel = this.Code.DefineLabel();
         var stepLabel = this.Code.DefineLabel();
         var breakLabel = this.Code.DefineLabel();
+        this.EmitClonePerIterationCells(loop.PerIteration);
         this.Code.MarkLabel(condLabel);
         this.EmitExpr(loop.Condition);
         this.Code.EmitBranch(JvmOpcode.Ifeq, breakLabel);
@@ -399,9 +713,29 @@ public static partial class JvmEmitter {
         this.EmitStmt(loop.Body);
         this._controls.Pop();
         this.Code.MarkLabel(stepLabel);
+        this.EmitClonePerIterationCells(loop.PerIteration);
         this.EmitStmt(loop.Step);
         this.Code.EmitGoto(condLabel);
         this.Code.MarkLabel(breakLabel);
+      }
+
+      private void EmitClonePerIterationCells(IReadOnlyList<IrLocal> perIteration) {
+        foreach (var local in perIteration) {
+          if (!this._capturedCells.TryGetValue(local, out var cell))
+            continue;
+
+          var cellVType = VType.Object(this.Pool.AddClass(cell.CellClass));
+          var valVType = this.VTypeOf(local.Type);
+          var tmpSlot = this.Code.AllocateLocal(valVType);
+          this.Code.EmitLoad(cell.CellSlot, cellVType);
+          this.Code.EmitField(JvmOpcode.Getfield, cell.CellClass, "value", this.Names.Descriptor(local.Type), valVType);
+          this.Code.EmitStore(tmpSlot, valVType);
+          this.Code.EmitNew(cell.CellClass);
+          this.Code.EmitDup();
+          this.Code.EmitLoad(tmpSlot, valVType);
+          this.Code.EmitInvoke(JvmOpcode.Invokespecial, cell.CellClass, "<init>", $"({this.Names.Descriptor(local.Type)})V", 1);
+          this.Code.EmitStore(cell.CellSlot, cellVType);
+        }
       }
 
       private void EmitSwitch(IrSwitch choice) {
@@ -479,6 +813,30 @@ public static partial class JvmEmitter {
       }
 
       private void EmitReturn(IrReturn ret) {
+        if (this._returnType.IsAsync) {
+          var elem = this._returnType.Element!;
+          if (elem == IrType.Void) {
+            this.EmitEnclosingFinallies(0);
+            this.Code.EmitNull();
+          } else {
+            this.EmitExpr(ret.Value!);
+            this.EmitBox(elem);
+            if (this._finallyBlocks.Count > 0) {
+              var objType = VType.Object(this.Pool.AddClass("java/lang/Object"));
+              var tmpSlot = this.Code.AllocateLocal(objType);
+              this.Code.EmitStore(tmpSlot, objType);
+              this.EmitEnclosingFinallies(0);
+              this.Code.EmitLoad(tmpSlot, objType);
+            }
+          }
+
+          var cfType = VType.Object(this.Pool.AddClass("java/util/concurrent/CompletableFuture"));
+          this.Code.EmitInvoke(JvmOpcode.Invokestatic, "java/util/concurrent/CompletableFuture", "completedFuture",
+            "(Ljava/lang/Object;)Ljava/util/concurrent/CompletableFuture;", 1, cfType);
+          this.Code.EmitReturn(JvmOpcode.Areturn);
+          return;
+        }
+
         if (ret.Value is { } value) {
           this.EmitExpr(value);
           if (this._finallyBlocks.Count > 0) {
@@ -534,81 +892,121 @@ public static partial class JvmEmitter {
           this.Code.EmitGoto(afterAll);
         }
 
-        foreach (var clause in attempt.Catches) {
-          var handlerLabel = this.Code.DefineLabel();
-          var catchInternal = JvmTypeMapper.ExceptionInternalName(clause.Class);
-          var catchCpIdx = this.Pool.AddClass(catchInternal);
-          this.Code.AddExceptionRange(tryStart, tryEnd, handlerLabel, catchCpIdx);
-          this.Code.MarkHandler(handlerLabel, catchCpIdx);
+        var hasFilters = attempt.Catches.Any(c => c.Filter is not null);
+        if (hasFilters && attempt.Catches.Count > 0) {
+          // Unified Throwable dispatcher so a false `when` filter falls through to subsequent catch clauses.
+          var dispatchLabel = this.Code.DefineLabel();
+          this.Code.AddExceptionRange(tryStart, tryEnd, dispatchLabel, 0);
+          this.Code.MarkHandler(dispatchLabel, 0);
+          var throwableType = VType.Object(this.Pool.AddClass("java/lang/Throwable"));
+          var rawExSlot = this.Code.AllocateLocal(throwableType);
+          this.Code.EmitStore(rawExSlot, throwableType);
 
-          ushort exSlot;
-          var exVType = VType.Object(catchCpIdx);
-          if (clause.Local is { } exLocal) {
-            exSlot = this._slots[exLocal];
-            this.Code.EmitStore(exSlot, this._localVTypes[exLocal]);
-          } else {
-            exSlot = this.Code.AllocateLocal(exVType);
-            this.Code.EmitStore(exSlot, exVType);
+          foreach (var clause in attempt.Catches) {
+            var nextClause = this.Code.DefineLabel();
+            var catchInternal = this.Names.DeclarationInternalName(clause.Class);
+            this.Code.EmitLoad(rawExSlot, throwableType);
+            this.Code.EmitInstanceOf(catchInternal);
+            this.Code.EmitBranch(JvmOpcode.Ifeq, nextClause);
+
+            var catchCpIdx = this.Pool.AddClass(catchInternal);
+            var exVType = VType.Object(catchCpIdx);
+            ushort exSlot;
+            this.Code.EmitLoad(rawExSlot, throwableType);
+            this.Code.EmitCheckCast(catchInternal);
+            if (clause.Local is { } exLocal) {
+              exSlot = this.Code.AllocateLocal(exVType);
+              this.Code.EmitDup();
+              this.Code.EmitStore(exSlot, exVType);
+              this.EmitStoreLocalValue(exLocal, () => { });
+            } else {
+              exSlot = this.Code.AllocateLocal(exVType);
+              this.Code.EmitStore(exSlot, exVType);
+            }
+
+            if (clause.Filter is { } filter) {
+              this.EmitExpr(filter);
+              this.Code.EmitBranch(JvmOpcode.Ifeq, nextClause);
+            }
+
+            this.EmitCatchBody(attempt.Finally, clause.Body, exSlot, afterAll, catchRanges);
+            this.Code.MarkLabel(nextClause);
           }
 
-          this._catchExSlots.Push(exSlot);
-          if (attempt.Finally is { } catchFin) {
-            var catchBodyStart = this.Code.DefineLabel();
-            var catchBodyEnd = this.Code.DefineLabel();
-            this._finallyBlocks.Add(catchFin);
-            this.Code.MarkLabel(catchBodyStart);
-            if (clause.Filter is { } filter) {
-              var filterPass = this.Code.DefineLabel();
-              this.EmitExpr(filter);
-              this.Code.EmitBranch(JvmOpcode.Ifne, filterPass);
-              this.Code.EmitLoad(exSlot, exVType);
-              this.Code.EmitAthrow();
-              this.Code.MarkLabel(filterPass);
-            }
-
-            this.EmitStmt(clause.Body);
-            this.Code.MarkLabel(catchBodyEnd);
-            this._finallyBlocks.RemoveAt(this._finallyBlocks.Count - 1);
-            catchRanges.Add((catchBodyStart, catchBodyEnd));
-            if (this.Code.IsReachable) {
-              this.EmitStmt(catchFin);
-              this.Code.EmitGoto(afterAll);
-            }
-          } else {
-            if (clause.Filter is { } filter) {
-              var filterPass = this.Code.DefineLabel();
-              this.EmitExpr(filter);
-              this.Code.EmitBranch(JvmOpcode.Ifne, filterPass);
-              this.Code.EmitLoad(exSlot, exVType);
-              this.Code.EmitAthrow();
-              this.Code.MarkLabel(filterPass);
-            }
-
-            this.EmitStmt(clause.Body);
-            this.Code.EmitGoto(afterAll);
+          if (attempt.Finally is { } unmatchedFin)
+            this.EmitStmt(unmatchedFin);
+          if (this.Code.IsReachable) {
+            this.Code.EmitLoad(rawExSlot, throwableType);
+            this.Code.EmitAthrow();
           }
+        } else {
+          foreach (var clause in attempt.Catches) {
+            var handlerLabel = this.Code.DefineLabel();
+            var catchInternal = this.Names.DeclarationInternalName(clause.Class);
+            var catchCpIdx = this.Pool.AddClass(catchInternal);
+            this.Code.AddExceptionRange(tryStart, tryEnd, handlerLabel, catchCpIdx);
+            this.Code.MarkHandler(handlerLabel, catchCpIdx);
 
-          this._catchExSlots.Pop();
+            var exVType = VType.Object(catchCpIdx);
+            ushort exSlot;
+            if (clause.Local is { } exLocal) {
+              exSlot = this.Code.AllocateLocal(exVType);
+              this.Code.EmitDup();
+              this.Code.EmitStore(exSlot, exVType);
+              this.EmitStoreLocalValue(exLocal, () => { });
+            } else {
+              exSlot = this.Code.AllocateLocal(exVType);
+              this.Code.EmitStore(exSlot, exVType);
+            }
+
+            this.EmitCatchBody(attempt.Finally, clause.Body, exSlot, afterAll, catchRanges);
+          }
         }
 
         if (attempt.Finally is { } exceptionalFin) {
           var finallyHandler = this.Code.DefineLabel();
-          this.Code.AddExceptionRange(tryStart, tryEnd, finallyHandler, 0);
+          if (!hasFilters || attempt.Catches.Count == 0)
+            this.Code.AddExceptionRange(tryStart, tryEnd, finallyHandler, 0);
           foreach (var (cbStart, cbEnd) in catchRanges)
             this.Code.AddExceptionRange(cbStart, cbEnd, finallyHandler, 0);
 
-          this.Code.MarkHandler(finallyHandler, 0);
-          var throwableType = VType.Object(this.Pool.AddClass("java/lang/Throwable"));
-          var exSlot = this.Code.AllocateLocal(throwableType);
-          this.Code.EmitStore(exSlot, throwableType);
-          this.EmitStmt(exceptionalFin);
-          if (this.Code.IsReachable) {
-            this.Code.EmitLoad(exSlot, throwableType);
-            this.Code.EmitAthrow();
+          if (catchRanges.Count > 0 || !hasFilters || attempt.Catches.Count == 0) {
+            this.Code.MarkHandler(finallyHandler, 0);
+            var throwableType = VType.Object(this.Pool.AddClass("java/lang/Throwable"));
+            var exSlot = this.Code.AllocateLocal(throwableType);
+            this.Code.EmitStore(exSlot, throwableType);
+            this.EmitStmt(exceptionalFin);
+            if (this.Code.IsReachable) {
+              this.Code.EmitLoad(exSlot, throwableType);
+              this.Code.EmitAthrow();
+            }
           }
         }
 
         this.Code.MarkLabel(afterAll);
+      }
+
+      private void EmitCatchBody(IrBlock? finallyBlock, IrBlock body, ushort exSlot, JvmLabel afterAll, List<(JvmLabel Start, JvmLabel End)> catchRanges) {
+        this._catchExSlots.Push(exSlot);
+        if (finallyBlock is { } catchFin) {
+          var catchBodyStart = this.Code.DefineLabel();
+          var catchBodyEnd = this.Code.DefineLabel();
+          this._finallyBlocks.Add(catchFin);
+          this.Code.MarkLabel(catchBodyStart);
+          this.EmitStmt(body);
+          this.Code.MarkLabel(catchBodyEnd);
+          this._finallyBlocks.RemoveAt(this._finallyBlocks.Count - 1);
+          catchRanges.Add((catchBodyStart, catchBodyEnd));
+          if (this.Code.IsReachable) {
+            this.EmitStmt(catchFin);
+            this.Code.EmitGoto(afterAll);
+          }
+        } else {
+          this.EmitStmt(body);
+          this.Code.EmitGoto(afterAll);
+        }
+
+        this._catchExSlots.Pop();
       }
 
       public void EmitExpr(IrExpr expr) {
@@ -628,7 +1026,7 @@ public static partial class JvmEmitter {
           case IrConstRef constRef:
             if (constRef.Constant.Type.IsArray) {
               this.Code.EmitStaticField(JvmOpcode.Getstatic, this._owner._internalClassName,
-                this._owner._constFieldNames[constRef.Constant], JvmTypeMapper.Descriptor(constRef.Constant.Type), this.VTypeOf(constRef.Constant.Type));
+                this._owner._constFieldNames[constRef.Constant], this.Names.Descriptor(constRef.Constant.Type), this.VTypeOf(constRef.Constant.Type));
             } else if (constRef.Constant.Type.IsString) {
               this.Code.EmitConstString(constRef.Constant.Strings[0]);
             } else {
@@ -637,11 +1035,11 @@ public static partial class JvmEmitter {
 
             break;
           case IrLocalRef localRef:
-            this.Code.EmitLoad(this._slots[localRef.Local], this._localVTypes[localRef.Local]);
+            this.EmitLoadLocal(localRef.Local);
             break;
           case IrGlobalRef globalRef:
             this.Code.EmitStaticField(JvmOpcode.Getstatic, this._owner._internalClassName,
-              this._owner._globalFieldNames[globalRef.Global], JvmTypeMapper.Descriptor(globalRef.Global.Type), this.VTypeOf(globalRef.Global.Type));
+              this._owner._globalFieldNames[globalRef.Global], this.Names.Descriptor(globalRef.Global.Type), this.VTypeOf(globalRef.Global.Type));
             if (globalRef.Global.Type.Integral == IrType.U8) {
               this.Code.EmitConstInt(0xFF);
               this.Code.EmitOp(JvmOpcode.Iand, 2, VType.Int);
@@ -660,66 +1058,53 @@ public static partial class JvmEmitter {
           case IrConditional choice: {
             var falseLabel = this.Code.DefineLabel();
             var endLabel = this.Code.DefineLabel();
+            var targetVType = this.VTypeOf(choice.Type);
             this.EmitExpr(choice.Condition);
             this.Code.EmitBranch(JvmOpcode.Ifeq, falseLabel);
             this.EmitExpr(choice.WhenTrue);
+            this.Code.CoerceStackTop(targetVType);
             this.Code.EmitGoto(endLabel);
             this.Code.MarkLabel(falseLabel);
             this.EmitExpr(choice.WhenFalse);
+            this.Code.CoerceStackTop(targetVType);
             this.Code.MarkLabel(endLabel);
             break;
           }
-          case IrArrayLoad load: {
-            var elem = load.Array.Type.Element!;
-            this.EmitExpr(load.Array);
-            this.EmitExpr(load.Index);
-            this.Code.EmitOp(JvmTypeMapper.ArrayLoadOpcode(elem), 2, this.VTypeOf(elem));
-            if (elem.Integral == IrType.U8) {
-              this.Code.EmitConstInt(0xFF);
-              this.Code.EmitOp(JvmOpcode.Iand, 2, VType.Int);
+          case IrArrayLoad load:
+            if (load.Array.Type.IsView) {
+              this.EmitViewLoad(load.Array, load.Index);
+            } else {
+              var elem = load.Array.Type.Element!;
+              this.EmitExpr(load.Array);
+              this.EmitExpr(load.Index);
+              this.Code.EmitOp(JvmTypeMapper.ArrayLoadOpcode(elem), 2, this.VTypeOf(elem));
+              if (elem.Integral == IrType.U8) {
+                this.Code.EmitConstInt(0xFF);
+                this.Code.EmitOp(JvmOpcode.Iand, 2, VType.Int);
+              } else if (elem.IsStruct) {
+                this._owner.EmitStructCopyCall(this.Code, elem.StructType!);
+              }
             }
 
             break;
-          }
           case IrArrayLength length:
             this.EmitExpr(length.Array);
             this.Code.EmitOp(JvmOpcode.Arraylength, 1, VType.Int);
             break;
-          case IrNewArray create: {
-            var lenSlot = this.Code.AllocateLocal(VType.Int);
-            this.EmitExpr(create.Length);
-            this.Code.EmitStore(lenSlot, VType.Int);
-            this.Code.EmitLoad(lenSlot, VType.Int);
-            var okLabel = this.Code.DefineLabel();
-            this.Code.EmitBranch(JvmOpcode.Ifge, okLabel);
-            this.EmitThrowArithmetic("Array length must not be negative.");
-            this.Code.MarkLabel(okLabel);
-            this.Code.EmitLoad(lenSlot, VType.Int);
-            EmitArrayAlloc(this.Code, create.Type.Element!, JvmTypeMapper.Descriptor(create.Type));
+          case IrNewArray create:
+            this.EmitNewArray(create);
             break;
-          }
-          case IrCall call: {
-            foreach (var arg in call.Arguments)
-              this.EmitExpr(arg);
-
-            var target = this._owner._functions[call.Function];
-            var retVType = target.ReturnType == IrType.Void ? (VType?)null : this.VTypeOf(target.ReturnType);
-            this.Code.EmitInvoke(JvmOpcode.Invokestatic, this._owner._internalClassName, target.Name,
-              JvmTypeMapper.MethodDescriptor(target), call.Arguments.Count, retVType);
-            if (target.ReturnType.Integral == IrType.U8) {
-              this.Code.EmitConstInt(0xFF);
-              this.Code.EmitOp(JvmOpcode.Iand, 2, VType.Int);
-            }
-
+          case IrCall call:
+            this.EmitCall(call);
             break;
-          }
+          case IrForeignCall foreignCall:
+            this.EmitForeignCall(foreignCall);
+            break;
           case IrStep step:
             this.EmitStep(step);
             break;
           case IrBind bind:
-            this.EmitExpr(bind.Value);
-            this.Code.EmitDup();
-            this.Code.EmitStore(this._slots[bind.Local], this._localVTypes[bind.Local]);
+            this.EmitBind(bind);
             break;
           case IrIsNull isNull:
             this.EmitIsNullCheck(isNull.Value);
@@ -727,13 +1112,11 @@ public static partial class JvmEmitter {
           case IrNone:
             this.Code.EmitNull();
             break;
-          case IrSome some: {
+          case IrSome some:
             this.EmitExpr(some.Value);
-            var (boxClass, _) = JvmTypeMapper.BoxInfo(some.Value.Type);
-            var primDesc = JvmTypeMapper.Descriptor(some.Value.Type);
-            this.Code.EmitInvoke(JvmOpcode.Invokestatic, boxClass, "valueOf", $"({primDesc})L{boxClass};", 1, VType.Object(this.Pool.AddClass(boxClass)));
+            if (!some.Value.Type.IsStruct)
+              this.EmitBox(some.Value.Type);
             break;
-          }
           case IrIsNone isNone:
             this.EmitIsNullCheck(isNone.Value);
             break;
@@ -752,7 +1135,8 @@ public static partial class JvmEmitter {
               this.Code.MarkLabel(okLabel);
             }
 
-            this.EmitUnbox(underlying);
+            if (!underlying.IsStruct)
+              this.EmitUnbox(underlying);
             break;
           }
           case IrCoalesce coalesce: {
@@ -774,17 +1158,74 @@ public static partial class JvmEmitter {
               this.EmitExpr(coalesce.Fallback);
               this.Code.EmitGoto(endLabel);
               this.Code.MarkLabel(hasVal);
-              this.EmitUnbox(underlying);
+              if (!underlying.IsStruct)
+                this.EmitUnbox(underlying);
               this.Code.MarkLabel(endLabel);
             }
 
             break;
           }
+          case IrStructNew created:
+            this.EmitStructNew(created);
+            break;
+          case IrStructDefault def:
+            this.EmitStructDefault(def.Type.StructType!);
+            break;
+          case IrStructEquals eq:
+            this.EmitStructEquals(eq);
+            break;
           case IrNew created:
-            this.EmitNewException(created);
+            this.EmitNewObject(created);
+            break;
+          case IrMethodCall call:
+            this.EmitMethodCall(call);
             break;
           case IrFieldLoad load:
-            this.EmitExceptionFieldLoad(load);
+            this.EmitFieldLoad(load);
+            break;
+          case IrReferenceEquals eq:
+            this.EmitReferenceEquals(eq.Left, eq.Right);
+            break;
+          case IrTypeTest test:
+            this.EmitExpr(test.Value);
+            this.Code.EmitInstanceOf(this.Names.ReferenceInternalName(test.Target));
+            break;
+          case IrCast cast:
+            this.EmitExpr(cast.Value);
+            this.Code.EmitCheckCast(this.Names.ReferenceInternalName(cast.Type));
+            break;
+          case IrAsCast asCast:
+            this.EmitAsCast(asCast);
+            break;
+          case IrGenericEquals eq:
+            this.EmitGenericEquals(eq.Left, eq.Right);
+            break;
+          case IrGenericCompare cmp:
+            this.EmitGenericCompare(cmp.Left, cmp.Right);
+            break;
+          case IrLambda lambda:
+            this.EmitLambda(lambda);
+            break;
+          case IrFunctionRef funcRef:
+            this.EmitFunctionRef(funcRef);
+            break;
+          case IrBoundMethod bound:
+            this.EmitBoundMethod(bound);
+            break;
+          case IrInvoke invoke:
+            this.EmitInvoke(invoke);
+            break;
+          case IrCollection col:
+            this.EmitCollection(col);
+            break;
+          case IrArraySequence seq:
+            this.EmitArraySequence(seq);
+            break;
+          case IrAsync asyncOp:
+            this.EmitAsyncOp(asyncOp);
+            break;
+          case IrAwait awaited:
+            this.EmitAwait(awaited);
             break;
           case IrThrowExpression thrown:
             this.EmitExpr(thrown.Exception);
@@ -794,6 +1235,82 @@ public static partial class JvmEmitter {
             this.EmitIntrinsic(intrinsic);
             break;
         }
+      }
+
+      private void EmitNewArray(IrNewArray create) {
+        var lenSlot = this.Code.AllocateLocal(VType.Int);
+        this.EmitExpr(create.Length);
+        this.Code.EmitStore(lenSlot, VType.Int);
+        this.Code.EmitLoad(lenSlot, VType.Int);
+        var okLabel = this.Code.DefineLabel();
+        this.Code.EmitBranch(JvmOpcode.Ifge, okLabel);
+        this.EmitThrowArithmetic("Array length must not be negative.");
+        this.Code.MarkLabel(okLabel);
+        this.Code.EmitLoad(lenSlot, VType.Int);
+        var elem = create.Type.Element!;
+        this._owner.EmitArrayAlloc(this.Code, elem, this.Names.Descriptor(create.Type));
+        if (elem.StructType is { HasDefault: true } st) {
+          var arrVType = this.VTypeOf(create.Type);
+          var arrSlot = this.Code.AllocateLocal(arrVType);
+          var iSlot = this.Code.AllocateLocal(VType.Int);
+          this.Code.EmitStore(arrSlot, arrVType);
+          this.Code.EmitConstInt(0);
+          this.Code.EmitStore(iSlot, VType.Int);
+          var loopStart = this.Code.DefineLabel();
+          var loopEnd = this.Code.DefineLabel();
+          this.Code.MarkLabel(loopStart);
+          this.Code.EmitLoad(iSlot, VType.Int);
+          this.Code.EmitLoad(lenSlot, VType.Int);
+          this.Code.EmitBranch(JvmOpcode.IfIcmpge, loopEnd);
+          this.Code.EmitLoad(arrSlot, arrVType);
+          this.Code.EmitLoad(iSlot, VType.Int);
+          this.EmitStructDefault(st);
+          this.Code.EmitOp(JvmOpcode.Aastore, 3);
+          this.Code.EmitLoad(iSlot, VType.Int);
+          this.Code.EmitConstInt(1);
+          this.Code.EmitOp(JvmOpcode.Iadd, 2, VType.Int);
+          this.Code.EmitStore(iSlot, VType.Int);
+          this.Code.EmitGoto(loopStart);
+          this.Code.MarkLabel(loopEnd);
+          this.Code.EmitLoad(arrSlot, arrVType);
+        }
+      }
+
+      private void EmitCall(IrCall call) {
+        foreach (var arg in call.Arguments)
+          this.EmitExpr(arg);
+
+        var target = this._owner._functions[call.Function];
+        var retVType = target.ReturnType == IrType.Void ? (VType?)null : this.VTypeOf(target.ReturnType);
+        this.Code.EmitInvoke(JvmOpcode.Invokestatic, this._owner._internalClassName, JvmTypeMapper.SanitizeIdentifier(target.Name),
+          this.Names.MethodDescriptor(target), call.Arguments.Count, retVType);
+        if (target.ReturnType.Integral == IrType.U8) {
+          this.Code.EmitConstInt(0xFF);
+          this.Code.EmitOp(JvmOpcode.Iand, 2, VType.Int);
+        }
+      }
+
+      private void EmitForeignCall(IrForeignCall foreignCall) {
+        foreach (var arg in foreignCall.Arguments)
+          this.EmitExpr(arg);
+
+        var target = this._owner._foreignFunctions[foreignCall.Function];
+        var retVType = target.ReturnType == IrType.Void ? (VType?)null : this.VTypeOf(target.ReturnType);
+        this.Code.EmitInvoke(JvmOpcode.Invokestatic, this._owner._internalClassName, JvmTypeMapper.SanitizeIdentifier(target.Name),
+          this.Names.MethodDescriptor(target), foreignCall.Arguments.Count, retVType);
+        if (target.ReturnType.Integral == IrType.U8) {
+          this.Code.EmitConstInt(0xFF);
+          this.Code.EmitOp(JvmOpcode.Iand, 2, VType.Int);
+        }
+      }
+
+      private void EmitBind(IrBind bind) {
+        var valVType = this.VTypeOf(bind.Local.Type);
+        var tmpSlot = this.Code.AllocateLocal(valVType);
+        this.EmitExpr(bind.Value);
+        this.Code.EmitStore(tmpSlot, valVType);
+        this.EmitStoreLocalValue(bind.Local, () => this.Code.EmitLoad(tmpSlot, valVType));
+        this.Code.EmitLoad(tmpSlot, valVType);
       }
 
       private void EmitIsNullCheck(IrExpr value) {
@@ -808,13 +1325,57 @@ public static partial class JvmEmitter {
         this.Code.MarkLabel(endLabel);
       }
 
+      private void EmitBox(IrType type, bool normalizeNegativeZero = false) {
+        if (!JvmTypeMapper.IsJvmPrimitive(type))
+          return;
+
+        if (normalizeNegativeZero && (type == IrType.F32 || type == IrType.F64)) {
+          var okLabel = this.Code.DefineLabel();
+          this.Code.EmitDup();
+          if (type == IrType.F32) {
+            this.Code.EmitConstFloatBits(0);
+            this.Code.EmitOp(JvmOpcode.Fcmpl, 2, VType.Int);
+            this.Code.EmitBranch(JvmOpcode.Ifne, okLabel);
+            this.Code.EmitPop();
+            this.Code.EmitConstFloatBits(0);
+          } else {
+            this.Code.EmitConstDoubleBits(0L);
+            this.Code.EmitOp(JvmOpcode.Dcmpl, 2, VType.Int);
+            this.Code.EmitBranch(JvmOpcode.Ifne, okLabel);
+            this.Code.EmitPop();
+            this.Code.EmitConstDoubleBits(0L);
+          }
+
+          this.Code.MarkLabel(okLabel);
+        }
+
+        if (type.Integral == IrType.U8)
+          this.Code.EmitOp(JvmOpcode.I2b, 1, VType.Int);
+
+        var (boxClass, _) = JvmTypeMapper.BoxInfo(type);
+        var primDesc = this.Names.Descriptor(type);
+        this.Code.EmitInvoke(JvmOpcode.Invokestatic, boxClass, "valueOf", $"({primDesc})L{boxClass};", 1, VType.Object(this.Pool.AddClass(boxClass)));
+      }
+
       private void EmitUnbox(IrType underlying) {
         var (boxClass, unboxMethod) = JvmTypeMapper.BoxInfo(underlying);
-        var primDesc = JvmTypeMapper.Descriptor(underlying);
+        var primDesc = this.Names.Descriptor(underlying);
         this.Code.EmitInvoke(JvmOpcode.Invokevirtual, boxClass, unboxMethod, $"(){primDesc}", 0, this.VTypeOf(underlying));
         if (underlying.Integral == IrType.U8) {
           this.Code.EmitConstInt(0xFF);
           this.Code.EmitOp(JvmOpcode.Iand, 2, VType.Int);
+        }
+      }
+
+      private void EmitUnboxFromObject(IrType targetType) {
+        if (JvmTypeMapper.IsJvmPrimitive(targetType)) {
+          var (boxClass, _) = JvmTypeMapper.BoxInfo(targetType);
+          this.Code.EmitCheckCast(boxClass);
+          this.EmitUnbox(targetType);
+        } else {
+          var internalName = this.Names.ReferenceInternalName(targetType);
+          if (internalName != "java/lang/Object")
+            this.Code.EmitCheckCast(internalName);
         }
       }
 
@@ -983,7 +1544,6 @@ public static partial class JvmEmitter {
         }
 
         if (!type.IsLong) {
-          // Unsigned u32 checked arithmetic via widening to 64-bit unsigned.
           var rSlot = this.Code.AllocateLocal(VType.Int);
           var lSlot = this.Code.AllocateLocal(VType.Int);
           this.Code.EmitStore(rSlot, VType.Int);
@@ -1027,7 +1587,6 @@ public static partial class JvmEmitter {
           return;
         }
 
-        // Unsigned u64 checked arithmetic.
         var rb = this.Code.AllocateLocal(VType.Long);
         var la = this.Code.AllocateLocal(VType.Long);
         this.Code.EmitStore(rb, VType.Long);
@@ -1057,7 +1616,6 @@ public static partial class JvmEmitter {
           this.Code.EmitLoad(rb, VType.Long);
           this.Code.EmitOp(JvmOpcode.Lsub, 2, VType.Long);
         } else {
-          // Overflow iff b != 0 && compareUnsigned(divideUnsigned(-1L, b), a) < 0
           this.Code.EmitLoad(rb, VType.Long);
           this.Code.EmitConstLong(0L);
           this.Code.EmitOp(JvmOpcode.Lcmp, 2, VType.Int);
@@ -1099,7 +1657,6 @@ public static partial class JvmEmitter {
           return;
         }
 
-        // Signed integer div/rem must trap on MIN_VALUE / -1 in addition to divisor == 0.
         if (type.IsLong) {
           var rSlot = this.Code.AllocateLocal(VType.Long);
           var lSlot = this.Code.AllocateLocal(VType.Long);
@@ -1234,7 +1791,6 @@ public static partial class JvmEmitter {
           return;
         }
 
-        // Integer -> Integer
         if (conv.Contract == IrConversion.Trap && !IrOperators.Contains(dst, src))
           this.EmitIntRangeCheck(src, dst);
 
@@ -1261,7 +1817,6 @@ public static partial class JvmEmitter {
           this.Code.EmitOp(toDouble ? JvmOpcode.L2d : JvmOpcode.L2f, 1, this.VTypeOf(dst));
           this.Code.EmitGoto(endLabel);
           this.Code.MarkLabel(negLabel);
-          // Round-to-nearest-even without double-rounding: ((v >>> 1) | (v & 1L)) * 2.0
           this.Code.EmitLoad(valSlot, VType.Long);
           this.Code.EmitConstInt(1);
           this.Code.EmitOp(JvmOpcode.Lushr, 2, VType.Long);
@@ -1296,12 +1851,10 @@ public static partial class JvmEmitter {
           var trapLabel = this.Code.DefineLabel();
           var okLabel = this.Code.DefineLabel();
 
-          // NaN check
           this.Code.EmitLoad(dSlot, VType.Double);
           this.Code.EmitInvoke(JvmOpcode.Invokestatic, "java/lang/Double", "isNaN", "(D)Z", 1, VType.Int);
           this.Code.EmitBranch(JvmOpcode.Ifne, trapLabel);
 
-          // Lower bound check
           if (dst == IrType.I64) {
             this.Code.EmitLoad(dSlot, VType.Double);
             this.Code.EmitConstDoubleBits(BitConverter.DoubleToInt64Bits(-9223372036854775808.0));
@@ -1315,7 +1868,6 @@ public static partial class JvmEmitter {
             this.Code.EmitBranch(JvmOpcode.Ifle, trapLabel);
           }
 
-          // Upper bound check
           var highExclusive = dst == IrType.U64
             ? 18446744073709551616.0
             : dst == IrType.I64
@@ -1345,19 +1897,16 @@ public static partial class JvmEmitter {
           var highLabel = this.Code.DefineLabel();
           var endLabel = this.Code.DefineLabel();
 
-          // NaN or <= 0.0 -> 0L
           this.Code.EmitLoad(dSlot, VType.Double);
           this.Code.EmitConstDoubleBits(0L);
           this.Code.EmitOp(JvmOpcode.Dcmpl, 2, VType.Int);
           this.Code.EmitBranch(JvmOpcode.Ifle, zeroLabel);
 
-          // >= 2^64 -> -1L (ulong.MaxValue)
           this.Code.EmitLoad(dSlot, VType.Double);
           this.Code.EmitConstDoubleBits(BitConverter.DoubleToInt64Bits(18446744073709551616.0));
           this.Code.EmitOp(JvmOpcode.Dcmpl, 2, VType.Int);
           this.Code.EmitBranch(JvmOpcode.Ifge, maxLabel);
 
-          // >= 2^63 -> ((long)(d - 2^63)) | Long.MIN_VALUE
           this.Code.EmitLoad(dSlot, VType.Double);
           this.Code.EmitConstDoubleBits(BitConverter.DoubleToInt64Bits(9223372036854775808.0));
           this.Code.EmitOp(JvmOpcode.Dcmpl, 2, VType.Int);
@@ -1385,7 +1934,6 @@ public static partial class JvmEmitter {
 
           this.Code.MarkLabel(endLabel);
         } else {
-          // Narrow signed/unsigned or u32: saturate via d2l then clamp to [min, max]
           this.Code.EmitOp(JvmOpcode.D2l, 1, VType.Long);
           var minVal = (long)IrOperators.Minimum(dst);
           var maxVal = (long)IrOperators.Maximum(dst);
@@ -1506,18 +2054,17 @@ public static partial class JvmEmitter {
         var newSlot = this.Code.AllocateLocal(vtype);
 
         if (step.Target is IrLocalRef localRef) {
-          this.Code.EmitLoad(this._slots[localRef.Local], vtype);
+          this.EmitLoadLocal(localRef.Local, copyStruct: false);
           this.Code.EmitStore(oldSlot, vtype);
           this.EmitSteppedValue(oldSlot, newSlot, type, step.Increment, step.Trap);
-          this.Code.EmitLoad(newSlot, vtype);
-          this.Code.EmitStore(this._slots[localRef.Local], vtype);
+          this.EmitStoreLocalValue(localRef.Local, () => this.Code.EmitLoad(newSlot, vtype));
         } else if (step.Target is IrGlobalRef globalRef) {
           this.EmitExpr(globalRef);
           this.Code.EmitStore(oldSlot, vtype);
           this.EmitSteppedValue(oldSlot, newSlot, type, step.Increment, step.Trap);
           this.Code.EmitLoad(newSlot, vtype);
           this.Code.EmitStaticField(JvmOpcode.Putstatic, this._owner._internalClassName,
-            this._owner._globalFieldNames[globalRef.Global], JvmTypeMapper.Descriptor(globalRef.Global.Type), vtype);
+            this._owner._globalFieldNames[globalRef.Global], this.Names.Descriptor(globalRef.Global.Type), vtype);
         } else {
           var load = (IrArrayLoad)step.Target;
           var arrVType = this.VTypeOf(load.Array.Type);
@@ -1565,7 +2112,6 @@ public static partial class JvmEmitter {
             this._localVTypes[fakeLeft] = vtype;
             this.EmitCheckedArithmetic(op, type, new IrLocalRef(fakeLeft), one);
           } else {
-            // Narrow type checked step: check against type min/max in int.
             this.Code.EmitLoad(oldSlot, VType.Int);
             this.Code.EmitConstInt(increment ? 1 : -1);
             this.Code.EmitOp(JvmOpcode.Iadd, 2, VType.Int);
@@ -1596,6 +2142,22 @@ public static partial class JvmEmitter {
         this.Code.EmitDup();
         this.Code.EmitConstString(message);
         this.Code.EmitInvoke(JvmOpcode.Invokespecial, "java/lang/ArrayIndexOutOfBoundsException", "<init>", "(Ljava/lang/String;)V", 1);
+        this.Code.EmitAthrow();
+      }
+
+      private void EmitThrowIllegalArgument(string message) {
+        this.Code.EmitNew("java/lang/IllegalArgumentException");
+        this.Code.EmitDup();
+        this.Code.EmitConstString(message);
+        this.Code.EmitInvoke(JvmOpcode.Invokespecial, "java/lang/IllegalArgumentException", "<init>", "(Ljava/lang/String;)V", 1);
+        this.Code.EmitAthrow();
+      }
+
+      private void EmitThrowIllegalState(string message) {
+        this.Code.EmitNew("java/lang/IllegalStateException");
+        this.Code.EmitDup();
+        this.Code.EmitConstString(message);
+        this.Code.EmitInvoke(JvmOpcode.Invokespecial, "java/lang/IllegalStateException", "<init>", "(Ljava/lang/String;)V", 1);
         this.Code.EmitAthrow();
       }
 

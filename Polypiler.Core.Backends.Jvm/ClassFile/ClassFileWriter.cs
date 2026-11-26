@@ -23,12 +23,13 @@ internal sealed record JvmMethodCode(
   IReadOnlyList<JvmExceptionEntry> ExceptionTable,
   IReadOnlyList<JvmStackMapFrame> StackMapFrames);
 
-/// <summary>A method declared in a JVMS classfile.</summary>
-internal sealed record JvmMethodDef(ushort AccessFlags, string Name, string Descriptor, JvmMethodCode Code);
+/// <summary>A method declared in a JVMS classfile (<paramref name="Code"/> is <see langword="null"/> for abstract or native methods).</summary>
+internal sealed record JvmMethodDef(ushort AccessFlags, string Name, string Descriptor, JvmMethodCode? Code);
 
 /// <summary>
 /// Writes a verifier-clean JVMS Chapter 4 <c>.class</c> file with constant pool, class metadata,
-/// static fields, methods, <c>Code</c> attributes, exception tables, and <c>StackMapTable</c> attributes.
+/// super class, implemented interfaces, fields, methods, <c>Code</c> attributes, exception tables,
+/// and <c>StackMapTable</c> attributes.
 /// </summary>
 internal sealed class ClassFileWriter {
 
@@ -37,22 +38,37 @@ internal sealed class ClassFileWriter {
   public const ushort AccStatic = 0x0008;
   public const ushort AccFinal = 0x0010;
   public const ushort AccSuper = 0x0020;
+  public const ushort AccNative = 0x0100;
+  public const ushort AccInterface = 0x0200;
+  public const ushort AccAbstract = 0x0400;
 
   private readonly ConstantPool _pool;
   private readonly ushort _majorVersion;
+  private readonly ushort _accessFlags;
   private readonly ushort _thisClassIndex;
   private readonly ushort _superClassIndex;
+  private readonly ushort[] _interfaceIndices;
   private readonly ushort _codeAttrNameIndex;
   private readonly ushort _stackMapTableAttrNameIndex;
   private readonly List<JvmFieldDef> _fields = [];
   private readonly List<JvmMethodDef> _methods = [];
 
-  /// <summary>Initializes a classfile writer for a public class extending <c>java/lang/Object</c>.</summary>
-  public ClassFileWriter(ConstantPool pool, ushort majorVersion, string internalClassName) {
+  /// <summary>Initializes a classfile writer with optional custom access flags, super class, and interfaces.</summary>
+  public ClassFileWriter(
+    ConstantPool pool,
+    ushort majorVersion,
+    string internalClassName,
+    ushort accessFlags = AccPublic | AccSuper,
+    string superClassName = "java/lang/Object",
+    IReadOnlyList<string>? interfaces = null) {
     this._pool = pool;
     this._majorVersion = majorVersion;
+    this._accessFlags = accessFlags;
     this._thisClassIndex = pool.AddClass(internalClassName);
-    this._superClassIndex = pool.AddClass("java/lang/Object");
+    this._superClassIndex = pool.AddClass(superClassName);
+    this._interfaceIndices = interfaces is { Count: > 0 }
+      ? Array.ConvertAll([.. interfaces], pool.AddClass)
+      : [];
     this._codeAttrNameIndex = pool.AddUtf8("Code");
     this._stackMapTableAttrNameIndex = pool.AddUtf8("StackMapTable");
   }
@@ -70,7 +86,7 @@ internal sealed class ClassFileWriter {
     foreach (var field in this._fields)
       fieldIndices.Add((field.AccessFlags, this._pool.AddUtf8(field.Name), this._pool.AddUtf8(field.Descriptor)));
 
-    var methodIndices = new List<(ushort Flags, ushort NameIdx, ushort DescIdx, JvmMethodCode Code)>(this._methods.Count);
+    var methodIndices = new List<(ushort Flags, ushort NameIdx, ushort DescIdx, JvmMethodCode? Code)>(this._methods.Count);
     foreach (var method in this._methods)
       methodIndices.Add((method.AccessFlags, this._pool.AddUtf8(method.Name), this._pool.AddUtf8(method.Descriptor), method.Code));
 
@@ -79,10 +95,12 @@ internal sealed class ClassFileWriter {
     WriteU2(stream, 0);
     WriteU2(stream, this._majorVersion);
     this._pool.WriteTo(stream);
-    WriteU2(stream, AccPublic | AccSuper);
+    WriteU2(stream, this._accessFlags);
     WriteU2(stream, this._thisClassIndex);
     WriteU2(stream, this._superClassIndex);
-    WriteU2(stream, 0); // interfaces_count
+    WriteU2(stream, (ushort)this._interfaceIndices.Length);
+    foreach (var ifaceIdx in this._interfaceIndices)
+      WriteU2(stream, ifaceIdx);
 
     WriteU2(stream, (ushort)fieldIndices.Count);
     foreach (var (flags, nameIdx, descIdx) in fieldIndices) {
@@ -97,8 +115,12 @@ internal sealed class ClassFileWriter {
       WriteU2(stream, flags);
       WriteU2(stream, nameIdx);
       WriteU2(stream, descIdx);
-      WriteU2(stream, 1); // Code attribute
-      this.WriteCodeAttribute(stream, code);
+      if (code is not null) {
+        WriteU2(stream, 1); // Code attribute
+        this.WriteCodeAttribute(stream, code);
+      } else {
+        WriteU2(stream, 0); // abstract or native method
+      }
     }
 
     WriteU2(stream, 0); // class attributes_count
