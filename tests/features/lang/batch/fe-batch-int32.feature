@@ -6,6 +6,6 @@ Feature: Lift Windows Batch integer kernels
     Then the native and translated results are both 42
 
   Scenario: A construct outside the profile is refused
-    Given a Batch kernel containing "call :unknown"
+    Given a Batch kernel containing "call %target%"
     When it is translated under the cmd profile
     Then it reports PLY2802 and writes no output file

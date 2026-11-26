@@ -59,6 +59,8 @@ public static class CSharpFrontend {
     "a number converted to text or back without a format provider uses the culture of the thread in .NET; the imported code uses the invariant culture";
 
   private static readonly Lazy<MetadataReference> _coreLibrary = new(() => Loaded(typeof(object).Assembly));
+  private static readonly Lazy<MetadataReference> _runtime = new(() => Loaded(System.Reflection.Assembly.Load("System.Runtime")));
+  private static readonly Lazy<MetadataReference> _console = new(() => Loaded(typeof(Console).Assembly));
 
   /// <summary>
   /// The collections of .NET outside the core library - <c>SortedDictionary</c>, <c>SortedSet</c>,
@@ -75,8 +77,7 @@ public static class CSharpFrontend {
     Loaded(typeof(System.Linq.ParallelEnumerable).Assembly),
     Loaded(typeof(System.Linq.Queryable).Assembly),
     Loaded(typeof(System.Linq.Expressions.Expression).Assembly),
-    Loaded(typeof(System.Collections.Concurrent.Partitioner).Assembly),
-    Loaded(System.Reflection.Assembly.Load("System.Runtime"))
+    Loaded(typeof(System.Collections.Concurrent.Partitioner).Assembly)
   ]);
 
   /// <summary>Imports one C# source file.</summary>
@@ -135,11 +136,19 @@ public static class CSharpFrontend {
     var trees = files
       .Select(file => CSharpSyntaxTree.ParseText(file.Text, new CSharpParseOptions(LanguageVersion.Latest), file.Path))
       .ToList();
+    var needsLinq = files.Any(file => file.Text.Contains("Linq", StringComparison.Ordinal));
+    var needsConsole = files.Any(file => file.Text.Contains("Console", StringComparison.Ordinal));
+    var references = new List<MetadataReference> { _coreLibrary.Value, _collections.Value };
+    if (needsLinq)
+      references.AddRange(_linq.Value);
+    if (needsConsole)
+      references.Add(_console.Value);
+    if (needsLinq || needsConsole)
+      references.Add(_runtime.Value);
     var compilation = CSharpCompilation.Create(
       "Imported",
       trees,
-      // LINQ is bound only for a source that names it: its assemblies are costs every other import would pay at startup.
-      [_coreLibrary.Value, _collections.Value, .. files.Any(file => file.Text.Contains("Linq", StringComparison.Ordinal)) ? _linq.Value : []],
+      references,
       new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, checkOverflow: checkedByDefault, allowUnsafe: true));
 
     var errors = compilation.GetDiagnostics()
