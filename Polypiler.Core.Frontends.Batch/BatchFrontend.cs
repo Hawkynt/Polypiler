@@ -58,6 +58,8 @@ public static partial class BatchFrontend {
 
   private abstract record Instruction(int Line);
   private sealed record Assignment(int Line, IrLocal Destination, IrExpr Value) : Instruction(Line);
+  private sealed record NumericLoop(int Line, IrLocal Iterator, IrConst Start, IrConst Step, IrConst End,
+    bool HasIterations, Assignment Body) : Instruction(Line);
   private sealed record Jump(int Line, string Target, IrExpr? Condition) : Instruction(Line);
   private sealed record Exit(int Line, IrExpr Status) : Instruction(Line);
 

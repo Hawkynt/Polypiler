@@ -25,6 +25,8 @@ public static partial class BatchFrontend {
   private static partial Regex ExitStatus();
   [GeneratedRegex("^set[ \t]+/a[ \t]+\"(" + _name + ")=([^\"]*)\"$", _options)]
   private static partial Regex SetArithmetic();
+  [GeneratedRegex("^for[ \t]+/l[ \t]+%%([A-Za-z])[ \t]+in[ \t]+\\(([^()]*)\\)[ \t]+do[ \t]+(.+)$", _options)]
+  private static partial Regex ForRange();
   [GeneratedRegex("^setlocal[ \t]+EnableExtensions[ \t]+DisableDelayedExpansion$", _options)]
   private static partial Regex Preamble();
 
@@ -77,12 +79,53 @@ public static partial class BatchFrontend {
       } else if (SetArithmetic().Match(line) is { Success: true } assignment)
         this._instructions.Add(new Assignment(number, this.Local(assignment.Groups[1].Value),
           new Arithmetic(assignment.Groups[2].Value, number, this.Local).Read()));
+      else if (ForRange().Match(line) is { Success: true } range)
+        this._instructions.Add(this.ReadForRange(range, line, physicalLength, number));
       else if (ExitStatus().Match(line) is { Success: true } exit) {
         CheckCommandLength(physicalLength + ExpansionGrowth(exit.Groups[1]), number, "expanded EXIT command");
         this._instructions.Add(new Exit(number, this.Operand(exit.Groups[1].Value, number)));
       } else
         throw new Refusal(number, line, malformed: line.StartsWith(':'));
     }
+
+    private NumericLoop ReadForRange(Match range, string line, int physicalLength, int number) {
+      var body = SetArithmetic().Match(range.Groups[3].Value);
+      var bounds = range.Groups[2].Value;
+      if (!body.Success || bounds.Contains('%'))
+        throw new Refusal(number, line);
+
+      var values = bounds.Split(',', StringSplitOptions.TrimEntries);
+      if (values.Length != 3)
+        throw new Refusal(number, "FOR /L requires a start, step and end range", malformed: true);
+      var start = Constant(values[0], number);
+      var step = Constant(values[1], number);
+      var end = Constant(values[2], number);
+      if (step.Value == 0)
+        throw new Refusal(number, "FOR /L step is zero");
+
+      var distance = step.Value > 0 ? end.Value - start.Value : start.Value - end.Value;
+      var trips = distance < 0 ? 0 : distance / Math.Abs(step.Value) + 1;
+      var terminal = start.Value + trips * step.Value;
+      if (terminal is < int.MinValue or > int.MaxValue)
+        throw new Refusal(number, "FOR /L iterator increment exceeds Int32");
+
+      var iterator = new IrLocal("forIndex" + this._instructions.Count.ToString(CultureInfo.InvariantCulture), IrType.I32);
+      var destination = this.Local(body.Groups[1].Value);
+      var arithmetic = new Arithmetic(body.Groups[2].Value, number, this.Local, (range.Groups[1].ValueSpan[0], iterator));
+      var value = arithmetic.Read();
+      if (trips > 0 && arithmetic.IteratorReferences > 0) {
+        // The native decimal spelling of Int32.MinValue is outside the quoted SET /A grammar.
+        if (start.Value == int.MinValue)
+          throw new Refusal(number, "FOR /L expands an iterator decimal outside the SET /A magnitude limit");
+        var last = terminal - step.Value;
+        var width = Math.Max(DecimalLength(start.Value), DecimalLength(last));
+        CheckCommandLength(physicalLength + arithmetic.IteratorReferences * (width - 3), number, "expanded FOR /L command");
+      }
+
+      return new(number, iterator, start, step, end, trips > 0, new(number, destination, value));
+    }
+
+    private static int DecimalLength(long value) => value.ToString(CultureInfo.InvariantCulture).Length;
 
     private static int ExpansionGrowth(Group operand)
       => operand.ValueSpan[0] == '%' ? _maxInt32TextLength - operand.Length : 0;

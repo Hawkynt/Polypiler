@@ -20,9 +20,17 @@ public static partial class BatchFrontend {
       var pc = new IrLocal("batchPc", IrType.I32);
       var result = new IrLocal("batchResult", IrType.I32);
       var used = reachable.SelectMany(index => References(instructions[index])).ToHashSet();
+      var iterators = new List<IrLocal>();
       foreach (var index in reachable)
-        if (instructions[index] is Assignment { Value: not (IrConst or IrStrConst) } assignment)
-          used.Add(assignment.Destination);
+        switch (instructions[index]) {
+          case Assignment { Value: not (IrConst or IrStrConst) } assignment:
+            used.Add(assignment.Destination);
+            break;
+          case NumericLoop { HasIterations: true } range:
+            used.Add(range.Body.Destination);
+            iterators.Add(range.Iterator);
+            break;
+        }
       var storage = locals.Values.Where(used.Contains).ToArray();
       var sections = reachable.Select(index => this.Section(index, edges[index], pc, result, used)).ToArray();
       var drive = new IrWhile(new IrBinary(IrBinaryOp.NotEqual, new IrLocalRef(pc), Number(-1)),
@@ -31,7 +39,7 @@ public static partial class BatchFrontend {
       // Definite assignment proves these storage initializers are never observable.
       IrStmt[] statements = [.. storage.Select(local => new IrDeclare(local, local.Type.IsString ? new IrStrConst("") : Number(0))),
         new IrDeclare(pc, Number(0)), new IrDeclare(result, Number(0)), drive, new IrReturn(new IrLocalRef(result))];
-      IrFunction run = new("Run", true, IrType.I32, [], [.. storage, pc, result], new(statements));
+      IrFunction run = new("Run", true, IrType.I32, [], [.. storage, .. iterators, pc, result], new(statements));
       return new(name, [run]);
     }
 
@@ -65,6 +73,8 @@ public static partial class BatchFrontend {
         var written = new HashSet<IrLocal>(entry[index]);
         if (instructions[index] is Assignment assignment)
           written.Add(assignment.Destination);
+        else if (instructions[index] is NumericLoop { HasIterations: true } range)
+          written.Add(range.Body.Destination);
 
         foreach (var target in edges[index]) {
           if (!entry.TryGetValue(target, out var existing)) {
@@ -85,6 +95,9 @@ public static partial class BatchFrontend {
     }
 
     private static IEnumerable<IrLocal> References(Instruction instruction) {
+      if (instruction is NumericLoop range)
+        return range.HasIterations ? References(range.Body).Where(local => local != range.Iterator) : [];
+
       var expression = instruction switch {
         Assignment assignment => assignment.Value,
         Jump jump => jump.Condition,
@@ -192,12 +205,23 @@ public static partial class BatchFrontend {
       IrStmt[] statements = instructions[index] switch {
         Assignment assignment when used.Contains(assignment.Destination) => [new IrAssign(assignment.Destination, assignment.Value), Go(edges[0])],
         Assignment => [Go(edges[0])],
+        NumericLoop { HasIterations: true } range => [ForRange(range), Go(edges[0])],
+        NumericLoop => [Go(edges[0])],
         Jump { Condition: { } condition } => [new IrIf(condition, new([Go(edges[0])]), new([Go(edges[1])]))],
         Jump => [Go(edges[0])],
         Exit exit => [new IrAssign(result, exit.Status), Go(-1)],
         _ => throw new InvalidOperationException("unexpected Batch instruction")
       };
       return new([index], false, new(statements));
+    }
+
+    private static IrBlock ForRange(NumericLoop range) {
+      var iterator = new IrLocalRef(range.Iterator);
+      var comparison = range.Step.Value > 0 ? IrBinaryOp.LessOrEqual : IrBinaryOp.GreaterOrEqual;
+      var condition = new IrBinary(comparison, iterator, range.End);
+      var body = new IrBlock([new IrAssign(range.Body.Destination, range.Body.Value)]);
+      var step = new IrBlock([new IrAssign(range.Iterator, new IrBinary(IrBinaryOp.Add, iterator, range.Step))]);
+      return new([new IrDeclare(range.Iterator, range.Start), new IrFor(condition, body, step)]);
     }
 
     private static IrConst Number(int value) => new(IrType.I32, value);

@@ -5,9 +5,11 @@ namespace Polypiler.Core.Frontends.Batch;
 
 public static partial class BatchFrontend {
 
-  private sealed class Arithmetic(string text, int line, Func<string, IrLocal> local) {
+  private sealed class Arithmetic(string text, int line, Func<string, IrLocal> local, (char Name, IrLocal Local)? iterator = null) {
 
     private int _position;
+
+    public int IteratorReferences { get; private set; }
 
     public IrExpr Read() {
       var value = this.Sum(0);
@@ -51,6 +53,13 @@ public static partial class BatchFrontend {
       var start = this._position;
       if (start == text.Length)
         throw new Refusal(line, "missing arithmetic operand", malformed: true);
+      if (iterator is { } variable && start + 3 <= text.Length
+          && text[start] == '%' && text[start + 1] == '%' && text[start + 2] == variable.Name
+          && (start + 3 == text.Length || !NamePart(text[start + 3]))) {
+        this._position += 3;
+        ++this.IteratorReferences;
+        return Negative(new IrLocalRef(variable.Local), negative);
+      }
       if (char.IsAsciiDigit(text[start])) {
         while (this._position < text.Length && char.IsAsciiDigit(text[this._position]))
           ++this._position;
@@ -62,12 +71,14 @@ public static partial class BatchFrontend {
       }
       if (char.IsAsciiLetter(text[start]) || text[start] == '_') {
         ++this._position;
-        while (this._position < text.Length && (char.IsAsciiLetterOrDigit(text[this._position]) || text[this._position] == '_'))
+        while (this._position < text.Length && NamePart(text[this._position]))
           ++this._position;
         return Negative(new IrLocalRef(local(text[start..this._position])), negative);
       }
       throw new Refusal(line, $"arithmetic syntax near {text[start..]}");
     }
+
+    private static bool NamePart(char character) => char.IsAsciiLetterOrDigit(character) || character == '_';
 
     private static IrExpr Negative(IrExpr expression, bool negative) => negative ? new IrUnary(IrUnaryOp.Negate, expression) : expression;
 
