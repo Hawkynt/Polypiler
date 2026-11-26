@@ -21,18 +21,18 @@ dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -- re
 | [Classes, Properties & Reference Records](#classes-properties--reference-records) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | `PLY3051` | `PLY3151` | ✅ | ✅ |
 | [Statics & Module State](#statics--module-state) | Core Language | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
 | [Inheritance, Virtual Dispatch & Interfaces](#inheritance-virtual-dispatch--interfaces) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | `PLY3051` | `PLY3151` | ✅ | ✅ |
-| [Generics](#generics) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | `PLY3051` | `PLY3151` | `PLY1450` | ✅ |
+| [Generics](#generics) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | `PLY3051` | `PLY3151` | ✅ | ✅ |
 | [Lambdas & Closures](#lambdas--closures) | Functional | ✅ | ✅ | ✅ | ✅ | `PLY0001` | `PLY2850`/`PLY2851` | `PLY3051` | `PLY3151` | `PLY1451` | `PLY2651` |
 | [Callbacks & Delegates](#callbacks--delegates) | Functional | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
 | [Enums & Nullable Optionals](#enums--nullable-optionals) | Types & Data | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | `PLY3052` | `PLY3152` | ✅ | ✅ |
 | [Collections](#collections) | Collections & Sequences | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | `PLY3051` | `PLY3151` | `PLY1451` | `PLY2651` |
-| [Iterators & Lazy Sequences](#iterators--lazy-sequences) | Collections & Sequences | ✅ | ✅ | ✅ | ✅ | `PLY1750` | `PLY2850`/`PLY2851` | `PLY3051` | `PLY3151` | `PLY1451` | `PLY2651` |
+| [Iterators & Lazy Sequences](#iterators--lazy-sequences) | Collections & Sequences | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | `PLY3051` | `PLY3151` | `PLY1451` | `PLY2651` |
 | [LINQ](#linq) | Collections & Sequences | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
-| [Exceptions & Resource Scopes](#exceptions--resource-scopes) | Error Handling | ✅ | ✅ | ✅ | `PLY1550` | ✅ | `PLY2850`/`PLY2851` | `PLY3051` | `PLY3151` | ✅ | `PLY2650` |
-| [Tasks & Async/Await](#tasks--asyncawait) | Concurrency & Asynchrony | ⚠️ 4/5 | ⚠️ 7/9 | ✅ | `PLY1550` | `PLY1750` | `PLY2850`/`PLY2851` | `PLY3051` | `PLY3151` | `PLY1451` | `PLY2651` |
-| [Standard Output (Stdio)](#standard-output-stdio) | I/O & Interop | `PLY1152` | `PLY1052` | `PLY1851` | `PLY1550` | `PLY1751` | ⚠️ 1/2 | `PLY3050` | `PLY3150` | `PLY1450` | `PLY2650` |
+| [Exceptions & Resource Scopes](#exceptions--resource-scopes) | Error Handling | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | `PLY3051` | `PLY3151` | ✅ | ✅ |
+| [Tasks & Async/Await](#tasks--asyncawait) | Concurrency & Asynchrony | ⚠️ 4/5 | ⚠️ 7/9 | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | `PLY3051` | `PLY3151` | `PLY1451` | `PLY2651` |
+| [Standard Output (Stdio)](#standard-output-stdio) | I/O & Interop | `PLY1152` | `PLY1052` | `PLY1851` | ✅ | `PLY1751` | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
 | [Spans, Bit Permutations & Unsafe Pointers](#spans-bit-permutations--unsafe-pointers) | Low-Level & Performance | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | `PLY3051` | `PLY3151` | `PLY1451` | `PLY2651` |
-| [Native Interop (P/Invoke)](#native-interop-pinvoke) | I/O & Interop | `PLY1152` | ✅ | `PLY1851` | `PLY1550` | `PLY1751` | `PLY2850`/`PLY2851` | `PLY3050` | `PLY3151` | `PLY1450` | `PLY2650` |
+| [Native Interop (P/Invoke)](#native-interop-pinvoke) | I/O & Interop | `PLY1152` | ✅ | `PLY1851` | ✅ | `PLY1751` | `PLY2850`/`PLY2851` | ✅ | `PLY3151` | ✅ | `PLY2650` |
 | [User-Defined Operator Overloading (Boundary)](#user-defined-operator-overloading-boundary) | Unsupported Boundaries | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
 | [Hardware SIMD Vectorization (Boundary)](#hardware-simd-vectorization-boundary) | Unsupported Boundaries | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
 | [Multithreading & Synchronization (Boundary)](#multithreading--synchronization-boundary) | Unsupported Boundaries | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
@@ -152,11 +152,11 @@ dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -- re
 | [Collections](#collections) | ✅ | ✅ | ✅ |
 | [Iterators & Lazy Sequences](#iterators--lazy-sequences) | ✅ | ✅ | ✅ |
 | [LINQ](#linq) | ✅ | ✅ | ✅ |
-| [Exceptions & Resource Scopes](#exceptions--resource-scopes) | `PLY1550` | `PLY1550` | `PLY1550` |
-| [Tasks & Async/Await](#tasks--asyncawait) | `PLY1550` | `PLY1550` | `PLY1550` |
-| [Standard Output (Stdio)](#standard-output-stdio) | `PLY1550` | `PLY1550` | `PLY1550` |
+| [Exceptions & Resource Scopes](#exceptions--resource-scopes) | ✅ | ✅ | ✅ |
+| [Tasks & Async/Await](#tasks--asyncawait) | ✅ | ✅ | ✅ |
+| [Standard Output (Stdio)](#standard-output-stdio) | ✅ | ✅ | ✅ |
 | [Spans, Bit Permutations & Unsafe Pointers](#spans-bit-permutations--unsafe-pointers) | ✅ | ✅ | ✅ |
-| [Native Interop (P/Invoke)](#native-interop-pinvoke) | `PLY1550` | `PLY1550` | `PLY1550` |
+| [Native Interop (P/Invoke)](#native-interop-pinvoke) | ✅ | ✅ | ✅ |
 | [User-Defined Operator Overloading (Boundary)](#user-defined-operator-overloading-boundary) | `PLY1002` | `PLY1002` | `PLY1002` |
 | [Hardware SIMD Vectorization (Boundary)](#hardware-simd-vectorization-boundary) | `PLY1002` | `PLY1002` | `PLY1002` |
 | [Multithreading & Synchronization (Boundary)](#multithreading--synchronization-boundary) | `PLY1002` | `PLY1002` | `PLY1002` |
@@ -181,10 +181,10 @@ dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -- re
 | [Callbacks & Delegates](#callbacks--delegates) | ✅ | ✅ | ✅ |
 | [Enums & Nullable Optionals](#enums--nullable-optionals) | ✅ | ✅ | ✅ |
 | [Collections](#collections) | ✅ | ✅ | ✅ |
-| [Iterators & Lazy Sequences](#iterators--lazy-sequences) | `PLY1750` | `PLY1750` | `PLY1750` |
+| [Iterators & Lazy Sequences](#iterators--lazy-sequences) | ✅ | ✅ | ✅ |
 | [LINQ](#linq) | ✅ | ✅ | ✅ |
 | [Exceptions & Resource Scopes](#exceptions--resource-scopes) | ✅ | ✅ | ✅ |
-| [Tasks & Async/Await](#tasks--asyncawait) | `PLY1750` | `PLY1750` | `PLY1750` |
+| [Tasks & Async/Await](#tasks--asyncawait) | ✅ | ✅ | ✅ |
 | [Standard Output (Stdio)](#standard-output-stdio) | `PLY1751` | `PLY1751` | `PLY1751` |
 | [Spans, Bit Permutations & Unsafe Pointers](#spans-bit-permutations--unsafe-pointers) | ✅ | ✅ | ✅ |
 | [Native Interop (P/Invoke)](#native-interop-pinvoke) | `PLY1751` | `PLY1751` | `PLY1751` |
@@ -247,9 +247,9 @@ dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -- re
 | [LINQ](#linq) | ✅ | ✅ |
 | [Exceptions & Resource Scopes](#exceptions--resource-scopes) | `PLY3051` | `PLY3051` |
 | [Tasks & Async/Await](#tasks--asyncawait) | `PLY3051` | `PLY3051` |
-| [Standard Output (Stdio)](#standard-output-stdio) | `PLY3050` | `PLY3050` |
+| [Standard Output (Stdio)](#standard-output-stdio) | ✅ | ✅ |
 | [Spans, Bit Permutations & Unsafe Pointers](#spans-bit-permutations--unsafe-pointers) | `PLY3051` | `PLY3051` |
-| [Native Interop (P/Invoke)](#native-interop-pinvoke) | `PLY3050` | `PLY3050` |
+| [Native Interop (P/Invoke)](#native-interop-pinvoke) | ✅ | ✅ |
 | [User-Defined Operator Overloading (Boundary)](#user-defined-operator-overloading-boundary) | `PLY1002` | `PLY1002` |
 | [Hardware SIMD Vectorization (Boundary)](#hardware-simd-vectorization-boundary) | `PLY1002` | `PLY1002` |
 | [Multithreading & Synchronization (Boundary)](#multithreading--synchronization-boundary) | `PLY1002` | `PLY1002` |
@@ -278,7 +278,7 @@ dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -- re
 | [LINQ](#linq) | ✅ | ✅ | ✅ |
 | [Exceptions & Resource Scopes](#exceptions--resource-scopes) | `PLY3151` | `PLY3151` | `PLY3151` |
 | [Tasks & Async/Await](#tasks--asyncawait) | `PLY3151` | `PLY3151` | `PLY3151` |
-| [Standard Output (Stdio)](#standard-output-stdio) | `PLY3150` | `PLY3150` | `PLY3150` |
+| [Standard Output (Stdio)](#standard-output-stdio) | ✅ | ✅ | ✅ |
 | [Spans, Bit Permutations & Unsafe Pointers](#spans-bit-permutations--unsafe-pointers) | `PLY3151` | `PLY3151` | `PLY3151` |
 | [Native Interop (P/Invoke)](#native-interop-pinvoke) | `PLY3151` | `PLY3151` | `PLY3151` |
 | [User-Defined Operator Overloading (Boundary)](#user-defined-operator-overloading-boundary) | `PLY1002` | `PLY1002` | `PLY1002` |
@@ -300,7 +300,7 @@ dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -- re
 | [Classes, Properties & Reference Records](#classes-properties--reference-records) | ✅ | ✅ | ✅ |
 | [Statics & Module State](#statics--module-state) | ✅ | ✅ | ✅ |
 | [Inheritance, Virtual Dispatch & Interfaces](#inheritance-virtual-dispatch--interfaces) | ✅ | ✅ | ✅ |
-| [Generics](#generics) | `PLY1450` | `PLY1450` | `PLY1450` |
+| [Generics](#generics) | ✅ | ✅ | ✅ |
 | [Lambdas & Closures](#lambdas--closures) | `PLY1451` | `PLY1451` | `PLY1451` |
 | [Callbacks & Delegates](#callbacks--delegates) | ✅ | ✅ | ✅ |
 | [Enums & Nullable Optionals](#enums--nullable-optionals) | ✅ | ✅ | ✅ |
@@ -309,9 +309,9 @@ dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -- re
 | [LINQ](#linq) | ✅ | ✅ | ✅ |
 | [Exceptions & Resource Scopes](#exceptions--resource-scopes) | ✅ | ✅ | ✅ |
 | [Tasks & Async/Await](#tasks--asyncawait) | `PLY1451` | `PLY1451` | `PLY1451` |
-| [Standard Output (Stdio)](#standard-output-stdio) | `PLY1450` | `PLY1450` | `PLY1450` |
+| [Standard Output (Stdio)](#standard-output-stdio) | ✅ | ✅ | ✅ |
 | [Spans, Bit Permutations & Unsafe Pointers](#spans-bit-permutations--unsafe-pointers) | `PLY1451` | `PLY1451` | `PLY1451` |
-| [Native Interop (P/Invoke)](#native-interop-pinvoke) | `PLY1450` | `PLY1450` | `PLY1450` |
+| [Native Interop (P/Invoke)](#native-interop-pinvoke) | ✅ | ✅ | ✅ |
 | [User-Defined Operator Overloading (Boundary)](#user-defined-operator-overloading-boundary) | `PLY1002` | `PLY1002` | `PLY1002` |
 | [Hardware SIMD Vectorization (Boundary)](#hardware-simd-vectorization-boundary) | `PLY1002` | `PLY1002` | `PLY1002` |
 | [Multithreading & Synchronization (Boundary)](#multithreading--synchronization-boundary) | `PLY1002` | `PLY1002` | `PLY1002` |
@@ -8251,6 +8251,130 @@ Returns i64.
 </details>
 
 <details>
+<summary><strong>C++</strong> — <code>cpp/cpp17</code>, <code>cpp/cpp20</code>, <code>cpp/cpp23</code> (identical output — <code>generics_showcase.cpp</code>, <code>generics_showcase.hpp</code>)</summary>
+
+**`generics_showcase.cpp`**
+
+```cpp
+#include "generics_showcase.hpp"
+#include <cmath>
+#include <optional>
+#include <stdexcept>
+#include <string>
+#include <type_traits>
+
+namespace generics_showcase {
+
+namespace {
+
+template <typename T>
+const std::shared_ptr<T>& ply_nonnull(const std::shared_ptr<T>& ptr) {
+  if (!ptr)
+    throw std::runtime_error("null reference");
+  return ptr;
+}
+
+template <typename T>
+std::int32_t ply_compare(const T& a, const T& b) {
+  if constexpr (std::is_floating_point_v<T>) {
+    if (a < b) return -1;
+    if (a > b) return 1;
+    if (a == b) return 0;
+    return std::isnan(a) ? (std::isnan(b) ? 0 : -1) : 1;
+  } else if constexpr (std::is_same_v<T, std::string>) {
+    const int c = a.compare(b);
+    return c < 0 ? -1 : (c > 0 ? 1 : 0);
+  } else if constexpr (std::is_same_v<T, std::optional<std::string>>) {
+    if (!a.has_value()) return b.has_value() ? -1 : 0;
+    if (!b.has_value()) return 1;
+    const int c = a->compare(*b);
+    return c < 0 ? -1 : (c > 0 ? 1 : 0);
+  } else if constexpr (std::is_integral_v<T> && !std::is_same_v<T, bool> && sizeof(T) < 4) {
+    return static_cast<std::int32_t>(a) - static_cast<std::int32_t>(b);
+  } else {
+    return a < b ? -1 : (a > b ? 1 : 0);
+  }
+}
+
+} // namespace
+
+static std::int32_t clamp_of_i32(std::int32_t, std::int32_t, std::int32_t);
+static std::int64_t clamp_of_i64(std::int64_t, std::int64_t, std::int64_t);
+
+BoxI32::BoxI32(std::int32_t initial) {
+  this->value = initial;
+}
+
+BoxI64::BoxI64(std::int64_t initial) {
+  this->value = initial;
+}
+
+static std::int32_t clamp_of_i32(std::int32_t value, std::int32_t min, std::int32_t max) {
+  if ((ply_compare(value, min) < 0)) {
+    return min;
+  }
+  if ((ply_compare(value, max) > 0)) {
+    return max;
+  }
+  return value;
+}
+
+static std::int64_t clamp_of_i64(std::int64_t value, std::int64_t min, std::int64_t max) {
+  if ((ply_compare(value, min) < 0)) {
+    return min;
+  }
+  if ((ply_compare(value, max) > 0)) {
+    return max;
+  }
+  return value;
+}
+
+std::int64_t run([[maybe_unused]] std::int32_t a, [[maybe_unused]] std::int64_t b) {
+  std::shared_ptr<BoxI32> int_box = std::make_shared<BoxI32>(clamp_of_i32(a, 0, 100));
+  std::shared_ptr<BoxI64> long_box = std::make_shared<BoxI64>(clamp_of_i64(b, -50LL, 50LL));
+  return static_cast<std::int64_t>(static_cast<std::uint64_t>(static_cast<std::int64_t>(static_cast<std::uint64_t>(ply_nonnull(int_box)->value))) + static_cast<std::uint64_t>(ply_nonnull(long_box)->value));
+}
+
+} // namespace generics_showcase
+```
+
+**`generics_showcase.hpp`**
+
+```cpp
+#pragma once
+
+#include <cstdint>
+#include <memory>
+
+namespace generics_showcase {
+
+class BoxI32;
+class BoxI64;
+
+class BoxI32 : public std::enable_shared_from_this<BoxI32> {
+public:
+  std::int32_t value{};
+
+  virtual ~BoxI32() = default;
+  explicit BoxI32(std::int32_t initial);
+};
+
+class BoxI64 : public std::enable_shared_from_this<BoxI64> {
+public:
+  std::int64_t value{};
+
+  virtual ~BoxI64() = default;
+  explicit BoxI64(std::int64_t initial);
+};
+
+std::int64_t run(std::int32_t a, std::int64_t b);
+
+} // namespace generics_showcase
+```
+
+</details>
+
+<details>
 <summary><strong>VBScript</strong> — <code>vbscript/5.8</code> (<code>GenericsShowcase.vbs</code>)</summary>
 
 ```vbscript
@@ -8395,7 +8519,7 @@ End Function
 
 </details>
 
-> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile); `msil` (`PLY3051`: type 'Box<i32>' is not supported by the MSIL backend); `jvm` (`PLY3151`: declared type 'Box<i32>' (IrClassType) is not supported by the JVM backend); `cpp` (`PLY1450`: construct 'IrGenericCompare' cannot be emitted as C++)
+> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile); `msil` (`PLY3051`: type 'Box<i32>' is not supported by the MSIL backend); `jvm` (`PLY3151`: declared type 'Box<i32>' (IrClassType) is not supported by the JVM backend)
 
 ## Lambdas & Closures
 
@@ -11369,7 +11493,232 @@ pub mod iterators_showcase;
 
 </details>
 
-> **Refused by:** `perl` (`perl/5.6`: `PLY1750`: type 'seq<i32>' has no Perl representation in profile 'perl/5.6'; `perl/5.8`: `PLY1750`: type 'seq<i32>' has no Perl representation in profile 'perl/5.8'; `perl/5`: `PLY1750`: type 'seq<i32>' has no Perl representation in profile 'perl/5'); `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile); `msil` (`PLY3051`: type 'seq<i32>' is not supported by the MSIL backend); `jvm` (`PLY3151`: type 'seq<i32>' in return type of 'EvensUpTo' is not supported by the JVM backend); `cpp` (`cpp/cpp17`: `PLY1451`: type 'seq<i32>' has no C++ representation in profile 'cpp/cpp17'; `cpp/cpp20`: `PLY1451`: type 'seq<i32>' has no C++ representation in profile 'cpp/cpp20'; `cpp/cpp23`: `PLY1451`: type 'seq<i32>' has no C++ representation in profile 'cpp/cpp23'); `vbscript` (`PLY2651`: type 'seq<i32>' has no VBScript representation in profile 'vbscript/5.8')
+<details>
+<summary><strong>Perl</strong> — 3 dialects (3 distinct outputs)</summary>
+
+<details>
+<summary>Dialect: <code>perl/5.6</code> (<code>lib/IteratorsShowcase.pm</code>)</summary>
+
+```perl
+package IteratorsShowcase;
+use 5.006;
+use strict;
+use warnings;
+use Exporter ();
+our @ISA = qw(Exporter);
+use Carp ();
+
+our $VERSION = '0.001';
+our @EXPORT_OK = qw(sum_evens);
+BEGIN { die "IteratorsShowcase requires a perl with 64-bit integers\n" unless ~0 > 4294967295; }
+
+sub _evens_up_to {
+    use integer;
+    my ($limit) = @_;
+    my $_p1 = $limit;
+    return sub {
+        my ($_yield) = @_;
+        my $limit = $_p1;
+        {
+            my $i = 0;
+            LOOP1: while ($i <= $limit) {
+                if ($i > 100) {
+                    return;
+                }
+                if (!$_yield->($i)) {
+                    return;
+                }
+                $i = ($i + 2);
+            }
+        }
+        return;
+    };
+}
+
+sub sum_evens {
+    use integer;
+    @_ == 1 or Carp::croak('usage: sum_evens($limit)');
+    my ($limit) = @_;
+    my $sum = 0;
+    my $_seq1 = _evens_up_to($limit);
+    $_seq1->(sub {
+        my ($value) = @_;
+        $sum = ((((($sum + $value)) & 0xFFFFFFFF) ^ 0x80000000) - 0x80000000);
+        return 1;
+    });
+    return $sum;
+}
+
+1;
+
+__END__
+
+=head1 NAME
+
+IteratorsShowcase
+
+=head1 SYNOPSIS
+
+    use IteratorsShowcase qw(sum_evens);
+
+=head2 sum_evens($limit)
+
+Returns i32.
+
+=cut
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>perl/5.8</code> (<code>lib/IteratorsShowcase.pm</code>)</summary>
+
+```perl
+package IteratorsShowcase;
+use 5.008;
+use strict;
+use warnings;
+use Exporter ();
+our @ISA = qw(Exporter);
+use Carp ();
+
+our $VERSION = '0.001';
+our @EXPORT_OK = qw(sum_evens);
+BEGIN { die "IteratorsShowcase requires a perl with 64-bit integers\n" unless ~0 > 4294967295; }
+
+sub _evens_up_to {
+    use integer;
+    my ($limit) = @_;
+    my $_p1 = $limit;
+    return sub {
+        my ($_yield) = @_;
+        my $limit = $_p1;
+        {
+            my $i = 0;
+            LOOP1: while ($i <= $limit) {
+                if ($i > 100) {
+                    return;
+                }
+                if (!$_yield->($i)) {
+                    return;
+                }
+                $i = ($i + 2);
+            }
+        }
+        return;
+    };
+}
+
+sub sum_evens {
+    use integer;
+    @_ == 1 or Carp::croak('usage: sum_evens($limit)');
+    my ($limit) = @_;
+    my $sum = 0;
+    my $_seq1 = _evens_up_to($limit);
+    $_seq1->(sub {
+        my ($value) = @_;
+        $sum = ((((($sum + $value)) & 0xFFFFFFFF) ^ 0x80000000) - 0x80000000);
+        return 1;
+    });
+    return $sum;
+}
+
+1;
+
+__END__
+
+=head1 NAME
+
+IteratorsShowcase
+
+=head1 SYNOPSIS
+
+    use IteratorsShowcase qw(sum_evens);
+
+=head2 sum_evens($limit)
+
+Returns i32.
+
+=cut
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>perl/5</code> (<code>lib/IteratorsShowcase.pm</code>)</summary>
+
+```perl
+package IteratorsShowcase;
+use strict;
+use warnings;
+use Exporter 'import';
+use Carp ();
+
+our $VERSION = '0.001';
+our @EXPORT_OK = qw(sum_evens);
+BEGIN { die "IteratorsShowcase requires a perl with 64-bit integers\n" unless ~0 > 4294967295; }
+
+sub _evens_up_to {
+    use integer;
+    my ($limit) = @_;
+    my $_p1 = $limit;
+    return sub {
+        my ($_yield) = @_;
+        my $limit = $_p1;
+        {
+            my $i = 0;
+            LOOP1: while ($i <= $limit) {
+                if ($i > 100) {
+                    return;
+                }
+                if (!$_yield->($i)) {
+                    return;
+                }
+                $i = ($i + 2);
+            }
+        }
+        return;
+    };
+}
+
+sub sum_evens {
+    use integer;
+    @_ == 1 or Carp::croak('usage: sum_evens($limit)');
+    my ($limit) = @_;
+    my $sum = 0;
+    my $_seq1 = _evens_up_to($limit);
+    $_seq1->(sub {
+        my ($value) = @_;
+        $sum = ((((($sum + $value)) & 0xFFFFFFFF) ^ 0x80000000) - 0x80000000);
+        return 1;
+    });
+    return $sum;
+}
+
+1;
+
+__END__
+
+=head1 NAME
+
+IteratorsShowcase
+
+=head1 SYNOPSIS
+
+    use IteratorsShowcase qw(sum_evens);
+
+=head2 sum_evens($limit)
+
+Returns i32.
+
+=cut
+```
+
+</details>
+
+</details>
+
+> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile); `msil` (`PLY3051`: type 'seq<i32>' is not supported by the MSIL backend); `jvm` (`PLY3151`: type 'seq<i32>' in return type of 'EvensUpTo' is not supported by the JVM backend); `cpp` (`cpp/cpp17`: `PLY1451`: type 'seq<i32>' has no C++ representation in profile 'cpp/cpp17'; `cpp/cpp20`: `PLY1451`: type 'seq<i32>' has no C++ representation in profile 'cpp/cpp20'; `cpp/cpp23`: `PLY1451`: type 'seq<i32>' has no C++ representation in profile 'cpp/cpp23'); `vbscript` (`PLY2651`: type 'seq<i32>' has no VBScript representation in profile 'vbscript/5.8')
 
 ## LINQ
 
@@ -12803,6 +13152,162 @@ def evaluate(value: int) -> int:
 </details>
 
 <details>
+<summary><strong>Rust</strong> — <code>rust2018</code>, <code>rust2021</code>, <code>rust2024</code> (identical output — <code>Cargo.toml</code>, <code>src/exceptions_and_using_showcase.rs</code>, <code>src/lib.rs</code>)</summary>
+
+**`Cargo.toml`**
+
+```toml
+[package]
+name = "exceptions_and_using_showcase"
+version = "0.1.0"
+edition = "2018"
+```
+
+**`src/exceptions_and_using_showcase.rs`**
+
+```rust
+use std::cell::Cell;
+use std::rc::Rc;
+
+/// An exception: the number of its class, its message and the exception it wraps.
+pub struct PlyError {
+    pub class: usize,
+    pub message: Vec<u16>,
+    pub inner: Option<Rc<PlyError>>,
+}
+
+pub static PLY_ERROR_BASES: [usize; 14] = [0, 0, 1, 1, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0];
+
+pub static PLY_ERROR_NAMES: [&str; 14] = [
+    "Exception",
+    "ArithmeticException",
+    "DivideByZeroException",
+    "OverflowException",
+    "IndexOutOfRangeException",
+    "NullReferenceException",
+    "InvalidCastException",
+    "InvalidOperationException",
+    "ArgumentException",
+    "ArgumentOutOfRangeException",
+    "KeyNotFoundException",
+    "FormatException",
+    "AssertionException",
+    "DomainException",
+];
+
+pub trait IDisposable {
+    fn dispose(&self);
+}
+
+#[derive(Default)]
+pub struct ScopeTracker {
+    closed: Cell<i32>,
+}
+
+impl ScopeTracker {
+    pub fn new() -> Rc<Self> {
+        let this = Rc::new(Self::default());
+        scope_tracker_ctor(&this);
+        this
+    }
+}
+
+impl IDisposable for ScopeTracker {
+    fn dispose(&self) {
+        scope_tracker_dispose(self)
+    }
+}
+
+fn ply_error(class: usize, message: Vec<u16>, inner: Option<Rc<PlyError>>) -> Rc<PlyError> {
+    Rc::new(PlyError {
+        class,
+        message,
+        inner,
+    })
+}
+
+fn ply_is(class: usize, target: usize) -> bool {
+    let mut at = class;
+    while at != target && at != PLY_ERROR_BASES[at] {
+        at = PLY_ERROR_BASES[at];
+    }
+    at == target
+}
+
+fn ply_unhandled(error: &PlyError) -> ! {
+    panic!("{}", PLY_ERROR_NAMES[error.class])
+}
+
+fn ply_utf16(text: &str) -> Vec<u16> {
+    text.encode_utf16().collect()
+}
+
+pub fn evaluate(value: i32) -> i32 {
+    let tracker: Rc<ScopeTracker> = ScopeTracker::new();
+    let mut result: i32 = 0;
+    let mut thrown2 = None;
+    'f0: {
+        let outcome: Result<(), (Rc<PlyError>, usize)> = 't1: {
+            let t2: Rc<ScopeTracker> = Rc::clone(&tracker);
+            let mut thrown1 = None;
+            'f2: {
+                if value < 0 {
+                    let thrown = ply_error(13, ply_utf16("negative"), None);
+                    let selected = if ply_is(thrown.class, 13)
+                        && thrown.message.clone().len() as i32 > 0
+                    {
+                        0
+                    } else {
+                        1
+                    };
+                    thrown1 = Some((thrown, selected));
+                    break 'f2;
+                }
+                result = value.wrapping_mul(2);
+            }
+            IDisposable::dispose(&*t2);
+            if let Some(error) = thrown1 {
+                break 't1 Err(error);
+            }
+            Ok(())
+        };
+        if let Err((error1, selected1)) = outcome {
+            if selected1 == 0 {
+                result = -1;
+            } else {
+                thrown2 = Some(error1);
+                break 'f0;
+            }
+        }
+    }
+    result = result.wrapping_add(tracker.closed.get());
+    if let Some(error2) = thrown2 {
+        ply_unhandled(&error2);
+    }
+    result
+}
+
+pub fn scope_tracker_dispose(this: &ScopeTracker) {
+    this.closed.set(this.closed.get().wrapping_add(1));
+}
+
+pub fn scope_tracker_ctor(_this: &ScopeTracker) {}
+```
+
+**`src/lib.rs`**
+
+```rust
+//! exceptions_and_using_showcase: generated by polypiler. Change the source, not this file.
+//! Rust profile: rust2018 (Rust 1.31).
+//! Helpers added by polypiler: MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source.
+#![forbid(unsafe_code)]
+
+pub mod exceptions_and_using_showcase;
+```
+
+</details>
+
+<details>
 <summary><strong>Perl</strong> — 3 dialects (3 distinct outputs)</summary>
 
 <details>
@@ -13368,7 +13873,255 @@ std::int32_t evaluate(std::int32_t value);
 
 </details>
 
-> **Refused by:** `rust` (`rust2018`: `PLY1550`: 'Using' cannot be expressed in Rust profile 'rust2018' (in the function 'Evaluate'); `rust2021`: `PLY1550`: 'Using' cannot be expressed in Rust profile 'rust2021' (in the function 'Evaluate'); `rust2024`: `PLY1550`: 'Using' cannot be expressed in Rust profile 'rust2024' (in the function 'Evaluate')); `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile); `msil` (`PLY3051`: type 'IDisposable' is not supported by the MSIL backend); `jvm` (`PLY3151`: declared type 'IDisposable' (IrInterfaceType) is not supported by the JVM backend); `vbscript` (`PLY2650`: construct 'IrUsing' cannot be emitted as VBScript)
+<details>
+<summary><strong>VBScript</strong> — <code>vbscript/5.8</code> (<code>ExceptionsAndUsingShowcase.vbs</code>)</summary>
+
+```vbscript
+Option Explicit
+
+Function ply_i32(ByVal x)
+  Dim m
+  m = CDbl(x)
+  m = m - Int(m / 4294967296.0) * 4294967296.0
+  If m >= 2147483648.0 Then m = m - 4294967296.0
+  ply_i32 = CLng(m)
+End Function
+
+Function ply_u32(ByVal x)
+  Dim m
+  m = CDbl(x)
+  ply_u32 = m - Int(m / 4294967296.0) * 4294967296.0
+End Function
+
+Function ply_mul32(ByVal a, ByVal b)
+  Dim ua, ub, al, ah, bl, bh, lo, md
+  ua = ply_u32(a)
+  ub = ply_u32(b)
+  al = ua - Int(ua / 65536.0) * 65536.0
+  ah = Int(ua / 65536.0)
+  bl = ub - Int(ub / 65536.0) * 65536.0
+  bh = Int(ub / 65536.0)
+  lo = al * bl
+  md = ah * bl + al * bh
+  md = md - Int(md / 65536.0) * 65536.0
+  ply_mul32 = ply_i32(lo + md * 65536.0)
+End Function
+
+Function ply_chk_null(ByVal o)
+  If o Is Nothing Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+  Set ply_chk_null = o
+End Function
+
+Dim ply_last_err
+Set ply_last_err = Nothing
+
+Class ply_Exception
+  Public ply_kind
+  Public Message
+  Public InnerException
+  Public Function ply_is(ByVal t)
+    If t = "Exception" Or t = ply_kind Then
+      ply_is = True
+      Exit Function
+    End If
+    If t = "ArithmeticException" And (ply_kind = "DivideByZeroException" Or ply_kind = "OverflowException") Then
+      ply_is = True
+      Exit Function
+    End If
+    If t = "ArgumentException" And ply_kind = "ArgumentOutOfRangeException" Then
+      ply_is = True
+      Exit Function
+    End If
+    ply_is = False
+  End Function
+End Class
+
+Function ply_make_err(ByVal kind, ByVal msg, ByVal inner)
+  Dim e
+  Set e = New ply_Exception
+  e.ply_kind = kind
+  e.Message = msg
+  Set e.InnerException = inner
+  Set ply_make_err = e
+End Function
+
+Sub ply_throw(ByVal exObj)
+  If exObj Is Nothing Then Err.Raise vbObjectError + 1004, "NullReferenceException", "Object reference not set to an instance of an object."
+  Set ply_last_err = exObj
+  Err.Raise vbObjectError + 1099, exObj.ply_kind, exObj.Message
+End Sub
+
+Function ply_capture_err(ByVal num, ByVal src, ByVal desc)
+  Dim e, k
+  If num = vbObjectError + 1099 And Not (ply_last_err Is Nothing) Then
+    Set e = ply_last_err
+    Set ply_last_err = Nothing
+    Set ply_capture_err = e
+    Exit Function
+  End If
+  If num = 11 Then
+    k = "DivideByZeroException"
+  ElseIf num = 6 Then
+    k = "OverflowException"
+  ElseIf num = 9 Then
+    k = "IndexOutOfRangeException"
+  ElseIf Len(src) > 0 Then
+    k = src
+  Else
+    k = "Exception"
+  End If
+  Set ply_capture_err = ply_make_err(k, desc, Nothing)
+End Function
+
+
+Class DomainException
+  Public ply_kind
+  Public Message
+  Public InnerException
+  Private Sub Class_Initialize()
+    ply_kind = "DomainException"
+    Message = Null
+    Set InnerException = Nothing
+  End Sub
+  Public Function ply_is(ByVal t)
+    ply_is = (t = "DomainException" Or t = "Exception")
+  End Function
+End Class
+
+Function new_DomainException_0(ByVal p_0)
+  Dim inst
+  Set inst = New DomainException
+  Call DomainException_ctor(inst, p_0)
+  Set new_DomainException_0 = inst
+End Function
+
+Class ScopeTracker
+  Public Closed
+  Private Sub Class_Initialize()
+    Closed = 0
+  End Sub
+  Public Function ply_is(ByVal t)
+    ply_is = (t = "ScopeTracker" Or t = "IDisposable")
+  End Function
+  Public Sub Dispose()
+    Call ScopeTracker_Dispose(Me)
+  End Sub
+End Class
+
+Function new_ScopeTracker_0()
+  Dim inst
+  Set inst = New ScopeTracker
+  Call ScopeTracker_ctor(inst)
+  Set new_ScopeTracker_0 = inst
+End Function
+
+
+Function Evaluate(ByVal value)
+  Dim tracker, result, v__t2, e, ply_enum1, ply_esrc2, ply_edesc3, ply_eobj4, ply_unh5, ply_enum6, ply_esrc7, ply_edesc8, ply_eobj9, ply_unh10, ply_r11, ply_m12, ply_mc13, ply_o14, ply_cn15, ply_cs16, ply_cd17, ply_o18, ply_l19
+  Set tracker = new_ScopeTracker_0()
+  result = 0
+  ply_unh5 = False
+  Set ply_eobj4 = Nothing
+  On Error Resume Next
+  Do
+    Set v__t2 = tracker
+    If Err.Number <> 0 Then Exit Do
+    ply_unh10 = False
+    Set ply_eobj9 = Nothing
+    On Error Resume Next
+    Do
+      If ((value) < (0)) Then
+        Call ply_throw(new_DomainException_0("negative"))
+        If Err.Number <> 0 Then Exit Do
+      End If
+      If Err.Number <> 0 Then Exit Do
+      result = ply_mul32(value, 2)
+      If Err.Number <> 0 Then Exit Do
+    Loop Until True
+    ply_enum6 = Err.Number
+    ply_esrc7 = Err.Source
+    ply_edesc8 = Err.Description
+    Err.Clear
+    If ply_enum6 <> 0 Then
+      Set ply_eobj9 = ply_capture_err(ply_enum6, ply_esrc7, ply_edesc8)
+      ply_unh10 = True
+    End If
+    If (Not (((v__t2) Is (Nothing)))) Then
+      Set ply_r11 = ply_chk_null(v__t2)
+      Call ply_r11.Dispose()
+      If Err.Number <> 0 Then Exit Do
+    End If
+    If Err.Number <> 0 Then Exit Do
+    If ply_unh10 Then Call ply_throw(ply_eobj9)
+    If Err.Number <> 0 Then Exit Do
+    If Err.Number <> 0 Then Exit Do
+  Loop Until True
+  ply_enum1 = Err.Number
+  ply_esrc2 = Err.Source
+  ply_edesc3 = Err.Description
+  Err.Clear
+  On Error GoTo 0
+  If ply_enum1 <> 0 Then
+    Set ply_eobj4 = ply_capture_err(ply_enum1, ply_esrc2, ply_edesc3)
+    ply_m12 = False
+    If Not ply_m12 And ply_eobj4.ply_is("DomainException") Then
+      Set e = ply_eobj4
+      ply_mc13 = False
+      On Error Resume Next
+      Set ply_o14 = ply_chk_null(e)
+      If Err.Number = 0 Then ply_mc13 = (((Len(ply_o14.Message)) > (0)))
+      Err.Clear
+      On Error GoTo 0
+      If ply_mc13 Then
+        ply_m12 = True
+        On Error Resume Next
+        Do
+          result = -1
+          If Err.Number <> 0 Then Exit Do
+        Loop Until True
+        ply_cn15 = Err.Number
+        ply_cs16 = Err.Source
+        ply_cd17 = Err.Description
+        Err.Clear
+        On Error GoTo 0
+        If ply_cn15 <> 0 Then
+          Set ply_eobj4 = ply_capture_err(ply_cn15, ply_cs16, ply_cd17)
+          ply_unh5 = True
+        End If
+      End If
+    End If
+    If Not ply_m12 Then ply_unh5 = True
+  End If
+  ply_l19 = result
+  Set ply_o18 = ply_chk_null(tracker)
+  result = ply_i32(CDbl(ply_l19) + CDbl(ply_o18.Closed))
+  If ply_unh5 Then Call ply_throw(ply_eobj4)
+  Evaluate = result
+  Exit Function
+End Function
+
+Sub ScopeTracker_Dispose(ByVal this)
+  Dim ply_o1, ply_o2
+  Set ply_o1 = ply_chk_null(this)
+  Set ply_o2 = ply_chk_null(this)
+  ply_o1.Closed = ply_i32(CDbl(ply_o2.Closed) + CDbl(1))
+End Sub
+
+Sub ScopeTracker_ctor(ByVal this)
+End Sub
+
+Sub DomainException_ctor(ByVal this, ByVal message)
+  this.Message = message
+  Set this.InnerException = Nothing
+End Sub
+
+Sub IDisposable_Dispose(ByVal this)
+End Sub
+```
+
+</details>
+
+> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile); `msil` (`PLY3051`: type 'IDisposable' is not supported by the MSIL backend); `jvm` (`PLY3151`: declared type 'IDisposable' (IrInterfaceType) is not supported by the JVM backend)
 
 ## Tasks & Async/Await
 
@@ -13640,7 +14393,308 @@ async def combine_async(a: int, b: int) -> int:
 
 </details>
 
-> **Refused by:** `rust` (`rust2018`: `PLY1550`: 'the type async<i32>' cannot be expressed in Rust profile 'rust2018' (in the function 'ComputeAsync'); `rust2021`: `PLY1550`: 'the type async<i32>' cannot be expressed in Rust profile 'rust2021' (in the function 'ComputeAsync'); `rust2024`: `PLY1550`: 'the type async<i32>' cannot be expressed in Rust profile 'rust2024' (in the function 'ComputeAsync')); `perl` (`perl/5.6`: `PLY1750`: type 'async<i32>' has no Perl representation in profile 'perl/5.6'; `perl/5.8`: `PLY1750`: type 'async<i32>' has no Perl representation in profile 'perl/5.8'; `perl/5`: `PLY1750`: type 'async<i32>' has no Perl representation in profile 'perl/5'); `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile); `msil` (`PLY3051`: type 'async<i32>' is not supported by the MSIL backend); `jvm` (`PLY3151`: type 'async<i32>' in return type of 'ComputeAsync' is not supported by the JVM backend); `cpp` (`cpp/cpp17`: `PLY1451`: type 'async<i32>' has no C++ representation in profile 'cpp/cpp17'; `cpp/cpp20`: `PLY1451`: type 'async<i32>' has no C++ representation in profile 'cpp/cpp20'; `cpp/cpp23`: `PLY1451`: type 'async<i32>' has no C++ representation in profile 'cpp/cpp23'); `vbscript` (`PLY2651`: type 'async<i32>' has no VBScript representation in profile 'vbscript/5.8')
+<details>
+<summary><strong>Rust</strong> — <code>rust2018</code>, <code>rust2021</code>, <code>rust2024</code> (identical output — <code>Cargo.toml</code>, <code>src/lib.rs</code>, <code>src/tasks_showcase.rs</code>)</summary>
+
+**`Cargo.toml`**
+
+```toml
+[package]
+name = "tasks_showcase"
+version = "0.1.0"
+edition = "2018"
+```
+
+**`src/lib.rs`**
+
+```rust
+//! tasks_showcase: generated by polypiler. Change the source, not this file.
+//! Rust profile: rust2018 (Rust 1.31).
+#![forbid(unsafe_code)]
+
+pub mod tasks_showcase;
+```
+
+**`src/tasks_showcase.rs`**
+
+```rust
+async fn compute_async(x: i32) -> i32 {
+    x.wrapping_mul(x).wrapping_add(1)
+}
+
+pub async fn combine_async(a: i32, b: i32) -> i32 {
+    let parts: Vec<i32> = vec![compute_async(a).await, compute_async(b).await];
+    parts[0].wrapping_add(parts[1])
+}
+```
+
+</details>
+
+<details>
+<summary><strong>Perl</strong> — 3 dialects (3 distinct outputs)</summary>
+
+<details>
+<summary>Dialect: <code>perl/5.6</code> (<code>lib/TasksShowcase.pm</code>)</summary>
+
+```perl
+# Helpers added by polypiler: MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source.
+package TasksShowcase;
+use 5.006;
+use strict;
+use warnings;
+use Exporter ();
+our @ISA = qw(Exporter);
+use Carp ();
+
+our $VERSION = '0.001';
+our @EXPORT_OK = qw(combine_async);
+BEGIN { die "TasksShowcase requires a perl with 64-bit integers\n" unless ~0 > 4294967295; }
+
+sub _ply_task_from_result {
+    my ($val) = @_;
+    return { done => 1, value => $val };
+}
+
+sub _ply_await {
+    my ($task) = @_;
+    die $task->{error} if exists $task->{error};
+    return $task->{value};
+}
+
+sub _ply_when_all {
+    my ($is_void, @tasks) = @_;
+    my @results;
+    for my $t (@tasks) {
+        return { done => 1, error => $t->{error} } if exists $t->{error};
+        push @results, $t->{value} unless $is_void;
+    }
+    return $is_void ? { done => 1, value => undef } : { done => 1, value => \@results };
+}
+
+sub _compute_async {
+    use integer;
+    my ($x_) = @_;
+    my $_aval1 = undef;
+    my $_aok2 = eval {
+        $_aval1 = _ply_await(_ply_task_from_result((((((((((($x_ * $x_)) & 0xFFFFFFFF) ^ 0x80000000) - 0x80000000) + 1)) & 0xFFFFFFFF) ^ 0x80000000) - 0x80000000)));
+        return 1;
+        1;
+    };
+    return { done => 1, error => $@ } unless $_aok2;
+    return { done => 1, value => $_aval1 };
+}
+
+sub combine_async {
+    use integer;
+    @_ == 2 or Carp::croak('usage: combine_async($a_, $b_)');
+    my ($a_, $b_) = @_;
+    my $_aval1 = undef;
+    my $_aok2 = eval {
+        my $parts = _ply_await(_ply_when_all(0, _compute_async($a_), _compute_async($b_)));
+        $_aval1 = (((((do { my ($_a, $_i) = ($parts, 0); die "IndexOutOfRange: index $_i\n" if $_i < 0 || $_i > $#$_a; $_a->[$_i] } + do { my ($_a, $_i) = ($parts, 1); die "IndexOutOfRange: index $_i\n" if $_i < 0 || $_i > $#$_a; $_a->[$_i] })) & 0xFFFFFFFF) ^ 0x80000000) - 0x80000000);
+        return 1;
+        1;
+    };
+    return { done => 1, error => $@ } unless $_aok2;
+    return { done => 1, value => $_aval1 };
+}
+
+1;
+
+__END__
+
+=head1 NAME
+
+TasksShowcase
+
+=head1 SYNOPSIS
+
+    use TasksShowcase qw(combine_async);
+
+=head2 combine_async($a_, $b_)
+
+Returns async<i32>.
+
+=cut
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>perl/5.8</code> (<code>lib/TasksShowcase.pm</code>)</summary>
+
+```perl
+# Helpers added by polypiler: MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source.
+package TasksShowcase;
+use 5.008;
+use strict;
+use warnings;
+use Exporter ();
+our @ISA = qw(Exporter);
+use Carp ();
+
+our $VERSION = '0.001';
+our @EXPORT_OK = qw(combine_async);
+BEGIN { die "TasksShowcase requires a perl with 64-bit integers\n" unless ~0 > 4294967295; }
+
+sub _ply_task_from_result {
+    my ($val) = @_;
+    return { done => 1, value => $val };
+}
+
+sub _ply_await {
+    my ($task) = @_;
+    die $task->{error} if exists $task->{error};
+    return $task->{value};
+}
+
+sub _ply_when_all {
+    my ($is_void, @tasks) = @_;
+    my @results;
+    for my $t (@tasks) {
+        return { done => 1, error => $t->{error} } if exists $t->{error};
+        push @results, $t->{value} unless $is_void;
+    }
+    return $is_void ? { done => 1, value => undef } : { done => 1, value => \@results };
+}
+
+sub _compute_async {
+    use integer;
+    my ($x_) = @_;
+    my $_aval1 = undef;
+    my $_aok2 = eval {
+        $_aval1 = _ply_await(_ply_task_from_result((((((((((($x_ * $x_)) & 0xFFFFFFFF) ^ 0x80000000) - 0x80000000) + 1)) & 0xFFFFFFFF) ^ 0x80000000) - 0x80000000)));
+        return 1;
+        1;
+    };
+    return { done => 1, error => $@ } unless $_aok2;
+    return { done => 1, value => $_aval1 };
+}
+
+sub combine_async {
+    use integer;
+    @_ == 2 or Carp::croak('usage: combine_async($a_, $b_)');
+    my ($a_, $b_) = @_;
+    my $_aval1 = undef;
+    my $_aok2 = eval {
+        my $parts = _ply_await(_ply_when_all(0, _compute_async($a_), _compute_async($b_)));
+        $_aval1 = (((((do { my ($_a, $_i) = ($parts, 0); die "IndexOutOfRange: index $_i\n" if $_i < 0 || $_i > $#$_a; $_a->[$_i] } + do { my ($_a, $_i) = ($parts, 1); die "IndexOutOfRange: index $_i\n" if $_i < 0 || $_i > $#$_a; $_a->[$_i] })) & 0xFFFFFFFF) ^ 0x80000000) - 0x80000000);
+        return 1;
+        1;
+    };
+    return { done => 1, error => $@ } unless $_aok2;
+    return { done => 1, value => $_aval1 };
+}
+
+1;
+
+__END__
+
+=head1 NAME
+
+TasksShowcase
+
+=head1 SYNOPSIS
+
+    use TasksShowcase qw(combine_async);
+
+=head2 combine_async($a_, $b_)
+
+Returns async<i32>.
+
+=cut
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>perl/5</code> (<code>lib/TasksShowcase.pm</code>)</summary>
+
+```perl
+# Helpers added by polypiler: MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source.
+package TasksShowcase;
+use strict;
+use warnings;
+use Exporter 'import';
+use Carp ();
+
+our $VERSION = '0.001';
+our @EXPORT_OK = qw(combine_async);
+BEGIN { die "TasksShowcase requires a perl with 64-bit integers\n" unless ~0 > 4294967295; }
+
+sub _ply_task_from_result {
+    my ($val) = @_;
+    return { done => 1, value => $val };
+}
+
+sub _ply_await {
+    my ($task) = @_;
+    die $task->{error} if exists $task->{error};
+    return $task->{value};
+}
+
+sub _ply_when_all {
+    my ($is_void, @tasks) = @_;
+    my @results;
+    for my $t (@tasks) {
+        return { done => 1, error => $t->{error} } if exists $t->{error};
+        push @results, $t->{value} unless $is_void;
+    }
+    return $is_void ? { done => 1, value => undef } : { done => 1, value => \@results };
+}
+
+sub _compute_async {
+    use integer;
+    my ($x_) = @_;
+    my $_aval1 = undef;
+    my $_aok2 = eval {
+        $_aval1 = _ply_await(_ply_task_from_result((((((((((($x_ * $x_)) & 0xFFFFFFFF) ^ 0x80000000) - 0x80000000) + 1)) & 0xFFFFFFFF) ^ 0x80000000) - 0x80000000)));
+        return 1;
+        1;
+    };
+    return { done => 1, error => $@ } unless $_aok2;
+    return { done => 1, value => $_aval1 };
+}
+
+sub combine_async {
+    use integer;
+    @_ == 2 or Carp::croak('usage: combine_async($a_, $b_)');
+    my ($a_, $b_) = @_;
+    my $_aval1 = undef;
+    my $_aok2 = eval {
+        my $parts = _ply_await(_ply_when_all(0, _compute_async($a_), _compute_async($b_)));
+        $_aval1 = (((((do { my ($_a, $_i) = ($parts, 0); die "IndexOutOfRange: index $_i\n" if $_i < 0 || $_i > $#$_a; $_a->[$_i] } + do { my ($_a, $_i) = ($parts, 1); die "IndexOutOfRange: index $_i\n" if $_i < 0 || $_i > $#$_a; $_a->[$_i] })) & 0xFFFFFFFF) ^ 0x80000000) - 0x80000000);
+        return 1;
+        1;
+    };
+    return { done => 1, error => $@ } unless $_aok2;
+    return { done => 1, value => $_aval1 };
+}
+
+1;
+
+__END__
+
+=head1 NAME
+
+TasksShowcase
+
+=head1 SYNOPSIS
+
+    use TasksShowcase qw(combine_async);
+
+=head2 combine_async($a_, $b_)
+
+Returns async<i32>.
+
+=cut
+```
+
+</details>
+
+</details>
+
+> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile); `msil` (`PLY3051`: type 'async<i32>' is not supported by the MSIL backend); `jvm` (`PLY3151`: type 'async<i32>' in return type of 'ComputeAsync' is not supported by the JVM backend); `cpp` (`cpp/cpp17`: `PLY1451`: type 'async<i32>' has no C++ representation in profile 'cpp/cpp17'; `cpp/cpp20`: `PLY1451`: type 'async<i32>' has no C++ representation in profile 'cpp/cpp20'; `cpp/cpp23`: `PLY1451`: type 'async<i32>' has no C++ representation in profile 'cpp/cpp23'); `vbscript` (`PLY2651`: type 'async<i32>' has no VBScript representation in profile 'vbscript/5.8')
 
 ## Standard Output (Stdio)
 
@@ -13660,6 +14714,60 @@ public static class StdioShowcase {
   }
 }
 ```
+
+<details>
+<summary><strong>Rust</strong> — <code>rust2018</code>, <code>rust2021</code>, <code>rust2024</code> (identical output — <code>Cargo.toml</code>, <code>src/lib.rs</code>, <code>src/stdio_showcase.rs</code>)</summary>
+
+**`Cargo.toml`**
+
+```toml
+[package]
+name = "stdio_showcase"
+version = "0.1.0"
+edition = "2018"
+```
+
+**`src/lib.rs`**
+
+```rust
+//! stdio_showcase: generated by polypiler. Change the source, not this file.
+//! Rust profile: rust2018 (Rust 1.31).
+//! Helpers added by polypiler: MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source.
+//! Caveat: cs-invariant-culture.
+#![forbid(unsafe_code)]
+
+pub mod stdio_showcase;
+```
+
+**`src/stdio_showcase.rs`**
+
+```rust
+fn ply_utf16(text: &str) -> Vec<u16> {
+    text.encode_utf16().collect()
+}
+
+pub fn run() -> i32 {
+    let mut sum: i32 = 0;
+    for i in 1..=3i32 {
+        sum = sum.wrapping_add(i.wrapping_mul(i));
+        println!(
+            "{}",
+            String::from_utf16_lossy(
+                &[
+                    &ply_utf16("step ")[..],
+                    &ply_utf16(&i.to_string())[..],
+                    &ply_utf16(": sum=")[..],
+                    &ply_utf16(&sum.to_string())[..],
+                ]
+                .concat(),
+            ),
+        );
+    }
+    sum
+}
+```
+
+</details>
 
 <details>
 <summary><strong>Batch</strong> — 1/2 dialects (1 output)</summary>
@@ -13711,7 +14819,224 @@ exit /b %_ply_v0%
 
 </details>
 
-> **Refused by:** `javascript` (`es5`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es5'; `es2015`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es2015'; `es2017`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es2017'; `es2020`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es2020'; `es2022`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es2022'); `csharp` (`PLY1052`: 'IrWriteLine' is not supported by the C# backend yet); `python` (`py3.8`: `PLY1851`: 'WriteLine' cannot be expressed in Python profile 'py3.8' (function 'Run'); `py3.9`: `PLY1851`: 'WriteLine' cannot be expressed in Python profile 'py3.9' (function 'Run'); `py3.10`: `PLY1851`: 'WriteLine' cannot be expressed in Python profile 'py3.10' (function 'Run'); `py3.11`: `PLY1851`: 'WriteLine' cannot be expressed in Python profile 'py3.11' (function 'Run'); `py3.12`: `PLY1851`: 'WriteLine' cannot be expressed in Python profile 'py3.12' (function 'Run'); `py3.13`: `PLY1851`: 'WriteLine' cannot be expressed in Python profile 'py3.13' (function 'Run'); `py3.14`: `PLY1851`: 'WriteLine' cannot be expressed in Python profile 'py3.14' (function 'Run')); `rust` (`rust2018`: `PLY1550`: 'WriteLine' cannot be expressed in Rust profile 'rust2018' (in the function 'Run'); `rust2021`: `PLY1550`: 'WriteLine' cannot be expressed in Rust profile 'rust2021' (in the function 'Run'); `rust2024`: `PLY1550`: 'WriteLine' cannot be expressed in Rust profile 'rust2024' (in the function 'Run')); `perl` (`PLY1751`: operation 'IrWriteLine' cannot be emitted as Perl); `msil` (`PLY3050`: construct 'IrWriteLine' is not supported by the MSIL backend); `jvm` (`PLY3150`: statement 'IrWriteLine' is not supported by the JVM backend); `cpp` (`PLY1450`: construct 'IrWriteLine' cannot be emitted as C++); `vbscript` (`PLY2650`: construct 'IrWriteLine' cannot be emitted as VBScript)
+<details>
+<summary><strong>MSIL</strong> — <code>msil/net10</code>, <code>msil/net8</code> (identical output — <code>StdioShowcase.dll</code> (disassembled))</summary>
+
+**`StdioShowcase.dll`** *(disassembled mnemonics)*
+
+```il
+.assembly StdioShowcase {}
+
+.class public abstract sealed StdioShowcase extends System.Object {
+  .method public hidebysig static int32 Run() cil managed {
+    .maxstack 64
+    .locals init ([0] int32, [1] int32, [2] int32, [3] int32)
+    IL_0000: ldc.i4.0
+    IL_0001: stloc.0
+    IL_0002: ldc.i4.1
+    IL_0003: stloc.1
+    IL_0004: ldloc.1
+    IL_0005: ldc.i4.3
+    IL_0006: cgt
+    IL_0008: ldc.i4.0
+    IL_0009: ceq
+    IL_000B: brfalse IL_0059
+    IL_0010: ldloc.0
+    IL_0011: ldloc.1
+    IL_0012: ldloc.1
+    IL_0013: mul
+    IL_0014: add
+    IL_0015: stloc.0
+    IL_0016: ldstr "step "
+    IL_001B: ldloc.1
+    IL_001C: stloc.2
+    IL_001D: ldloca.s 2
+    IL_001F: call System.Globalization.CultureInfo System.Globalization.CultureInfo::get_InvariantCulture()
+    IL_0024: call string System.Int32::ToString(System.IFormatProvider)
+    IL_0029: call string System.String::Concat(string, string)
+    IL_002E: ldstr ": sum="
+    IL_0033: call string System.String::Concat(string, string)
+    IL_0038: ldloc.0
+    IL_0039: stloc.3
+    IL_003A: ldloca.s 3
+    IL_003C: call System.Globalization.CultureInfo System.Globalization.CultureInfo::get_InvariantCulture()
+    IL_0041: call string System.Int32::ToString(System.IFormatProvider)
+    IL_0046: call string System.String::Concat(string, string)
+    IL_004B: call void System.Console::WriteLine(string)
+    IL_0050: ldloc.1
+    IL_0051: ldc.i4.1
+    IL_0052: add
+    IL_0053: stloc.1
+    IL_0054: br IL_0004
+    IL_0059: ldloc.0
+    IL_005A: ret
+    IL_005B: ldc.i4.0
+    IL_005C: ret
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><strong>JVM</strong> — <code>jvm/21</code>, <code>jvm/17</code>, <code>jvm/8</code> (identical output — <code>StdioShowcase.jar</code> (disassembled))</summary>
+
+**`StdioShowcase.jar`** *(disassembled mnemonics)*
+
+```text
+// classfile version 65.0
+public class StdioShowcase {
+  public <init>()V;
+    Code: stack=1, locals=1
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: return
+  public static Run()I;
+    Code: stack=3, locals=2
+      0: iconst_0
+      1: istore_0
+      2: iconst_0
+      3: istore_1
+      4: iconst_0
+      5: istore_0
+      6: iconst_1
+      7: istore_1
+      8: iload_1
+      9: iconst_3
+      10: if_icmple 17
+      13: iconst_0
+      14: goto 18
+      17: iconst_1
+      18: ifeq 68
+      21: iload_0
+      22: iload_1
+      23: iload_1
+      24: imul
+      25: iadd
+      26: istore_0
+      27: getstatic // Field java/lang/System.out:Ljava/io/PrintStream;
+      30: ldc "step "
+      32: iload_1
+      33: invokestatic // Method java/lang/Integer.toString:(I)Ljava/lang/String;
+      36: invokevirtual // Method java/lang/String.concat:(Ljava/lang/String;)Ljava/lang/String;
+      39: ldc ": sum="
+      41: invokevirtual // Method java/lang/String.concat:(Ljava/lang/String;)Ljava/lang/String;
+      44: iload_0
+      45: invokestatic // Method java/lang/Integer.toString:(I)Ljava/lang/String;
+      48: invokevirtual // Method java/lang/String.concat:(Ljava/lang/String;)Ljava/lang/String;
+      51: dup
+      52: ifnonnull 58
+      55: pop
+      56: ldc ""
+      58: invokevirtual // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+      61: iload_1
+      62: iconst_1
+      63: iadd
+      64: istore_1
+      65: goto 8
+      68: iload_0
+      69: ireturn
+}
+```
+
+</details>
+
+<details>
+<summary><strong>C++</strong> — <code>cpp/cpp17</code>, <code>cpp/cpp20</code>, <code>cpp/cpp23</code> (identical output — <code>stdio_showcase.cpp</code>, <code>stdio_showcase.hpp</code>)</summary>
+
+**`stdio_showcase.cpp`**
+
+```cpp
+#include "stdio_showcase.hpp"
+#include <iostream>
+#include <string>
+
+namespace stdio_showcase {
+
+std::int32_t run() {
+  std::int32_t sum = 0;
+  {
+    std::int32_t i = 1;
+    while ((i <= 3)) {
+      sum = static_cast<std::int32_t>(static_cast<std::uint32_t>(sum) + static_cast<std::uint32_t>(static_cast<std::int32_t>(static_cast<std::uint32_t>(i) * static_cast<std::uint32_t>(i))));
+      std::cout << (std::string("step ") + std::to_string(i) + std::string(": sum=") + std::to_string(sum)) << '\n';
+      i = static_cast<std::int32_t>(static_cast<std::uint32_t>(i) + static_cast<std::uint32_t>(1));
+    }
+  }
+  return sum;
+}
+
+} // namespace stdio_showcase
+```
+
+**`stdio_showcase.hpp`**
+
+```cpp
+#pragma once
+
+#include <cstdint>
+
+namespace stdio_showcase {
+
+std::int32_t run();
+
+} // namespace stdio_showcase
+```
+
+</details>
+
+<details>
+<summary><strong>VBScript</strong> — <code>vbscript/5.8</code> (<code>StdioShowcase.vbs</code>)</summary>
+
+```vbscript
+Option Explicit
+
+Function ply_i32(ByVal x)
+  Dim m
+  m = CDbl(x)
+  m = m - Int(m / 4294967296.0) * 4294967296.0
+  If m >= 2147483648.0 Then m = m - 4294967296.0
+  ply_i32 = CLng(m)
+End Function
+
+Function ply_u32(ByVal x)
+  Dim m
+  m = CDbl(x)
+  ply_u32 = m - Int(m / 4294967296.0) * 4294967296.0
+End Function
+
+Function ply_mul32(ByVal a, ByVal b)
+  Dim ua, ub, al, ah, bl, bh, lo, md
+  ua = ply_u32(a)
+  ub = ply_u32(b)
+  al = ua - Int(ua / 65536.0) * 65536.0
+  ah = Int(ua / 65536.0)
+  bl = ub - Int(ub / 65536.0) * 65536.0
+  bh = Int(ub / 65536.0)
+  lo = al * bl
+  md = ah * bl + al * bh
+  md = md - Int(md / 65536.0) * 65536.0
+  ply_mul32 = ply_i32(lo + md * 65536.0)
+End Function
+
+
+Function Run()
+  Dim sum, i
+  sum = 0
+  i = 1
+  Do While ((i) <= (3))
+    sum = ply_i32(CDbl(sum) + CDbl(ply_mul32(i, i)))
+    WScript.Echo ("step " & CStr(i) & ": sum=" & CStr(sum))
+    i = ply_i32(CDbl(i) + CDbl(1))
+  Loop
+  Run = sum
+  Exit Function
+End Function
+```
+
+</details>
+
+> **Refused by:** `javascript` (`es5`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es5'; `es2015`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es2015'; `es2017`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es2017'; `es2020`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es2020'; `es2022`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es2022'); `csharp` (`PLY1052`: 'IrWriteLine' is not supported by the C# backend yet); `python` (`py3.8`: `PLY1851`: 'WriteLine' cannot be expressed in Python profile 'py3.8' (function 'Run'); `py3.9`: `PLY1851`: 'WriteLine' cannot be expressed in Python profile 'py3.9' (function 'Run'); `py3.10`: `PLY1851`: 'WriteLine' cannot be expressed in Python profile 'py3.10' (function 'Run'); `py3.11`: `PLY1851`: 'WriteLine' cannot be expressed in Python profile 'py3.11' (function 'Run'); `py3.12`: `PLY1851`: 'WriteLine' cannot be expressed in Python profile 'py3.12' (function 'Run'); `py3.13`: `PLY1851`: 'WriteLine' cannot be expressed in Python profile 'py3.13' (function 'Run'); `py3.14`: `PLY1851`: 'WriteLine' cannot be expressed in Python profile 'py3.14' (function 'Run')); `perl` (`PLY1751`: operation 'IrWriteLine' cannot be emitted as Perl)
 
 ## Spans, Bit Permutations & Unsafe Pointers
 
@@ -15550,7 +16875,208 @@ public static class NativeInteropShowcase {
 
 </details>
 
-> **Refused by:** `javascript` (`es5`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es5' cannot call; --bind geom=<module or global> supplies a binding; `es2015`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2015' cannot call; --bind geom=<module or global> supplies a binding; `es2017`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2017' cannot call; --bind geom=<module or global> supplies a binding; `es2020`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2020' cannot call; --bind geom=<module or global> supplies a binding; `es2022`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2022' cannot call; --bind geom=<module or global> supplies a binding); `python` (`py3.8`: `PLY1851`: 'the native call of geom_norm (geom)' cannot be expressed in Python profile 'py3.8' (function 'Measure'); `py3.9`: `PLY1851`: 'the native call of geom_norm (geom)' cannot be expressed in Python profile 'py3.9' (function 'Measure'); `py3.10`: `PLY1851`: 'the native call of geom_norm (geom)' cannot be expressed in Python profile 'py3.10' (function 'Measure'); `py3.11`: `PLY1851`: 'the native call of geom_norm (geom)' cannot be expressed in Python profile 'py3.11' (function 'Measure'); `py3.12`: `PLY1851`: 'the native call of geom_norm (geom)' cannot be expressed in Python profile 'py3.12' (function 'Measure'); `py3.13`: `PLY1851`: 'the native call of geom_norm (geom)' cannot be expressed in Python profile 'py3.13' (function 'Measure'); `py3.14`: `PLY1851`: 'the native call of geom_norm (geom)' cannot be expressed in Python profile 'py3.14' (function 'Measure')); `rust` (`rust2018`: `PLY1550`: 'ForeignCall' cannot be expressed in Rust profile 'rust2018' (in the function 'Measure'); `rust2021`: `PLY1550`: 'ForeignCall' cannot be expressed in Rust profile 'rust2021' (in the function 'Measure'); `rust2024`: `PLY1550`: 'ForeignCall' cannot be expressed in Rust profile 'rust2024' (in the function 'Measure')); `perl` (`PLY1751`: operation 'IrForeignCall' cannot be emitted as Perl); `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile); `msil` (`PLY3050`: construct 'foreign functions' is not supported by the MSIL backend); `jvm` (`PLY3151`: declared type 'NativePoint' (IrStructType) is not supported by the JVM backend); `cpp` (`PLY1450`: construct 'IrForeignCall' cannot be emitted as C++); `vbscript` (`PLY2650`: construct 'foreign function 'geom_norm'' cannot be emitted as VBScript)
+<details>
+<summary><strong>Rust</strong> — 3 dialects (2 distinct outputs)</summary>
+
+<details>
+<summary>Dialects: <code>rust2018</code>, <code>rust2021</code> (<code>Cargo.toml</code>, <code>src/lib.rs</code>, <code>src/native_interop_showcase.rs</code>)</summary>
+
+**`Cargo.toml`**
+
+```toml
+[package]
+name = "native_interop_showcase"
+version = "0.1.0"
+edition = "2018"
+```
+
+**`src/lib.rs`**
+
+```rust
+//! native_interop_showcase: generated by polypiler. Change the source, not this file.
+//! Rust profile: rust2018 (Rust 1.31).
+//! Unsafe code: geom_norm, for the foreign call to 'geom::geom_norm' in the function 'Measure'; the crate passes Miri.
+#![deny(unsafe_code)]
+
+pub mod native_interop_showcase;
+```
+
+**`src/native_interop_showcase.rs`**
+
+```rust
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct NativePoint {
+    pub x: i32,
+    pub y: i32,
+}
+
+#[link(name = "geom")]
+extern "C" {
+    #[link_name = "geom_norm"]
+    fn ply_ffi_geom_norm(point: NativePoint) -> i32;
+}
+
+#[allow(unsafe_code)]
+fn geom_norm(point: NativePoint) -> i32 {
+    // SAFETY: calls foreign symbol 'geom_norm' in library 'geom' with marshalled arguments.
+    unsafe {
+        ply_ffi_geom_norm(point)
+    }
+}
+
+pub fn measure(x: i32, y: i32) -> i32 {
+    geom_norm(NativePoint { x, y })
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>rust2024</code> (<code>Cargo.toml</code>, <code>src/lib.rs</code>, <code>src/native_interop_showcase.rs</code>)</summary>
+
+**`Cargo.toml`**
+
+```toml
+[package]
+name = "native_interop_showcase"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+```
+
+**`src/lib.rs`**
+
+```rust
+//! native_interop_showcase: generated by polypiler. Change the source, not this file.
+//! Rust profile: rust2024 (Rust 1.85).
+//! Unsafe code: geom_norm, for the foreign call to 'geom::geom_norm' in the function 'Measure'; the crate passes Miri.
+#![deny(unsafe_code)]
+
+pub mod native_interop_showcase;
+```
+
+**`src/native_interop_showcase.rs`**
+
+```rust
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct NativePoint {
+    pub x: i32,
+    pub y: i32,
+}
+
+#[link(name = "geom")]
+#[allow(unsafe_code)]
+unsafe extern "C" {
+    #[link_name = "geom_norm"]
+    fn ply_ffi_geom_norm(point: NativePoint) -> i32;
+}
+
+#[allow(unsafe_code)]
+fn geom_norm(point: NativePoint) -> i32 {
+    // SAFETY: calls foreign symbol 'geom_norm' in library 'geom' with marshalled arguments.
+    unsafe {
+        ply_ffi_geom_norm(point)
+    }
+}
+
+pub fn measure(x: i32, y: i32) -> i32 {
+    geom_norm(NativePoint { x, y })
+}
+```
+
+</details>
+
+</details>
+
+<details>
+<summary><strong>MSIL</strong> — <code>msil/net10</code>, <code>msil/net8</code> (identical output — <code>NativeInteropShowcase.dll</code> (disassembled))</summary>
+
+**`NativeInteropShowcase.dll`** *(disassembled mnemonics)*
+
+```il
+.assembly NativeInteropShowcase {}
+
+.class public sealed NativePoint extends System.ValueType {
+  .field public int32 X
+  .field public int32 Y
+}
+
+.class public abstract sealed NativeInteropShowcase extends System.Object {
+  .method public hidebysig static int32 Measure(int32 x, int32 y) cil managed {
+    .maxstack 64
+    .locals init ([0] NativePoint)
+    IL_0000: ldloca.s 0
+    IL_0002: initobj NativePoint
+    IL_0008: ldloca.s 0
+    IL_000A: ldarg.0
+    IL_000B: stfld X
+    IL_0010: ldloca.s 0
+    IL_0012: ldarg.1
+    IL_0013: stfld Y
+    IL_0018: ldloc.0
+    IL_0019: call int32 NativeInteropShowcase::geom_norm(NativePoint)
+    IL_001E: ret
+    IL_001F: ldc.i4.0
+    IL_0020: ret
+  }
+  .method private hidebysig static int32 geom_norm(NativePoint point) cil managed {
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><strong>C++</strong> — <code>cpp/cpp17</code>, <code>cpp/cpp20</code>, <code>cpp/cpp23</code> (identical output — <code>native_interop_showcase.cpp</code>, <code>native_interop_showcase.hpp</code>)</summary>
+
+**`native_interop_showcase.cpp`**
+
+```cpp
+#include "native_interop_showcase.hpp"
+
+namespace native_interop_showcase {
+
+extern "C" {
+  std::int32_t geom_norm(NativePoint point);
+}
+
+
+std::int32_t measure([[maybe_unused]] std::int32_t x, [[maybe_unused]] std::int32_t y) {
+  return geom_norm(NativePoint{x, y});
+}
+
+} // namespace native_interop_showcase
+```
+
+**`native_interop_showcase.hpp`**
+
+```cpp
+#pragma once
+
+#include <cstdint>
+
+namespace native_interop_showcase {
+
+struct NativePoint {
+  std::int32_t x{};
+  std::int32_t y{};
+
+  bool operator==(const NativePoint& other) const {
+    return (this->x == other.x) && (this->y == other.y);
+  }
+  bool operator!=(const NativePoint& other) const { return !(*this == other); }
+};
+
+std::int32_t measure(std::int32_t x, std::int32_t y);
+
+} // namespace native_interop_showcase
+```
+
+</details>
+
+> **Refused by:** `javascript` (`es5`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es5' cannot call; --bind geom=<module or global> supplies a binding; `es2015`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2015' cannot call; --bind geom=<module or global> supplies a binding; `es2017`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2017' cannot call; --bind geom=<module or global> supplies a binding; `es2020`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2020' cannot call; --bind geom=<module or global> supplies a binding; `es2022`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2022' cannot call; --bind geom=<module or global> supplies a binding); `python` (`py3.8`: `PLY1851`: 'the native call of geom_norm (geom)' cannot be expressed in Python profile 'py3.8' (function 'Measure'); `py3.9`: `PLY1851`: 'the native call of geom_norm (geom)' cannot be expressed in Python profile 'py3.9' (function 'Measure'); `py3.10`: `PLY1851`: 'the native call of geom_norm (geom)' cannot be expressed in Python profile 'py3.10' (function 'Measure'); `py3.11`: `PLY1851`: 'the native call of geom_norm (geom)' cannot be expressed in Python profile 'py3.11' (function 'Measure'); `py3.12`: `PLY1851`: 'the native call of geom_norm (geom)' cannot be expressed in Python profile 'py3.12' (function 'Measure'); `py3.13`: `PLY1851`: 'the native call of geom_norm (geom)' cannot be expressed in Python profile 'py3.13' (function 'Measure'); `py3.14`: `PLY1851`: 'the native call of geom_norm (geom)' cannot be expressed in Python profile 'py3.14' (function 'Measure')); `perl` (`PLY1751`: operation 'IrForeignCall' cannot be emitted as Perl); `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile); `jvm` (`PLY3151`: declared type 'NativePoint' (IrStructType) is not supported by the JVM backend); `vbscript` (`PLY2650`: construct 'foreign function 'geom_norm'' cannot be emitted as VBScript)
 
 ## User-Defined Operator Overloading (Boundary)
 
