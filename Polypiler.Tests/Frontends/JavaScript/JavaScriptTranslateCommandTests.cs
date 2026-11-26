@@ -140,8 +140,8 @@ public sealed class JavaScriptTranslateCommandTests {
   [TestCase(new[] { "A.cs", "--from", "csharp", "--to", "javascript", "--output", "out", "--export", "F" }, "the option '--export' does not apply to the source language 'csharp'", TestName = "Misuse: --export for C#")]
   [TestCase(new[] { "A.cs", "--from", "csharp", "--to", "javascript", "--output", "out", "--explain-types" }, "the option '--explain-types' does not apply to the source language 'csharp'", TestName = "Misuse: --explain-types for C#")]
   [TestCase(new[] { "A.js", "--explain-types", "B.js", "--from", "javascript", "--to", "javascript", "--output", "out" }, "unexpected argument 'B.js'", TestName = "Misuse: --explain-types takes no value")]
-  [TestCase(new[] { "A.js", "--from", "typescript", "--to", "javascript", "--output", "out" }, "unknown source language 'typescript'; the prototype reads 'csharp', 'javascript', 'python', 'rust', 'perl', 'batch', 'msil', 'jvm' and 'cpp'", TestName = "Misuse: unknown --from names the sources")]
-  [TestCase(new[] { "A.js", "--from", "javascript", "--to", "cobol", "--output", "out" }, "unknown target language 'cobol'; the prototype writes 'javascript', 'csharp', 'python', 'rust', 'perl', 'batch', 'msil', 'jvm' and 'cpp'", TestName = "Misuse: unknown --to names the targets")]
+  [TestCase(new[] { "A.js", "--from", "typescript", "--to", "javascript", "--output", "out" }, "unknown source language 'typescript'; the prototype reads 'csharp', 'javascript', 'python', 'rust', 'perl', 'batch', 'msil', 'jvm', 'cpp' and 'vbscript'", TestName = "Misuse: unknown --from names the sources")]
+  [TestCase(new[] { "A.js", "--from", "javascript", "--to", "cobol", "--output", "out" }, "unknown target language 'cobol'; the prototype writes 'javascript', 'csharp', 'python', 'rust', 'perl', 'batch', 'msil', 'jvm', 'cpp' and 'vbscript'", TestName = "Misuse: unknown --to names the targets")]
   public void Misuse_IsAUsageError(string[] arguments, string message) {
     var (exitCode, output, error) = Invoke(arguments.Prepend("translate").ToArray());
     Assert.That((exitCode, output), Is.EqualTo(((int)ExitCode.UsageError, "")));
@@ -163,7 +163,7 @@ public sealed class JavaScriptTranslateCommandTests {
   public void Help_NamesTheLanguagesAndTheExportOption() {
     var help = Invoke("translate", "--help").Output;
     Assert.That(help, Does.Contain("usage: polypiler translate <file> [options]").And.Contain("small subsets of its languages"));
-    Assert.That(help, Does.Contain("  --from <csharp|javascript|python|rust|perl|batch|msil|jvm|cpp> ").And.Contain("  --to <javascript|csharp|python|rust|perl|batch|msil|jvm|cpp> ").And.Contain("  --output <directory> ")
+    Assert.That(help, Does.Contain("  --from <csharp|javascript|python|rust|perl|batch|msil|jvm|cpp|vbscript> ").And.Contain("  --to <javascript|csharp|python|rust|perl|batch|msil|jvm|cpp|vbscript> ").And.Contain("  --output <directory> ")
       .And.Contain("  --export <name>[,<name>...] ").And.Contain("  --disable-opt <O####>[,<O####>...] ").And.Contain("  --explain-types "));
     Assert.That(Invoke("--help").Output, Does.Contain("  translate  translate a source file").And.Contain("small subsets of its languages"));
   }

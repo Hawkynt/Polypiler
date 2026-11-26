@@ -1990,6 +1990,78 @@ codes:
     area: python
     owner: BE-PY-FUNCTIONS
     surfaces: standard error of polypiler translate --to python; stops emission, no file is written
+  - code: PLY2600
+    severity: error
+    exit: InvalidSource
+    title: VBScript syntax error
+    message: "VBScript syntax error: <detail>"
+    rule: vbscript.frontend.syntax
+    area: visualbasic
+    owner: "#1133"
+    surfaces: standard error of polypiler translate --from vbscript; stops import
+  - code: PLY2601
+    severity: error
+    exit: UnsupportedConstruct
+    title: unsupported VBScript construct
+    message: "VBScript construct '<construct>' is not supported"
+    rule: vbscript.frontend.construct
+    area: visualbasic
+    owner: "#1133"
+    surfaces: standard error of polypiler translate --from vbscript; stops import
+  - code: PLY2602
+    severity: error
+    exit: UnsupportedConstruct
+    title: unsupported VBScript call
+    message: "VBScript call '<call>' is not supported"
+    rule: vbscript.frontend.call
+    area: visualbasic
+    owner: "#1133"
+    surfaces: standard error of polypiler translate --from vbscript; stops import
+  - code: PLY2603
+    severity: error
+    exit: InvalidSource
+    title: unresolved VBScript symbol
+    message: "unresolved VBScript symbol '<symbol>'"
+    rule: vbscript.frontend.symbol
+    area: visualbasic
+    owner: "#1133"
+    surfaces: standard error of polypiler translate --from vbscript; stops import
+  - code: PLY2604
+    severity: error
+    exit: InvalidSource
+    title: invalid VBScript type contract
+    message: "invalid VBScript contract: <detail>"
+    rule: vbscript.frontend.contract
+    area: visualbasic
+    owner: "#1133"
+    surfaces: standard error of polypiler translate --from vbscript; stops import
+  - code: PLY2650
+    severity: error
+    exit: UnsupportedConstruct
+    title: construct cannot be emitted as VBScript
+    message: "construct '<construct>' cannot be emitted as VBScript"
+    rule: vbscript.backend.construct
+    area: visualbasic
+    owner: "#1133"
+    surfaces: standard error of polypiler translate --to vbscript; stops emission, no file is written
+  - code: PLY2651
+    severity: error
+    exit: UnsupportedConstruct
+    title: type has no VBScript representation
+    message: "type '<type>' has no VBScript representation in profile '<profile>'"
+    rule: vbscript.backend.type
+    area: visualbasic
+    owner: "#1133"
+    surfaces: standard error of polypiler translate --to vbscript; stops emission, no file is written
+  - code: PLY2652
+    severity: error
+    exit: UnsupportedConstruct
+    title: intrinsic cannot be emitted as VBScript
+    message: "intrinsic '<intrinsic>' cannot be emitted as VBScript"
+    rule: vbscript.backend.intrinsic
+    area: visualbasic
+    owner: "#1133"
+    surfaces: standard error of polypiler translate --to vbscript; stops emission, no file is written
   - code: PLY2800
     severity: error
     exit: InvalidSource
