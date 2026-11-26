@@ -79,6 +79,7 @@ internal static class VBScriptHelpers {
   public const string Unwrap = "ply_unwrap";
   public const string UnwrapObj = "ply_unwrap_o";
   public const string ErrSupport = "ply_err_support";
+  public const string WriteLine = "ply_write_line";
 
   private static readonly Dictionary<string, string[]> _dependencies = new(StringComparer.Ordinal) {
     [Mul32] = [U32, I32],
@@ -116,7 +117,7 @@ internal static class VBScriptHelpers {
     NewArr, CheckIdx, ArrCopy, ArrFill, ArrEq, LoadEndian, StoreEndian,
     StrUnit, StrFromUnits, StrToUnits, StrRepeat, StrSub, StrIndexOf, StrLastIndexOf,
     StrStarts, StrEnds, StrContains, StrReplace, StrReplaceFirst, StrSplit, StrTrim, StrPad,
-    CheckNull, Unwrap, UnwrapObj, ErrSupport
+    CheckNull, Unwrap, UnwrapObj, ErrSupport, WriteLine
   ];
 
   private static readonly Dictionary<string, string> _bodies = new(StringComparer.Ordinal) {
@@ -891,6 +892,11 @@ internal static class VBScriptHelpers {
         End If
         Set ply_capture_err = ply_make_err(k, desc, Nothing)
       End Function
+      """,
+    [WriteLine] = """
+      Sub ply_write_line(ByVal s)
+        If IsNull(s) Or IsEmpty(s) Then WScript.Echo "" Else WScript.Echo CStr(s)
+      End Sub
       """
   };
 

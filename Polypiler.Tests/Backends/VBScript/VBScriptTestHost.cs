@@ -84,6 +84,10 @@ internal static class VBScriptTestHost {
           if (trying.Finally is { } cleanup)
             Collect(cleanup);
           break;
+        case IrUsing @using:
+          AddLocal(@using.Resource);
+          Collect(@using.Body);
+          break;
       }
     }
 
@@ -111,6 +115,17 @@ internal static class VBScriptTestHost {
 
   public static IrModule ImportCSharpRaw(string source) {
     var imported = CSharpFrontend.Import("Snippet.cs", source);
+    Assert.That(imported.Diagnostics, Is.Empty, string.Join("\n", imported.Diagnostics));
+    return imported.Module!;
+  }
+
+  public static IrModule ImportShowcase(string fileName) {
+    var dir = new DirectoryInfo(AppContext.BaseDirectory);
+    while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "Polypiler.slnx")))
+      dir = dir.Parent;
+    Assert.That(dir, Is.Not.Null, "Could not locate repository root containing Polypiler.slnx.");
+    var path = Path.Combine(dir!.FullName, "docs", "showcase", fileName);
+    var imported = CSharpFrontend.Import(fileName, File.ReadAllText(path));
     Assert.That(imported.Diagnostics, Is.Empty, string.Join("\n", imported.Diagnostics));
     return imported.Module!;
   }

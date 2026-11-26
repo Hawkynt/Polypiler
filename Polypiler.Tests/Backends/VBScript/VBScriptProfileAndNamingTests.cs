@@ -143,21 +143,14 @@ public sealed class VBScriptProfileAndNamingTests {
     };
     Assert.That(VBScriptEmitter.Check(fMod).Select(d => d.Code), Has.Member(VBScriptEmitter.UnsupportedConstructCode));
 
-    // IrUsing statement imported from C#.
-    var usingMod = ImportCSharpRaw("""
-      using System;
-      public sealed class Res : IDisposable {
-        public void Dispose() { }
-      }
-      public static class M {
-        public static int F() {
-          using (var r = new Res()) {
-            return 1;
-          }
-        }
-      }
-      """);
-    Assert.That(VBScriptEmitter.Check(usingMod).Select(d => d.Code), Has.Member(VBScriptEmitter.UnsupportedConstructCode));
+    // IrForEachSequence statement refused with PLY2650.
+    var seqArr = L("xs", IrType.Array(IrType.I32));
+    var seqEl = L("x", IrType.I32);
+    var seqMod = new IrModule("Seq", [
+      new IrFunction("each", true, IrType.Void, [seqArr], [seqEl],
+        Block(new IrForEachSequence(seqEl, new IrArraySequence(R(seqArr)), Block()), new IrReturn(null)))
+    ]);
+    Assert.That(VBScriptEmitter.Check(seqMod).Select(d => d.Code), Has.Member(VBScriptEmitter.UnsupportedConstructCode));
 
     // BigInt constant expression.
     var bigConstMod = new IrModule("Bc", [Function("f", IrType.I32, [], new IrExprStmt(new IrBigConst(BigInteger.One)), new IrReturn(I(0)))]);

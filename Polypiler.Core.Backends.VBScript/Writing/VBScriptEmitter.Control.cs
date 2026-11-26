@@ -118,6 +118,19 @@ public static partial class VBScriptEmitter {
           this.EmitTry(@try, text, indent);
           break;
 
+        case IrUsing @using:
+          this.EmitBlock(@using.Lowered(), text, indent);
+          break;
+
+        case IrWriteLine write: {
+          var val = this.EmitExpr(write.Value, text, indent);
+          if (write.Value is IrStrConst or IrIntrinsic { Op: IrIntrinsicOp.StrConcat })
+            text.Append(pad).Append("WScript.Echo ").Append(val).Append('\n');
+          else
+            text.Append(pad).Append("Call ").Append(this.Use(VBScriptHelpers.WriteLine)).Append('(').Append(val).Append(")\n");
+          break;
+        }
+
         default:
           this.ReportConstruct(statement.GetType().Name);
           break;
