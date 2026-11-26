@@ -10,7 +10,7 @@ using Reqnroll;
 namespace Polypiler.Tests.Acceptance.Rust;
 
 /// <summary>
-/// The steps of <c>tests/features/infra/rust-failure-message.feature</c> (#1429): formatting a failed
+/// The steps of <c>tests/features/infra/infra-rust-failure-message.feature</c> (#1429): formatting a failed
 /// Rust execution keeps every diagnostic and every generated file without throwing when a crate holds
 /// several modules or none.
 /// </summary>
