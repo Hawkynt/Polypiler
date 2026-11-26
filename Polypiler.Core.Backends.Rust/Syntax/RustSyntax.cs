@@ -231,6 +231,9 @@ public sealed record RsParameter(string Name, string TypeName) : RsNode;
 /// <param name="Body">The body.</param>
 public sealed record RsFunction(string Name, string Visibility, IReadOnlyList<RsParameter> Parameters, string? Returns, RsBlock Body) : RsItem {
 
+  /// <summary>Whether the function is <c>async fn</c>.</summary>
+  public bool IsAsync { get; init; }
+
   /// <summary>The generic parameters as they are written after the name, <c>&lt;'a&gt;</c>, or empty.</summary>
   public string Generics { get; init; } = "";
 
@@ -241,6 +244,12 @@ public sealed record RsFunction(string Name, string Visibility, IReadOnlyList<Rs
   public bool IsHelper { get; init; }
 
 }
+
+/// <summary><c>extern "C" { items }</c>, or <c>unsafe extern "C" { items }</c> in Rust 2024.</summary>
+/// <param name="Abi">The ABI string, such as <c>C</c>.</param>
+/// <param name="IsUnsafe">Whether the block is marked <c>unsafe</c>.</param>
+/// <param name="Items">The foreign function declarations.</param>
+public sealed record RsExternBlock(string Abi, bool IsUnsafe, IReadOnlyList<RsFunction> Items) : RsItem;
 
 /// <summary><c>const NAME: T = value;</c>.</summary>
 /// <param name="Name">The name.</param>

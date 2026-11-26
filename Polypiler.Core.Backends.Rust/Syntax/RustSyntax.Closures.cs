@@ -21,6 +21,10 @@ public sealed record RsTuple(IReadOnlyList<RsExpression> Elements) : RsExpressio
 /// <param name="Operand">The <c>Result</c>.</param>
 public sealed record RsTry(RsExpression Operand) : RsExpression;
 
+/// <summary><c>value.await</c>: awaits a future inside an <c>async fn</c>.</summary>
+/// <param name="Operand">The future.</param>
+public sealed record RsAwait(RsExpression Operand) : RsExpression;
+
 /// <summary><c>let Err(error) = outcome</c>: the condition of an <c>if let</c>, which holds where the value matches the pattern.</summary>
 /// <param name="Pattern">The pattern as it is written, of names the backend chose.</param>
 /// <param name="Value">The value matched.</param>

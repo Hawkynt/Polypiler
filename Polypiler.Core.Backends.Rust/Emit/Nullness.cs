@@ -33,6 +33,8 @@ internal sealed class Nullness {
     IrNew => false,
     IrLocalRef reference => this._variables.Contains((function, reference.Local)),
     IrCall call => this._results.Contains(call.Function),
+    IrAwait { Operand: IrCall call } => this._results.Contains(call.Function),
+    IrAwait { Operand: IrAsync { Op: IrAsyncOp.FromResult } result } => this.MayBeNull(function, result.Arguments[0]),
     IrMethodCall call => this._results.Contains(call.Method.Function),
     IrConditional choice => this.MayBeNull(function, choice.WhenTrue) || this.MayBeNull(function, choice.WhenFalse),
     IrCast cast => this.MayBeNull(function, cast.Value),
@@ -73,7 +75,7 @@ internal sealed class Nullness {
             case IrAssign assign when IsReference(assign.Local.Type) && facts.MayBeNull(function.Name, assign.Value):
               changed |= facts._variables.Add((function.Name, assign.Local));
               break;
-            case IrReturn { Value: { } value } when IsReference(function.ReturnType) && facts.MayBeNull(function.Name, value):
+            case IrReturn { Value: { } value } when IsReference(function.ReturnType.IsAsync ? function.ReturnType.Element! : function.ReturnType) && facts.MayBeNull(function.Name, value):
               changed |= facts._results.Add(function.Name);
               break;
           }

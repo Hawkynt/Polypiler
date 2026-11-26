@@ -34,6 +34,9 @@ internal sealed class ArrayNullness {
     IrLocalRef reference => this._variables.Contains((function, reference.Local)),
     IrBind bind => this._variables.Contains((function, bind.Local)),
     IrCall call => this._results.Contains(call.Function),
+    IrAwait { Operand: IrCall call } => this._results.Contains(call.Function),
+    IrAwait { Operand: IrAsync { Op: IrAsyncOp.FromResult } result } => this.MayBeNull(function, result.Arguments[0]),
+    IrAwait { Operand: IrAsync { Op: IrAsyncOp.WhenAll } } => false,
     IrConditional choice => this.MayBeNull(function, choice.WhenTrue) || this.MayBeNull(function, choice.WhenFalse),
     IrFieldLoad { Target.Type.IsObject: true } load => this._fields.Contains(load.Field),
     _ => false

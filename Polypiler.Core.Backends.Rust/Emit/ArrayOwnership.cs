@@ -118,12 +118,13 @@ internal static class ArrayOwnership {
     // The functions whose borrowed result a caller writes through: their result is an exclusive borrow.
     var writtenResults = new HashSet<string>(StringComparer.Ordinal);
     var byName = module.Functions.ToDictionary(function => function.Name, StringComparer.Ordinal);
+    var foreignByName = module.ForeignFunctions.ToDictionary(function => function.Name, StringComparer.Ordinal);
     for (var round = 0; round <= 2 * module.Functions.Count + 1; ++round) {
       var changed = false;
       foreach (var function in module.Functions) {
         var before = facts[function.Name].Key;
         var results = writtenResults.Count;
-        facts[function.Name] = Analyse(function, facts, writtenResults, byName);
+        facts[function.Name] = Analyse(function, facts, writtenResults, byName, foreignByName);
         changed |= facts[function.Name].Key != before || writtenResults.Count != results;
       }
 
@@ -144,10 +145,10 @@ internal static class ArrayOwnership {
     }
   }
 
-  private static FunctionArrays Analyse(IrFunction function, IReadOnlyDictionary<string, FunctionArrays> facts, HashSet<string> writtenResults, IReadOnlyDictionary<string, IrFunction> byName) {
-    var first = Analyse(function, facts, writtenResults, byName, null);
+  private static FunctionArrays Analyse(IrFunction function, IReadOnlyDictionary<string, FunctionArrays> facts, HashSet<string> writtenResults, IReadOnlyDictionary<string, IrFunction> byName, IReadOnlyDictionary<string, IrForeignFunction> foreignByName) {
+    var first = Analyse(function, facts, writtenResults, byName, foreignByName, null);
     var moves = first.Moves.Count == 0 ? null : first.Moves;
-    return moves is null ? first : Analyse(function, facts, writtenResults, byName, moves);
+    return moves is null ? first : Analyse(function, facts, writtenResults, byName, foreignByName, moves);
   }
 
   /// <summary>
@@ -195,7 +196,7 @@ internal static class ArrayOwnership {
     _ => (null, null)
   };
 
-  private static FunctionArrays Analyse(IrFunction function, IReadOnlyDictionary<string, FunctionArrays> facts, HashSet<string> writtenResults, IReadOnlyDictionary<string, IrFunction> byName, HashSet<IrStmt>? moves) {
+  private static FunctionArrays Analyse(IrFunction function, IReadOnlyDictionary<string, FunctionArrays> facts, HashSet<string> writtenResults, IReadOnlyDictionary<string, IrFunction> byName, IReadOnlyDictionary<string, IrForeignFunction> foreignByName, HashSet<IrStmt>? moves) {
     var result = new FunctionArrays();
     var groups = new Groups();
     // The same unions but for the moves, a variable given the array of one read for the last time: one owner after the other, never two at once.
@@ -245,6 +246,15 @@ internal static class ArrayOwnership {
           break;
         case IrNull:
           // Null holds no array: the variable is an Option, which ArrayNullness finds.
+          break;
+        case IrAwait { Operand: IrAsync { Op: IrAsyncOp.WhenAll } }:
+          created.Add(node);
+          break;
+        case IrAwait { Operand: IrAsync { Op: IrAsyncOp.FromResult } result }:
+          Link(node, result.Arguments[0]);
+          break;
+        case IrAwait { Operand: IrCall awaitedCall }:
+          Link(node, awaitedCall);
           break;
         case IrBind bind:
           Link(bind.Local, bind.Value);
@@ -341,6 +351,12 @@ internal static class ArrayOwnership {
                 if (ViewRoot(call.Arguments[index]) is { } viewed && WritesView(target, target.Parameters[index]))
                   Write(viewed);
             break;
+          case IrForeignCall foreignCall when foreignByName.TryGetValue(foreignCall.Function, out var declared):
+            for (var index = 0; index < foreignCall.Arguments.Count && index < declared.Parameters.Count; ++index)
+              if (declared.Parameters[index].Marshal.Kind is IrMarshalKind.Array or IrMarshalKind.ByRef
+                && declared.Parameters[index].Marshal.Direction != IrMarshalDirection.In)
+                Write(foreignCall.Arguments[index]);
+            break;
           case IrIntrinsic { Op: IrIntrinsicOp.ViewFill or IrIntrinsicOp.ViewCopy or IrIntrinsicOp.ViewTryCopy } operation
             when ViewRoot(operation.Arguments[operation.Op == IrIntrinsicOp.ViewFill ? 0 : 1]) is { } viewed:
             Write(viewed);
@@ -397,13 +413,18 @@ internal static class ArrayOwnership {
     if (owners is not null)
       problems.Add($"one array shared by the variables {string.Join(" and ", owners.Select(local => $"'{local.Name}'"))}");
 
-    if (function.ReturnType.IsArray) {
-      var root = groups.Find(_result);
-      var borrowed = function.Parameters.Select((parameter, index) => (parameter, index)).Where(pair => pair.parameter.Type.IsArray && groups.Find(pair.parameter) == root).ToList();
-      result.Result = !owned.Contains(root) && borrowed.Count > 0 ? ArrayHolder.Borrowed : ArrayHolder.Owned;
-      if (result.Result == ArrayHolder.Borrowed)
-        foreach (var (_, index) in borrowed)
-          result.ResultParameters.Add(index);
+    var returnedType = function.ReturnType.IsAsync ? function.ReturnType.Element! : function.ReturnType;
+    if (returnedType.IsArray) {
+      if (function.IsAsync) {
+        result.Result = ArrayHolder.Owned;
+      } else {
+        var root = groups.Find(_result);
+        var borrowed = function.Parameters.Select((parameter, index) => (parameter, index)).Where(pair => pair.parameter.Type.IsArray && groups.Find(pair.parameter) == root).ToList();
+        result.Result = !owned.Contains(root) && borrowed.Count > 0 ? ArrayHolder.Borrowed : ArrayHolder.Owned;
+        if (result.Result == ArrayHolder.Borrowed)
+          foreach (var (_, index) in borrowed)
+            result.ResultParameters.Add(index);
+      }
     }
 
     result.Problem = problems.FirstOrDefault();

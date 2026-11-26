@@ -225,9 +225,23 @@ public static class RustSyntaxReader {
       }
 
       RsItem item;
-      if (this.Accept("fn"))
+      if (this.Accept("async")) {
+        this.Expect("fn");
+        item = this.Function(visibility, true);
+      } else if (this.Accept("fn")) {
         item = this.Function(visibility);
-      else if (this.Accept("thread_local")) {
+      } else if (this.Is("extern") || (this.Is("unsafe") && this.Is("extern", 1))) {
+        var isUnsafe = this.Accept("unsafe");
+        this.Expect("extern");
+        var abi = this.Next();
+        if (abi.Kind != Kind.String)
+          throw new FormatException($"Expected an ABI string, found '{abi.Text}'.");
+        this.Expect("{");
+        var items = new List<RsFunction>();
+        while (!this.Accept("}"))
+          items.Add((RsFunction)this.Item());
+        item = new RsExternBlock(abi.Text, isUnsafe, items);
+      } else if (this.Accept("thread_local")) {
         this.Expect("!");
         this.Expect("{");
         this.Expect("static");
@@ -358,7 +372,7 @@ public static class RustSyntaxReader {
       return new RsStruct(name, visibility, fields) { Generics = generics };
     }
 
-    private RsFunction Function(string visibility) {
+    private RsFunction Function(string visibility, bool isAsync = false) {
       var name = this.Identifier();
       var generics = this.Is("<") ? this.TypeText() : "";
       this.Expect("(");
@@ -399,7 +413,7 @@ public static class RustSyntaxReader {
 
       // A required method of a trait has no body: a declaration block.
       var body = this.Accept(";") ? new RsBlock([], null) { IsDeclaration = true } : this.Block();
-      return new RsFunction(name, visibility, parameters, returns, body) { Generics = generics, Where = clauses };
+      return new RsFunction(name, visibility, parameters, returns, body) { IsAsync = isAsync, Generics = generics, Where = clauses };
     }
 
     /// <summary>
@@ -423,7 +437,7 @@ public static class RustSyntaxReader {
         else if (token.Text == "->")
           text.Append(" -> ");
         else
-          text.Append(token.Text is "+" or "=" ? $" {token.Text} " : token.Text).Append(token.Text is ";" or "," or ":" or "mut" or "dyn" or "impl" ? " " : "");
+          text.Append(token.Text is "+" or "=" ? $" {token.Text} " : token.Text).Append(token.Text is ";" or "," or ":" or "mut" or "const" or "dyn" or "impl" ? " " : "");
 
         if (generics && depth == 0)
           return text.ToString();
@@ -494,6 +508,10 @@ public static class RustSyntaxReader {
           if (12 < minimum)
             return left;
           this.Next();
+          if (this.Is("*")) {
+            left = new RsCast(left, this.TypeText());
+            continue;
+          }
           // A cast to a generic type, x as Rc<dyn Base>; a comparison after a cast stands in parentheses.
           var target = this.Identifier();
           left = new RsCast(left, this.Is("<") ? target + this.TypeText() : target);
@@ -577,7 +595,9 @@ public static class RustSyntaxReader {
             name += "::" + this.TypeText();
           }
 
-          expression = this.Is("(") ? new RsMethodCall(expression, name, this.Arguments(")")) : new RsField(expression, name);
+          expression = name == "await" && !this.Is("(")
+            ? new RsAwait(expression)
+            : this.Is("(") ? new RsMethodCall(expression, name, this.Arguments(")")) : new RsField(expression, name);
         } else if (this.Accept("?")) {
           expression = new RsTry(expression);
         } else if (this.Is("(") && expression is RsPath or RsCall or RsIndex or RsParenthesized) {

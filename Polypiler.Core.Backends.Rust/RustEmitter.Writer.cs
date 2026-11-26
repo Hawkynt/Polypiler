@@ -44,6 +44,7 @@ public static partial class RustEmitter {
 
     /// <summary>The crate: manifest, root and module.</summary>
     public RustCrate Crate(IrModule module) {
+      module = LowerUsing(module);
       module = this.GeneralizedClasses(this.Generalized(module));
       module = Polypiler.Core.Backends.Rust.Emit.AliasSpecialization.Run(Polypiler.Core.Backends.Rust.Emit.ObjectLowering.Run(Polypiler.Core.Backends.Rust.Emit.ListLiterals.Run(Polypiler.Core.Backends.Rust.Emit.BindHoisting.Run(module))));
       this._module = module;
@@ -53,6 +54,7 @@ public static partial class RustEmitter {
       this.NameItems(module);
       this.NameInstances();
       this.NameTypes(module);
+      this.NameForeign(module);
       this.NameIterators(module);
       this.NameGlobals(module);
       this.NameReaders(module);
@@ -96,6 +98,7 @@ public static partial class RustEmitter {
         });
 
       items.AddRange(this.HierarchyItems());
+      items.AddRange(this.ForeignItems(module));
 
       var unit = this._options.Tests.Count > 0 || tests.Count > 0 ? this.Tests(module) : null;
       this._construct = "the module";
