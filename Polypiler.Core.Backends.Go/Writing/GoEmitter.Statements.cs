@@ -219,6 +219,9 @@ public static partial class GoEmitter {
         case IrWhile loop:
           return this.While(loop.Condition, loop.Body, null);
         case IrFor loop:
+          if (loop.PerIteration.FirstOrDefault(local => Captured(loop.Body.Statements, local)) is { } own)
+            this.Refuse(ControlUnsupportedDescriptor, $"control-flow construct 'per-iteration loop variable {own.Name} captured by a closure' cannot be emitted as Go in profile '{profile.Name}'");
+
           return this.While(loop.Condition, loop.Body, loop.Step);
         case IrDoWhile loop:
           return this.DoWhile(loop);
@@ -263,8 +266,8 @@ public static partial class GoEmitter {
       }
 
       var value = this.Expression(initializer);
-      if (IsUntyped(value) || value is GoIdent { Name: "true" or "false" } || initializer is IrConstRef or IrStrConst)
-        return [new GoVarStmt(new GoValueSpec([name], this.TypeOf(local.Type), IsZero(initializer) ? [] : [value]))];
+      if (IsUntyped(value) || value is GoIdent { Name: "true" or "false" or "nil" } || initializer is IrConstRef or IrStrConst)
+        return [new GoVarStmt(new GoValueSpec([name], this.TypeOf(local.Type), IsZero(initializer) || initializer is IrNull ? [] : [value]))];
 
       return [new GoAssign([Name(name)], ":=", [value])];
     }
@@ -529,6 +532,11 @@ public static partial class GoEmitter {
           return false;
       }
 
+      // A closure of the body that captures the counter sees one variable for every pass in the IR unless
+      // the loop lists it as a variable of its own per pass: Go's for clause gives every pass its own from 1.22.
+      if (Captured(body, local) && !(statements[index + 1] is IrFor { PerIteration: var own } && own.Contains(local) && this.Has(GoCapabilities.PerIterationLoopVariables)))
+        return false;
+
       if (IrTree.Nodes(condition).Any(node => node is IrConditional or IrStep or IrBinary { Op: IrBinaryOp.LogicalAnd or IrBinaryOp.LogicalOr }))
         return false;
 
@@ -559,6 +567,10 @@ public static partial class GoEmitter {
         this._prelude = saved;
       }
     }
+
+    /// <summary>Whether a closure of some statements captures a local.</summary>
+    private static bool Captured(IEnumerable<IrStmt> statements, IrLocal local)
+      => statements.SelectMany(IrTree.Nodes).OfType<IrLambda>().Any(lambda => lambda.Captures.Contains(local));
 
     /// <summary>Whether a statement steps a local: an assignment to it or a step of it.</summary>
     private static bool Steps(IrStmt statement, IrLocal local) => statement switch {

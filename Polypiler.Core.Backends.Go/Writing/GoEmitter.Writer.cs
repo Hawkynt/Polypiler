@@ -233,6 +233,9 @@ public static partial class GoEmitter {
           return new GoIdent("string");
         case { IsArray: true, Element: { } element }:
           return new GoArrayType(null, this.TypeOf(element));
+        case { IsFunction: true, Signature: { } signature }:
+          return new GoFuncType([.. signature.Parameters.Select(parameter => new GoField([], this.TypeOf(parameter)))],
+            signature.Result == IrType.Void ? [] : [new GoField([], this.TypeOf(signature.Result))]);
         case { IsStruct: true, Declaration: { } declaration } when this._types.TryGetValue(declaration, out var name):
           return new GoIdent(name);
         default:

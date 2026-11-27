@@ -75,6 +75,12 @@ internal static class GoHelpers {
   /// <summary>The name of the helper of the smaller or larger of two integers, below Go 1.21.</summary>
   public static string Bound(bool minimum, IrType type) => (minimum ? "plyMin" : "plyMax") + Title(type);
 
+  /// <summary>The name of the helper of the smaller of two doubles below Go 1.21, a NaN where one is.</summary>
+  public const string FloatMinimum = "plyMinFloat64";
+
+  /// <summary>The name of the helper of the larger of two doubles below Go 1.21, a NaN where one is.</summary>
+  public const string FloatMaximum = "plyMaxFloat64";
+
   /// <summary>The name of the helper of the sign of a floating-point number.</summary>
   public const string Sign = "plySign";
 
@@ -111,6 +117,9 @@ internal static class GoHelpers {
         	return 0
         }
         """;
+
+    if (name is FloatMinimum or FloatMaximum)
+      return Body(name, "a, b float64", "float64", ["if a != a {", "\treturn a", "}", "if b != b {", "\treturn b", "}", $"return math.{(name == FloatMinimum ? "Min" : "Max")}(a, b)"]);
 
     if (name == RoundHalfUp)
       return """

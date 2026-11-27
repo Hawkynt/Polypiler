@@ -233,6 +233,50 @@ public sealed class ControlEmissionTests {
   }
 
   [Test]
+  public void Closures_AreFunctionLiterals_ThatCaptureTheVariable() {
+    var acc = L("acc", IrType.I32);
+    var delta = L("delta", IrType.I32);
+    var bump = L("bump", IrType.Function(IrType.I32, IrType.I32));
+    var lambda = new IrLambda(bump.Type, [acc], [delta], [], Block(new IrAssign(acc, Bin(IrBinaryOp.Add, R(acc), R(delta))), new IrReturn(R(acc))));
+    var text = Text(IrType.I32, [_a],
+      new IrDeclare(acc, R(_a)),
+      new IrDeclare(bump, lambda),
+      new IrReturn(new IrInvoke(IrType.I32, R(bump), [I(2)])));
+    Assert.That(text, Does.Contain("\tacc := a\n\tbump := func(delta int32) int32 {\n\t\tacc += delta\n\t\treturn acc\n\t}\n\treturn bump(2)\n"));
+    var open = new IrLambda(IrType.Function(IrType.I32), [_c], [], [], Block(new IrIf(R(_c), Block(new IrReturn(I(1))), null)));
+    Assert.That(Text(IrType.Function(IrType.I32), [_c], new IrReturn(open)), Does.Contain("return func() int32 {\n\t\tif c {\n\t\t\treturn 1\n\t\t}\n\t\tpanic(\"unreachable\")\n\t}"));
+    var none = new IrLambda(IrType.Function(IrType.Void), [], [], [], Block(new IrReturn(null)));
+    Assert.That(Text(IrType.Function(IrType.Void), [], new IrReturn(none)), Does.Contain("return func() {\n\t}"));
+    Assert.That(Text(IrType.Function(IrType.Void), [], new IrReturn(new IrNull(IrType.Function(IrType.Void)))), Does.Contain("return nil"));
+    var module = new IrModule("M", [Function("f", IrType.Function(IrType.I32, IrType.I32), [], new IrReturn(new IrFunctionRef(IrType.Function(IrType.I32, IrType.I32), "g"))),
+      Function("g", IrType.I32, [_a], new IrReturn(R(_a)))]);
+    Assert.That(Emit(module), Does.Contain("func F() func(int32) int32 {\n\treturn G\n}"));
+  }
+
+  [Test]
+  public void AnAssignmentAsAValue_IsTheAssignmentBeforeTheUse() {
+    Assert.That(Text(IrType.I32, [_a, _b], new IrReturn(Bin(IrBinaryOp.Add, new IrBind(_b, Bin(IrBinaryOp.Multiply, R(_a), I(2))), R(_b)))), Does.Contain("\tb = a * 2\n\treturn b + b\n"));
+    var unread = L("unread", IrType.I32);
+    Assert.That(new IrModule("M", [new IrFunction("f", true, IrType.I32, [_a], [unread], Block(new IrDeclare(unread, null), new IrReturn(new IrBind(unread, R(_a)))))]) is var module ? Emit(module) : "", Does.Contain("\treturn a\n"));
+  }
+
+  [Test]
+  public void LoopVariables_CapturedByClosures_KeepTheIrsVariables() {
+    var hold = L("hold", IrType.Function(IrType.I32));
+    IrLambda Capture() => new(IrType.Function(IrType.I32), [_i], [], [], Block(new IrReturn(R(_i))));
+    IrStmt[] Loop(IrLocal[] own) => [
+      new IrDeclare(hold, new IrNull(hold.Type)),
+      new IrDeclare(_i, I(0)),
+      new IrFor(Bin(IrBinaryOp.Less, R(_i), I(3)), Block(new IrAssign(hold, Capture())), Block(Inc(_i))) { PerIteration = own },
+      new IrReturn(new IrInvoke(IrType.I32, R(hold), []))];
+    var shared = Text(IrType.I32, [], Loop([]));
+    Assert.That(shared, Does.Contain("\tvar hold func() int32\n\tvar i int32\n\tfor ; i < 3; i++ {"));
+    var own = Emit(new IrModule("M", [Function("f", IrType.I32, [], Loop([_i]))]), "go1.22");
+    Assert.That(own, Does.Contain("\tfor i := int32(0); i < 3; i++ {"));
+    Assert.That(Problems(new IrModule("M", [Function("f", IrType.I32, [], Loop([_i]))]), "go1.21"), Has.Some.Contains("PLY2160").And.Some.Contains("per-iteration loop variable i"));
+  }
+
+  [Test]
   public void ConstructsOutsideTheSubset_AreRefusedByName() {
     var async = new IrFunction("run", true, IrType.Async(IrType.I32), [], [], Block(new IrReturn(I(1))));
     Assert.That(Problems(new IrModule("M", [async])), Has.Some.Contains("PLY2170"));

@@ -85,6 +85,11 @@ public static partial class GoEmitter {
         IrFieldLoad load => new GoSelector(this.Expression(load.Target), this.FieldName(load.Field)) { Type = load.Type },
         IrStructEquals equality => this.StructEquals(equality),
         IrIntrinsic intrinsic => this.Intrinsic(intrinsic),
+        IrLambda lambda => this.Lambda(lambda),
+        IrInvoke invoke => this.Invoke(invoke),
+        IrFunctionRef reference when this._functions.TryGetValue(reference.Function, out var function) => Name(function),
+        IrBind bind => this.Bind(bind),
+        IrNull { Type.IsFunction: true } => Name("nil"),
         IrThrowExpression thrown => new GoCall(new GoFuncLit(new GoFuncType([], [new GoField([], this.TypeOf(thrown.Type))]), new GoBlock([this.Panic(thrown.Exception)])), []),
         _ => this.Inexpressible(KindOf(expression))
       };
@@ -209,7 +214,7 @@ public static partial class GoEmitter {
 
     /// <summary>Whether an expression calls a function of the module or a helper that may trap: what could change state or trap before an earlier read.</summary>
     private static bool Calls(IrExpr expression) => IrTree.Nodes(expression).Any(node => node switch {
-      IrCall or IrStep => true,
+      IrCall or IrStep or IrInvoke or IrBind => true,
       IrBinary { Op: IrBinaryOp.AddChecked or IrBinaryOp.SubtractChecked or IrBinaryOp.MultiplyChecked or IrBinaryOp.Divide or IrBinaryOp.Remainder } binary => binary.Left.Type.IsInteger,
       IrUnary { Op: IrUnaryOp.NegateChecked } => true,
       IrConvert { Contract: not IrConversion.Wrap } => true,
@@ -593,6 +598,46 @@ public static partial class GoEmitter {
         default:
           return null;
       }
+    }
+
+    /// <summary>
+    /// A lambda as a function literal: Go's closures capture a variable, not its value, as the IR's do,
+    /// so a write after the closure was made is seen by it and a write by it is seen outside.
+    /// </summary>
+    private GoExpr Lambda(IrLambda lambda) {
+      var signature = lambda.Type.Signature!;
+      var parameters = lambda.Parameters.Select(parameter => new GoField([this.LocalName(parameter)], this.TypeOf(parameter.Type))).ToList();
+      IReadOnlyList<GoField> results = signature.Result == IrType.Void ? [] : [new GoField([], this.TypeOf(signature.Result))];
+      this._scopes.Add([.. lambda.Parameters]);
+      var saved = this._prelude;
+      this._prelude = [];
+      var body = this.Statements(lambda.Body.Statements);
+      this._prelude = saved;
+      this._scopes.RemoveAt(this._scopes.Count - 1);
+      if (signature.Result == IrType.Void && body.Count > 0 && body[^1] is GoReturn { Results.Count: 0 })
+        body.RemoveAt(body.Count - 1);
+
+      if (signature.Result != IrType.Void && !Terminates(body))
+        body.Add(new GoExprStmt(Call(Name("panic"), new GoString("unreachable"))));
+
+      return new GoFuncLit(new GoFuncType(parameters, results), new GoBlock(body)) { Type = lambda.Type };
+    }
+
+    /// <summary>The call of a function value: the callee first, then the arguments; Go panics on a nil one after both, as the IR traps.</summary>
+    private GoExpr Invoke(IrInvoke invoke) {
+      var operands = this.Operands([invoke.Callee, .. invoke.Arguments]);
+      return new GoCall(operands[0], operands[1..]) { Type = invoke.Type };
+    }
+
+    /// <summary>An assignment that is a value: the assignment before the use, the variable its value.</summary>
+    private GoExpr Bind(IrBind bind) {
+      var value = this.Expression(bind.Value);
+      if (!this._read.Contains(bind.Local))
+        return value;
+
+      var target = Name(this.LocalName(bind.Local));
+      this._prelude.Add(new GoAssign([target], "=", [value]));
+      return target with { Type = bind.Type };
     }
 
     /// <summary>The panic of a thrown exception: the message of a library exception, or of the class, as the text of the trap.</summary>

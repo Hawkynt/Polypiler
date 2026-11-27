@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Linq;
 using Polypiler.Core.Backends.Go.Syntax;
 using Polypiler.Core.IR;
 
@@ -62,9 +63,24 @@ public static partial class GoEmitter {
           return this.Wide(type, wide => this.CallHelper(GoHelpers.RoundHalfUp, IrType.F64, wide(value)));
         }
         case IrIntrinsicOp.Min or IrIntrinsicOp.Max when type.IsFloat: {
+          // Go's built-in min and max give a NaN where an operand is one, as the IR's do; math.Max(+Inf, NaN) is +Inf.
           var operands = this.Operands(intrinsic.Arguments);
-          var name = intrinsic.Op == IrIntrinsicOp.Min ? "Min" : "Max";
-          return this.Wide(type, wide => Call(Member("math", name), wide(operands[0]), wide(operands[1])));
+          var minimum = intrinsic.Op == IrIntrinsicOp.Min;
+          if (this.Has(GoCapabilities.MinMax))
+            return new GoCall(Name(minimum ? "min" : "max"), [this.Typed(operands[0], type), operands[1]]) { Type = result };
+
+          return this.Wide(type, wide => this.CallHelper(minimum ? GoHelpers.FloatMinimum : GoHelpers.FloatMaximum, IrType.F64, wide(operands[0]), wide(operands[1])));
+        }
+        case IrIntrinsicOp.CarryOut or IrIntrinsicOp.BorrowOut when type.IsInteger && !type.IsSigned && !type.IsLong: {
+          // The exact sum or difference with the carry or borrow in, on 64 bits, compared with the range of the type.
+          var operands = this.Operands(intrinsic.Arguments);
+          var carry = Name(this.Temporary());
+          this._prelude.Add(new GoVarStmt(new GoValueSpec([carry.Name], Name("uint64"), [])));
+          this._prelude.Add(new GoIf(null, operands[2], new GoBlock([new GoAssign([carry], "=", [new GoInt(1)])]), null));
+          GoExpr Wide(GoExpr value) => this.Conversion(IrType.U64, value);
+          return intrinsic.Op == IrIntrinsicOp.CarryOut
+            ? new GoBinary(new GoBinary(new GoBinary(Wide(operands[0]), "+", Wide(operands[1])), "+", carry), ">", new GoInt((ulong)IrOperators.Maximum(type))) { Type = IrType.Bool }
+            : new GoBinary(Wide(operands[0]), "<", new GoBinary(Wide(operands[1]), "+", carry)) { Type = IrType.Bool };
         }
         case IrIntrinsicOp.Sign when type.IsFloat: {
           var value = this.Expression(intrinsic.Arguments[0]);
@@ -116,9 +132,19 @@ public static partial class GoEmitter {
           var operands = this.Operands(intrinsic.Arguments);
           return new GoComposite(this.TypeOf(result), operands) { Type = result, PerLine = operands.Length > 8 ? 8 : 0 };
         }
-        case IrIntrinsicOp.StrConcat when intrinsic.Arguments.Count == 2: {
+        case IrIntrinsicOp.HighWord: {
+          var value = this.Expression(intrinsic.Arguments[0]);
+          return this.Conversion(result, new GoBinary(this.AsUnsigned(type, value), ">>", new GoInt(32)) { Type = IrType.U64 });
+        }
+        case IrIntrinsicOp.JoinWords: {
           var operands = this.Operands(intrinsic.Arguments);
-          return new GoBinary(operands[0], "+", operands[1]) { Type = IrType.String };
+          GoExpr Wide(GoExpr word) => this.Conversion(IrType.U64, word);
+          var joined = new GoBinary(new GoBinary(Wide(operands[0]), "<<", new GoInt(32)) { Type = IrType.U64 }, "|", Wide(operands[1])) { Type = IrType.U64 };
+          return this.Conversion(result, joined);
+        }
+        case IrIntrinsicOp.StrConcat when intrinsic.Arguments.Count >= 2: {
+          var operands = this.Operands(intrinsic.Arguments);
+          return operands.Skip(1).Aggregate(operands[0], (all, next) => new GoBinary(all, "+", next) { Type = IrType.String });
         }
         case IrIntrinsicOp.StrEquals when intrinsic.Arguments.Count == 2: {
           var operands = this.Operands(intrinsic.Arguments);

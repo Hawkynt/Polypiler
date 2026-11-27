@@ -190,6 +190,11 @@ public sealed class ScalarEmissionTests {
     Assert.That(Body(IrType.I32, [_ua], Op(IrIntrinsicOp.TrailingZeroCount, IrType.I32, R(_ua))), Does.Contain("return int32(bits.TrailingZeros32(a))"));
     Assert.That(Body(IrType.U32, [_ua], Op(IrIntrinsicOp.ByteSwap, IrType.U32, R(_ua))), Does.Contain("return bits.ReverseBytes32(a)"));
     Assert.That(Body(IrType.I64, [_la], Op(IrIntrinsicOp.BitReverse, IrType.I64, R(_la))), Does.Contain("return int64(bits.Reverse64(uint64(a)))"));
+    Assert.That(Body(IrType.U32, [_la], Op(IrIntrinsicOp.HighWord, IrType.U32, R(_la))), Does.Contain("return uint32(uint64(a) >> 32)"));
+    Assert.That(Body(IrType.I64, [_ua, _ub], Op(IrIntrinsicOp.JoinWords, IrType.I64, R(_ua), R(_ub))), Does.Contain("return int64(uint64(a)<<32 | uint64(b))"));
+    var carry = L("c", IrType.Bool);
+    Assert.That(Body(IrType.Bool, [_ua, _ub, carry], Op(IrIntrinsicOp.CarryOut, IrType.Bool, R(_ua), R(_ub), R(carry))), Does.Contain("return uint64(a)+uint64(b)+t > 4294967295"));
+    Assert.That(Body(IrType.Bool, [_ua, _ub, carry], Op(IrIntrinsicOp.BorrowOut, IrType.Bool, R(_ua), R(_ub), R(carry))), Does.Contain("return uint64(a) < uint64(b)+t"));
     var u8 = L("a", IrType.U8);
     Assert.That(Body(IrType.U8, [u8], Op(IrIntrinsicOp.ByteSwap, IrType.U8, R(u8))), Does.Contain("return a\n"));
   }
@@ -202,8 +207,11 @@ public sealed class ScalarEmissionTests {
     Assert.That(before, Does.Contain("return plyMinInt32(a, b)").And.Contain("func plyMinInt32(a, b int32) int32 {"));
     Assert.That(Emit(Returning(IrType.U64, [_qa, _qb], new IrIntrinsic(IrIntrinsicOp.Max, IrType.U64, [R(_qa), R(_qb)])), "go1.20"), Does.Contain("func plyMaxUint64(a, b uint64) uint64 {"));
     Assert.That(Body(IrType.I32, [_a], new IrIntrinsic(IrIntrinsicOp.Max, IrType.I32, [I(3), R(_a)])), Does.Contain("return max(int32(3), a)"));
-    Assert.That(Body(IrType.F64, [_da, _db], new IrIntrinsic(IrIntrinsicOp.Min, IrType.F64, [R(_da), R(_db)])), Does.Contain("return math.Min(a, b)"));
-    Assert.That(Body(IrType.F32, [_fa, _fb], new IrIntrinsic(IrIntrinsicOp.Max, IrType.F32, [R(_fa), R(_fb)])), Does.Contain("return float32(math.Max(float64(a), float64(b)))"));
+    Assert.That(Body(IrType.F64, [_da, _db], new IrIntrinsic(IrIntrinsicOp.Min, IrType.F64, [R(_da), R(_db)])), Does.Contain("return min(a, b)"));
+    Assert.That(Body(IrType.F32, [_fa, _fb], new IrIntrinsic(IrIntrinsicOp.Max, IrType.F32, [R(_fa), R(_fb)])), Does.Contain("return max(a, b)"));
+    var floats = Emit(Returning(IrType.F32, [_fa, _fb], new IrIntrinsic(IrIntrinsicOp.Max, IrType.F32, [R(_fa), R(_fb)])), "go1.20");
+    Assert.That(floats, Does.Contain("return float32(plyMaxFloat64(float64(a), float64(b)))").And.Contain("if a != a {").And.Contain("return math.Max(a, b)"));
+    Assert.That(Emit(Returning(IrType.F64, [_da, _db], new IrIntrinsic(IrIntrinsicOp.Min, IrType.F64, [R(_da), R(_db)])), "go1.20"), Does.Contain("return plyMinFloat64(a, b)"));
     var clamp = new IrIntrinsic(IrIntrinsicOp.Clamp, IrType.I64, [R(_la), C(IrType.I64, -1), C(IrType.I64, 10)]);
     Assert.That(Body(IrType.I64, [_la], clamp), Does.Contain("return min(max(a, -1), 10)"));
     Assert.That(Emit(Returning(IrType.I64, [_la], clamp), "go1.18"), Does.Contain("return plyMinInt64(plyMaxInt64(a, -1), 10)"));
