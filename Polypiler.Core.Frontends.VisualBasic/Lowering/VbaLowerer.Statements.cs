@@ -9,7 +9,12 @@ namespace Polypiler.Core.Frontends.VisualBasic.Lowering;
 internal sealed partial class VbaLowerer {
 
   /// <summary>A variable of the procedure: a local, a parameter or the function's result.</summary>
-  private sealed record Variable(IrLocal Local, VbaType Type, bool IsParameter);
+  private sealed record Variable(IrLocal Local, VbaType Type, bool IsParameter) {
+
+    /// <summary>The kinds the variable may hold when it is a <c>Variant</c>, of a fixed type or dynamic; none for a typed one.</summary>
+    public VbaTags Tags { get; init; }
+
+  }
 
   private readonly Dictionary<string, Variable> _locals = new(StringComparer.OrdinalIgnoreCase);
   private readonly Dictionary<string, VbaValue> _localConstants = new(StringComparer.OrdinalIgnoreCase);
@@ -39,14 +44,14 @@ internal sealed partial class VbaLowerer {
     return local;
   }
 
-  private IrFunction Procedure(VbaProcedure procedure) {
+  private IrFunction LowerProcedure(VbaProcedure procedure) {
     this.BeginProcedure(procedure.Name);
     var signature = this._procedures[procedure.Name];
     var parameters = new List<IrLocal>();
     foreach (var (name, type, _, _, _) in signature.Parameters) {
       var local = new IrLocal(name, type.Ir);
       parameters.Add(local);
-      if (!this._locals.TryAdd(name, new(local, type, true)))
+      if (!this._locals.TryAdd(name, new(local, type, true) { Tags = type.IsVariant ? VbaTags.Any : VbaTags.None }))
         throw this.Unresolved(procedure.Line, $"the parameter '{name}' is declared twice");
     }
 
@@ -57,7 +62,7 @@ internal sealed partial class VbaLowerer {
     var prologue = new List<IrStmt>();
     if (signature.Returns is { } returns) {
       this._result = new IrLocal(procedure.Name, returns.Ir);
-      this._locals[procedure.Name] = new(this._result, returns, false);
+      this._locals[procedure.Name] = new(this._result, returns, false) { Tags = returns.IsVariant ? VbaTags.Any : VbaTags.None };
       this._declared.Add(this._result);
       prologue.Add(new IrDeclare(this._result, this.Default(returns, procedure.Line)));
     }
@@ -69,8 +74,11 @@ internal sealed partial class VbaLowerer {
         if (this._locals.ContainsKey(variable.Name))
           throw this.Unresolved(variable.Line, $"the variable '{variable.Name}' is declared twice");
 
+        var tags = VbaTags.None;
+        if (type.IsVariant)
+          (type, tags) = this.VariantLocal(variable.Name);
         var local = new IrLocal(variable.Name, type.Ir);
-        this._locals[variable.Name] = new(local, type, false);
+        this._locals[variable.Name] = new(local, type, false) { Tags = tags };
         this._declared.Add(local);
         this._pending = [];
         var initial = this.Initial(variable, type);
@@ -156,6 +164,7 @@ internal sealed partial class VbaLowerer {
     (IrExceptionClass.InvalidCastException, 13),
     (IrExceptionClass.NullReferenceException, 91),
     (IrExceptionClass.ArgumentException, 5),
+    (IrExceptionClass.InvalidOperationException, 94),
     (IrExceptionClass.Exception, 5)
   ];
 
@@ -167,6 +176,7 @@ internal sealed partial class VbaLowerer {
     13 => IrExceptionClass.InvalidCastException,
     91 => IrExceptionClass.NullReferenceException,
     5 => IrExceptionClass.ArgumentException,
+    94 => IrExceptionClass.InvalidOperationException,
     _ => null
   };
 
@@ -217,6 +227,8 @@ internal sealed partial class VbaLowerer {
         return result;
       }
 
+      if (this._inference is { } inference)
+        inference.Weak = resumeNext;
       result.AddRange(resumeNext ? this.Resumed(statement, []) : this.Statement(statement));
     }
 
@@ -231,6 +243,7 @@ internal sealed partial class VbaLowerer {
         throw this.Unsupported(line, "a handler with On Error, a label or GoTo of its own");
 
       var protectedBody = guarded.SelectMany(this.Statement).ToList();
+      this._inference?.Havoc();
       var handlerBody = handler.SelectMany(this.Statement).ToList();
       return [new IrTry(new IrBlock(protectedBody), this.Catches([]), null), .. handlerBody];
     }
@@ -240,7 +253,10 @@ internal sealed partial class VbaLowerer {
     if (resumes.Count != 1 || handler[^1] is not VbaResume { Target: "Next" } || guarded.Count == 0 || guarded[^1] is not VbaExit)
       throw this.Unsupported(resumes[0].Line, "Resume other than a Resume Next that ends a handler after an Exit");
 
+    this._inference?.Havoc();
     var handling = handler.Take(handler.Count - 1).SelectMany(this.Statement).Append(this.SetErr(0)).ToList();
+    if (this._inference is { } inference)
+      inference.Weak = true;
     return [.. guarded.SelectMany(statement => this.Resumed(statement, handling))];
   }
 
@@ -345,7 +361,7 @@ internal sealed partial class VbaLowerer {
   private IrStmt Raise(VbaExpr number, int line) {
     var value = this.Expression(number);
     if (value.Expr is not IrConst { Type.IsInteger: true } constant || ClassOf(constant.Value) is not { } type)
-      throw this.Unsupported(line, "Err.Raise of an error number other than the constants 5, 6, 9, 11, 13 and 91, which the IR's exception classes stand for");
+      throw this.Unsupported(line, "Err.Raise of an error number other than the constants 5, 6, 9, 11, 13, 91 and 94, which the IR's exception classes stand for");
     return Throw(type);
   }
 
@@ -355,6 +371,9 @@ internal sealed partial class VbaLowerer {
         if (variable.Global is not null && variable.Type.IsArray)
           throw this.Unsupported(line, $"the assignment of the module-level array '{name.Name}', which the IR's globals cannot replace");
         var assigned = this.Expression(value);
+        // A local given a fixed type and assigned another one is lowered again as a Variant.
+        if (this.Record(name.Name, assigned))
+          return new IrBlock([]);
         var coerced = this.Coerce(this.Copied(assigned), variable.Type, line);
         return variable.Local is { } local ? new IrAssign(local, coerced) : new IrGlobalAssign(variable.Global!, coerced);
       case VbaName name:
@@ -444,8 +463,12 @@ internal sealed partial class VbaLowerer {
         throw this.Unsupported(call.Line, $"Err.{method}");
       }
 
-      if (string.Equals(objectName, "Debug", StringComparison.OrdinalIgnoreCase) && string.Equals(method, "Print", StringComparison.OrdinalIgnoreCase) && call.Arguments.Count == 1)
-        return [new IrWriteLine(this.Text(this.Expression(call.Arguments[0]), call.Line))];
+      if (string.Equals(objectName, "Debug", StringComparison.OrdinalIgnoreCase) && string.Equals(method, "Print", StringComparison.OrdinalIgnoreCase) && call.Arguments.Count == 1) {
+        var printed = this.Expression(call.Arguments[0]);
+        if (printed.Type.IsVariant && (printed.Tags & VbaTags.Null) != VbaTags.None)
+          throw this.Unsupported(call.Line, "Debug.Print of a Variant that may be Null, which it prints as the word Null");
+        return [new IrWriteLine(this.Text(printed, call.Line))];
+      }
     }
 
     if (call.Target is VbaName name && this._procedures.TryGetValue(name.Name, out var signature)) {
@@ -461,7 +484,10 @@ internal sealed partial class VbaLowerer {
   private IrStmt If(IReadOnlyList<VbaIfBranch> branches, IReadOnlyList<VbaStatement>? otherwise) {
     var first = branches[0];
     var condition = this.Condition(first.Condition);
+    var entry = this.Snapshot();
     var then = new IrBlock(this.Block(first.Body));
+    var afterThen = this.Snapshot();
+    this.Restore(entry);
     IrBlock? rest = null;
     if (branches.Count > 1) {
       // An ElseIf whose condition needs statements has them inside the Else, where it is evaluated.
@@ -471,6 +497,7 @@ internal sealed partial class VbaLowerer {
       rest = new IrBlock(this.Block(otherwise));
     }
 
+    this.Join(afterThen, this.Snapshot());
     return new IrIf(condition, then, rest);
   }
 
@@ -478,8 +505,11 @@ internal sealed partial class VbaLowerer {
   private IEnumerable<IrStmt> Select(VbaSelect select) {
     var value = this.Expression(select.Value);
     var held = this.Temporary(value.Type.Ir, value.Expr);
-    var subject = new VbaValue(new IrLocalRef(held), value.Type);
+    var subject = value with { Expr = new IrLocalRef(held) };
+    var entry = this.Snapshot();
+    var ends = new List<Dictionary<string, VbaTags>?>();
     IrStmt? chain = select.Else is null ? null : new IrBlock(this.Block(select.Else));
+    ends.Add(this.Snapshot());
     for (var index = select.Cases.Count - 1; index >= 0; --index) {
       var section = select.Cases[index];
       IrExpr? test = null;
@@ -493,9 +523,13 @@ internal sealed partial class VbaLowerer {
         test = test is null ? one : new IrBinary(IrBinaryOp.LogicalOr, one, test);
       }
 
+      this.Restore(entry);
       chain = new IrIf(test!, new IrBlock(this.Block(section.Body)), chain is null ? null : chain is IrBlock block ? block : new IrBlock([chain]));
+      ends.Add(this.Snapshot());
+      this.Restore(entry);
     }
 
+    this.Join([.. ends]);
     return chain is null ? [] : [chain];
   }
 
@@ -513,13 +547,21 @@ internal sealed partial class VbaLowerer {
   /// as Visual Basic's does - also after the last pass.
   /// </summary>
   private IEnumerable<IrStmt> For(VbaFor loop) {
+    if (this.Lookup(loop.Variable) is { Local: { } dynamic, Type.IsVariant: true })
+      return this.VariantFor(loop, dynamic);
     if (this.Lookup(loop.Variable) is not { Local: { } counter, Type: var type } || !type.IsNumeric || type.Kind == VbaKind.Boolean)
       throw this.Unresolved(loop.Line, $"the counter '{loop.Variable}' is no numeric variable of the procedure");
 
-    var start = this.Temporary(type.Ir, this.Coerce(this.Expression(loop.Start), type, loop.Line));
+    var startValue = this.Expression(loop.Start);
+    var start = this.Temporary(type.Ir, this.Coerce(startValue, type, loop.Line));
     var statements = new List<IrStmt> { new IrAssign(counter, new IrLocalRef(start)) };
-    var end = this.Temporary(type.Ir, this.Coerce(this.Expression(loop.End), type, loop.Line));
+    var endValue = this.Expression(loop.End);
+    var end = this.Temporary(type.Ir, this.Coerce(endValue, type, loop.Line));
     var stepValue = loop.Step is null ? new VbaValue(new IrConst(type.Ir, type.IsFloat ? IrOperators.Bits(type.Ir, 1.0) : 1), type) : this.Expression(loop.Step);
+    // A Variant counter given a fixed type keeps it only where its last step cannot promote it.
+    var variant = this._inference?.Candidates.Contains(loop.Variable) == true;
+    if (variant)
+      this.Record(loop.Variable, Steady(startValue, endValue, stepValue) == type.Kind ? new(startValue.Expr, type) : new(startValue.Expr, VbaType.Variant) { Tags = VbaTags.Any });
     var step = this.Temporary(type.Ir, this.Coerce(stepValue, type, loop.Line));
     var current = new VbaValue(new IrLocalRef(counter), type);
     var limit = new VbaValue(new IrLocalRef(end), type);
@@ -528,10 +570,15 @@ internal sealed partial class VbaLowerer {
     IrExpr condition = stepValue.Expr is IrConst constant && !type.IsFloat
       ? this.Compare(constant.Value >= 0 ? "<=" : ">=", current, limit, loop.Line)
       : new IrConditional(this.Compare(">=", by, zero, loop.Line), this.Compare("<=", current, limit, loop.Line), this.Compare(">=", current, limit, loop.Line));
+    this.EnterLoop(loop);
+    var head = this.Snapshot();
     this._loops.Push("For");
     var body = this.Block(loop.Body);
     this._loops.Pop();
-    var advance = this.Statement(new VbaAssign(new VbaName(loop.Variable, "", loop.Line), new VbaBinary(new VbaName(loop.Variable, "", loop.Line), "+", new VbaName(this.HoldName(step, type), "", loop.Line), loop.Line), loop.Line));
+    this.LeaveLoop(loop, head);
+    var advance = variant
+      ? [new IrAssign(counter, this.Arithmetic("+", type, current, by).Expr)]
+      : this.Statement(new VbaAssign(new VbaName(loop.Variable, "", loop.Line), new VbaBinary(new VbaName(loop.Variable, "", loop.Line), "+", new VbaName(this.HoldName(step, type), "", loop.Line), loop.Line), loop.Line));
     statements.Add(new IrFor(condition, new IrBlock(body), new IrBlock(advance)));
     return statements;
   }
@@ -543,9 +590,12 @@ internal sealed partial class VbaLowerer {
   }
 
   private IrStmt Do(VbaDo loop) {
+    this.EnterLoop(loop);
+    var head = this.Snapshot();
     this._loops.Push("Do");
     var body = this.Block(loop.Body);
     this._loops.Pop();
+    this.LeaveLoop(loop, head);
     if (loop.Condition is null)
       return new IrWhile(new IrConst(IrType.Bool, 1), new IrBlock(body));
 
@@ -569,6 +619,7 @@ internal sealed partial class VbaLowerer {
   private IrStmt Exit(VbaExit exit) {
     switch (exit.Kind) {
       case "Do" or "For":
+        this.ExitLoop();
         if (this._loops.Count == 0)
           throw this.Unresolved(exit.Line, $"Exit {exit.Kind} outside a {exit.Kind} loop");
         if (this._loops.Peek() != exit.Kind)

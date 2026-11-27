@@ -218,6 +218,8 @@ internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnosti
         return VbaType.Double;
       case "string":
         return VbaType.String;
+      case "variant":
+        return VbaType.Variant;
     }
 
     if (this._enumTypes.Contains(type.Name))
@@ -226,7 +228,6 @@ internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnosti
       return record;
 
     var name = type.Name.ToLowerInvariant() switch {
-      "variant" => "Variant",
       "currency" => "Currency",
       "date" => "Date",
       "object" => "Object",
@@ -243,10 +244,9 @@ internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnosti
 
   /// <summary>The type of a declared variable: an array of its element type with its lower bound, or a scalar. A field of a record holds no array.</summary>
   private VbaType VariableType(VbaVariable variable, bool field, IEnumerable<VbaStatement>? resized = null) {
-    if (variable.Type is null)
-      throw this.Unsupported(variable.Line, $"Variant (the variable '{variable.Name}' has no type)");
-
-    var element = this.TypeOf(variable.Type, field);
+    var element = variable.Type is null ? VbaType.Variant : this.TypeOf(variable.Type, field);
+    if (element.IsVariant && (field || variable.IsArray))
+      throw this.Unsupported(variable.Line, $"the Variant {(field ? "field" : "array")} '{variable.Name}'{(field ? " of a Type" : "")}");
     if (field && element.Kind == VbaKind.String)
       throw this.Unsupported(variable.Line, $"the String field '{variable.Name}' of a Type, which the IR's records do not hold");
     if (!variable.IsArray)
@@ -281,10 +281,9 @@ internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnosti
   private Signature SignatureOf(VbaProcedure procedure) {
     var parameters = new List<(string, VbaType, bool, bool, VbaExpr?)>();
     foreach (var parameter in procedure.Parameters) {
-      if (parameter.Type is null)
-        throw this.Unsupported(parameter.Line, $"Variant (the parameter '{parameter.Name}' has no type)");
-
-      var type = this.TypeOf(parameter.Type, false);
+      var type = parameter.Type is null ? VbaType.Variant : this.TypeOf(parameter.Type, false);
+      if (parameter.IsArray && type.IsVariant)
+        throw this.Unsupported(parameter.Line, $"the Variant array parameter '{parameter.Name}'");
       if (parameter.IsArray)
         type = VbaType.ArrayOf(type, this._optionBase);
       if (parameter.Optional && parameter.Default is null && !this._raw)
@@ -294,9 +293,9 @@ internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnosti
 
     VbaType? returns = null;
     if (procedure.IsFunction) {
-      if (procedure.Returns is null)
-        throw this.Unsupported(procedure.Line, $"Variant (the function '{procedure.Name}' has no result type)");
-      returns = this.TypeOf(procedure.Returns, false);
+      returns = procedure.Returns is null ? VbaType.Variant : this.TypeOf(procedure.Returns, false);
+      if (procedure.ReturnsArray && returns.IsVariant)
+        throw this.Unsupported(procedure.Line, $"the function '{procedure.Name}' that returns a Variant array");
       if (procedure.ReturnsArray)
         returns = VbaType.ArrayOf(returns, this._optionBase);
     }
@@ -309,6 +308,7 @@ internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnosti
     VbaKind.String => new IrStrConst(""),
     VbaKind.Record => new IrStructNew(type.Ir, [.. type.Record!.Fields.Select(field => this.Default(this._fields[Key(type.Record, field.Name)].Type, line))]),
     VbaKind.Array => new IrNewArray(type.Ir, new IrConst(IrType.I32, 0)),
+    VbaKind.Variant => new IrVariantOf(IrVariantTag.Empty, null),
     _ => new IrConst(type.Ir, 0)
   };
 

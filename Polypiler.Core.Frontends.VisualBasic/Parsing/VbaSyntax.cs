@@ -110,6 +110,12 @@ internal sealed record VbaString(string Value, int Line) : VbaExpr(Line);
 
 internal sealed record VbaBoolean(bool Value, int Line) : VbaExpr(Line);
 
+/// <summary>The literal <c>Empty</c>: the value of a <c>Variant</c> that holds nothing yet.</summary>
+internal sealed record VbaEmpty(int Line) : VbaExpr(Line);
+
+/// <summary>The literal <c>Null</c>: the value of a <c>Variant</c> known to be missing.</summary>
+internal sealed record VbaNull(int Line) : VbaExpr(Line);
+
 /// <summary>A name with the type character it was written with, or none.</summary>
 internal sealed record VbaName(string Name, string Suffix, int Line) : VbaExpr(Line);
 
