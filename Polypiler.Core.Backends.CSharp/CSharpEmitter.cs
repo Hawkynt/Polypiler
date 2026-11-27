@@ -454,6 +454,7 @@ public static partial class CSharpEmitter {
     IrStore store => ([store.Array, store.Index, store.Value], []),
     IrFieldStore store => ([store.Target, store.Value], []),
     IrExprStmt expression => ([expression.Expression], []),
+    IrWriteLine write => ([write.Value], []),
     IrIf conditional => ([conditional.Condition], conditional.Else is null ? [conditional.Then] : [conditional.Then, conditional.Else]),
     IrWhile loop => ([loop.Condition], [loop.Body]),
     IrDoWhile loop => ([loop.Condition], [loop.Body]),
@@ -974,6 +975,10 @@ public static partial class CSharpEmitter {
         case IrAssign or IrGlobalAssign or IrStore or IrFieldStore or IrExprStmt:
           statements.Add(new CsExpressionStatement(this.Effect(statement)));
           break;
+        case IrWriteLine write:
+          var writeLine = CSharpFragments.Expression(Base + "Console.WriteLine");
+          statements.Add(new CsExpressionStatement(new CsInvocation(writeLine, [this.Text(write.Value)])));
+          break;
         case IrIf conditional when this.CoalescingAssignment(conditional) is { } assigned:
           statements.Add(new CsExpressionStatement(assigned));
           break;
@@ -1280,6 +1285,9 @@ public static partial class CSharpEmitter {
           return (this.GlobalName(reference.Global), Primary);
         case IrNull or IrGenericEquals or IrGenericCompare or IrCall when this.GenericNode(expression) is { } generic:
           return generic;
+        case IrNull { Type.IsString: true }:
+          // An expression must keep its string type for overload resolution, even in a conditional.
+          return (new CsCast(new CsType("string"), new CsNullLiteral()) { Type = IrType.String }, Cast);
         case IrNull { Type.IsPointer: true }:
           return (new CsNullLiteral(), Primary);
         case IrNull { Type.IsArray: true } or IrNone or IrSome or IrIsNone or IrUnwrap or IrCoalesce or IrIsNull or IrBind or IrConditional { Condition: IrIsNull or IrIsNone }:
