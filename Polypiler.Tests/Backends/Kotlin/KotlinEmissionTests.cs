@@ -78,9 +78,17 @@ public sealed class KotlinEmissionTests {
   }
 
   private static IrType Type(IrTypeKind kind) => kind switch {
-    IrTypeKind.I8 => IrType.I8, IrTypeKind.U8 => IrType.U8, IrTypeKind.I16 => IrType.I16, IrTypeKind.U16 => IrType.U16,
-    IrTypeKind.I32 => IrType.I32, IrTypeKind.U32 => IrType.U32, IrTypeKind.I64 => IrType.I64, IrTypeKind.U64 => IrType.U64,
-    IrTypeKind.F32 => IrType.F32, IrTypeKind.Bool => IrType.Bool, _ => IrType.F64
+    IrTypeKind.I8 => IrType.I8,
+    IrTypeKind.U8 => IrType.U8,
+    IrTypeKind.I16 => IrType.I16,
+    IrTypeKind.U16 => IrType.U16,
+    IrTypeKind.I32 => IrType.I32,
+    IrTypeKind.U32 => IrType.U32,
+    IrTypeKind.I64 => IrType.I64,
+    IrTypeKind.U64 => IrType.U64,
+    IrTypeKind.F32 => IrType.F32,
+    IrTypeKind.Bool => IrType.Bool,
+    _ => IrType.F64
   };
 
   [Test]
