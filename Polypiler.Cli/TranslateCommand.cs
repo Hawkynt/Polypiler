@@ -16,6 +16,7 @@ using Polypiler.Core.Backends.Perl;
 using Polypiler.Core.Backends.Python;
 using Polypiler.Core.Backends.Rust;
 using Polypiler.Core.Backends.VBScript;
+using Polypiler.Core.Backends.VisualBasic;
 using Polypiler.Core.Frontends.Batch;
 using Polypiler.Core.Frontends.Cpp;
 using Polypiler.Core.Frontends.CSharp;
@@ -27,6 +28,7 @@ using Polypiler.Core.Frontends.Python;
 using Polypiler.Core.Frontends.Rust;
 using Polypiler.Core.Frontends.Rust.Cargo;
 using Polypiler.Core.Frontends.VBScript;
+using Polypiler.Core.Frontends.VisualBasic;
 using Polypiler.Core.IR;
 using Polypiler.Core.Backends.CSharp.Passes;
 using Polypiler.Core.Backends.JavaScript.Passes;
@@ -126,7 +128,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     [Export] = "JavaScript, MSIL and JVM: the functions or methods to translate",
     [ExplainTypes] = "JavaScript: write why every value has its type to standard output",
     [BatchDialectOption] = "Batch source: cmd.exe (the default) or MS-DOS 6.22 COMMAND.COM",
-    [Profile] = "the target profile: a target framework of C#, a language level of JavaScript, a version of Python, an edition of Rust, a Perl version, a C++ standard, a VBScript version, an MSIL framework or a JVM classfile version",
+    [Profile] = "the target profile: a target framework of C#, a language level of JavaScript, a version of Python, an edition of Rust, a Perl version, a C++ standard, a VBScript version, a classic Visual Basic dialect, an MSIL framework or a JVM classfile version",
     [Module] = "JavaScript: how the file is packaged",
     [Global] = "JavaScript: the global object a script declares",
     [TypedArrays] = "JavaScript: an ECMAScript 5 engine with typed arrays",
@@ -177,7 +179,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     new("msil", [new(Export, "<name>[,<name>...]")], ExportMisuse, null, ImportMsil),
     new("jvm", [new(Export, "<name>[,<name>...]")], ExportMisuse, null, ImportJvm),
     new("cpp", [], _ => null, ImportCpp),
-    new("vbscript", [new(VBScriptContractOption, "<file-or-line>")], _ => null, ImportVBScript)
+    new("vbscript", [new(VBScriptContractOption, "<file-or-line>")], _ => null, ImportVBScript),
+    new("visualbasic", [], _ => null, ImportVisualBasic)
   ];
 
   /// <summary>The target languages; another one is another entry.</summary>
@@ -191,7 +194,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     Msil(Implementations),
     Jvm(Implementations),
     Cpp(Implementations),
-    VBScript(Implementations)
+    VBScript(Implementations),
+    VisualBasic(Implementations)
   ];
 
   /// <summary>
@@ -242,7 +246,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// <param name="capabilities">The table the JavaScript backend chooses its constructs from.</param>
   /// <returns>The process exit code.</returns>
   public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, JavaScriptCapabilities capabilities)
-    => Run(arguments, output, error, [JavaScript(capabilities, Implementations), CSharp(CSharpCapabilities.Default, Implementations), Python(PythonCapabilities.Standard, Implementations), Rust(RustCapabilities.Default, Implementations), Perl(Implementations), Batch(), Msil(Implementations), Jvm(Implementations), Cpp(Implementations), VBScript(Implementations)]);
+    => Run(arguments, output, error, [JavaScript(capabilities, Implementations), CSharp(CSharpCapabilities.Default, Implementations), Python(PythonCapabilities.Standard, Implementations), Rust(RustCapabilities.Default, Implementations), Perl(Implementations), Batch(), Msil(Implementations), Jvm(Implementations), Cpp(Implementations), VBScript(Implementations), VisualBasic(Implementations)]);
 
   /// <summary>Runs the command with portable floating-point implementations of the caller's in place of the precomputed ones.</summary>
   /// <param name="arguments">The arguments after the word <c>translate</c>.</param>
@@ -254,7 +258,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// </param>
   /// <returns>The process exit code.</returns>
   public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Func<IrModule> implementations)
-    => Run(arguments, output, error, [JavaScript(JavaScriptCapabilities.Standard, implementations), CSharp(CSharpCapabilities.Default, implementations), Python(PythonCapabilities.Standard, implementations), Rust(RustCapabilities.Default, implementations), Perl(implementations), Batch(), Msil(implementations), Jvm(implementations), Cpp(implementations), VBScript(implementations)]);
+    => Run(arguments, output, error, [JavaScript(JavaScriptCapabilities.Standard, implementations), CSharp(CSharpCapabilities.Default, implementations), Python(PythonCapabilities.Standard, implementations), Rust(RustCapabilities.Default, implementations), Perl(implementations), Batch(), Msil(implementations), Jvm(implementations), Cpp(implementations), VBScript(implementations), VisualBasic(implementations)]);
 
   /// <summary>Runs <c>polypiler translate</c> with the arguments, the command made with the given backends.</summary>
   private static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Backend[] backends) {
@@ -645,6 +649,17 @@ public sealed partial class TranslateCommand : ICliCommand {
     return (imported.Module, failure, []);
   }
 
+  /// <summary>Imports a classic Visual Basic (VB6 / VBA) standard module.</summary>
+  private static (IrModule? Module, int ExitCode, IReadOnlyList<ManifestMessage> Caveats) ImportVisualBasic(
+    string file, string source, IReadOnlyDictionary<string, string> options, CliContext context) {
+    var imported = VisualBasicFrontend.Import(file, source);
+    foreach (var diagnostic in imported.Diagnostics)
+      context.Report(diagnostic);
+
+    var failure = imported.Diagnostics.Any(diagnostic => diagnostic.ExitCode == ExitCode.InvalidSource) ? InvalidSource : UnsupportedConstruct;
+    return (imported.Module, failure, []);
+  }
+
   /// <summary>The text of a file a JavaScript module requires, or <see langword="null"/> when there is none.</summary>
   private static string? Required(string file) => File.Exists(file) ? File.ReadAllText(file) : null;
 
@@ -850,6 +865,23 @@ public sealed partial class TranslateCommand : ICliCommand {
     (module, options) => VBScriptEmitter.Check(module, VBScriptProfileOf(options).Profile!),
     (module, options, _, _) => VBScriptEmitter.EmitTarget(module, VBScriptProfileOf(options).Profile!),
     VBScriptProfile.Names);
+
+  /// <summary>The classic Visual Basic backend; <c>--profile</c> selects <c>visualbasic/vb6</c>, <c>visualbasic/vba6</c>, <c>visualbasic/vba7</c> or <c>visualbasic/vba7-64</c>.</summary>
+  private static Backend VisualBasic(Func<IrModule> implementations) => new("visualbasic",
+    VisualBasicEmitter.Runtime,
+    options => VisualBasicProfileOf(options).Profile!.Name,
+    RuleTarget.Neutral,
+    [new(Profile, Choice(VisualBasicProfile.Names)), new(Float, FloatChoice)],
+    options => FloatMisuse(options) ?? VisualBasicProfileOf(options).Error,
+    (module, options) => VisualBasicEmitter.Legalize(module, implementations, VisualBasicProfileOf(options).Profile!, FloatModeOf(options)),
+    (module, options) => VisualBasicEmitter.Check(module, VisualBasicProfileOf(options).Profile!),
+    (module, options, passes, _) => VisualBasicEmitter.Emit(module, VisualBasicProfileOf(options).Profile!, FloatModeOf(options), null, passes),
+    VisualBasicProfile.Names);
+
+  private static (VisualBasicProfile? Profile, string? Error) VisualBasicProfileOf(IReadOnlyDictionary<string, string> options) {
+    VisualBasicProfile.TryParse(options.GetValueOrDefault(Profile), out var profile, out var error);
+    return (profile, error);
+  }
 
   private static (VBScriptProfile? Profile, string? Error) VBScriptProfileOf(IReadOnlyDictionary<string, string> options) {
     VBScriptProfile.TryParse(options.GetValueOrDefault(Profile), out var profile, out var error);
