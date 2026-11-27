@@ -13,36 +13,38 @@ public static partial class BatchEmitter {
   private static readonly IrType _i32Array = IrType.Array(IrType.I32);
 
   /// <summary>
-  /// The plain Int32 kernel form for a module of that shape: no runtime prologue, so the Batch
-  /// frontend lifts the output again. <see langword="null"/> when the body needs the full runtime.
+  /// Emits the compact Int32 kernel form. Returns <see langword="null"/> when the body needs
+  /// a construct provided by the full runtime.
   /// </summary>
   private static IReadOnlyList<string>? KernelLines(IrModule module) {
     if (Kernel(module) is not { } function)
       return null;
 
     try {
-      var writer = new Writer(function.Locals);
+      var writer = new Writer(function);
       writer.Block(function.Body);
       writer.Finish();
       return writer.Lines;
-    } catch (Refusal) {
+    } catch (Refusal refusal) when (refusal is not KernelDiagnostic) {
       return null;
     }
   }
 
-  private sealed class Writer {
+  private sealed partial class Writer {
 
     private readonly Dictionary<IrLocal, string> _locals = [];
     private int _nextLabel;
     private int _nextArrayId;
-    private int _totalArraySlots;
+    private int _totalCollectionSlots;
+    private string? _exhaustedStorage;
     private int _loopDepth;
     private bool _needsBoundsTrap;
 
-    public Writer(IReadOnlyList<IrLocal> locals) {
-      foreach (var local in locals) {
+    public Writer(IrFunction function) {
+      this._mapKeyIds = CollectMapKeys(function);
+      foreach (var local in function.Locals) {
         var name = "_ply_v" + this._locals.Count.ToString(CultureInfo.InvariantCulture);
-        if ((local.Type != IrType.I32 && local.Type != _i32Array) || !this._locals.TryAdd(local, name))
+        if (!this.SupportsValueType(local.Type) || !this._locals.TryAdd(local, name))
           throw new Refusal($"local {local.Name} of type {local.Type}");
       }
     }
@@ -50,11 +52,20 @@ public static partial class BatchEmitter {
     public List<string> Lines { get; } = ["@echo off", "setlocal EnableExtensions DisableDelayedExpansion"];
 
     public void Finish() {
-      if (!this._needsBoundsTrap)
-        return;
+      if (this._exhaustedStorage is { } operation)
+        throw new KernelDiagnostic($"{operation} exceeding the {CmdArrayStorageBudget}-slot collection budget");
 
-      this.Mark("_ply_trap_oor");
-      this.Line(">&2 echo PLY_BATCH_TRAP=IndexOutOfRange");
+      if (this._needsBoundsTrap)
+        this.Trap("_ply_trap_oor", "IndexOutOfRange");
+      if (this._needsMissingKeyTrap)
+        this.Trap(_missingKeyLabel, "KeyNotFound");
+      if (this._needsDuplicateKeyTrap)
+        this.Trap(_duplicateKeyLabel, "DuplicateKey");
+    }
+
+    private void Trap(string label, string name) {
+      this.Mark(label);
+      this.Line($">&2 echo PLY_BATCH_TRAP={name}");
       this.Line("exit /b 97");
     }
 
@@ -87,6 +98,9 @@ public static partial class BatchEmitter {
             break;
           case IrStore store:
             this.Store(store);
+            break;
+          case IrExprStmt { Expression: IrCollection { Op: IrCollectionOp.MapPut or IrCollectionOp.MapAdd } map }:
+            this.WriteMap(map);
             break;
           case IrWriteLine write:
             this.WriteLine(write);
@@ -314,27 +328,38 @@ public static partial class BatchEmitter {
 
     private readonly record struct OutputFragment(string? Text, IrExpr? Expression);
 
-    private void Branch(IrExpr condition, string yes, string no) {
+    private void Branch(IrExpr condition, string yes, string no, int slot = 0) {
       if (condition is IrConst constant && constant.Type == IrType.Bool) {
         this.Jump(constant.Value == 0 ? no : yes);
         return;
       }
       if (condition is IrUnary { Op: IrUnaryOp.LogicalNot } negated) {
-        this.Branch(negated.Operand, no, yes);
+        this.Branch(negated.Operand, no, yes, slot);
         return;
       }
       if (condition is IrBinary { Op: IrBinaryOp.LogicalAnd } both) {
         var next = this.Label();
-        this.Branch(both.Left, next, no);
+        this.Branch(both.Left, next, no, slot);
         this.Mark(next);
-        this.Branch(both.Right, yes, no);
+        this.Branch(both.Right, yes, no, slot);
         return;
       }
       if (condition is IrBinary { Op: IrBinaryOp.LogicalOr } either) {
         var next = this.Label();
-        this.Branch(either.Left, yes, next);
+        this.Branch(either.Left, yes, next, slot);
         this.Mark(next);
-        this.Branch(either.Right, yes, no);
+        this.Branch(either.Right, yes, no, slot);
+        return;
+      }
+      if (condition is IrLocalRef local && local.Type == IrType.Bool) {
+        this.Line($"if %{this.Value(local, slot)}% NEQ 0 goto {yes}");
+        this.Jump(no);
+        return;
+      }
+      if (condition is IrCollection { Op: IrCollectionOp.MapContainsKey } contains) {
+        var (_, entry) = this.MapEntry(contains, slot);
+        this.Line($"if defined {entry} goto {yes}");
+        this.Jump(no);
         return;
       }
       if (condition is not IrBinary binary)
@@ -348,10 +373,10 @@ public static partial class BatchEmitter {
         IrBinaryOp.GreaterOrEqual => "GEQ",
         _ => throw new Refusal(binary.Op.ToString())
       };
-      var left = this.Value(binary.Left);
-      var right = this.Value(binary.Right, 1);
-      var leftBits = Temporary(2);
-      var rightBits = Temporary(3);
+      var left = this.Value(binary.Left, slot);
+      var right = this.Value(binary.Right, slot + 1);
+      var leftBits = Temporary(slot + 2);
+      var rightBits = Temporary(slot + 3);
       this.Assign(leftBits, $"({left}>>31)&1");
       this.Assign(rightBits, $"({right}>>31)&1");
       var sameSign = this.Label();
@@ -380,23 +405,47 @@ public static partial class BatchEmitter {
     private int ReserveArray(int length) {
       if (this._loopDepth > 0)
         throw new Refusal("array allocation inside a loop");
-      if (this._totalArraySlots + length > CmdArrayStorageBudget)
-        throw new Refusal($"array storage exceeding {CmdArrayStorageBudget} elements");
-      this._totalArraySlots += length;
+      this.ReserveCollectionSlots(length, "array storage");
       return ++this._nextArrayId;
     }
 
+    private void ReserveCollectionSlots(int size, string operation) {
+      if (size <= CmdArrayStorageBudget - this._totalCollectionSlots) {
+        this._totalCollectionSlots += size;
+      } else if (this._mapKeyIds is not null) {
+        this._exhaustedStorage ??= operation;
+      } else {
+        throw new Refusal($"{operation} exceeding the {CmdArrayStorageBudget}-slot collection budget");
+      }
+    }
+
+    private bool SupportsValueType(IrType type)
+      => type == IrType.I32 || type == _i32Array
+        || this._mapKeyIds is not null && (type == _stringMap || type == IrType.String || type == IrType.Bool);
+
     // The result owns its slot. Evaluating an operand can reuse higher slots until that operand returns.
     private string Value(IrExpr expression, int slot = 0) {
-      if (expression.Type != IrType.I32 && expression.Type != _i32Array)
+      if (!this.SupportsValueType(expression.Type))
         throw new Refusal(expression.Type.ToString());
       if (expression is IrLocalRef local)
         return this._locals[local.Local];
 
       var destination = Temporary(slot);
       switch (expression) {
-        case IrConst constant when constant.Type == IrType.I32:
+        case IrConst constant when constant.Type == IrType.I32 || constant.Type == IrType.Bool:
           this.Assign(destination, constant.Value == int.MinValue ? "-2147483647-1" : constant.Value.ToString(CultureInfo.InvariantCulture));
+          break;
+        case IrStrConst key when this._mapKeyIds is not null && this._mapKeyIds.TryGetValue(key.Value, out var keyId):
+          this.Assign(destination, keyId.ToString(CultureInfo.InvariantCulture));
+          break;
+        case IrConditional conditional when this._mapKeyIds is not null:
+          this.AssignChoice(destination, conditional.Condition, conditional.WhenTrue, conditional.WhenFalse, slot + 1);
+          break;
+        case IrCollection collection when collection.Op != IrCollectionOp.MapContainsKey:
+          this.ReadMap(destination, collection, slot + 1);
+          break;
+        case { Type: var type } when type == IrType.Bool:
+          this.AssignChoice(destination, expression, new IrConst(IrType.Bool, 1), new IrConst(IrType.Bool, 0), slot + 1);
           break;
         case IrUnary { Op: IrUnaryOp.Negate } unary when unary.Type == IrType.I32:
           this.Assign(destination, $"-{this.Value(unary.Operand, slot + 1)}");
@@ -440,6 +489,19 @@ public static partial class BatchEmitter {
           throw new Refusal(expression.GetType().Name);
       }
       return destination;
+    }
+
+    private void AssignChoice(string destination, IrExpr condition, IrExpr whenTrue, IrExpr whenFalse, int slot) {
+      var yes = this.Label();
+      var no = this.Label();
+      var done = this.Label();
+      this.Branch(condition, yes, no, slot);
+      this.Mark(yes);
+      this.Assign(destination, this.Value(whenTrue, slot));
+      this.Jump(done);
+      this.Mark(no);
+      this.Assign(destination, this.Value(whenFalse, slot));
+      this.Mark(done);
     }
 
     private void Binary(IrBinary binary, string destination, int slot) {

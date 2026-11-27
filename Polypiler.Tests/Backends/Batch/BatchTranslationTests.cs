@@ -36,6 +36,107 @@ public sealed class BatchTranslationTests {
     AssertPureBatch(script);
   }
 
+  [TestCase(false)]
+  [TestCase(true)]
+  public void TranslatesThePinnedMapWithoutEmbeddingKeyText(bool optimize) {
+    var bytes = File.ReadAllBytes(BatchFixture("map-alias.cs"));
+    Assert.That(Convert.ToHexStringLower(SHA256.HashData(bytes)),
+      Is.EqualTo("6c733c8067656f5584a68425c13b8f7adb4030069d8c8e40054f2f8250ef8bda"));
+    var source = Encoding.ASCII.GetString(bytes);
+    var imported = CSharpFrontend.Import("map-alias.cs", source);
+    Assert.That(imported.Diagnostics, Is.Empty);
+    Assert.That(IrInterpreter.Call(imported.Module!, "Run", []), Is.EqualTo(42));
+
+    var script = Emit(source, optimize: optimize);
+    Assert.That(script, Does.Contain("if defined").And.Contain("setlocal"));
+    Assert.That(script, Does.Not.Contain("Alice").And.Not.Contain("alice").And.Not.Contain("a% !&|<>^[]"));
+    Assert.That(script.All(char.IsAscii), Is.True);
+  }
+
+  [Test]
+  public void TranslatesSelectedOrdinalKeysAndCountsTheirEntries() {
+    const string source = """
+      using System.Collections.Generic;
+      public static class Kernel {
+        public static int Run() {
+          var map = new Dictionary<string, int> { ["\u00e9"] = 0, ["e\u0301"] = 2, ["\0"] = 3 };
+          int selector = 1;
+          string key = selector > 0 ? "\u00e9" : "e\u0301";
+          bool present = map.ContainsKey(key);
+          map[key] = 40;
+          if (!present) return -1;
+          return map[key] + map.Count - 1;
+        }
+      }
+      """;
+    var imported = CSharpFrontend.Import("ordinal.cs", source);
+    Assert.That(imported.Diagnostics, Is.Empty);
+    Assert.That(IrInterpreter.Call(imported.Module!, "Run", []), Is.EqualTo(42));
+
+    var script = Emit(source);
+    Assert.That(script.All(char.IsAscii), Is.True);
+    Assert.That(script, Does.Contain("if defined"));
+  }
+
+  [TestCase("return map[\"missing\"];", "KeyNotFound")]
+  [TestCase("map.Add(\"key\", 0); map.Add(\"key\", 1); return 0;", "DuplicateKey")]
+  public void EmitsDistinctTrapsForDictionaryOperations(string body, string trap) {
+    var source = "using System.Collections.Generic; public static class Kernel { public static int Run() {"
+      + "var map = new Dictionary<string, int>(); " + body + " } }";
+    var script = Emit(source);
+    Assert.That(script, Does.Contain($"PLY_BATCH_TRAP={trap}").And.Contain("exit /b 97"));
+  }
+
+  [TestCase("var map = new Dictionary<string, long>(); return map.Count;")]
+  [TestCase("int n = 0; var map = new Dictionary<string, int>(); return map[$\"key{n}\"];")]
+  [TestCase("var map = new Dictionary<string, int>(); map.Clear(); return 0;")]
+  [TestCase("int n = 0; while (n < 2) { var map = new Dictionary<string, int>(); n += map.Count + 1; } return n;")]
+  public void UsesTheGeneralRuntimeForOtherDictionaryShapes(string body) {
+    var source = "using System.Collections.Generic; public static class Kernel { public static int Run() { " + body + " } }";
+    var imported = CSharpFrontend.Import("runtime-map.cs", source);
+    Assert.That(imported.Diagnostics, Is.Empty);
+    Assert.That(BatchEmitter.Check(imported.Module!), Is.Empty);
+    Assert.That(BatchEmitter.Emit(imported.Module!).Single().Content, Does.Contain(":__ply_"));
+  }
+
+  [Test]
+  public void RefusesANullMapKeyInVerifiedIr() {
+    var type = IrType.Map(IrType.String, IrType.I32, MapOrder.SlotReuse);
+    var map = new IrLocal("map", type);
+    var module = new IrModule("NullKey", [
+      new("Run", true, IrType.I32, [], [map], new([
+        new IrDeclare(map, new IrCollection(IrCollectionOp.MapNew, type, [])),
+        new IrReturn(new IrCollection(IrCollectionOp.MapGet, IrType.I32, [new IrLocalRef(map), new IrNull(IrType.String)]))
+      ]))
+    ]);
+    Assert.That(IrVerifier.Verify(module), Is.Empty);
+    Assert.That(BatchEmitter.Check(module), Has.One.Matches<Diagnostic>(problem => problem.Code == "PLY2850"));
+  }
+
+  [TestCase(509, true)]
+  [TestCase(510, true)]
+  [TestCase(511, false)]
+  public void CountsMapSlotsAndArrayElementsInTheSameStorageBudget(int arrayLength, bool accepted) {
+    var source = $$"""
+      using System.Collections.Generic;
+      public static class Kernel {
+        public static int Run() {
+          int[] values = new int[{{arrayLength}}];
+          var map = new Dictionary<string, int> { ["key"] = 42 };
+          return values[0] + map.Count;
+        }
+      }
+      """;
+    var imported = CSharpFrontend.Import("budget.cs", source);
+    Assert.That(imported.Diagnostics, Is.Empty);
+    var diagnostics = BatchEmitter.Check(imported.Module!);
+    if (accepted)
+      Assert.That(diagnostics, Is.Empty);
+    else
+      Assert.That(diagnostics, Has.One.Matches<Diagnostic>(problem
+        => problem.Code == "PLY2850" && problem.Message.Contains("512-slot collection budget", StringComparison.Ordinal)));
+  }
+
   [Test]
   public void TranslatesConsoleOutputFixtureAndLiftsExactStdout() {
     var source = File.ReadAllText(BatchFixture("console-output.cs"));
@@ -255,8 +356,8 @@ public sealed class BatchTranslationTests {
       Assert.That(line.Length, Is.LessThanOrEqualTo(1024));
   }
 
-  private static string Emit(string source, string profile = BatchEmitter.Profile) {
-    var (status, error, bytes) = Translate(source, profile);
+  private static string Emit(string source, string profile = BatchEmitter.Profile, bool optimize = false) {
+    var (status, error, bytes) = Translate(source, profile, optimize);
     Assert.That(status, Is.Zero, error);
     Assert.That(bytes, Is.Not.Null);
     Assert.That(bytes!.All(value => value < 128), Is.True);
@@ -265,15 +366,17 @@ public sealed class BatchTranslationTests {
     return script;
   }
 
-  private static (int Status, string Error, byte[]? Script) Translate(string source, string profile = BatchEmitter.Profile) {
+  private static (int Status, string Error, byte[]? Script) Translate(string source, string profile = BatchEmitter.Profile, bool optimize = false) {
     var workspace = Directory.CreateTempSubdirectory();
     try {
       var fixture = Path.Combine(workspace.FullName, "Kernel.cs");
       File.WriteAllText(fixture, source);
       var output = Path.Combine(workspace.FullName, "out");
       using var error = new StringWriter();
-      var status = Program.Run(["translate", fixture, "--from", "csharp", "--to", "batch", "--profile", profile,
-        "--opt", "none", "--output", output], TextWriter.Null, error);
+      List<string> arguments = ["translate", fixture, "--from", "csharp", "--to", "batch", "--profile", profile, "--output", output];
+      if (!optimize)
+        arguments.AddRange(["--opt", "none"]);
+      var status = Program.Run([.. arguments], TextWriter.Null, error);
       var script = Directory.Exists(output) ? Directory.EnumerateFiles(output, "*.bat").SingleOrDefault() : null;
       return (status, error.ToString(), script is null ? null : File.ReadAllBytes(script));
     } finally {

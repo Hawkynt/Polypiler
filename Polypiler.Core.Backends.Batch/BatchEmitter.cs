@@ -48,10 +48,10 @@ public static partial class BatchEmitter {
     if (verification.Count > 0)
       return ([], verification);
 
-    if (KernelLines(module) is { } kernel)
-      return (kernel, []);
-
     try {
+      if (KernelLines(module) is { } kernel)
+        return (kernel, []);
+
       var lowered = SequenceFusion.Run(module);
       var emitter = new UnifiedEmitter(lowered);
       return (emitter.EmitAll(), []);
@@ -66,7 +66,9 @@ public static partial class BatchEmitter {
        && type == IrType.I32 && module.Constants.Count == 0 && module.Globals.Count == 0
        && module.Types.Count == 0 && module.Initializer is null ? function : null;
 
-  private sealed class Refusal(string detail) : Exception(detail);
+  private class Refusal(string detail) : Exception(detail);
+
+  private sealed class KernelDiagnostic(string detail) : Refusal(detail);
 
   private sealed partial class UnifiedEmitter {
 
