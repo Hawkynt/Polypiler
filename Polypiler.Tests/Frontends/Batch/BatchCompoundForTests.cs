@@ -83,7 +83,7 @@ public sealed class BatchCompoundForTests {
     Assert.That(IrInterpreter.Call(imported.Module!, "Run", []), Is.EqualTo(int.MaxValue));
   }
 
-  [TestCase("setlocal", 42)]
+  [TestCase("setlocal", 41)]
   [TestCase("setlocal EnableExtensions EnableDelayedExpansion", 41)]
   [TestCase("setlocal DisableDelayedExpansion", 41)]
   public void ExpandedStatusReflectsTheSetlocalOptions(string command, int expected) {

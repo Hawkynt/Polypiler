@@ -321,7 +321,7 @@ public static partial class BatchFrontend {
             break;
           case SetLocalStage local:
             this.Emit(new ScopePush(number, frameId, local.DelayedExpansion));
-            this.Emit(new Assignment(number, this._errorLevel, new IrConst(IrType.I32, local.DelayedExpansion is null ? 1 : 0)));
+            this.Emit(new Assignment(number, this._errorLevel, new IrConst(IrType.I32, 0)));
             break;
           case EndLocalStage:
             this.Emit(new ScopePop(number, frameId));

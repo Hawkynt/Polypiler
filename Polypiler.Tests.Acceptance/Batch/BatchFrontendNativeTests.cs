@@ -50,7 +50,7 @@ public sealed class BatchFrontendNativeTests {
   [TestCase("set /a \"total=0\"\r\nfor /l %%I in (3,1,1) do set /a \"total=total+%%I\"\r\nexit /b %total%", 0)]
   [TestCase("set /a \"number=-2147483647-1\"\r\nset /a \"sign=(number>>31)&1\"\r\nexit /b %sign%", 1)]
   [TestCase("set /a \"x=1+7>>2&1\"\r\nexit /b %x%", 0)]
-  [TestCase("setlocal\r\nset /a \"n=%errorlevel%+41\"\r\nexit /b %n%", 42)]
+  [TestCase("setlocal\r\nset /a \"n=%errorlevel%+41\"\r\nexit /b %n%", 41)]
   [TestCase("setlocal\r\nsetlocal EnableDelayedExpansion\r\nset /a \"n=!errorlevel!+41\"\r\nexit /b %n%", 41)]
   public void SignedBoundariesAndZeroIterationsMatchNative(string body, int expected)
     => Compare("@echo off\r\nsetlocal EnableExtensions DisableDelayedExpansion\r\n" + body, expected);
