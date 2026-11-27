@@ -35,6 +35,7 @@ public sealed class ModulesSteps {
   private static readonly string[] _languages = [
     "Polypiler.Core.Backends.Batch",
     "Polypiler.Core.Backends.Cpp",
+    "Polypiler.Core.Backends.Go",
     "Polypiler.Core.Backends.Jvm",
     "Polypiler.Core.Backends.Msil",
     "Polypiler.Core.Backends.Perl",
@@ -44,6 +45,7 @@ public sealed class ModulesSteps {
     "Polypiler.Core.Backends.VisualBasic",
     "Polypiler.Core.Frontends.Batch",
     "Polypiler.Core.Frontends.Cpp",
+    "Polypiler.Core.Frontends.Go",
     "Polypiler.Core.Frontends.Jvm",
     "Polypiler.Core.Frontends.Msil",
     "Polypiler.Core.Frontends.Perl",

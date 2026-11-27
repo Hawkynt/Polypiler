@@ -1,0 +1,4 @@
+package refused
+
+func F( {
+}

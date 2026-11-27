@@ -101,6 +101,14 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+      # The Go frontend's tests run its helper, which the pinned go builds and runs.
+      - name: go version of tooling/toolchains.lock
+        id: go
+        run: echo "version=$(awk '/^  go:$/{found=1} found && /version:/{gsub(/"/, "", $2); print $2; exit}' tooling/toolchains.lock)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ steps.go.outputs.version }}
+          cache: false
       # The unit tests carry the coverage (AGENTS.md); the acceptance tests run in the test matrix.
       - name: Test with coverage
         run: dotnet test Polypiler.Tests/Polypiler.Tests.csproj -c Debug --filter "TestCategory!=Sweep&TestCategory!=Exhaustive" --collect:"XPlat Code Coverage" --results-directory ./coverage
@@ -744,6 +752,53 @@ jobs:
         if: always()
         with:
           name: layer-pyperl-${{ matrix.os }}
+          path: artifacts/
+          if-no-files-found: warn
+
+  # The Go layer (tooling/ci/layers/go.yaml): the pinned go, which builds, vets and runs the modules
+  # the Go backend writes and the helper of the Go frontend, offline (GOPROXY=off, GOTOOLCHAIN=local).
+  layer-go:
+    name: layer-go ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      POLYPILER_REQUIRE_TOOLCHAINS: '1'
+      DOTNET_NOLOGO: 'true'
+      TOOLING: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build --
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: ci env
+        id: env
+        run: |
+          dotnet build Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -warnaserror
+          $TOOLING ci env --layer go | tee -a "$GITHUB_OUTPUT"
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ steps.env.outputs.go }}
+          cache: false
+      - name: toolchains
+        run: $TOOLING toolchains probe --only go
+      - name: build
+        run: dotnet build Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release -warnaserror
+      - name: test
+        run: dotnet test Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release --no-build --filter "TestCategory=Layer.go" --logger "trx;LogFileName=layer-go.trx" --logger "console;verbosity=detailed" --results-directory artifacts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: layer-go-${{ matrix.os }}
           path: artifacts/
           if-no-files-found: warn
 

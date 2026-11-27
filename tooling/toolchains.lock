@@ -65,13 +65,17 @@
 #   jdk, kotlinc, typescript, python, perl
 #               the versions the JVM, JS/TS and Python/Perl layers (tooling/ci/layers) install and
 #               probe in their jobs.
+#   go          the release the Go layer (tooling/ci/layers/go.yaml) installs with actions/setup-go,
+#               the one of the development host (1.27.4). Its language version 1.27 is the newest
+#               profile of the Go backend; the profiles from go1.22 on have per-iteration loop
+#               variables and range over an integer.
 #   libreoffice the oracle of classic Visual Basic (docs/adr/2600-classic-visual-basic-oracle.md):
 #               LibreOffice Basic in its VBA compatibility mode, run headless. The Visual Basic layer
 #               (tooling/ci/visualbasic/install.sh) unpacks the Debian packages of this release from the
 #               archive of The Document Foundation; the development host's Arch package is the same
 #               release. Used only as an external process; none of its code enters the repository.
 #   others      no test runs them yet. Installed on the development host: read from the tool
-#               (ruby, go). Not installed: the latest stable upstream release (aflplusplus, fbc,
+#               (ruby). Not installed: the latest stable upstream release (aflplusplus, fbc,
 #               fpc, ilspy-cli, ilverify, nasm, php, qemu-user, wabt, wasmtime, z3).
 schema: 1
 toolchains:
@@ -168,7 +172,7 @@ toolchains:
     source: https://gmplib.org/
     oracleOnly: true
   go:
-    version: "1.27.2"
+    version: "1.27.4"
     probe: [go, version]
     versionPattern: '^go version go(?<version>\d+\.\d+(\.\d+)?)'
     platforms: [linux, windows, macos]
