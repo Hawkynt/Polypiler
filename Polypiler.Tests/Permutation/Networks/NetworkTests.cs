@@ -25,10 +25,16 @@ public sealed class NetworkTests {
     var module = new IrModule("Network", [function], []);
     Assert.That(IrVerifier.Verify(module), Is.Empty, "the lowered IR must be legal");
     var argument = network.InputWidth switch {
-      8 => (object)(byte)input, 16 => (ushort)input, 32 => (uint)input, _ => (ulong)input
+      8 => (object)(byte)input,
+      16 => (ushort)input,
+      32 => (uint)input,
+      _ => (ulong)input
     };
     return IrInterpreter.Call(module, "F", [argument]) switch {
-      byte value => value, ushort value => value, uint value => value, ulong value => value,
+      byte value => value,
+      ushort value => value,
+      uint value => value,
+      ulong value => value,
       var other => throw new InvalidOperationException($"unexpected {other}")
     };
   }
@@ -301,14 +307,16 @@ public sealed class NetworkTests {
     var network = NetworkText.Parse(text.Replace("; ", "\n", StringComparison.Ordinal), 8, 8);
     Assert.That(NetworkText.Print(network), Is.EqualTo(text));
     Assert.That(network.Steps[4].Immediate, Is.EqualTo(new NetworkImmediate.Bytes([1, 2])));
-    Assert.That(new NetworkImmediate.Bytes([1, 2]).GetHashCode(), Is.EqualTo(new NetworkImmediate.Bytes([1, 2]).GetHashCode()));
+    var bytes = new NetworkImmediate.Bytes([1, 2]);
+    Assert.That(bytes.GetHashCode(), Is.EqualTo(new NetworkImmediate.Bytes([1, 2]).GetHashCode()));
     var table = new NetworkImmediate.Table([1, 0x1F]);
     Assert.That((table.ToString(), table.Equals(new NetworkImmediate.Table([1, 0x1F])), table.GetHashCode() == new NetworkImmediate.Table([1, 0x1F]).GetHashCode()), Is.EqualTo(("{0x01,0x1F}", true, true)));
     Assert.That(NetworkText.Step(new NetworkStep(NetworkOp.Const, 8, [], new NetworkImmediate.Bits(0))), Is.EqualTo("Const(0x00, 8)"));
     Assert.That(NetworkText.Hex(0x1FF), Is.EqualTo("0x1FF"));
     Assert.That(network.WidthOf(1), Is.EqualTo(16));
     Assert.Throws<ArgumentOutOfRangeException>(() => network.WidthOf(7));
-    Assert.That(new NetworkStep(NetworkOp.Not, 8, [0], null), Is.EqualTo(new NetworkStep(NetworkOp.Not, 8, [0], null)));
+    var not = new NetworkStep(NetworkOp.Not, 8, [0], null);
+    Assert.That(not, Is.EqualTo(new NetworkStep(NetworkOp.Not, 8, [0], null)));
     Assert.That(new NetworkStep(NetworkOp.Not, 8, [0], null).Equals(null), Is.False);
   }
 

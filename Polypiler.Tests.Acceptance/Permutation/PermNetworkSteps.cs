@@ -73,11 +73,11 @@ public sealed class PermNetworkSteps {
   [Then("^the lowered steps are \"(.*)\" in that order$")]
   public void Lowered(string operations) {
     var lowered = NetworkLowering.Lower(this.Network, new IrLocalRef(new IrLocal("x", IrType.U8)));
-    var names = lowered.Statements.Cast<IrDeclare>().Select((declare, index) => Main(declare.Initializer!, this.Network.Steps[index].Width).ToString());
+    var names = lowered.Statements.Cast<IrDeclare>().Select((declare, index) => Operation(declare.Initializer!, this.Network.Steps[index].Width).ToString());
     Assert.That(string.Join(", ", names), Is.EqualTo(operations));
   }
 
-  private static IrBinaryOp Main(IrExpr expression, int width) => expression is IrBinary { Op: IrBinaryOp.And, Left: IrBinary inner, Right: IrConst mask } && mask.Value == (1L << width) - 1
+  private static IrBinaryOp Operation(IrExpr expression, int width) => expression is IrBinary { Op: IrBinaryOp.And, Left: IrBinary inner, Right: IrConst mask } && mask.Value == (1L << width) - 1
     ? inner.Op : ((IrBinary)expression).Op;
 
   /// <summary>The network's cost under a cost table of the repository.</summary>
