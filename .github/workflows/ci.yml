@@ -606,7 +606,7 @@ jobs:
         run: |
           echo "Server = $ARCHIVE/\$repo/os/\$arch" > /etc/pacman.d/mirrorlist
           pacman -Syyuu --noconfirm
-          pacman -S --noconfirm --needed git icu gcc clang compiler-rt bubblewrap
+          pacman -S --noconfirm --needed git icu gcc clang llvm lld python compiler-rt bubblewrap
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
@@ -629,10 +629,14 @@ jobs:
         run: |
           if [ "$RUNNER_OS" = macOS ]; then
             name="LLVM-$VERSION-macOS-ARM64"
-            members=("$name/bin/clang" "$name/bin/clang-${VERSION%%.*}" "$name/lib/clang")
+            members=("$name/bin/clang" "$name/bin/clang-${VERSION%%.*}" "$name/lib/clang"
+              "$name/bin/ld.lld" "$name/bin/lld" "$name/bin/llvm-config" "$name/bin/llvm-readelf"
+              "$name/bin/llvm-readobj" "$name/bin/llvm-objdump" "$name/bin/llvm-objcopy" "$name/bin/llvm-strip")
           else
             name="clang+llvm-$VERSION-x86_64-pc-windows-msvc"
-            members=("$name/bin/clang.exe" "$name/bin/lld-link.exe" "$name/lib/clang")
+            members=("$name/bin/clang.exe" "$name/bin/lld-link.exe" "$name/lib/clang"
+              "$name/bin/ld.lld.exe" "$name/bin/lld.exe" "$name/bin/llvm-config.exe" "$name/bin/llvm-readelf.exe"
+              "$name/bin/llvm-readobj.exe" "$name/bin/llvm-objdump.exe" "$name/bin/llvm-objcopy.exe" "$name/bin/llvm-strip.exe")
           fi
           temp=$(cd "$RUNNER_TEMP" && pwd)
           command -v zstd || brew install zstd
@@ -649,7 +653,7 @@ jobs:
       - name: toolchains
         run: |
           mkdir -p artifacts/layer-native
-          $TOOLING toolchains probe --only dotnet-sdk,gcc,clang,bubblewrap | tee artifacts/layer-native/probe.txt
+          $TOOLING toolchains probe --only dotnet-sdk,gcc,clang,llvm,lld,bubblewrap | tee artifacts/layer-native/probe.txt
       - name: build
         run: dotnet build Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release -warnaserror
       - name: test

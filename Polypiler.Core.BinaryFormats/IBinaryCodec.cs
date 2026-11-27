@@ -19,4 +19,11 @@ public interface IBinaryCodec {
   /// <returns>The image, or why there is none.</returns>
   BinaryResult<BinaryImage> Read(ReadOnlyMemory<byte> file, BinaryManifest? manifest);
 
+  /// <summary>Reads a file with its name available for diagnostics.</summary>
+  /// <param name="file">The whole file.</param>
+  /// <param name="manifest">The manifest, or <see langword="null"/>.</param>
+  /// <param name="fileName">The file name as passed by the caller.</param>
+  /// <returns>The image, or why there is none.</returns>
+  BinaryResult<BinaryImage> Read(ReadOnlyMemory<byte> file, BinaryManifest? manifest, string fileName) => this.Read(file, manifest);
+
 }

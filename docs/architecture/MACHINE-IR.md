@@ -139,13 +139,21 @@ implements `IEmulatorOracle`.
 
 A binary enters as a `BinaryImage` (sections with permissions, symbols, relocations, imports, entries,
 ISA, mode, byte order) that implements `IMachineCodeSource`. An `IBinaryCodec` reads it, chosen by
-`BinaryCodecRegistry` from the manifest's `container` or the file's magic; known but unsupported magics
-(ELF, PE, Mach-O) are named in `PLY4059`, and a blob is raw only when the manifest says so. The manifest
+`BinaryCodecRegistry` from the manifest's `container` or the file's magic; a known magic without a reader
+is named in `PLY4059`, and a blob is raw only when the manifest says so. The manifest
 (`spec/schemas/binary-manifest.schema.json`) states the hash, machine, mode, load address, entries with
 their ABI and buffer parameters, code and data ranges, relocations, imports, stack, memory map and
 projection. `ImageBuilder.Load` checks the SHA-256 (`PLY4056`), merges container and manifest and refuses
 contradictions (`PLY4057`) and entries outside executable code (`PLY4058`). Relocations are recorded,
 never applied. The `--manifest` option of `recover` follows with the `recover` command.
+
+`ElfCodec` reads ELF32 and ELF64 relocatable objects, executables and shared images on i386, x86-64,
+ARM and AArch64. It validates file extents before parsing the tables with LibObjectFile. The image
+preserves section contents and allocation flags, function symbols and the entry address. A file
+without section headers uses its load segments. ARM mapping symbols set the mode of each code
+range and identify embedded data. Undefined dynamic symbols with supported GOT relocations
+produce import slots. Thread-local sections keep their stored layout and do not occupy the ordinary
+process address map. Unsupported relocation records remain in the image with `PLY4063`.
 
 ## Ports
 
