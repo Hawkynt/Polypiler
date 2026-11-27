@@ -33,7 +33,7 @@ flowchart LR
 | `Profiles/` | `KotlinProfile` (`kotlin2.0` … `kotlin2.4`, the versions the pinned `kotlinc` 2.4.21 takes as `-language-version`, each on the JVM targets 1.8, 11, 17 and 21) and `KotlinCapabilities`, the table of what each profile has |
 | `Writing/` | the writer: module, names, functions, constants and globals; types; statements and control flow; expressions, literals and conversions; intrinsics |
 | `Passes/` | `KotlinTargetPasses`: O0501, which removes a helper nothing names |
-| `KotlinHelpers.cs` | the semantics of the IR Kotlin's operators state otherwise, each a private function built as a tree ([backends](BACKENDS.md#helpers-that-stay-with-a-backend)) |
+| `Helpers/KotlinHelpers.cs` | the semantics of the IR Kotlin's operators state otherwise, each a private function built as a tree ([backends](BACKENDS.md#helpers-that-stay-with-a-backend)) |
 | `KotlinLibrary.cs` | which integer operations legalization binds from the IR's helper library |
 
 ## Profiles

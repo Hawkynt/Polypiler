@@ -23,7 +23,7 @@ namespace Polypiler.Core.Backends.Kotlin;
 public static class KotlinHelpers {
 
   /// <summary>The source file of the helpers, which the header names as their origin.</summary>
-  public const string Folder = "Polypiler.Core.Backends.Kotlin/KotlinHelpers.cs";
+  public const string Folder = "Polypiler.Core.Backends.Kotlin/Helpers/KotlinHelpers.cs";
 
   private const string Overflow = "integer overflow";
 
