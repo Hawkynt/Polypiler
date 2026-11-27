@@ -1,13 +1,14 @@
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace Polypiler.Core.BinaryFormats;
 
 /// <summary>
-/// The codecs a load may use, found by ID or by the magic at the start of a file. A file whose magic
-/// no codec claims is never taken for a raw blob: a known container without a codec is named
-/// (<c>PLY4059</c>), and an unknown one is refused the same way.
+/// The codecs a load may use, found by ID or by executable signatures. The DOS family uses the
+/// secondary signature in the supplied bytes to select its codec by ID. A known family with no
+/// registered codec is named in <c>PLY4059</c>. Raw blobs require an explicit container choice.
 /// </summary>
 public sealed class BinaryCodecRegistry {
 
@@ -20,8 +21,7 @@ public sealed class BinaryCodecRegistry {
     ([0xCE, 0xFA, 0xED, 0xFE], "Mach-O"),
     ([0xFE, 0xED, 0xFA, 0xCF], "Mach-O"),
     ([0xFE, 0xED, 0xFA, 0xCE], "Mach-O"),
-    ([0xCA, 0xFE, 0xBA, 0xBE], "Mach-O universal"),
-    ([0x4D, 0x5A], "PE")
+    ([0xCA, 0xFE, 0xBA, 0xBE], "Mach-O universal")
   ];
 
   private readonly List<IBinaryCodec> _codecs = [];
@@ -55,10 +55,13 @@ public sealed class BinaryCodecRegistry {
     return this._codecs.FirstOrDefault(codec => codec.Id == id);
   }
 
-  /// <summary>The first codec that claims a file by its magic, or <see langword="null"/>.</summary>
-  /// <param name="prefix">The first bytes of the file.</param>
-  /// <returns>The codec.</returns>
+  /// <summary>Selects the identified DOS-family codec or the first ordinary codec that claims the prefix.</summary>
+  /// <param name="prefix">The file bytes. DOS-family detection uses the secondary signature at its declared offset.</param>
+  /// <returns>The codec, or <see langword="null"/> when no codec is available.</returns>
   public IBinaryCodec? Detect(ReadOnlySpan<byte> prefix) {
+    if (IdentifyDosFamily(prefix) is { } family)
+      return this.Find(family.ToLowerInvariant());
+
     var head = prefix[..Math.Min(prefix.Length, PrefixLength)];
     foreach (var codec in this._codecs)
       if (codec.CanRead(head))
@@ -67,13 +70,45 @@ public sealed class BinaryCodecRegistry {
   }
 
   /// <summary>The name of a container format known by its magic, whether or not a codec reads it, or <see langword="null"/>.</summary>
-  /// <param name="prefix">The first bytes of the file.</param>
-  /// <returns>The format, for example <c>Mach-O</c>.</returns>
+  /// <param name="prefix">The file bytes or a prefix containing the format's signature.</param>
+  /// <returns>The format, for example <c>Mach-O</c> or <c>MZ</c>.</returns>
   public static string? KnownFormat(ReadOnlySpan<byte> prefix) {
+    if (IdentifyDosFamily(prefix) is { } family)
+      return family;
+
     foreach (var (magic, format) in _knownMagics)
       if (prefix.StartsWith(magic))
         return format;
     return null;
+  }
+
+  private static string? IdentifyDosFamily(ReadOnlySpan<byte> file) {
+    if (file.StartsWith("ZM"u8))
+      return "MZ";
+    if (!file.StartsWith("MZ"u8))
+      return null;
+
+    const int secondaryHeaderPointer = 0x3c;
+    const int extendedHeaderLength = secondaryHeaderPointer + sizeof(uint);
+    if (file.Length < extendedHeaderLength)
+      return "MZ";
+
+    var offset = BinaryPrimitives.ReadUInt32LittleEndian(file[secondaryHeaderPointer..]);
+    if (offset < extendedHeaderLength || offset > (uint)(file.Length - sizeof(ushort)))
+      return "MZ";
+
+    var header = file[(int)offset..];
+    if (header.StartsWith("PE\0\0"u8))
+      return "PE";
+
+    const int relocationTablePointer = 0x18;
+    if (BinaryPrimitives.ReadUInt16LittleEndian(file[relocationTablePointer..]) != 0x40)
+      return "MZ";
+    if (header.StartsWith("NE"u8))
+      return "NE";
+    if (header.StartsWith("LE"u8))
+      return "LE";
+    return header.StartsWith("LX"u8) ? "LX" : "MZ";
   }
 
   /// <summary>The codec for a file: the one the manifest names, else the one its magic selects.</summary>
