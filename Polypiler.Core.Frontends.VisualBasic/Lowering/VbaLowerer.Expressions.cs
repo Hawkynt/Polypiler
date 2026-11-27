@@ -441,6 +441,10 @@ internal sealed partial class VbaLowerer {
       return value.Type.Kind == VbaKind.Double && target.Kind == VbaKind.Single ? this.Checked(converted) : converted;
     }
 
+    // A String takes an integer or a Boolean as CStr writes it.
+    if (target.Kind == VbaKind.String && (value.Type.IsInteger || value.Type.Kind == VbaKind.Boolean))
+      return this.Text(value, line);
+
     if (target.IsArray && value.Type.IsArray && target.Element == value.Type.Element)
       return value.Expr;
 

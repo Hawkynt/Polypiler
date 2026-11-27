@@ -732,7 +732,11 @@ internal static class VbaParser {
       return new VbaCallStatement(callee, arguments, line);
     }
 
-    private static string Canonical(string word) => char.ToUpperInvariant(word[0]) + word[1..].ToLowerInvariant();
+    private static readonly string[] _spellings = ["GoSub", "GoTo", "Mod", "And", "Or", "Xor", "Eqv", "Imp", "Like", "Is", "Do", "For", "Function", "Sub", "Property", "Return", "Stop", "Set", "With", "Nothing", "Empty", "Null", "New"];
+
+    /// <summary>A keyword as the Visual Basic editor spells it.</summary>
+    private static string Canonical(string word) => _spellings.FirstOrDefault(spelling => string.Equals(spelling, word, StringComparison.OrdinalIgnoreCase))
+      ?? char.ToUpperInvariant(word[0]) + word[1..].ToLowerInvariant();
 
     private string LabelName() {
       if (this.Current.Kind == Kind.Integer)

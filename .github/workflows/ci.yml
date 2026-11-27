@@ -812,6 +812,52 @@ jobs:
           path: artifacts/
           if-no-files-found: ignore
 
+  # The classic Visual Basic layer (tooling/ci/layers/visualbasic.yaml, ADR 2600): LibreOffice at the
+  # version tooling/toolchains.lock pins, installed from the Debian packages of the Document Foundation's
+  # archive, runs the VB6 / VBA modules of the frontend and the backend headless as the oracle.
+  layer-visualbasic:
+    name: layer-visualbasic ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      POLYPILER_REQUIRE_TOOLCHAINS: '1'
+      DOTNET_NOLOGO: 'true'
+      TOOLING: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build --
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: ci env
+        id: env
+        run: |
+          dotnet build Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -warnaserror
+          $TOOLING ci env --layer visualbasic | tee -a "$GITHUB_OUTPUT"
+      - name: install libreoffice
+        run: tooling/ci/visualbasic/install.sh "${{ steps.env.outputs.libreoffice }}"
+      - name: toolchains
+        run: $TOOLING toolchains probe --only libreoffice
+      - name: build
+        run: dotnet build Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release -warnaserror
+      - name: test
+        run: dotnet test Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release --no-build --filter "TestCategory=Layer.visualbasic" --logger "trx;LogFileName=layer-visualbasic.trx" --logger "console;verbosity=detailed" --results-directory artifacts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: layer-visualbasic-${{ matrix.os }}
+          path: artifacts/
+          if-no-files-found: warn
+
   # PRD §13.1 and §23.3: what Polypiler writes must come out byte for byte the same when it is generated
   # again. `rebuild check` runs each command twice through the sandboxed runner, each run in a fresh
   # directory, and compares the trees with tooling/ci/rebuild-ignore.yaml applied (PLY0036 otherwise):

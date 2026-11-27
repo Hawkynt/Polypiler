@@ -189,7 +189,8 @@ public static partial class VisualBasicEmitter {
         case IrTypeKind.U16 or IrTypeKind.I32:
           return LongLiteral((int)value);
         case IrTypeKind.U32:
-          return LongLiteral((int)(uint)value);
+          // The bits of a value from 2^31 on are a negative Long, written as its eight hexadecimal digits.
+          return (int)(uint)value < 0 ? new VbInteger((int)(uint)value) { Hex = true } : new VbInteger((int)(uint)value);
         case IrTypeKind.I64 or IrTypeKind.U64:
           this.TypeName(type);
           return value < 0 && (type.Kind == IrTypeKind.U64 || value == long.MinValue) ? new VbInteger(value) { Suffix = "^", Hex = true } : new VbInteger(value) { Suffix = "^" };
@@ -203,8 +204,8 @@ public static partial class VisualBasicEmitter {
       }
     }
 
-    /// <summary>A <c>Long</c>: in decimal, the smallest value and every negative bit pattern of a <c>u32</c> as eight hexadecimal digits.</summary>
-    private static VbInteger LongLiteral(int value) => value == int.MinValue || value < -1_000_000_000 ? new VbInteger(value) { Hex = true } : new VbInteger(value);
+    /// <summary>A <c>Long</c>: in decimal, the smallest value, which has no decimal literal, as <c>&amp;H80000000</c>.</summary>
+    private static VbInteger LongLiteral(int value) => value == int.MinValue ? new VbInteger(value) { Hex = true } : new VbInteger(value);
 
     /// <summary>A literal that is an operand of <c>Long</c> arithmetic, given the type character <c>&amp;</c> so that two literals are not multiplied as <c>Integer</c>.</summary>
     private static VbExpression AsLong(VbExpression operand) => operand is VbInteger { Hex: false, Suffix: "" } integer ? integer with { Suffix = "&" } : operand;
@@ -288,7 +289,7 @@ public static partial class VisualBasicEmitter {
       if (type.IsFloat)
         return this.FloatBinary(binary.Op, type, left, right);
       if (type.IsWord)
-        return this.WordBinary(binary.Op, type, left, right);
+        return this.WordBinary(binary.Op, type, left, right, type.Kind == IrTypeKind.I32 && Small(binary.Left) && Small(binary.Right));
       if (type.IsLong)
         return this.LongBinary(binary.Op, type, left, right);
 
@@ -324,7 +325,14 @@ public static partial class VisualBasicEmitter {
       return type == IrType.F32 ? new VbCall(new VbName("CSng"), [result]) : result;
     }
 
-    private VbExpression WordBinary(IrBinaryOp op, IrType type, VbExpression left, VbExpression right) {
+    /// <summary>Whether an <c>i32</c> operand holds a value of at most 16 bits, so that a sum, difference or product of two cannot leave 32 bits.</summary>
+    private static bool Small(IrExpr operand) => operand switch {
+      IrConvert { Operand.Type.Kind: IrTypeKind.I8 or IrTypeKind.U8 or IrTypeKind.I16 or IrTypeKind.U16 } => true,
+      IrConst { Value: >= -32768 and <= 32768 } => true,
+      _ => false
+    };
+
+    private VbExpression WordBinary(IrBinaryOp op, IrType type, VbExpression left, VbExpression right, bool small = false) {
       var unsigned = type.Kind == IrTypeKind.U32;
       if (Comparison(op) is { } comparison) {
         if (!unsigned || op is IrBinaryOp.Equal or IrBinaryOp.NotEqual)
@@ -337,6 +345,8 @@ public static partial class VisualBasicEmitter {
 
       VbExpression Native(string symbol) => new VbCall(new VbName("CLng"), [new VbBinary(AsLong(left), symbol, AsLong(right))]);
       return op switch {
+        // Two values of 16 bits sum, subtract and multiply within 32 bits: Visual Basic's own operator cannot overflow.
+        IrBinaryOp.Add or IrBinaryOp.Subtract or IrBinaryOp.Multiply when small => Native(op == IrBinaryOp.Add ? "+" : op == IrBinaryOp.Subtract ? "-" : "*"),
         IrBinaryOp.Add => this.CallHelper(VisualBasicHelpers.Add32, left, right),
         IrBinaryOp.Subtract => this.CallHelper(VisualBasicHelpers.Subtract32, left, right),
         IrBinaryOp.Multiply => this.CallHelper(VisualBasicHelpers.Multiply32, left, right),

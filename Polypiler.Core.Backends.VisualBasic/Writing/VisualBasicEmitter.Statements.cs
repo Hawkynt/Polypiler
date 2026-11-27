@@ -43,6 +43,7 @@ public static partial class VisualBasicEmitter {
       this._frames.Clear();
       this._handlers.Clear();
       this._caught.Clear();
+      this._byReference.Clear();
       this._out = [];
     }
 
@@ -67,7 +68,7 @@ public static partial class VisualBasicEmitter {
 
     /// <summary>A label of the procedure no other name has.</summary>
     private string Label(string stem) {
-      var name = VisualBasicNaming.Free(stem + "1", this._localNames.Contains);
+      var name = VisualBasicNaming.Free(stem, this._localNames.Contains);
       this._localNames.Add(name);
       return name;
     }
@@ -126,8 +127,10 @@ public static partial class VisualBasicEmitter {
           this._localNames.Add(given);
           parameters.Add(new(false, given, type));
           copies.Add(new(name, type));
-          prologue.Add(new VbAssign(new VbName(name), new VbName(given)));
+          prologue.AddRange(this.CopyFields(new VbName(name), new VbName(given), (IrStructType)parameter.Type.Declaration!));
         } else {
+          if (parameter.Type.IsStruct)
+            this._byReference.Add(parameter);
           parameters.Add(new(!parameter.Type.IsStruct, name, type));
         }
       }
@@ -281,8 +284,30 @@ public static partial class VisualBasicEmitter {
       if (local.Type.IsArray && value is IrLocalRef or IrGlobalRef or IrFieldLoad or IrConstRef or IrConditional)
         this.Refuse(InexpressibleDescriptor, $"the array '{local.Name}' would be a copy of the array assigned to it in Visual Basic, where the IR shares it");
 
+      // A record parameter is passed by reference, and LibreOffice Basic makes a variable assigned from
+      // one an alias of it; field by field the copy is a copy in every dialect and in the oracle.
+      if (value is IrLocalRef { Local: var source } && this._byReference.Contains(source) && local.Type.Declaration is IrStructType record) {
+        this._out.AddRange(this.CopyFields(new VbName(this.LocalName(local)), new VbName(this.LocalName(source)), record));
+        return;
+      }
+
       var written = this.Expression(value);
       this._out.Add(new VbAssign(new VbName(this.LocalName(local)), written));
+    }
+
+    /// <summary>The record parameters of the procedure, passed by reference.</summary>
+    private readonly HashSet<IrLocal> _byReference = [];
+
+    /// <summary>The assignment of every field of a record, a record field by its own fields.</summary>
+    private IEnumerable<VbStatement> CopyFields(VbExpression target, VbExpression source, IrStructType record) {
+      foreach (var field in record.Fields) {
+        var name = this._fieldNames[field];
+        if (field.Type.Declaration is IrStructType inner)
+          foreach (var statement in this.CopyFields(new VbMember(target, name), new VbMember(source, name), inner))
+            yield return statement;
+        else
+          yield return new VbAssign(new VbMember(target, name), new VbMember(source, name));
+      }
     }
 
     /// <summary>A variable, a field of one or an element of one: what an assignment can write; <see langword="null"/> for anything else.</summary>

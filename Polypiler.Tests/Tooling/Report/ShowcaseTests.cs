@@ -73,7 +73,7 @@ public sealed class ShowcaseTests {
     var byBackend = targets.ToDictionary(t => t.Backend, t => t.Profiles, StringComparer.Ordinal);
     Assert.That(byBackend.Keys, Does.Contain("csharp").And.Contain("javascript").And.Contain("rust")
       .And.Contain("python").And.Contain("perl").And.Contain("cpp")
-      .And.Contain("vbscript").And.Contain("batch").And.Contain("msil").And.Contain("jvm"));
+      .And.Contain("vbscript").And.Contain("visualbasic").And.Contain("batch").And.Contain("msil").And.Contain("jvm"));
     Assert.That(byBackend["javascript"], Does.Contain("es5").And.Contain("es2022"));
     Assert.That(byBackend["csharp"], Does.Contain("net2.0").And.Contain("net10.0"));
     Assert.That(byBackend["batch"], Does.Contain("cmd").And.Contain("dos622"));
@@ -248,6 +248,7 @@ public sealed class ShowcaseTests {
     Assert.That(ShowcaseGenerator.RenderOutputFile("a.pm", Encoding.UTF8.GetBytes("1")).Fence, Is.EqualTo("perl"));
     Assert.That(ShowcaseGenerator.RenderOutputFile("a.hpp", Encoding.UTF8.GetBytes("1")).Fence, Is.EqualTo("cpp"));
     Assert.That(ShowcaseGenerator.RenderOutputFile("a.vbs", Encoding.UTF8.GetBytes("1")).Fence, Is.EqualTo("vbscript"));
+    Assert.That(ShowcaseGenerator.RenderOutputFile("a.bas", Encoding.UTF8.GetBytes("1")).Fence, Is.EqualTo("vb"));
     Assert.That(ShowcaseGenerator.RenderOutputFile("a.bat", Encoding.UTF8.GetBytes("1")).Fence, Is.EqualTo("bat"));
     Assert.That(ShowcaseGenerator.RenderOutputFile("a.xyz", Encoding.UTF8.GetBytes("1")).Fence, Is.EqualTo("text"));
 

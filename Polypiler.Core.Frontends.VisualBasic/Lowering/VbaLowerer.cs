@@ -250,6 +250,8 @@ internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnosti
       throw this.Unsupported(variable.Line, $"Variant (the variable '{variable.Name}' has no type)");
 
     var element = this.TypeOf(variable.Type, field);
+    if (field && element.Kind == VbaKind.String)
+      throw this.Unsupported(variable.Line, $"the String field '{variable.Name}' of a Type, which the IR's records do not hold");
     if (!variable.IsArray)
       return element;
     if (field)
@@ -258,6 +260,8 @@ internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnosti
       throw this.Unsupported(variable.Line, "a multidimensional array");
     if (element.IsArray)
       throw this.Unsupported(variable.Line, "an array of arrays");
+    if (element.Kind == VbaKind.String)
+      throw this.Unsupported(variable.Line, $"the array of Strings '{variable.Name}', which the IR cannot create without its elements");
 
     // A dynamic array takes the lower bound its first ReDim gives it.
     var first = variable.IsDynamicArray ? ReDims(resized ?? [], variable.Name).FirstOrDefault() : null;

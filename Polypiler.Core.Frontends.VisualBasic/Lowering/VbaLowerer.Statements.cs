@@ -72,7 +72,11 @@ internal sealed partial class VbaLowerer {
         var local = new IrLocal(variable.Name, type.Ir);
         this._locals[variable.Name] = new(local, type, false);
         this._declared.Add(local);
-        prologue.Add(new IrDeclare(local, this.Initial(variable, type)));
+        this._pending = [];
+        var initial = this.Initial(variable, type);
+        prologue.AddRange(this._pending);
+        this._pending = [];
+        prologue.Add(new IrDeclare(local, initial));
       }
     }
 
@@ -93,25 +97,11 @@ internal sealed partial class VbaLowerer {
     var length = upper - type.LowerBound + 1;
     if (length < 0)
       throw this.Unresolved(variable.Line, $"the array '{variable.Name}' has an upper bound below its lower bound");
-    return this.NewArray(type, new IrConst(IrType.I32, length));
+    return NewArray(type, new IrConst(IrType.I32, length));
   }
 
-  /// <summary>A new array of a length; one of strings or records has the defaults of its element type, not the IR's.</summary>
-  private IrExpr NewArray(VbaType type, IrExpr length) {
-    var element = type.Element!;
-    if (element.Kind is not (VbaKind.String or VbaKind.Record))
-      return new IrNewArray(type.Ir, length);
-
-    // A new array of strings or records is filled with the element's default, which needs a loop.
-    var array = this.Temporary(type.Ir, new IrNewArray(type.Ir, length));
-    var index = this.Temporary(IrType.I32, new IrConst(IrType.I32, 0));
-    var condition = new IrBinary(IrBinaryOp.Less, new IrLocalRef(index), new IrArrayLength(new IrLocalRef(array)));
-    this._pending.Add(new IrWhile(condition, new IrBlock([
-      new IrStore(new IrLocalRef(array), new IrLocalRef(index), this.Default(element, 0)),
-      new IrAssign(index, new IrBinary(IrBinaryOp.Add, new IrLocalRef(index), new IrConst(IrType.I32, 1)))
-    ])));
-    return new IrLocalRef(array);
-  }
+  /// <summary>A new array of a length: its elements are the defaults of their type, zero and False, as Visual Basic's are.</summary>
+  private static IrExpr NewArray(VbaType type, IrExpr length) => new IrNewArray(type.Ir, length);
 
   /// <summary>Every <c>Dim</c> of a body, also those in its blocks.</summary>
   private static IEnumerable<VbaDim> Dims(IReadOnlyList<VbaStatement> body) {
@@ -362,6 +352,8 @@ internal sealed partial class VbaLowerer {
   private IrStmt Assign(VbaExpr target, VbaExpr value, int line) {
     switch (target) {
       case VbaName name when this.Lookup(name.Name) is { } variable:
+        if (variable.Global is not null && variable.Type.IsArray)
+          throw this.Unsupported(line, $"the assignment of the module-level array '{name.Name}', which the IR's globals cannot replace");
         var assigned = this.Expression(value);
         var coerced = this.Coerce(this.Copied(assigned), variable.Type, line);
         return variable.Local is { } local ? new IrAssign(local, coerced) : new IrGlobalAssign(variable.Global!, coerced);
@@ -598,15 +590,18 @@ internal sealed partial class VbaLowerer {
     if (item.Target is not VbaName name || this.Lookup(name.Name) is not { Type.IsArray: true } variable)
       throw this.Unresolved(line, "ReDim of something that is no array variable");
 
+    if (variable.Global is not null)
+      throw this.Unsupported(line, $"ReDim of the module-level array '{name.Name}', which the IR's globals cannot replace");
+
     var lower = item.Bounds[0].Lower is { } given ? this.ConstantValue(given, line) : this._optionBase;
     if (lower != variable.Type.LowerBound)
       throw this.Unsupported(line, $"ReDim with the lower bound {lower} of an array declared with {variable.Type.LowerBound}");
 
     var upper = this.Coerce(this.Expression(item.Bounds[0].Upper), VbaType.Long, line);
     var length = this.Temporary(IrType.I32, new IrBinary(IrBinaryOp.AddChecked, new IrBinary(IrBinaryOp.SubtractChecked, upper, new IrConst(IrType.I32, lower)), new IrConst(IrType.I32, 1)));
-    // A length below zero is "Subscript out of range" (error 9), not the IR's overflow.
-    this._pending.Add(new IrIf(new IrBinary(IrBinaryOp.Less, new IrLocalRef(length), new IrConst(IrType.I32, 0)), new IrBlock([Throw(IrExceptionClass.IndexOutOfRangeException)]), null));
-    var created = this.NewArray(variable.Type, new IrLocalRef(length));
+    // An upper bound below the lower one is "Subscript out of range" (error 9): ReDim makes no empty array.
+    this._pending.Add(new IrIf(new IrBinary(IrBinaryOp.Less, new IrLocalRef(length), new IrConst(IrType.I32, 1)), new IrBlock([Throw(IrExceptionClass.IndexOutOfRangeException)]), null));
+    var created = NewArray(variable.Type, new IrLocalRef(length));
     IrExpr Old() => variable.Local is { } local ? new IrLocalRef(local) : new IrGlobalRef(variable.Global!);
     var statements = new List<IrStmt>();
     if (preserve) {
@@ -625,6 +620,8 @@ internal sealed partial class VbaLowerer {
   private IrStmt Erase(VbaExpr target, int line) {
     if (target is not VbaName name || this.Lookup(name.Name) is not { Type.IsArray: true } variable)
       throw this.Unresolved(line, "Erase of something that is no array variable");
+    if (variable.Global is not null)
+      throw this.Unsupported(line, $"Erase of the module-level array '{name.Name}', which the IR's globals cannot replace");
 
     var empty = new IrNewArray(variable.Type.Ir, new IrConst(IrType.I32, 0));
     return variable.Local is { } local ? new IrAssign(local, empty) : new IrGlobalAssign(variable.Global!, empty);
