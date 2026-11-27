@@ -342,6 +342,12 @@ public static class LibraryLegalization {
           return new IrCoalesce(this.Expression(coalesce.Value), this.Expression(coalesce.Fallback));
         case IrIsNull test:
           return new IrIsNull(this.Expression(test.Value));
+        case IrVariantOf made:
+          return made with { Value = made.Value is null ? null : this.Expression(made.Value) };
+        case IrVariantTagOf tag:
+          return new IrVariantTagOf(this.Expression(tag.Value));
+        case IrVariantValue value:
+          return value with { Value = this.Expression(value.Value) };
         case IrBind bind:
           return bind with { Value = this.Expression(bind.Value) };
         case IrThrowExpression thrown:
