@@ -95,7 +95,7 @@ public sealed class HelperScenarioTests {
     section = section[..section.IndexOf("\n## ", 3, StringComparison.Ordinal)];
     var documented = Regex.Matches(section, @"^\| `(Polypiler\.Core\.Backends\.[^`]+\.cs)` \| ([^|]+) \|", RegexOptions.Multiline)
       .ToDictionary(match => match.Groups[1].Value, match => match.Groups[2].Value.Trim());
-    var files = new[] { "Polypiler.Core.Backends.CSharp", "Polypiler.Core.Backends.JavaScript", "Polypiler.Core.Backends.Python", "Polypiler.Core.Backends.Rust" }
+    var files = new[] { "Polypiler.Core.Backends.CSharp", "Polypiler.Core.Backends.JavaScript", "Polypiler.Core.Backends.Python", "Polypiler.Core.Backends.Rust", "Polypiler.Core.Backends.VisualBasic" }
       .SelectMany(project => Directory.GetFiles(Path.Combine(root, project, "Helpers"), "*.cs", SearchOption.AllDirectories))
       .Select(path => Path.GetRelativePath(root, path).Replace('\\', '/'))
       .Order(StringComparer.Ordinal)
