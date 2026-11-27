@@ -135,7 +135,8 @@ Canonical intrinsic names permit recognition and late target-specific decomposit
 Bind an interpreter output sink with `IrInterpreter.Instantiate(module, sink)`. The sink receives
 one text record per write, with an empty record for a null string. The target runtime determines the
 line ending and encoding. Initializers and nested calls use the same instance sink. Earlier records
-remain available if a later operation traps.
+remain available if a later operation traps. The C# backend emits the string overload of
+`System.Console.WriteLine` in every profile, so the host console controls line endings and encoding.
 
 An example IR fragment is illustrative, **not** a proposed parser grammar:
 
