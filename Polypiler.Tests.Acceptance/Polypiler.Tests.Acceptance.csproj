@@ -44,6 +44,7 @@
     <Compile Include="..\Polypiler.Tests\Backends\Support\*.cs" LinkBase="Backends\Support" />
     <Compile Include="..\Polypiler.Tests\Frontends\JavaScript\Support\*.cs" LinkBase="Frontends\JavaScript\Support" />
     <Compile Include="..\Polypiler.Tests\Frontends\Python\Support\*.cs" LinkBase="Frontends\Python\Support" />
+    <Compile Include="..\Polypiler.Tests\Frontends\Kotlin\Support\*.cs" LinkBase="Frontends\Kotlin\Support" />
     <Compile Include="..\Polypiler.Tests\Frontends\Rust\Support\*.cs" LinkBase="Frontends\Rust\Support" />
     <Compile Include="..\Polypiler.Tests\Float\Support\FloatVectors.cs" LinkBase="Float\Support" />
     <Compile Include="..\Polypiler.Tests\Recognize\Support\*.cs" LinkBase="Recognize\Support" />
@@ -67,6 +68,7 @@
     <ProjectReference Include="..\Polypiler.Core.Backends.Cpp\Polypiler.Core.Backends.Cpp.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Backends.CSharp\Polypiler.Core.Backends.CSharp.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Backends.Jvm\Polypiler.Core.Backends.Jvm.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Backends.Kotlin\Polypiler.Core.Backends.Kotlin.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Backends.Msil\Polypiler.Core.Backends.Msil.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Backends.Perl\Polypiler.Core.Backends.Perl.csproj" />
     <ProjectReference Include="..\Polypiler.Core.BinaryFormats\Polypiler.Core.BinaryFormats.csproj" />
@@ -75,6 +77,7 @@
     <ProjectReference Include="..\Polypiler.Core.Frontends.Cpp\Polypiler.Core.Frontends.Cpp.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Frontends.CSharp\Polypiler.Core.Frontends.CSharp.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Frontends.JavaScript\Polypiler.Core.Frontends.JavaScript.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Frontends.Kotlin\Polypiler.Core.Frontends.Kotlin.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Frontends.Jvm\Polypiler.Core.Frontends.Jvm.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Frontends.Msil\Polypiler.Core.Frontends.Msil.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Frontends.Perl\Polypiler.Core.Frontends.Perl.csproj" />

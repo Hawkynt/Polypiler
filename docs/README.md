@@ -54,6 +54,8 @@ Original chapter numbers and section links are retained. The pages here are a re
 - [Python backend](architecture/PYTHON-BACKEND.md) — profile-specific syntax, fixed-width numeric contracts, helpers and verification under CPython.
 - [Rust frontend](architecture/RUST-FRONTEND.md) — parsing, typing, borrowing, overflow modes and the supported crate subset.
 - [Rust backend](architecture/RUST-BACKEND.md) — Cargo output, editions/MSRV, value representation, traps and verification.
+- [Kotlin frontend](architecture/KOTLIN-FRONTEND.md) — Kotlin/JVM parsed by Polypiler's own parser, Kotlin's numeric semantics in the IR, the imported subset and its refusals.
+- [Kotlin backend](architecture/KOTLIN-BACKEND.md) — language versions and JVM targets, the lowering table, the helpers, refusals and verification under `kotlinc`.
 - [Benchmarks](benchmarks/README.md) — how to add a benchmark, run it, read its result and compare two result sets against the budgets.
 - [Audit of the PB-Compiler LLVM emitter](llvm/pb-emitter-audit.md) — what PB-Compiler's `--emit-llvm` writes at the pinned commit, what LLVM 23.1.3 accepts of it, and the gaps against PRD §26.3.
 - [Licence of emitted code](../LICENSE-OUTPUT.md) — the helpers and portable implementations a translation copies into its output are MIT, so a translated program keeps the licence of its source; the compiler stays LGPL-3.0-or-later.

@@ -1567,6 +1567,150 @@ codes:
     area: rust
     owner: "#468"
     surfaces: "the diagnostics of RustRunner.ExecuteAsync: a signature that does not fit the declaration or has no pairing, an unknown export, an answer that is no output image"
+  - code: PLY1600
+    severity: error
+    exit: InvalidSource
+    title: Kotlin syntax error
+    message: "Kotlin syntax error: <detail>"
+    rule: kotlin.frontend.syntax
+    area: kotlin
+    owner: "#424"
+    surfaces: "standard error of polypiler translate --from kotlin; stops import"
+  - code: PLY1601
+    severity: error
+    exit: UnsupportedConstruct
+    title: Kotlin number or operator outside the imported subset
+    message: "<the operator, conversion or literal and why>"
+    rule: kotlin.frontend.scalar
+    area: kotlin
+    owner: "#424"
+    surfaces: "standard error of polypiler translate --from kotlin; stops import"
+  - code: PLY1610
+    severity: error
+    exit: UnsupportedConstruct
+    title: Kotlin control construct outside the imported subset
+    message: "<the construct and why>"
+    rule: kotlin.frontend.control
+    area: kotlin
+    owner: "#421"
+    surfaces: "standard error of polypiler translate --from kotlin; stops import"
+  - code: PLY1620
+    severity: error
+    exit: UnsupportedConstruct
+    title: Kotlin array or string construct outside the imported subset
+    message: "<the construct and why>"
+    rule: kotlin.frontend.memory
+    area: kotlin
+    owner: "#423"
+    surfaces: "standard error of polypiler translate --from kotlin; stops import"
+  - code: PLY1630
+    severity: error
+    exit: UnsupportedConstruct
+    title: Kotlin function, call or name outside the imported subset or unresolved
+    message: "<the function or name and why>"
+    rule: kotlin.frontend.function
+    area: kotlin
+    owner: "#422"
+    surfaces: "standard error of polypiler translate --from kotlin; stops import"
+  - code: PLY1640
+    severity: error
+    exit: UnsupportedConstruct
+    title: Kotlin declared type outside the imported subset
+    message: "<the class, interface, object or nullable type>"
+    rule: kotlin.frontend.type
+    area: kotlin
+    owner: "#425"
+    surfaces: "standard error of polypiler translate --from kotlin; stops import"
+  - code: PLY1650
+    severity: error
+    exit: UnsupportedConstruct
+    title: type has no Kotlin representation
+    message: "type '<type>' has no Kotlin representation in profile '<profile>'"
+    rule: kotlin.backend.type
+    area: kotlin
+    owner: "#419"
+    surfaces: "standard error of polypiler translate --to kotlin; stops emission"
+  - code: PLY1651
+    severity: error
+    exit: UnsupportedConstruct
+    title: operation cannot be expressed in Kotlin
+    message: "'<operation>' cannot be expressed in Kotlin profile '<profile>'"
+    rule: kotlin.backend.operation
+    area: kotlin
+    owner: "#419"
+    surfaces: "standard error of polypiler translate --to kotlin; stops emission"
+  - code: PLY1658
+    severity: error
+    exit: UnsupportedConstruct
+    title: control construct has no Kotlin form
+    message: "<the statement or jump and why>"
+    rule: kotlin.backend.control
+    area: kotlin
+    owner: "#416"
+    surfaces: "standard error of polypiler translate --to kotlin; stops emission"
+  - code: PLY1666
+    severity: error
+    exit: UnsupportedConstruct
+    title: memory construct has no Kotlin form
+    message: "<the layout, view or pointer and why>"
+    rule: kotlin.backend.memory
+    area: kotlin
+    owner: "#418"
+    surfaces: "standard error of polypiler translate --to kotlin; stops emission"
+  - code: PLY1674
+    severity: error
+    exit: UnsupportedConstruct
+    title: Kotlin names of exports collide
+    message: "exports '<a>' and '<b>' both map to the Kotlin name '<name>'"
+    rule: kotlin.backend.names
+    area: kotlin
+    owner: "#417"
+    surfaces: "standard error of polypiler translate --to kotlin; stops emission"
+  - code: PLY1682
+    severity: error
+    exit: UnsupportedConstruct
+    title: declared type has no Kotlin form yet
+    message: "<the class, interface or struct and why>"
+    rule: kotlin.backend.types
+    area: kotlin
+    owner: "#420"
+    surfaces: "standard error of polypiler translate --to kotlin; stops emission"
+  - code: PLY1691
+    severity: error
+    exit: TargetBuildFailure
+    title: Kotlin toolchain rejected the input
+    message: "the Kotlin toolchain rejected the input: <the compiler's errors with file and line>"
+    rule: kotlin.runner.compile
+    area: kotlin
+    owner: "#426"
+    surfaces: "the diagnostics of KotlinRunner.Compile, after PLY0030"
+  - code: PLY1692
+    severity: error
+    exit: OracleFailure
+    title: Kotlin driver died
+    message: "the Kotlin driver died with exit code <code>: <standard error>"
+    rule: kotlin.runner.crash
+    area: kotlin
+    owner: "#426"
+    surfaces: "the diagnostics of KotlinRunner.ExecuteFunction for a driver that ended with an uncaught error"
+  - code: PLY1694
+    severity: error
+    exit: OracleFailure
+    title: Kotlin call outcome differs
+    message: "call <call>: expected <expected>, actual <actual>"
+    rule: kotlin.runner.mismatch
+    area: kotlin
+    owner: "#426"
+    surfaces: "the detail of a mismatching call of the Kotlin runner"
+  - code: PLY1695
+    severity: error
+    exit: OracleFailure
+    title: Kotlin driver protocol error
+    message: "<reason>"
+    rule: kotlin.runner.protocol
+    area: kotlin
+    owner: "#426"
+    surfaces: "the diagnostics of KotlinRunner: a signature that contradicts the declaration or has no Kotlin type, an export the unit does not define, an input image the driver cannot read"
   - code: PLY1700
     severity: error
     exit: InvalidSource
