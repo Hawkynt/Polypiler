@@ -1,0 +1,700 @@
+# Type errors of expressions, constants and calls, one per message of the Go frontend's checker; the
+# Go layer checks that go/types refuses each file too. Written for this repository.
+-- no_value_used --
+// want: invalid "(no value) used as value"
+package p
+
+func f() {}
+
+var x = f()
+-- builtin_not_called --
+// want: invalid "(built-in) must be called"
+package p
+
+var x = len
+-- type_not_expression --
+// want: invalid "(type) is not an expression"
+package p
+
+var x = int
+-- multiple_value --
+// want: invalid "multiple-value f() (value of type (int, int)) in single-value context"
+package p
+
+func f() (int, int) { return 1, 2 }
+
+var x = f() + 1
+-- indirect_nil --
+// want: invalid "invalid operation: cannot indirect nil"
+package p
+
+var x = *nil
+-- indirect_int --
+// want: invalid "invalid operation: cannot indirect"
+package p
+
+var v int
+var x = *v
+-- blank_as_value --
+// want: invalid "cannot use _ as value"
+package p
+
+var x = _
+-- undefined --
+// want: invalid "undefined: y"
+package p
+
+var x = y
+-- literal_overflow --
+// want: invalid "constant overflow"
+package p
+
+const c = 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- truncated --
+// want: invalid "truncated"
+package p
+
+var x int = 1.5
+-- overflows_conversion --
+// want: invalid "overflows"
+package p
+
+var x uint8 = 256
+-- cannot_use_string_as_int --
+// want: invalid "cannot use \"a\" (untyped string constant) as int value in variable declaration"
+package p
+
+var x int = "a"
+-- constant_overflow_typed --
+// want: invalid "overflows int8"
+package p
+
+const a int8 = 100
+const b = a * 2
+-- constant_overflow_untyped --
+// want: invalid "constant multiplication overflow"
+package p
+
+const a = 1 << 400
+const b = a * a
+-- negation_overflow --
+// want: invalid "overflows"
+package p
+
+const c = -uint(1)
+-- assign_type_to --
+// want: invalid "cannot use x (variable of type string) as int value in assignment"
+package p
+
+func F(x string) {
+	var y int
+	y = x
+	_ = y
+}
+-- untyped_nil_blank --
+// want: invalid "use of untyped nil in assignment"
+package p
+
+func F() { _ = nil }
+-- interface_not_implemented --
+// want: invalid "as I value in variable declaration"
+package p
+
+type I interface{ M() }
+type T struct{}
+
+var _ I = T{}
+-- untyped_to_interface_with_methods --
+// want: invalid "as I value in variable declaration"
+package p
+
+type I interface{ M() }
+
+var _ I = 1
+-- untyped_to_slice --
+// want: invalid "cannot use 1"
+package p
+
+var _ []int = 1
+-- untyped_bool_to_int --
+// want: invalid "cannot use"
+package p
+
+func F(a, b int) int { return a < b }
+-- address_of_value --
+// want: invalid "invalid operation: cannot take address of"
+package p
+
+var x = &f()
+
+func f() int { return 1 }
+-- tilde --
+// want: invalid "cannot use ~ outside of interface or type constraint"
+package p
+
+var x = ~1
+-- unary_minus_string --
+// want: invalid "operator - not defined on"
+package p
+
+var s string
+var x = -s
+-- unary_not_int --
+// want: invalid "operator ! not defined on"
+package p
+
+var x = !1
+-- unary_xor_float --
+// want: invalid "operator ^ not defined on"
+package p
+
+var x = ^1.5
+-- mismatched_types --
+// want: invalid "mismatched types int and int8"
+package p
+
+func F(a int, b int8) int { return a + b }
+-- plus_bool --
+// want: invalid "operator + not defined on"
+package p
+
+var x = true + false
+-- remainder_float --
+// want: invalid "operator % not defined on"
+package p
+
+var x = 1.5 % 2.0
+-- and_int --
+// want: invalid "operator && not defined on"
+package p
+
+var x = 1 && 2
+-- division_by_zero --
+// want: invalid "invalid operation: division by zero"
+package p
+
+func F(a int) int { return a / 0 }
+-- constant_division_by_zero --
+// want: invalid "invalid operation: division by zero"
+package p
+
+const c = 1.0 / 0
+-- comparison_mismatch --
+// want: invalid "mismatched types string and int"
+package p
+
+func F(a string, b int) bool { return a == b }
+-- nil_comparison --
+// want: invalid "operator == not defined on nil"
+package p
+
+var x = nil == nil
+-- nil_with_int --
+// want: invalid "mismatched types"
+package p
+
+func F(a int) bool { return a == nil }
+-- slice_comparison --
+// want: invalid "slice can only be compared to nil"
+package p
+
+func F(a, b []int) bool { return a == b }
+-- map_comparison_right --
+// want: invalid "map can only be compared to nil"
+package p
+
+func F(a any, b map[int]int) bool { return a == b }
+-- func_comparison --
+// want: invalid "func can only be compared to nil"
+package p
+
+func F(a, b func()) bool { return a == b }
+-- struct_comparison --
+// want: invalid "cannot be compared"
+package p
+
+type T struct{ s []int }
+
+func F(a, b T) bool { return a == b }
+-- ordered_bool --
+// want: invalid "operator < not defined on"
+package p
+
+var x = true < false
+-- ordered_right --
+// want: invalid "operator < not defined on"
+package p
+
+func F(a, b any) bool { return a < b }
+-- shift_float --
+// want: invalid "shifted operand"
+package p
+
+var x = 1.5 << 2
+-- shift_negative --
+// want: invalid "negative shift count"
+package p
+
+var x = 1 << -1
+-- shift_count_huge --
+// want: invalid "overflows"
+package p
+
+func F(a int) int { return a << 0x10000000000000000 }
+-- shift_count_fraction --
+// want: invalid "truncated"
+package p
+
+func F(a int) int { return a << 1.5 }
+-- shift_count_string --
+// want: invalid "shift count"
+package p
+
+func F(a int, s string) int { return a << s }
+-- shift_count_untyped_float_variable --
+// want: invalid "cannot"
+package p
+
+func F(a int, b float64) int { return a << (b < 1) }
+-- shift_invalid_count --
+// want: invalid "invalid shift count"
+package p
+
+const c = 1 << 2000
+-- shift_variable_float --
+// want: invalid "shifted operand"
+package p
+
+func F(a float64, n uint) float64 { return a << n }
+-- shift_untyped_to_float --
+// want: invalid "must be integer"
+package p
+
+func F(n uint) float64 {
+	var f float64 = 1 << n
+	return f
+}
+-- blank_selector --
+// want: invalid "cannot refer to blank field or method"
+package p
+
+type T struct{ _ int }
+
+var t T
+var x = t._
+-- pointer_method_on_value --
+// want: invalid "cannot call pointer method M on T"
+package p
+
+type T int
+
+func (*T) M() {}
+
+func f() T { return 0 }
+
+var _ = f().M
+-- undefined_field --
+// want: invalid "t.y undefined (type T has no field or method y)"
+package p
+
+type T struct{ x int }
+
+var t T
+var _ = t.y
+-- index_out_of_bounds --
+// want: invalid "index 5 out of bounds [0:3]"
+package p
+
+var a [3]int
+var x = a[5]
+-- index_not_integer --
+// want: invalid "truncated"
+package p
+
+var s []int
+var x = s[1.5]
+-- index_string_variable --
+// want: invalid "must be integer"
+package p
+
+var s []int
+var k string
+var x = s[k]
+-- index_negative --
+// want: invalid "must not be negative"
+package p
+
+var s []int
+var x = s[-1]
+-- index_overflow --
+// want: invalid "overflows int"
+package p
+
+var s []int
+var x = s[1 << 70]
+-- index_of_int --
+// want: invalid "cannot index"
+package p
+
+var i int
+var x = i[0]
+-- slice_string_three --
+// want: invalid "3-index slice of string"
+package p
+
+var s string
+var x = s[1:2:3]
+-- slice_array_value --
+// want: invalid "(value not addressable)"
+package p
+
+func f() [3]int { return [3]int{} }
+
+var x = f()[1:]
+-- slice_int --
+// want: invalid "cannot slice"
+package p
+
+var i int
+var x = i[1:]
+-- slice_inverted --
+// want: invalid "invalid slice indices: 1 < 2"
+package p
+
+var s []int
+var x = s[2:1]
+-- composite_without_type --
+// want: invalid "missing type in composite literal"
+package p
+
+type T struct{ a []int }
+
+var x = T{a: {1}}
+-- map_literal_missing_key --
+// want: invalid "missing key in map literal"
+package p
+
+var m = map[int]int{1}
+-- map_literal_duplicate --
+// want: invalid "duplicate key 1 in map literal"
+package p
+
+var m = map[int]int{1: 1, 1: 2}
+-- composite_of_int --
+// want: invalid "invalid composite literal type int"
+package p
+
+var x = int{}
+-- composite_element_of_int --
+// want: invalid "invalid composite literal element type int"
+package p
+
+var x = []int{{}}
+-- struct_mixture --
+// want: invalid "mixture of field:value and value elements in struct literal"
+package p
+
+type T struct{ a, b int }
+
+var x = T{a: 1, 2}
+-- struct_mixture_positional --
+// want: invalid "mixture of field:value and value elements in struct literal"
+package p
+
+type T struct{ a, b int }
+
+var x = T{1, b: 2}
+-- struct_field_name_invalid --
+// want: invalid "invalid field name"
+package p
+
+type T struct{ a int }
+
+var x = T{1 + 1: 2}
+-- struct_unknown_field --
+// want: invalid "unknown field c in struct literal of type T"
+package p
+
+type T struct{ a int }
+
+var x = T{c: 1}
+-- struct_duplicate_field --
+// want: invalid "duplicate field name a in struct literal"
+package p
+
+type T struct{ a int }
+
+var x = T{a: 1, a: 2}
+-- struct_too_many --
+// want: invalid "too many values in struct literal of type T"
+package p
+
+type T struct{ a int }
+
+var x = T{1, 2}
+-- struct_too_few --
+// want: invalid "too few values in struct literal of type T"
+package p
+
+type T struct{ a, b int }
+
+var x = T{1}
+-- array_literal_index_variable --
+// want: invalid "must be integer constant"
+package p
+
+var i = 1
+var x = []int{i: 1}
+-- array_literal_out_of_bounds --
+// want: invalid "index 2 is out of bounds"
+package p
+
+var x = [2]int{1, 2, 3}
+-- array_literal_duplicate --
+// want: invalid "duplicate index 0 in array or slice literal"
+package p
+
+var x = []int{0: 1, 0: 2}
+-- call_no_value_function --
+// want: invalid "(no value) used as value"
+package p
+
+func f() func() { return nil }
+func g() {}
+
+var x = g()()
+-- call_non_function --
+// want: invalid "cannot call non-function"
+package p
+
+var i int
+var x = i()
+-- spread_non_variadic --
+// want: invalid "cannot use ... in call to non-variadic f"
+package p
+
+func f(a []int) {}
+
+func F(s []int) { f(s...) }
+-- spread_count --
+// want: invalid "not enough arguments in call to f"
+package p
+
+func f(a int, b ...int) {}
+
+func F(s []int) { f(s...) }
+-- not_enough_arguments --
+// want: invalid "not enough arguments in call to f"
+package p
+
+func f(a, b int) {}
+
+func F() { f(1) }
+-- too_many_arguments --
+// want: invalid "too many arguments in call to f"
+package p
+
+func f(a int) {}
+
+func F() { f(1, 2) }
+-- conversion_missing_argument --
+// want: invalid "missing argument in conversion to int"
+package p
+
+var x = int()
+-- conversion_too_many --
+// want: invalid "too many arguments in conversion to int"
+package p
+
+var x = int(1, 2)
+-- conversion_spread --
+// want: invalid "invalid use of ... in conversion to []int"
+package p
+
+var s []int
+var x = []int(s...)
+-- conversion_constant_overflow --
+// want: invalid "constant 300 overflows uint8"
+package p
+
+var x = uint8(300)
+-- conversion_impossible --
+// want: invalid "cannot convert"
+package p
+
+var s string
+var x = int(s)
+-- conversion_constant_string_to_int --
+// want: invalid "cannot convert"
+package p
+
+var x = int("1")
+-- builtin_spread --
+// want: invalid "invalid use of ... with built-in len"
+package p
+
+var s []int
+var x = len(s...)
+-- len_arguments --
+// want: invalid "not enough arguments for len() (expected 1, found 0)"
+package p
+
+var x = len()
+-- len_of_int --
+// want: invalid "for built-in len"
+package p
+
+var x = len(1)
+-- cap_of_map --
+// want: invalid "for built-in cap"
+package p
+
+var m map[int]int
+var x = cap(m)
+-- append_nothing --
+// want: invalid "not enough arguments for append()"
+package p
+
+var x = append()
+-- append_nil --
+// want: invalid "first argument to append must be a typed slice; found nil"
+package p
+
+var x = append(nil, 1)
+-- append_int --
+// want: invalid "is not a slice"
+package p
+
+var i int
+var x = append(i, 1)
+-- append_spread_three --
+// want: invalid "arguments for append"
+package p
+
+var s []int
+var x = append(s, 1, s...)
+-- clear_arguments --
+// want: invalid "not enough arguments for clear()"
+package p
+
+func F() { clear() }
+-- clear_int --
+// want: invalid "cannot be cleared"
+package p
+
+func F(i int) { clear(i) }
+-- copy_arguments --
+// want: invalid "not enough arguments for copy"
+package p
+
+func F(s []int) { copy(s) }
+-- copy_to_int --
+// want: invalid "copy expects slice arguments"
+package p
+
+func F(i int, s []int) { copy(i, s) }
+-- copy_from_int --
+// want: invalid "copy expects slice arguments"
+package p
+
+func F(i int, s []int) { copy(s, i) }
+-- copy_element_types --
+// want: invalid "have different element types"
+package p
+
+func F(a []int, b []string) { copy(a, b) }
+-- delete_arguments --
+// want: invalid "not enough arguments for delete"
+package p
+
+func F(m map[int]int) { delete(m) }
+-- delete_not_map --
+// want: invalid "is not a map"
+package p
+
+func F(s []int) { delete(s, 1) }
+-- new_arguments --
+// want: invalid "not enough arguments for new()"
+package p
+
+var x = new()
+-- panic_arguments --
+// want: invalid "not enough arguments for panic()"
+package p
+
+func F() { panic() }
+-- recover_arguments --
+// want: invalid "too many arguments for recover(1)"
+package p
+
+func F() { recover(1) }
+-- make_nothing --
+// want: invalid "not enough arguments for make()"
+package p
+
+var x = make()
+-- make_int --
+// want: invalid "cannot make int; type must be slice, map, or channel"
+package p
+
+var x = make(int)
+-- make_slice_without_length --
+// want: invalid "expects 2 or 3 arguments; found 1"
+package p
+
+var x = make([]int)
+-- make_swapped --
+// want: invalid "length and capacity swapped"
+package p
+
+var x = make([]int, 3, 2)
+-- min_nothing --
+// want: invalid "not enough arguments for min() (expected 1, found 0)"
+package p
+
+var x = min()
+-- min_unordered --
+// want: invalid "cannot be ordered"
+package p
+
+var x = min(true)
+-- min_mismatched --
+// want: invalid "mismatched types"
+package p
+
+func F(a int, b int8) int { return min(a, b) }
+-- print_nil --
+// want: invalid "use of untyped nil"
+package p
+
+func F() { println(nil) }
+-- not_used --
+// want: invalid "is not used"
+package p
+
+func F(x int) { x }
+-- builtin_value_not_used --
+// want: invalid "is not used"
+package p
+
+func F(s []int) { len(s) }
+-- statement_builtin_name --
+// want: invalid "must be called"
+package p
+
+func F() { len }
+-- statement_type --
+// want: invalid "is not an expression"
+package p
+
+func F() { int }
+-- defer_conversion --
+// want: invalid "defer requires function call, not conversion"
+package p
+
+func F() { defer int(1) }
+-- go_discards --
+// want: invalid "go discards result of"
+package p
+
+func F(s []int) { go len(s) }

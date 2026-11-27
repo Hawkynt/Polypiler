@@ -1,0 +1,212 @@
+# Conversions, assignability and the untyped values in their contexts, valid and invalid, for the
+# Go frontend's checker; the Go layer checks that go/types decides each file alike. Written for this
+# repository.
+-- conversions_and_contexts --
+// want: valid
+// const fromCode string "A"
+package p
+
+import _ "math"
+
+type Tagged struct {
+	A int `json:"a"`
+}
+
+type Plain struct{ A int }
+
+type Ints []int
+
+func pair() (int, int) { return 1, 2 }
+
+func add(a, b int) int { return a + b }
+
+const fromCode = string(rune(65))
+
+var a, b = pair()
+
+func More(p *Plain, s string, i int, arr *[4]int) {
+	_ = Tagged(Plain{1})
+	_ = (*Tagged)(p)
+	_ = float64(i) + float64(int8(i))
+	_ = []byte(s)
+	_ = []rune(s)
+	var plain []int = Ints(nil)
+	_ = plain
+	_ = add(pair())
+	_ = make(map[int]int, 4)
+	_ = "abc"[1]
+	_ = "abc"[1:]
+	_ = arr[1:]
+	for i, v := range arr {
+		_, _ = i, v
+	}
+	var x int64 = (1 << i)
+	var y int64 = -(1 << i)
+	_, _ = x, y
+	var v any = 1
+	switch v {
+	case 1, "a":
+	}
+	_ = a + b
+}
+
+type Small interface{ Area() float64 }
+
+type Big interface {
+	Area() float64
+	Name() string
+}
+
+func Narrow(b Big) Small { return b }
+
+type T int
+
+func (T) _() {}
+
+func Labels() int {
+	for {
+	L:
+		for {
+			break L
+		}
+	}
+}
+
+func Trailing(x int) {
+	switch x {
+	case 1:
+		x++
+		;
+	}
+}
+-- paren_type --
+// want: valid
+package p
+
+var x (int)
+-- indirect_void --
+// want: invalid "(no value) used as value"
+package p
+
+func g() {}
+
+var x = *g()
+-- indirect_builtin --
+// want: invalid "(built-in) must be called"
+package p
+
+var x = *len
+-- new_of_value_before_go126 --
+// want: invalid "1 is not a type"
+//go:build go1.25
+
+package p
+
+var x = new(1)
+-- float_from_string --
+// want: invalid "as float64 value"
+package p
+
+var f float64 = "a"
+-- int_from_nil --
+// want: invalid "cannot use nil as int value"
+package p
+
+var i int = nil
+-- struct_from_int --
+// want: invalid "cannot use 1"
+package p
+
+var s struct{} = 1
+-- switch_error_on_int --
+// want: invalid "cannot convert 1"
+package p
+
+func F(e error) {
+	switch e {
+	case 1:
+	}
+}
+-- addition_overflow --
+// want: invalid "constant addition overflow"
+package p
+
+const a = 1 << 511
+const b = a + a
+-- subtraction_overflow --
+// want: invalid "constant subtraction overflow"
+package p
+
+const a = -1 << 511
+const b = a - (1 << 511)
+-- string_compared_with_int --
+// want: invalid "mismatched types"
+package p
+
+func F(s string) bool { return s == 1 }
+-- nil_compared_with_struct --
+// want: invalid "mismatched types"
+package p
+
+type S struct{}
+
+func F(s S) bool { return nil == s }
+-- struct_compared_with_nil --
+// want: invalid "mismatched types"
+package p
+
+type S struct{}
+
+func F(s S) bool { return s == nil }
+-- map_index_not_used --
+// want: invalid "m[1] (map index expression of type int) is not used"
+package p
+
+func F(m map[int]int) { m[1] }
+-- missing_return_empty --
+// want: invalid "missing return"
+package p
+
+func F() int {
+	;
+}
+-- missing_return_assignment --
+// want: invalid "missing return"
+package p
+
+func F() (x int) {
+	x = 1
+}
+-- missing_return_if_break --
+// want: invalid "missing return"
+package p
+
+func F(b bool) int {
+	for {
+		if b {
+			break
+		}
+	}
+}
+-- map_key_of_itself --
+// want: invalid "invalid map key type K"
+package p
+
+type K struct{ m map[K]int }
+-- instantiation_list --
+// want: unsupported "generic instantiation"
+package p
+
+var x = int[int, string]
+-- function_instantiation --
+// want: unsupported "generic function instantiation"
+package p
+
+func F() {}
+
+var x = F[int]
+-- type_instantiation --
+// want: unsupported "generic type instantiation"
+package p
+
+var x int[string]

@@ -1,0 +1,322 @@
+# Type errors of declarations, one per message of the Go frontend's checker; the Go layer checks
+# that go/types refuses each file too. Written for this repository.
+-- blank_package --
+// want: invalid "invalid package name _"
+package _
+-- import_clash --
+// want: invalid "math already declared through import of package math"
+package p
+
+import "math"
+
+var _ = math.Pi
+
+func math() {}
+-- unused_import --
+// want: invalid "\"math\" imported and not used"
+package p
+
+import "math"
+-- unused_import_renamed --
+// want: invalid "imported as m and not used"
+package p
+
+import m "math"
+-- init_variable --
+// want: invalid "cannot declare init - must be func"
+package p
+
+var init = 1
+-- main_constant --
+// want: invalid "cannot declare main - must be func"
+package main
+
+const main = 1
+-- redeclared --
+// want: invalid "x redeclared in this block"
+package p
+
+var x int
+var x int
+-- redeclared_import --
+// want: invalid "math redeclared in this block"
+package p
+
+import "math"
+import "math"
+
+var _ = math.Pi
+-- invalid_import_path --
+// want: invalid "invalid import path"
+package p
+
+import "a b"
+-- const_missing_init --
+// want: invalid "missing init expr for const declaration"
+package p
+
+const a, b = 1
+-- const_extra_init --
+// want: invalid "extra init expr"
+package p
+
+const a = 1, 2
+-- const_typed_without_value --
+// want: invalid "missing init expr for const declaration"
+package p
+
+const (
+	a int = 1
+	b int
+)
+-- var_mismatch --
+// want: invalid "assignment mismatch: 2 variables but 3 values"
+package p
+
+var a, b = 1, 2, 3
+-- init_arguments --
+// want: invalid "func init must have no arguments and no return values"
+package p
+
+func init(x int) {}
+-- main_results --
+// want: invalid "func main must have no arguments and no return values"
+package main
+
+func main() int { return 0 }
+-- recursive_constant --
+// want: invalid "invalid recursive declaration of a"
+package p
+
+const a = b
+const b = a
+-- variable_refers_to_itself --
+// want: invalid "initialization cycle: x refers to itself"
+package p
+
+var x int = x
+-- initialization_cycle --
+// want: invalid "initialization cycle for x"
+package p
+
+var x = f()
+
+func f() int { return x }
+-- blank_as_type --
+// want: invalid "cannot use _ as value or type"
+package p
+
+var x _
+-- undefined_type --
+// want: invalid "undefined: T"
+package p
+
+var x T
+-- not_a_type --
+// want: invalid "y is not a type"
+package p
+
+var y int
+var x y
+-- selector_not_a_type --
+// want: invalid "math.Pi is not a type"
+package p
+
+import "math"
+
+var x math.Pi
+-- selector_of_no_package_not_a_type --
+// want: invalid "x.y is not a type"
+package p
+
+var x struct{ y int }
+var z x.y
+-- open_array_outside_literal --
+// want: invalid "invalid use of [...] array (outside a composite literal)"
+package p
+
+var x [...]int
+-- map_key_slice --
+// want: invalid "invalid map key type []int"
+package p
+
+var m map[[]int]int
+-- map_key_later_type --
+// want: invalid "invalid map key type K"
+package p
+
+var m map[K]int
+
+type K []int
+-- expression_not_a_type --
+// want: invalid "1 + 2 is not a type"
+package p
+
+var x = make(1 + 2)
+-- not_exported --
+// want: invalid "name pi not exported by package math"
+package p
+
+import "math"
+
+var x = math.pi
+-- undefined_member --
+// want: invalid "undefined: math.Tau"
+package p
+
+import "math"
+
+var x = math.Tau
+-- array_length_undefined --
+// want: invalid "undefined array length n or missing type constraint"
+package p
+
+var a [n]int
+-- array_length_variable --
+// want: invalid "invalid array length n"
+package p
+
+var n = 3
+var a [n]int
+-- array_length_not_constant --
+// want: invalid "must be constant"
+package p
+
+func f() int { return 1 }
+
+var a [f()]int
+-- array_length_negative --
+// want: invalid "invalid array length"
+package p
+
+var a [-1]int
+-- array_length_float --
+// want: invalid "must be integer"
+package p
+
+var a [1.5]int
+-- duplicate_field --
+// want: invalid "a redeclared"
+package p
+
+type T struct {
+	a int
+	a string
+}
+-- blank_method --
+// want: invalid "methods must have a unique non-blank name"
+package p
+
+type I interface{ _() }
+-- duplicate_method --
+// want: invalid "duplicate method M"
+package p
+
+type I interface {
+	M()
+	M()
+}
+-- duplicate_parameter --
+// want: invalid "a redeclared in this block"
+package p
+
+var f func(a int) (a int)
+-- recursive_type --
+// want: invalid "invalid recursive type T"
+package p
+
+type T T
+-- recursive_struct --
+// want: invalid "invalid recursive type T"
+package p
+
+type T struct{ t T }
+-- recursive_array --
+// want: invalid "invalid recursive type A"
+package p
+
+type A [2]B
+type B struct{ a A }
+-- method_no_receiver --
+// want: invalid "method has no receiver"
+package p
+
+func () M() {}
+-- method_two_receivers --
+// want: invalid "method has multiple receivers"
+package p
+
+type T int
+
+func (a, b T) M() {}
+-- method_on_int --
+// want: invalid "cannot define new methods on non-local type int"
+package p
+
+func (int) M() {}
+-- method_on_slice --
+// want: invalid "invalid receiver type []int"
+package p
+
+func ([]int) M() {}
+-- method_on_pointer_type --
+// want: invalid "invalid receiver type P (pointer or interface type)"
+package p
+
+type P *int
+
+func (P) M() {}
+-- method_redeclared --
+// want: invalid "method T.M already declared"
+package p
+
+type T int
+
+func (T) M() {}
+func (*T) M() {}
+-- field_and_method --
+// want: invalid "field and method with the same name x"
+package p
+
+type T struct{ x int }
+
+func (T) x() {}
+-- method_on_error --
+// want: invalid "cannot define new methods on non-local type error"
+package p
+
+func (error) M() {}
+-- invalid_constant_type --
+// want: invalid "invalid constant type []int"
+package p
+
+const c []int = nil
+-- constant_not_constant --
+// want: invalid "is not constant"
+package p
+
+var v = 1
+
+const c = v
+-- iota_outside --
+// want: invalid "cannot use iota outside constant declaration"
+package p
+
+var x = iota
+-- package_without_selector --
+// want: invalid "use of package math without selector"
+package p
+
+import "math"
+
+var x = math
+-- range_int_before_go122 --
+// want: invalid "requires go1.22 or later"
+//go:build go1.21
+
+package p
+
+func F() {
+	for range 3 {
+	}
+}
