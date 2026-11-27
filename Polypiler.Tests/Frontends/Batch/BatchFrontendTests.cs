@@ -184,6 +184,72 @@ public sealed class BatchFrontendTests {
   }
 
   [Test]
+  public void LiftsDelayedExpansionBlocksAndConditionalAssignments() {
+    const string script = """
+      @echo off
+      setlocal EnableExtensions EnableDelayedExpansion
+      set "_EX_ACTIVE=0"
+      set "x=1" & set "y=!x!"
+      if not "!x!"=="2" goto :step1
+      exit /b 1
+      :step1
+      if not "!x!"=="!y!" (set "z=9") else (set "z=4")
+      if "!z!"=="4" (set "z=10") else (set "z=0")
+      set /a "a=(z+2), b=a*3"
+      if !b! EQU 36 (set "r=40") else (set "r=0")
+      call :sub 2
+      if "!_EX_ACTIVE!"=="1" (>&2 echo PLY_BATCH_TRAP=0 & exit /b 97)
+      exit /b !r!
+      :sub
+      setlocal EnableExtensions EnableDelayedExpansion
+      if "%~1"=="" goto :eof
+      set "d=%1"
+      set /a "r=r+d"
+      (
+
+        endlocal
+        set "r=%r%"
+      )
+      goto :eof
+      """;
+    var lifted = BatchFrontend.Import("delayed.bat", script);
+    Assert.That(lifted.Diagnostics, Is.Empty);
+    Assert.That(IrInterpreter.Call(lifted.Module!, "Run", []), Is.EqualTo(42));
+
+    // Trap exit path taken + empty arg jumping to :eof
+    const string trapScript = """
+      setlocal EnableExtensions EnableDelayedExpansion
+      set "_EX_ACTIVE=1"
+      if "!_EX_ACTIVE!"=="1" (>&2 echo PLY_BATCH_TRAP=1 & exit /b 97)
+      exit /b 0
+      """;
+    var trapped = BatchFrontend.Import("trap.bat", trapScript);
+    Assert.That(trapped.Diagnostics, Is.Empty);
+    Assert.That(IrInterpreter.Call(trapped.Module!, "Run", []), Is.EqualTo(97));
+
+    const string emptyArgEof = """
+      setlocal EnableExtensions EnableDelayedExpansion
+      if "%~1"=="" goto :eof
+      exit /b 99
+      """;
+    var eofLifted = BatchFrontend.Import("emptyarg.bat", emptyArgEof);
+    Assert.That(eofLifted.Diagnostics, Is.Empty);
+    Assert.That(IrInterpreter.Call(eofLifted.Module!, "Run", []), Is.EqualTo(0));
+
+    // Negative cases: unclosed/empty paren block, malformed set /a, mismatched else targets
+    Assert.That(BatchFrontend.Import("unclosed.bat", _prologue + "(\n  set \"x=1\"").Diagnostics,
+      Has.One.Matches<Diagnostic>(d => d.Code == "PLY2800"));
+    Assert.That(BatchFrontend.Import("emptyblk.bat", _prologue + "(\n)\nexit /b 0").Diagnostics,
+      Has.One.Matches<Diagnostic>(d => d.Code == "PLY2800"));
+    Assert.That(BatchFrontend.Import("badarith.bat", _prologue + "set /a \"x\"\nexit /b 0").Diagnostics,
+      Has.One.Matches<Diagnostic>(d => d.Code == "PLY2800"));
+    Assert.That(BatchFrontend.Import("mismatch1.bat", _prologue + "set \"a=1\"\nif %a% EQU 1 (set \"x=1\") else (set \"y=0\")\nexit /b 0").Diagnostics,
+      Has.One.Matches<Diagnostic>(d => d.Code == "PLY2802"));
+    Assert.That(BatchFrontend.Import("mismatch2.bat", _prologue + "set \"a=1\"\nif \"%a%\"==\"1\" (set \"x=1\") else (set \"y=0\")\nexit /b 0").Diagnostics,
+      Has.One.Matches<Diagnostic>(d => d.Code == "PLY2802"));
+  }
+
+  [Test]
   public void RoundTripsCSharpCountdownThroughBatchAndBack() {
     var fixture = Path.Combine(PrototypeFixture.RepositoryRoot, "tests", "fixtures", "batch", "countdown.cs");
     var csharpModule = CSharpFrontend.Import(fixture, File.ReadAllText(fixture)).Module!;

@@ -15,24 +15,36 @@ public static partial class BatchFrontend {
   private const string _name = "[A-Za-z_][A-Za-z_0-9]*";
   private const string _decimal = "(?:0|-?[1-9][0-9]*)";
   private const string _positional = "%[1-9]";
-  private const string _operand = "(?:%" + _name + "%|" + _positional + "|" + _decimal + ")";
+  private const string _operand = "(?:%" + _name + "%|!" + _name + "!|" + _positional + "|" + _decimal + ")";
   private const RegexOptions _options = RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.NonBacktracking;
 
   [GeneratedRegex("^:(" + _name + ")$", _options)]
   private static partial Regex Label();
-  [GeneratedRegex("^goto[ \t]+(:eof|" + _name + ")$", _options)]
+  [GeneratedRegex("^goto[ \t]+(:eof|:?" + _name + ")$", _options)]
   private static partial Regex Goto();
-  [GeneratedRegex("^if[ \t]+(" + _operand + ")[ \t]+(EQU|NEQ|LSS|LEQ|GTR|GEQ)[ \t]+(" + _operand + ")[ \t]+goto[ \t]+(:eof|" + _name + ")$", _options)]
+  [GeneratedRegex("^if[ \t]+(" + _operand + ")[ \t]+(EQU|NEQ|LSS|LEQ|GTR|GEQ)[ \t]+(" + _operand + ")[ \t]+goto[ \t]+(:eof|:?" + _name + ")$", _options)]
   private static partial Regex IfGoto();
+  [GeneratedRegex("^if[ \t]+(not[ \t]+)?\"(" + _operand + ")\"==\"(" + _operand + ")\"[ \t]+goto[ \t]+(:eof|:?" + _name + ")$", _options)]
+  private static partial Regex IfEqGoto();
+  [GeneratedRegex("^if[ \t]+\"%~1\"==\"\"[ \t]+goto[ \t]+(:eof|:?" + _name + ")$", _options)]
+  private static partial Regex IfEmptyArgGoto();
+  [GeneratedRegex("^if[ \t]+(" + _operand + ")[ \t]+(EQU|NEQ|LSS|LEQ|GTR|GEQ)[ \t]+(" + _operand + ")[ \t]+\\(set[ \t]+\"(" + _name + ")=(" + _operand + ")\"\\)[ \t]+else[ \t]+\\(set[ \t]+\"(" + _name + ")=(" + _operand + ")\"\\)$", _options)]
+  private static partial Regex IfCmpSetElse();
+  [GeneratedRegex("^if[ \t]+(not[ \t]+)?\"(" + _operand + ")\"==\"(" + _operand + ")\"[ \t]+\\(set[ \t]+\"(" + _name + ")=(" + _operand + ")\"\\)[ \t]+else[ \t]+\\(set[ \t]+\"(" + _name + ")=(" + _operand + ")\"\\)$", _options)]
+  private static partial Regex IfEqSetElse();
+  [GeneratedRegex("^if[ \t]+\"(" + _operand + ")\"==\"(" + _operand + ")\"[ \t]+\\(>&2[ \t]+echo[ \t]+[^&]*&[ \t]+exit[ \t]+/b[ \t]+(" + _operand + ")\\)$", _options)]
+  private static partial Regex IfTrapExit();
   [GeneratedRegex("^exit[ \t]+/b(?:[ \t]+(" + _operand + "))?$", _options)]
   private static partial Regex ExitStatus();
-  [GeneratedRegex("^set[ \t]+/a[ \t]+\"(" + _name + ")=([^\"]*)\"$", _options)]
+  [GeneratedRegex("^set[ \t]+/a[ \t]+\"([^\"]*)\"$", _options)]
   private static partial Regex SetArithmetic();
+  [GeneratedRegex("^(" + _name + ")=(.+)$", _options)]
+  private static partial Regex SetArithAssignment();
   [GeneratedRegex("^set[ \t]+(?:\"(" + _name + ")=(" + _operand + ")\"|(" + _name + ")=(" + _operand + "))$", _options)]
   private static partial Regex SetValue();
-  [GeneratedRegex("^setlocal(?:[ \t]+EnableExtensions[ \t]+DisableDelayedExpansion)?$", _options)]
+  [GeneratedRegex("^setlocal(?:[ \t]+EnableExtensions[ \t]+(?:Disable|Enable)DelayedExpansion)?$", _options)]
   private static partial Regex SetLocalCmd();
-  [GeneratedRegex("^setlocal[ \t]+EnableExtensions[ \t]+DisableDelayedExpansion$", _options)]
+  [GeneratedRegex("^setlocal[ \t]+EnableExtensions[ \t]+(Disable|Enable)DelayedExpansion$", _options)]
   private static partial Regex Preamble();
   [GeneratedRegex("^endlocal$", _options)]
   private static partial Regex EndLocalCmd();
@@ -50,6 +62,7 @@ public static partial class BatchFrontend {
     private readonly Dictionary<string, int> _emittedLabels = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<Instruction> _instructions = [];
     private readonly IrLocal _errorLevel = new("batchErrorLevel", IrType.I32);
+    private bool _delayedExpansion;
     private int _nextTemp;
     private int _nextSyntheticLabel;
     private int _nextFrameId;
@@ -57,16 +70,25 @@ public static partial class BatchFrontend {
     private sealed record SourceLine(int Number, string Text, int PhysicalLength);
     private sealed record ChainStage(string Separator, string Command);
 
+    private static void CheckAscii(string raw, int lineNumber) {
+      CheckCommandLength(raw.Length, lineNumber, "physical line");
+      foreach (var character in raw)
+        if (character is not '\t' && character is < ' ' or > '~')
+          throw new Refusal(lineNumber, "only ASCII text with LF or CRLF is accepted", malformed: true);
+    }
+
+    private static string NormalizeTarget(string raw)
+      => raw.StartsWith(':') && !raw.Equals(":eof", StringComparison.OrdinalIgnoreCase) ? raw[1..] : raw;
+
     public Script Read() {
       var lineNumber = 0;
       var sawEcho = false;
       var localized = false;
-      foreach (var raw in source.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n')) {
+      var rawLines = source.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+      for (var rawIndex = 0; rawIndex < rawLines.Length; ++rawIndex) {
+        var raw = rawLines[rawIndex];
         ++lineNumber;
-        CheckCommandLength(raw.Length, lineNumber, "physical line");
-        foreach (var character in raw)
-          if (character is not '\t' && character is < ' ' or > '~')
-            throw new Refusal(lineNumber, "only ASCII text with LF or CRLF is accepted", malformed: true);
+        CheckAscii(raw, lineNumber);
         var line = raw.Trim();
         if (line.Length == 0)
           continue;
@@ -75,9 +97,35 @@ public static partial class BatchFrontend {
             sawEcho = true;
             continue;
           }
-          if (!Preamble().IsMatch(line))
+          var preamble = Preamble().Match(line);
+          if (!preamble.Success)
             throw new Refusal(lineNumber, "missing SETLOCAL EnableExtensions DisableDelayedExpansion prologue", malformed: true);
+          this._delayedExpansion = preamble.Groups[1].Value.Equals("Enable", StringComparison.OrdinalIgnoreCase);
           localized = true;
+          continue;
+        }
+        if (line == "(") {
+          var blockStart = lineNumber;
+          var parts = new List<string>();
+          var blockLength = raw.Length;
+          var closed = false;
+          while (++rawIndex < rawLines.Length) {
+            var innerRaw = rawLines[rawIndex];
+            ++lineNumber;
+            CheckAscii(innerRaw, lineNumber);
+            var inner = innerRaw.Trim();
+            if (inner.Length == 0)
+              continue;
+            if (inner == ")") {
+              closed = true;
+              break;
+            }
+            parts.Add(inner);
+            blockLength += innerRaw.Length;
+          }
+          if (!closed || parts.Count == 0)
+            throw new Refusal(blockStart, "unclosed or empty parenthesized block", malformed: true);
+          this._lines.Add(new(blockStart, string.Join(" & ", parts), blockLength));
           continue;
         }
         var label = Label().Match(line);
@@ -104,7 +152,7 @@ public static partial class BatchFrontend {
       var frameId = this._nextFrameId++;
       // Emit every source line reachable in this frame so local GOTO/IF targets stay direct.
       var entryLabel = this.FrameTarget(frameId, startSourceIndex);
-      var reachableSource = this.CollectFrameLines(startSourceIndex);
+      var reachableSource = this.CollectFrameLines(startSourceIndex, args.Length > 0);
       var ordered = reachableSource.Order().ToArray();
 
       // Ensure the frame starts at startSourceIndex when entered.
@@ -127,7 +175,7 @@ public static partial class BatchFrontend {
       }
     }
 
-    private HashSet<int> CollectFrameLines(int startSourceIndex) {
+    private HashSet<int> CollectFrameLines(int startSourceIndex, bool hasArgs) {
       var visited = new HashSet<int>();
       var queue = new Queue<int>();
       if (startSourceIndex < this._lines.Count && visited.Add(startSourceIndex))
@@ -135,13 +183,33 @@ public static partial class BatchFrontend {
 
       while (queue.TryDequeue(out var index)) {
         var line = this._lines[index];
-        if (ForNumeric().IsMatch(line.Text)) {
+        if (ForNumeric().IsMatch(line.Text) || IfCmpSetElse().IsMatch(line.Text)
+            || IfEqSetElse().IsMatch(line.Text) || IfTrapExit().IsMatch(line.Text)) {
           Enqueue(index + 1);
+          continue;
+        }
+        var emptyArg = IfEmptyArgGoto().Match(line.Text);
+        if (emptyArg.Success) {
+          if (!hasArgs) {
+            var target = NormalizeTarget(emptyArg.Groups[1].Value);
+            if (!target.Equals(":eof", StringComparison.OrdinalIgnoreCase) && this._sourceLabels.TryGetValue(target, out var destination))
+              Enqueue(destination);
+          } else {
+            Enqueue(index + 1);
+          }
           continue;
         }
         var branch = IfGoto().Match(line.Text);
         if (branch.Success) {
-          var target = branch.Groups[4].Value;
+          var target = NormalizeTarget(branch.Groups[4].Value);
+          if (!target.Equals(":eof", StringComparison.OrdinalIgnoreCase) && this._sourceLabels.TryGetValue(target, out var destination))
+            Enqueue(destination);
+          Enqueue(index + 1);
+          continue;
+        }
+        var eqBranch = IfEqGoto().Match(line.Text);
+        if (eqBranch.Success) {
+          var target = NormalizeTarget(eqBranch.Groups[4].Value);
           if (!target.Equals(":eof", StringComparison.OrdinalIgnoreCase) && this._sourceLabels.TryGetValue(target, out var destination))
             Enqueue(destination);
           Enqueue(index + 1);
@@ -152,7 +220,7 @@ public static partial class BatchFrontend {
         foreach (var stage in stages) {
           var jump = Goto().Match(stage.Command);
           if (jump.Success) {
-            var target = jump.Groups[1].Value;
+            var target = NormalizeTarget(jump.Groups[1].Value);
             if (!target.Equals(":eof", StringComparison.OrdinalIgnoreCase) && this._sourceLabels.TryGetValue(target, out var destination))
               Enqueue(destination);
             if (stage.Separator.Length == 0)
@@ -173,6 +241,30 @@ public static partial class BatchFrontend {
       }
     }
 
+    private static IrBinaryOp ParseComparison(string op) => op.ToUpperInvariant() switch {
+      "EQU" => IrBinaryOp.Equal,
+      "NEQ" => IrBinaryOp.NotEqual,
+      "LSS" => IrBinaryOp.Less,
+      "LEQ" => IrBinaryOp.LessOrEqual,
+      "GTR" => IrBinaryOp.Greater,
+      _ => IrBinaryOp.GreaterOrEqual
+    };
+
+    private void EmitConditionalJump(int number, IrExpr condition, string rawTarget, int frameId, bool isSubroutine, string? returnLabel) {
+      var target = NormalizeTarget(rawTarget);
+      if (target.Equals(":eof", StringComparison.OrdinalIgnoreCase)) {
+        var eofBranch = this.SyntheticLabel();
+        var fallthrough = this.SyntheticLabel();
+        this.Emit(new Jump(number, eofBranch, condition));
+        this.Emit(new Jump(number, fallthrough, null));
+        this.Mark(eofBranch);
+        this.EmitReturn(number, frameId, isSubroutine, returnLabel);
+        this.Mark(fallthrough);
+      } else {
+        this.Emit(new Jump(number, this.ResolveLabel(target, frameId, number), condition));
+      }
+    }
+
     private bool EmitLine(SourceLine sourceLine, int frameId, int[] args, bool isSubroutine, string? returnLabel, HashSet<string> activeCalls) {
       var line = sourceLine.Text;
       var number = sourceLine.Number;
@@ -183,31 +275,87 @@ public static partial class BatchFrontend {
         return false;
       }
 
+      var emptyArg = IfEmptyArgGoto().Match(line);
+      if (emptyArg.Success) {
+        if (args.Length == 0) {
+          var target = NormalizeTarget(emptyArg.Groups[1].Value);
+          if (target.Equals(":eof", StringComparison.OrdinalIgnoreCase))
+            this.EmitReturn(number, frameId, isSubroutine, returnLabel);
+          else
+            this.Emit(new Jump(number, this.ResolveLabel(target, frameId, number), null));
+          return true;
+        }
+        return false;
+      }
+
       var branch = IfGoto().Match(line);
       if (branch.Success) {
         CheckCommandLength(physicalLength + ExpansionGrowth(branch.Groups[1]) + ExpansionGrowth(branch.Groups[3]), number, "expanded IF command");
         var left = this.Operand(branch.Groups[1].Value, number, args);
         var right = this.Operand(branch.Groups[3].Value, number, args);
-        var condition = new IrBinary(branch.Groups[2].Value.ToUpperInvariant() switch {
-          "EQU" => IrBinaryOp.Equal,
-          "NEQ" => IrBinaryOp.NotEqual,
-          "LSS" => IrBinaryOp.Less,
-          "LEQ" => IrBinaryOp.LessOrEqual,
-          "GTR" => IrBinaryOp.Greater,
-          _ => IrBinaryOp.GreaterOrEqual
-        }, left, right);
-        var target = branch.Groups[4].Value;
-        if (target.Equals(":eof", StringComparison.OrdinalIgnoreCase)) {
-          var eofBranch = this.SyntheticLabel();
-          var fallthrough = this.SyntheticLabel();
-          this.Emit(new Jump(number, eofBranch, condition));
-          this.Emit(new Jump(number, fallthrough, null));
-          this.Mark(eofBranch);
-          this.EmitReturn(number, frameId, isSubroutine, returnLabel);
-          this.Mark(fallthrough);
-        } else {
-          this.Emit(new Jump(number, this.ResolveLabel(target, frameId, number), condition));
-        }
+        var condition = new IrBinary(ParseComparison(branch.Groups[2].Value), left, right);
+        this.EmitConditionalJump(number, condition, branch.Groups[4].Value, frameId, isSubroutine, returnLabel);
+        return false;
+      }
+
+      var eqBranch = IfEqGoto().Match(line);
+      if (eqBranch.Success) {
+        CheckCommandLength(physicalLength + ExpansionGrowth(eqBranch.Groups[2]) + ExpansionGrowth(eqBranch.Groups[3]), number, "expanded IF command");
+        var left = this.Operand(eqBranch.Groups[2].Value, number, args);
+        var right = this.Operand(eqBranch.Groups[3].Value, number, args);
+        var op = eqBranch.Groups[1].Success ? IrBinaryOp.NotEqual : IrBinaryOp.Equal;
+        this.EmitConditionalJump(number, new IrBinary(op, left, right), eqBranch.Groups[4].Value, frameId, isSubroutine, returnLabel);
+        return false;
+      }
+
+      var cmpSet = IfCmpSetElse().Match(line);
+      if (cmpSet.Success) {
+        CheckCommandLength(physicalLength + ExpansionGrowth(cmpSet.Groups[1]) + ExpansionGrowth(cmpSet.Groups[3])
+          + ExpansionGrowth(cmpSet.Groups[5]) + ExpansionGrowth(cmpSet.Groups[7]), number, "expanded IF command");
+        var dst1 = cmpSet.Groups[4].Value;
+        var dst2 = cmpSet.Groups[6].Value;
+        if (!dst1.Equals(dst2, StringComparison.OrdinalIgnoreCase))
+          throw new Refusal(number, line);
+        var condition = new IrBinary(ParseComparison(cmpSet.Groups[2].Value),
+          this.Operand(cmpSet.Groups[1].Value, number, args), this.Operand(cmpSet.Groups[3].Value, number, args));
+        var whenTrue = this.Operand(cmpSet.Groups[5].Value, number, args);
+        var whenFalse = this.Operand(cmpSet.Groups[7].Value, number, args);
+        this.Emit(new Assignment(number, this.EnvLocal(dst1), new IrConditional(condition, whenTrue, whenFalse)));
+        return false;
+      }
+
+      var eqSet = IfEqSetElse().Match(line);
+      if (eqSet.Success) {
+        CheckCommandLength(physicalLength + ExpansionGrowth(eqSet.Groups[2]) + ExpansionGrowth(eqSet.Groups[3])
+          + ExpansionGrowth(eqSet.Groups[5]) + ExpansionGrowth(eqSet.Groups[7]), number, "expanded IF command");
+        var dst1 = eqSet.Groups[4].Value;
+        var dst2 = eqSet.Groups[6].Value;
+        if (!dst1.Equals(dst2, StringComparison.OrdinalIgnoreCase))
+          throw new Refusal(number, line);
+        var op = eqSet.Groups[1].Success ? IrBinaryOp.NotEqual : IrBinaryOp.Equal;
+        var condition = new IrBinary(op,
+          this.Operand(eqSet.Groups[2].Value, number, args), this.Operand(eqSet.Groups[3].Value, number, args));
+        var whenTrue = this.Operand(eqSet.Groups[5].Value, number, args);
+        var whenFalse = this.Operand(eqSet.Groups[7].Value, number, args);
+        this.Emit(new Assignment(number, this.EnvLocal(dst1), new IrConditional(condition, whenTrue, whenFalse)));
+        return false;
+      }
+
+      var trapExit = IfTrapExit().Match(line);
+      if (trapExit.Success) {
+        CheckCommandLength(physicalLength + ExpansionGrowth(trapExit.Groups[1]) + ExpansionGrowth(trapExit.Groups[2])
+          + ExpansionGrowth(trapExit.Groups[3]), number, "expanded IF command");
+        var left = this.Operand(trapExit.Groups[1].Value, number, args);
+        var right = this.Operand(trapExit.Groups[2].Value, number, args);
+        var status = this.Operand(trapExit.Groups[3].Value, number, args);
+        var trapBranch = this.SyntheticLabel();
+        var afterTrap = this.SyntheticLabel();
+        this.Emit(new Jump(number, trapBranch, new IrBinary(IrBinaryOp.Equal, left, right)));
+        this.Emit(new Jump(number, afterTrap, null));
+        this.Mark(trapBranch);
+        this.Emit(new Assignment(number, this._errorLevel, status));
+        this.EmitReturn(number, frameId, isSubroutine, returnLabel);
+        this.Mark(afterTrap);
         return false;
       }
 
@@ -221,6 +369,8 @@ public static partial class BatchFrontend {
       for (var i = 0; i < parsedStages.Length; ++i)
         foreach (var (slot, token) in parsedStages[i].PercentOperands()) {
           growth += ExpansionGrowth(token);
+          if (token[0] == '!')
+            continue;
           var expr = this.Operand(token, number, args);
           if (needsSnapshot && expr is IrLocalRef) {
             var temp = this.Temp();
@@ -248,27 +398,34 @@ public static partial class BatchFrontend {
         terminated = false;
         switch (stage) {
           case SetArithStage arith:
-            this.Emit(new Assignment(number, this.EnvLocal(arith.Destination), new Arithmetic(arith.Expression, number, this.EnvLocal).Read()));
+            foreach (var (destination, expression) in arith.Assignments)
+              this.Emit(new Assignment(number, this.EnvLocal(destination), new Arithmetic(expression, number, this.EnvLocal).Read()));
             break;
-          case SetValueStage setValue:
-            this.Emit(new Assignment(number, this.EnvLocal(setValue.Destination), preExpanded[(i, 0)]));
+          case SetValueStage setValue: {
+            var value = setValue.Operand[0] == '!' ? this.Operand(setValue.Operand, number, args) : preExpanded[(i, 0)];
+            this.Emit(new Assignment(number, this.EnvLocal(setValue.Destination), value));
             break;
+          }
           case SetLocalStage:
             this.Emit(new ScopePush(number, frameId));
             break;
           case EndLocalStage:
             this.Emit(new ScopePop(number, frameId));
             break;
-          case GotoStage jump:
-            if (jump.Target.Equals(":eof", StringComparison.OrdinalIgnoreCase))
+          case GotoStage jump: {
+            var target = NormalizeTarget(jump.Target);
+            if (target.Equals(":eof", StringComparison.OrdinalIgnoreCase))
               this.EmitReturn(number, frameId, isSubroutine, returnLabel);
             else
-              this.Emit(new Jump(number, this.ResolveLabel(jump.Target, frameId, number), null));
+              this.Emit(new Jump(number, this.ResolveLabel(target, frameId, number), null));
             terminated = true;
             break;
+          }
           case ExitStage exit:
-            if (exit.Operand is not null)
-              this.Emit(new Assignment(number, this._errorLevel, preExpanded[(i, 0)]));
+            if (exit.Operand is not null) {
+              var status = exit.Operand[0] == '!' ? this.Operand(exit.Operand, number, args) : preExpanded[(i, 0)];
+              this.Emit(new Assignment(number, this._errorLevel, status));
+            }
             this.EmitReturn(number, frameId, isSubroutine, returnLabel);
             terminated = true;
             break;
@@ -359,7 +516,7 @@ public static partial class BatchFrontend {
       public virtual IEnumerable<(int Slot, string Token)> PercentOperands() => [];
     }
 
-    private sealed record SetArithStage(string Separator, string Destination, string Expression) : ParsedStage(Separator);
+    private sealed record SetArithStage(string Separator, List<(string Destination, string Expression)> Assignments) : ParsedStage(Separator);
 
     private sealed record SetValueStage(string Separator, string Destination, string Operand) : ParsedStage(Separator) {
       public override IEnumerable<(int Slot, string Token)> PercentOperands() { yield return (0, this.Operand); }
@@ -378,11 +535,40 @@ public static partial class BatchFrontend {
 
     private sealed record CallStage(string Separator, string Target, int[] Arguments) : ParsedStage(Separator);
 
+    private static List<(string Destination, string Expression)> SplitArithmeticAssignments(string body, int number) {
+      var result = new List<(string Destination, string Expression)>();
+      var depth = 0;
+      var start = 0;
+      for (var i = 0; i <= body.Length; ++i) {
+        if (i < body.Length) {
+          if (body[i] == '(')
+            ++depth;
+          else if (body[i] == ')')
+            --depth;
+          else if (body[i] == ',' && depth == 0) {
+            AddPart(body[start..i]);
+            start = i + 1;
+          }
+        } else {
+          AddPart(body[start..]);
+        }
+      }
+      return result;
+
+      void AddPart(string raw) {
+        var part = raw.Trim();
+        var match = SetArithAssignment().Match(part);
+        if (!match.Success)
+          throw new Refusal(number, $"set /a \"{part}\"", malformed: true);
+        result.Add((match.Groups[1].Value, match.Groups[2].Value));
+      }
+    }
+
     private ParsedStage ParseStage(ChainStage stage, int number) {
       var command = stage.Command;
       var arith = SetArithmetic().Match(command);
       if (arith.Success)
-        return new SetArithStage(stage.Separator, arith.Groups[1].Value, arith.Groups[2].Value);
+        return new SetArithStage(stage.Separator, SplitArithmeticAssignments(arith.Groups[1].Value, number));
       var set = SetValue().Match(command);
       if (set.Success) {
         var dest = set.Groups[1].Success ? set.Groups[1].Value : set.Groups[3].Value;
@@ -473,14 +659,24 @@ public static partial class BatchFrontend {
     private static int ExpansionGrowth(Group operand) => ExpansionGrowth(operand.Value);
 
     private static int ExpansionGrowth(string token)
-      => token.Length > 0 && token[0] == '%' ? Math.Max(0, _maxInt32TextLength - token.Length) : 0;
+      => token.Length > 0 && token[0] is '%' or '!' ? Math.Max(0, _maxInt32TextLength - token.Length) : 0;
 
     private static void CheckCommandLength(int length, int line, string kind) {
       if (length > _commandLimit)
         throw new Refusal(line, $"{kind} exceeds the {_commandLimit}-character cmd limit");
     }
 
+    private IrExpr EnvOrErrorLevel(string name)
+      => name.Equals("errorlevel", StringComparison.OrdinalIgnoreCase)
+        ? new IrLocalRef(this._errorLevel)
+        : new IrLocalRef(this.EnvLocal(name));
+
     private IrExpr Operand(string token, int line, int[] args) {
+      if (token[0] == '!') {
+        if (!this._delayedExpansion)
+          throw new Refusal(line, $"delayed expansion {token} requires EnableDelayedExpansion");
+        return this.EnvOrErrorLevel(token[1..^1]);
+      }
       if (token[0] != '%')
         return Constant(token, line);
       if (token.Length == 2 && char.IsAsciiDigit(token[1])) {
@@ -489,10 +685,7 @@ public static partial class BatchFrontend {
           throw new Refusal(line, $"unbound positional parameter {token}");
         return new IrConst(IrType.I32, args[slot]);
       }
-      var name = token[1..^1];
-      if (name.Equals("errorlevel", StringComparison.OrdinalIgnoreCase))
-        return new IrLocalRef(this._errorLevel);
-      return new IrLocalRef(this.EnvLocal(name));
+      return this.EnvOrErrorLevel(token[1..^1]);
     }
 
     private IrLocal EnvLocal(string name) {

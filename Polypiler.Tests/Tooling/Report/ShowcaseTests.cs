@@ -272,6 +272,7 @@ public sealed class ShowcaseTests {
     this.Write("examples/01-add.cs", "// Showcase: Add & Async\n// Category: Core\n// Summary: Simple ops.\nusing System.Threading.Tasks;\npublic static class K { public static async Task<int> AddAsync(int a, int b) => await Task.FromResult(a + b); }\n");
     this.Write("examples/02-ops.cs", "// Showcase: Bitwise\n// Category: Core\n// Summary: Rotate.\nusing System.Numerics;\npublic static class O { public static uint Rot(uint x, int n) => BitOperations.RotateLeft(x, n); }\n");
     this.Write("examples/03-boundary.cs", "// Showcase: Unsupported\n// Category: Boundary\n// Summary: Refused.\nusing System.IO;\npublic static class B { public static int N(string p) => File.ReadAllLines(p).Length; }\n");
+    this.Write("examples/04-native.cs", "// Showcase: Native\n// Category: Interop\n// Summary: P/Invoke.\nusing System.Runtime.InteropServices;\npublic static class N { [DllImport(\"geom\")] private static extern int f(int x); public static int Run(int x) => f(x); }\n");
     var marker = this.CreateFakePolypilerMarker();
     var runner = new InProcessCliRunner();
 
