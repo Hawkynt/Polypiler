@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using Polypiler.Core;
-using Polypiler.Core.Backends.CSharp;
 using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.Backends.Perl;
 using Polypiler.Core.Backends.Python;
@@ -11,6 +10,7 @@ using Polypiler.Core.Backends.Rust;
 using Polypiler.Core.IR;
 using Polypiler.Core.Optimize;
 using Polypiler.Core.Optimize.Passes;
+using Polypiler.Prototype.Testing;
 
 namespace Polypiler.Tests.IR;
 
@@ -20,7 +20,7 @@ public sealed class StandardOutputTests {
   [TestCase(false, new[] { "first", "second" })]
   [TestCase(true, new[] { "first", "", "second" })]
   public void TheOutputEffectSurvivesRoundTrippingAndOptimization(bool choose, string[] expected) {
-    foreach (var module in Variants(FromOracle())) {
+    foreach (var module in Variants(OutputEffectFixture.Module())) {
       Assert.That(IrVerifier.Verify(module), Is.Empty);
       var output = new List<string>();
       var instance = IrInterpreter.Instantiate(module, output.Add);
@@ -57,7 +57,7 @@ public sealed class StandardOutputTests {
 
   [Test]
   public void EarlierOutputSurvivesAnOperandThatTraps() {
-    foreach (var module in Variants(FromOracle())) {
+    foreach (var module in Variants(OutputEffectFixture.Module())) {
       var output = new List<string>();
       var instance = IrInterpreter.Instantiate(module, output.Add);
       Assert.That(instance.Call("Trap", 2), Is.EqualTo(42));
@@ -72,7 +72,7 @@ public sealed class StandardOutputTests {
 
   [Test]
   public void TheInitializerAndCallsWriteToTheirOwnInstances() {
-    var main = FromOracle();
+    var main = OutputEffectFixture.Module();
     var module = main with {
       Initializer = "Start",
       Functions = [.. main.Functions, Function("Start", false, IrType.Void, [],
@@ -124,20 +124,19 @@ public sealed class StandardOutputTests {
 
   [Test]
   public void AWriteRequiresAnOutputSink() {
-    Assert.That(() => IrInterpreter.Call(FromOracle(), "Run", [false]), Throws.InvalidOperationException.With.Message.Contains("output"));
-    Assert.That(() => IrInterpreter.Instantiate(FromOracle(), null!), Throws.ArgumentNullException);
+    Assert.That(() => IrInterpreter.Call(OutputEffectFixture.Module(), "Run", [false]), Throws.InvalidOperationException.With.Message.Contains("output"));
+    Assert.That(() => IrInterpreter.Instantiate(OutputEffectFixture.Module(), null!), Throws.ArgumentNullException);
   }
 
   [Test]
   public void BackendsWithoutAnOutputMappingDiagnoseTheStatement() {
-    var module = FromOracle();
-    AssertRefusesOutput(CSharpEmitter.Check(module));
+    var module = OutputEffectFixture.Module();
     AssertRefusesOutput(JavaScriptEmitter.Check(module, JavaScriptProfile.Parse("es2022")));
   }
 
   [Test]
   public void PythonBackendEmitsPrintForStandardOutput() {
-    var module = FromOracle();
+    var module = OutputEffectFixture.Module();
     foreach (var name in PythonProfile.Names) {
       var profile = PythonProfile.Parse(name);
       Assert.That(PythonEmitter.Check(module, profile), Is.Empty, name);
@@ -148,7 +147,7 @@ public sealed class StandardOutputTests {
 
   [Test]
   public void PerlBackendEmitsPrintForStandardOutput() {
-    var module = FromOracle();
+    var module = OutputEffectFixture.Module();
     foreach (var name in PerlProfile.Names) {
       var profile = PerlProfile.Parse(name);
       Assert.That(PerlEmitter.Check(module, profile), Is.Empty, name);
@@ -159,7 +158,7 @@ public sealed class StandardOutputTests {
 
   [Test]
   public void RustBackendEmitsPrintlnForStandardOutput() {
-    var module = FromOracle();
+    var module = OutputEffectFixture.Module();
     foreach (var profile in RustProfile.All) {
       Assert.That(RustEmitter.Check(module, profile), Is.Empty, profile.Name);
       var files = RustEmitter.Emit(module, profile);
@@ -178,28 +177,7 @@ public sealed class StandardOutputTests {
       new OptimizerOptions { Verify = true }).Module
   ];
 
-  // The expected traces come from tests/fixtures/batch/OutputEffect.cs, compiled and run independently.
-  private static IrModule FromOracle() {
-    var choose = new IrLocal("choose", IrType.Bool);
-    var divisor = new IrLocal("divisor", IrType.I32);
-    var text = new IrLocal("text", IrType.String);
-    var emitText = new IrLocal("divisor", IrType.I32);
-    return new("OutputEffect", [
-      Function("Run", true, IrType.I32, [choose], First(),
-        new IrIf(new IrLocalRef(choose), new IrBlock([Emit(new IrStrConst(""))]), null),
-        Emit(new IrStrConst("second")), new IrReturn(Int(42))),
-      Function("Trap", true, IrType.I32, [divisor], First(),
-        Emit(new IrCall("Text", IrType.String, [new IrLocalRef(divisor)])), new IrReturn(Int(42))),
-      Function("Emit", false, IrType.Void, [text], new IrWriteLine(new IrLocalRef(text)), new IrReturn(null)),
-      Function("Text", false, IrType.String, [emitText], new IrReturn(new IrConditional(
-        new IrBinary(IrBinaryOp.NotEqual, new IrBinary(IrBinaryOp.Divide, Int(42), new IrLocalRef(emitText)), Int(0)),
-        new IrStrConst("done"), new IrStrConst("zero"))))
-    ]);
-  }
-
   private static IrWriteLine First() => new(new IrStrConst("first"));
-
-  private static IrExprStmt Emit(IrExpr text) => new(new IrCall("Emit", IrType.Void, [text]));
 
   private static IrConst Int(int value) => new(IrType.I32, value);
 

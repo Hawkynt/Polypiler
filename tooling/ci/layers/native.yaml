@@ -5,7 +5,7 @@
 # pinned gcc, clang and bubblewrap; bubblewrap isolates the runner there.
 schema: 1
 layer: native
-toolchains: [dotnet-sdk, gcc, clang, bubblewrap]
+toolchains: [dotnet-sdk, gcc, clang, llvm, lld, bubblewrap]
 os: [ubuntu-latest, macos-latest, windows-latest]
-paths: ["Polypiler.Core.Frontends.C/**", "Polypiler.Core.Frontends.Cpp/**", "Polypiler.Core.Backends.C/**", "Polypiler.Core.Backends.Cpp/**", "Polypiler.Tests.Acceptance/Cpp/**", "Polypiler.Interop/**", "tests/fixtures/**/*.c", "tests/fixtures/**/*.cpp", "tests/fixtures/**/*.h", "tooling/ci/layers/native.*"]
+paths: ["Polypiler.Core.Frontends.C/**", "Polypiler.Core.Frontends.Cpp/**", "Polypiler.Core.Backends.C/**", "Polypiler.Core.Backends.Cpp/**", "Polypiler.Tests.Acceptance/Cpp/**", "Polypiler.Core.BinaryFormats/**", "Polypiler.Tests.Acceptance/BinaryFormats/**", "tooling/machine/**", "tests/features/native/mach-bin-elf.feature", "tests/fixtures/native/mach-bin-elf/**", "Polypiler.Interop/**", "tests/fixtures/**/*.c", "tests/fixtures/**/*.cpp", "tests/fixtures/**/*.h", "tooling/ci/layers/native.*"]
 always: false

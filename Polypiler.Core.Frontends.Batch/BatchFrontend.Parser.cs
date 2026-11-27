@@ -30,16 +30,20 @@ public static partial class BatchFrontend {
   private static partial Regex SetArithmetic();
   [GeneratedRegex("^set[ \t]+(?:\"(" + _name + ")=(" + _operand + ")\"|(" + _name + ")=(" + _operand + "))$", _options)]
   private static partial Regex SetValue();
-  [GeneratedRegex("^setlocal(?:[ \t]+EnableExtensions[ \t]+DisableDelayedExpansion)?$", _options)]
+  private const string _delayedMode = "(EnableDelayedExpansion|DisableDelayedExpansion)";
+  [GeneratedRegex("^setlocal(?:[ \t]+(?:EnableExtensions[ \t]+)?" + _delayedMode + ")?$", _options)]
   private static partial Regex SetLocalCmd();
-  [GeneratedRegex("^setlocal[ \t]+EnableExtensions[ \t]+DisableDelayedExpansion$", _options)]
+  [GeneratedRegex("^setlocal[ \t]+EnableExtensions[ \t]+" + _delayedMode + "$", _options)]
   private static partial Regex Preamble();
   [GeneratedRegex("^endlocal$", _options)]
   private static partial Regex EndLocalCmd();
   [GeneratedRegex("^call[ \t]+:(" + _name + ")(?:[ \t]+(.+))?$", _options)]
   private static partial Regex CallLabel();
-  [GeneratedRegex("^for[ \t]+/l[ \t]+%%([A-Za-z])[ \t]+in[ \t]+\\(([^,)]+),([^,)]+),([^,)]+)\\)[ \t]+do[ \t]+set[ \t]+/a[ \t]+\"(" + _name + ")=([^\"]*)\"$", _options)]
+  private const string _numericFor = "^for[ \t]+/l[ \t]+%%([A-Za-z])[ \t]+in[ \t]+\\(([^,)]+),([^,)]+),([^,)]+)\\)[ \t]+do[ \t]+";
+  [GeneratedRegex(_numericFor + "set[ \t]+/a[ \t]+\"(" + _name + ")=([^\"]*)\"$", _options)]
   private static partial Regex ForNumeric();
+  [GeneratedRegex(_numericFor + "\\((.*)$", _options)]
+  private static partial Regex ForCompound();
 
   private sealed class Parser(string source) {
 
@@ -54,19 +58,20 @@ public static partial class BatchFrontend {
     private int _nextSyntheticLabel;
     private int _nextFrameId;
 
-    private sealed record SourceLine(int Number, string Text, int PhysicalLength);
+    private sealed record SourceLine(int Number, string Text, int PhysicalLength, CompoundFor? Compound = null);
+    private sealed record CompoundFor(Match Header, IReadOnlyList<(int Line, string Text)> Body);
+    private sealed record NumericBody(int Line, string Destination, string Expression);
     private sealed record ChainStage(string Separator, string Command);
 
     public Script Read() {
-      var lineNumber = 0;
+      var lines = source.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
       var sawEcho = false;
       var localized = false;
-      foreach (var raw in source.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n')) {
-        ++lineNumber;
-        CheckCommandLength(raw.Length, lineNumber, "physical line");
-        foreach (var character in raw)
-          if (character is not '\t' && character is < ' ' or > '~')
-            throw new Refusal(lineNumber, "only ASCII text with LF or CRLF is accepted", malformed: true);
+      var delayed = false;
+      for (var index = 0; index < lines.Length; ++index) {
+        var lineNumber = index + 1;
+        var raw = lines[index];
+        CheckPhysicalLine(raw, lineNumber);
         var line = raw.Trim();
         if (line.Length == 0)
           continue;
@@ -75,9 +80,16 @@ public static partial class BatchFrontend {
             sawEcho = true;
             continue;
           }
-          if (!Preamble().IsMatch(line))
-            throw new Refusal(lineNumber, "missing SETLOCAL EnableExtensions DisableDelayedExpansion prologue", malformed: true);
+          var preamble = Preamble().Match(line);
+          if (!preamble.Success)
+            throw new Refusal(lineNumber, "missing SETLOCAL EnableExtensions prologue with a delayed expansion mode", malformed: true);
           localized = true;
+          delayed = EnablesDelayedExpansion(preamble.Groups[1]);
+          continue;
+        }
+        var compound = ForCompound().Match(line);
+        if (compound.Success) {
+          this._lines.Add(ReadCompound(compound, lines, ref index));
           continue;
         }
         var label = Label().Match(line);
@@ -90,15 +102,64 @@ public static partial class BatchFrontend {
       }
 
       if (!localized || this._lines.Count == 0)
-        throw new Refusal(lineNumber, "the script has no instructions", malformed: true);
+        throw new Refusal(lines.Length, "the script has no instructions", malformed: true);
 
       this._allLocals.Add("$errorlevel", this._errorLevel);
       this.ExpandFrame(0, [], isSubroutine: false, returnLabel: null, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
 
       var preassigned = new HashSet<IrLocal> { this._errorLevel };
       var scoped = this._envLocals.Values.ToHashSet();
-      return new(this._instructions, this._emittedLabels, this._allLocals, preassigned: preassigned, scopedLocals: scoped);
+      return new(this._instructions, this._emittedLabels, this._allLocals, preassigned: preassigned, scopedLocals: scoped, initialDelayedExpansion: delayed);
     }
+
+    private static SourceLine ReadCompound(Match header, string[] lines, ref int index) {
+      var first = index + 1;
+      var width = lines[index].Length;
+      var tail = header.Groups[5].Value;
+      var commands = new List<(int Line, string Text)>();
+      while (true) {
+        var number = index + 1;
+        var command = tail.TrimEnd();
+        var closes = command.EndsWith(')');
+        if (closes)
+          command = command[..^1];
+        if (!string.IsNullOrWhiteSpace(command))
+          commands.Add((number, command));
+
+        if (closes) {
+          if (commands.Count == 0)
+            throw new Refusal(first, "empty compound FOR /L body", malformed: true);
+          return new(first, lines[first - 1].Trim(), width, new(header, commands));
+        }
+
+        if (++index == lines.Length)
+          throw new Refusal(first, "missing closing parenthesis for compound FOR /L", malformed: true);
+        tail = lines[index];
+        CheckPhysicalLine(tail, index + 1);
+        width += 1 + tail.Length;
+        CheckCommandLength(width, first, "compound FOR command");
+      }
+    }
+
+    private static IEnumerable<NumericBody> CompoundAssignments(CompoundFor compound) {
+      foreach (var (line, text) in compound.Body)
+        foreach (var stage in SplitChain(text, line)) {
+          var assignment = SetArithmetic().Match(stage.Command);
+          if (!assignment.Success || stage.Separator == "&&")
+            throw new Refusal(line, "compound FOR /L requires SET /A assignments");
+          yield return new(line, assignment.Groups[1].Value, assignment.Groups[2].Value);
+        }
+    }
+
+    private static void CheckPhysicalLine(string raw, int number) {
+      CheckCommandLength(raw.Length, number, "physical line");
+      foreach (var character in raw)
+        if (character is not '\t' && character is < ' ' or > '~')
+          throw new Refusal(number, "only ASCII text with LF or CRLF is accepted", malformed: true);
+    }
+
+    private static bool EnablesDelayedExpansion(Group mode)
+      => mode.Value.Equals("EnableDelayedExpansion", StringComparison.OrdinalIgnoreCase);
 
     private void ExpandFrame(int startSourceIndex, int[] args, bool isSubroutine, string? returnLabel, HashSet<string> activeCalls) {
       var frameId = this._nextFrameId++;
@@ -135,7 +196,7 @@ public static partial class BatchFrontend {
 
       while (queue.TryDequeue(out var index)) {
         var line = this._lines[index];
-        if (ForNumeric().IsMatch(line.Text)) {
+        if (line.Compound is not null || ForNumeric().IsMatch(line.Text)) {
           Enqueue(index + 1);
           continue;
         }
@@ -179,7 +240,7 @@ public static partial class BatchFrontend {
       var physicalLength = sourceLine.PhysicalLength;
 
       if (line.StartsWith("for ", StringComparison.OrdinalIgnoreCase) || line.StartsWith("for\t", StringComparison.OrdinalIgnoreCase)) {
-        this.EmitForNumeric(line, physicalLength, number);
+        this.EmitForNumeric(sourceLine);
         return false;
       }
 
@@ -218,7 +279,11 @@ public static partial class BatchFrontend {
       var growth = 0;
       var preExpanded = new Dictionary<(int Stage, int Slot), IrExpr>();
       var needsSnapshot = parsedStages.Length > 1;
-      for (var i = 0; i < parsedStages.Length; ++i)
+      var expanded = new NumericExpansion(this);
+      var arithmetic = new Dictionary<int, Assignment>();
+      for (var i = 0; i < parsedStages.Length; ++i) {
+        if (parsedStages[i] is SetArithStage assignment)
+          arithmetic.Add(i, expanded.Read(new(number, assignment.Destination, assignment.Expression)));
         foreach (var (slot, token) in parsedStages[i].PercentOperands()) {
           growth += ExpansionGrowth(token);
           var expr = this.Operand(token, number, args);
@@ -230,7 +295,8 @@ public static partial class BatchFrontend {
             preExpanded.Add((i, slot), expr);
           }
         }
-      CheckCommandLength(physicalLength + growth, number, "expanded command");
+      }
+      CheckCommandLength(physicalLength + growth + expanded.Growth, number, "expanded command");
 
       // Phase 2: execute stages left-to-right honoring & and &&.
       var lineEnd = parsedStages.Length > 1 ? this.SyntheticLabel() : null;
@@ -247,14 +313,15 @@ public static partial class BatchFrontend {
         previousCanFail = false;
         terminated = false;
         switch (stage) {
-          case SetArithStage arith:
-            this.Emit(new Assignment(number, this.EnvLocal(arith.Destination), new Arithmetic(arith.Expression, number, this.EnvLocal).Read()));
+          case SetArithStage:
+            this.Emit(arithmetic[i]);
             break;
           case SetValueStage setValue:
             this.Emit(new Assignment(number, this.EnvLocal(setValue.Destination), preExpanded[(i, 0)]));
             break;
-          case SetLocalStage:
-            this.Emit(new ScopePush(number, frameId));
+          case SetLocalStage local:
+            this.Emit(new ScopePush(number, frameId, local.DelayedExpansion));
+            this.Emit(new Assignment(number, this._errorLevel, new IrConst(IrType.I32, 0)));
             break;
           case EndLocalStage:
             this.Emit(new ScopePop(number, frameId));
@@ -300,16 +367,17 @@ public static partial class BatchFrontend {
       }
     }
 
-    private void EmitForNumeric(string line, int physicalLength, int number) {
-      var match = ForNumeric().Match(line);
+    private void EmitForNumeric(SourceLine line) {
+      var number = line.Number;
+      var match = line.Compound?.Header ?? ForNumeric().Match(line.Text);
       if (!match.Success)
-        throw new Refusal(number, line);
+        throw new Refusal(number, line.Text);
 
       var letter = match.Groups[1].Value[0];
       var startToken = match.Groups[2].Value.Trim();
       var stepToken = match.Groups[3].Value.Trim();
       var endToken = match.Groups[4].Value.Trim();
-      if (startToken.Contains('%') || stepToken.Contains('%') || endToken.Contains('%'))
+      if (new[] { startToken, stepToken, endToken }.Any(token => token.Contains('%') || token.Contains('!')))
         throw new Refusal(number, "dynamic FOR /L bounds");
 
       var start = (int)Constant(startToken, number).Value;
@@ -331,28 +399,78 @@ public static partial class BatchFrontend {
           throw new Refusal(number, "FOR /L iterator increment exceeds Int32");
       }
 
-      var destinationName = match.Groups[5].Value;
-      var bodyText = match.Groups[6].Value;
-      var forToken = "%%" + letter;
-      var tokenCount = 0;
-      for (var offset = 0; (offset = bodyText.IndexOf(forToken, offset, StringComparison.Ordinal)) >= 0; offset += 3)
-        ++tokenCount;
-      CheckCommandLength(physicalLength + tokenCount * (_maxInt32TextLength - 3), number, "expanded FOR command");
-
       var iterator = this.Temp();
-      var bodyExpr = new Arithmetic(bodyText, number, this.EnvLocal, (letter, iterator)).Read();
-      var destination = this.EnvLocal(destinationName);
+      var expansion = new NumericExpansion(this, (letter, iterator));
+      var commands = line.Compound is { } compound ? CompoundAssignments(compound)
+        : [new NumericBody(number, match.Groups[5].Value, match.Groups[6].Value)];
+      var body = commands.Select(expansion.Read).ToArray();
+      CheckCommandLength(line.PhysicalLength + expansion.Growth, number, "expanded FOR command");
+
       var header = this.SyntheticLabel();
       var after = this.SyntheticLabel();
+      var zeroTrips = step > 0 ? start > end : start < end;
+      if (!zeroTrips && start == int.MinValue && expansion.UsesIterator)
+        throw new Refusal(number, "FOR /L expands an iterator outside the SET /A decimal magnitude limit");
+      if (line.Compound is not null && zeroTrips) {
+        // Percent snapshots already ran while constructing the command. Delayed operands do not run.
+        this.Emit(new Jump(number, after, null));
+        this.Mark(after);
+        return;
+      }
 
+      var iteratorRef = new IrLocalRef(iterator);
       this.Emit(new Assignment(number, iterator, new IrConst(IrType.I32, start)));
       this.Mark(header);
-      var exitCondition = new IrBinary(step > 0 ? IrBinaryOp.Greater : IrBinaryOp.Less, new IrLocalRef(iterator), new IrConst(IrType.I32, end));
-      this.Emit(new Jump(number, after, exitCondition));
-      this.Emit(new Assignment(number, destination, bodyExpr));
-      this.Emit(new Assignment(number, iterator, new IrBinary(IrBinaryOp.Add, new IrLocalRef(iterator), new IrConst(IrType.I32, step))));
-      this.Emit(new Jump(number, header, null));
+      if (line.Compound is null) {
+        var exitCondition = new IrBinary(step > 0 ? IrBinaryOp.Greater : IrBinaryOp.Less, iteratorRef, new IrConst(IrType.I32, end));
+        this.Emit(new Jump(number, after, exitCondition));
+      }
+      foreach (var assignment in body)
+        this.Emit(assignment);
+      this.Emit(new Assignment(number, iterator, new IrBinary(IrBinaryOp.Add, iteratorRef, new IrConst(IrType.I32, step))));
+      var repeat = line.Compound is null ? null
+        : new IrBinary(step > 0 ? IrBinaryOp.LessOrEqual : IrBinaryOp.GreaterOrEqual, iteratorRef, new IrConst(IrType.I32, end));
+      this.Emit(new Jump(number, header, repeat));
       this.Mark(after);
+    }
+
+    private sealed class NumericExpansion(Parser parser, (char Letter, IrLocal Local)? iterator = null) {
+      private readonly Dictionary<IrLocal, IrLocal> _snapshots = [];
+
+      public int Growth { get; private set; }
+      public bool UsesIterator { get; private set; }
+
+      public Assignment Read(NumericBody body) {
+        if (iterator is { } binding) {
+          var token = "%%" + binding.Letter;
+          for (var index = 0; (index = body.Expression.IndexOf(token, index, StringComparison.Ordinal)) >= 0; index += token.Length) {
+            this.Growth += _maxInt32TextLength - token.Length;
+            this.UsesIterator = true;
+          }
+        }
+
+        var readsDelayed = false;
+        List<IrLocal>? decimalOperands = null;
+        var value = new Arithmetic(body.Expression, body.Line, parser.EnvLocal, iterator, Expand).Read();
+        return new(body.Line, parser.EnvLocal(body.Destination), value, readsDelayed, decimalOperands);
+
+        IrLocal Expand(string token) {
+          this.Growth += Math.Max(0, _maxInt32TextLength - token.Length);
+          var local = parser.EnvironmentValue(token[1..^1]);
+          if (token[0] == '!') {
+            readsDelayed = true;
+            (decimalOperands ??= []).Add(local);
+            return local;
+          }
+          if (!this._snapshots.TryGetValue(local, out var snapshot)) {
+            snapshot = parser.Temp();
+            this._snapshots.Add(local, snapshot);
+            parser.Emit(new Assignment(body.Line, snapshot, new IrLocalRef(local)));
+          }
+          (decimalOperands ??= []).Add(snapshot);
+          return snapshot;
+        }
+      }
     }
 
     private abstract record ParsedStage(string Separator) {
@@ -365,7 +483,7 @@ public static partial class BatchFrontend {
       public override IEnumerable<(int Slot, string Token)> PercentOperands() { yield return (0, this.Operand); }
     }
 
-    private sealed record SetLocalStage(string Separator) : ParsedStage(Separator);
+    private sealed record SetLocalStage(string Separator, bool? DelayedExpansion) : ParsedStage(Separator);
     private sealed record EndLocalStage(string Separator) : ParsedStage(Separator);
     private sealed record GotoStage(string Separator, string Target) : ParsedStage(Separator);
 
@@ -389,8 +507,9 @@ public static partial class BatchFrontend {
         var val = set.Groups[1].Success ? set.Groups[2].Value : set.Groups[4].Value;
         return new SetValueStage(stage.Separator, dest, val);
       }
-      if (SetLocalCmd().IsMatch(command))
-        return new SetLocalStage(stage.Separator);
+      var local = SetLocalCmd().Match(command);
+      if (local.Success)
+        return new SetLocalStage(stage.Separator, local.Groups[1].Success ? EnablesDelayedExpansion(local.Groups[1]) : null);
       if (EndLocalCmd().IsMatch(command))
         return new EndLocalStage(stage.Separator);
       var jump = Goto().Match(command);
@@ -489,11 +608,11 @@ public static partial class BatchFrontend {
           throw new Refusal(line, $"unbound positional parameter {token}");
         return new IrConst(IrType.I32, args[slot]);
       }
-      var name = token[1..^1];
-      if (name.Equals("errorlevel", StringComparison.OrdinalIgnoreCase))
-        return new IrLocalRef(this._errorLevel);
-      return new IrLocalRef(this.EnvLocal(name));
+      return new IrLocalRef(this.EnvironmentValue(token[1..^1]));
     }
+
+    private IrLocal EnvironmentValue(string name)
+      => name.Equals("errorlevel", StringComparison.OrdinalIgnoreCase) ? this._errorLevel : this.EnvLocal(name);
 
     private IrLocal EnvLocal(string name) {
       if (name.Equals("errorlevel", StringComparison.OrdinalIgnoreCase))

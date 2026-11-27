@@ -25,6 +25,11 @@ public static partial class JvmEmitter {
     private readonly Dictionary<IrModuleConst, string> _constFieldNames = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<IrGlobal, string> _globalFieldNames = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<string, byte[]> _extraClasses = new(StringComparer.Ordinal);
+    private readonly List<JvmMethodDef> _moduleHelpers = [];
+    private readonly Dictionary<string, string> _helperNames = new(StringComparer.Ordinal);
+    private readonly Dictionary<IrEnumType, string> _enumIsDefinedHelpers = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<IrEnumType, string> _enumToStringHelpers = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<IrEnumType, string> _enumParseHelpers = new(ReferenceEqualityComparer.Instance);
     private int _syntheticCounter;
 
     public ModuleEmitter(IrModule module, JvmProfile profile, JvmEmitOptions options) {
@@ -84,6 +89,8 @@ public static partial class JvmEmitter {
       }
 
       var hasMain = this.EmitMainBridgeIfNeeded(writer);
+      for (var i = 0; i < this._moduleHelpers.Count; ++i)
+        writer.AddMethod(this._moduleHelpers[i]);
       var classBytes = writer.ToBytes();
       var classEntryPath = this._internalClassName + ".class";
 

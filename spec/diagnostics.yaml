@@ -2580,3 +2580,38 @@ codes:
     area: machine
     owner: MACH-BIN-MANIFEST
     surfaces: "the failure of ImageBuilder.Load and BinaryCodecRegistry.Select for a file whose magic no registered codec claims; as \"'<file>' is a <format> file, which no registered codec reads; ...\" for a known container (ELF, PE, Mach-O, Mach-O universal) and as \"'<file>' is declared as container '<id>', which no registered codec reads; ...\" for a manifest container without a codec"
+  - code: PLY4060
+    severity: error
+    exit: EnvironmentError
+    title: incomplete ELF file
+    message: "'<file>' is not a complete ELF file: <detail>"
+    rule: machine.elf.incomplete
+    area: machine
+    owner: MACH-BIN-ELF
+    surfaces: ElfCodec.Read for invalid magic or a truncated header
+  - code: PLY4061
+    severity: error
+    exit: UnsupportedConstruct
+    title: unsupported ELF header field
+    message: "ELF <field> '<value>' is not supported"
+    rule: machine.elf.unsupported
+    area: machine
+    owner: MACH-BIN-ELF
+    surfaces: ElfCodec.Read for a class, encoding, machine or object type outside the admitted formats
+  - code: PLY4062
+    severity: error
+    exit: EnvironmentError
+    title: corrupt ELF structure
+    message: "ELF structure is corrupt: <detail>"
+    rule: machine.elf.corrupt
+    area: machine
+    owner: MACH-BIN-ELF
+    surfaces: ElfCodec.Read for inconsistent or out-of-file structures
+  - code: PLY4063
+    severity: warning
+    title: unsupported ELF relocation
+    message: "relocation type <type> at <address> is not supported; code that depends on it cannot be translated standalone"
+    rule: machine.elf.relocation
+    area: machine
+    owner: MACH-BIN-ELF
+    surfaces: ElfCodec.Read when a relocation is preserved as unsupported
