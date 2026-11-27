@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using NUnit.Framework;
@@ -51,6 +50,8 @@ public sealed class BatchFrontendNativeTests {
   [TestCase("set /a \"total=0\"\r\nfor /l %%I in (3,1,1) do set /a \"total=total+%%I\"\r\nexit /b %total%", 0)]
   [TestCase("set /a \"number=-2147483647-1\"\r\nset /a \"sign=(number>>31)&1\"\r\nexit /b %sign%", 1)]
   [TestCase("set /a \"x=1+7>>2&1\"\r\nexit /b %x%", 0)]
+  [TestCase("setlocal\r\nset /a \"n=%errorlevel%+41\"\r\nexit /b %n%", 42)]
+  [TestCase("setlocal\r\nsetlocal EnableDelayedExpansion\r\nset /a \"n=!errorlevel!+41\"\r\nexit /b %n%", 41)]
   public void SignedBoundariesAndZeroIterationsMatchNative(string body, int expected)
     => Compare("@echo off\r\nsetlocal EnableExtensions DisableDelayedExpansion\r\n" + body, expected);
 
@@ -62,6 +63,37 @@ public sealed class BatchFrontendNativeTests {
     Compare($"@echo off\r\nsetlocal EnableExtensions DisableDelayedExpansion\r\nset /a \"n=7\"\r\n{command}\r\nexit /b %n%\r\n", 42);
   }
 
+  [TestCase("value", 8190)]
+  [TestCase("value", 8191)]
+  [TestCase("%value%", 8190)]
+  [TestCase("%value%", 8191)]
+  [TestCase("!value!", 8190)]
+  [TestCase("!value!", 8191)]
+  public void CompoundCommandWidthAgreesWithNative(string operand, int width) {
+    const string prologue = "@echo off\r\nsetlocal EnableExtensions EnableDelayedExpansion\r\nset \"value=-2147483647\"\r\nset \"result=7\"\r\n";
+    var command = $"for /l %%I in (1,1,1) do (\n  set /a \"result={operand}\"\n)";
+    var expansion = operand[0] is '%' or '!' ? 11 - operand.Length : 0;
+    var padded = command.Insert(command.IndexOf("result=", StringComparison.Ordinal) + "result=".Length,
+      new string(' ', width - command.Length - expansion)).Replace("\n", "\r\n", StringComparison.Ordinal);
+    Compare(prologue + padded + "\r\nexit /b %result%\r\n", -2147483647);
+  }
+
+  [TestCase("%value%")]
+  [TestCase("!value!")]
+  public void ExpandedDecimalMinimumHasTheSameNativeTraceAsTheLiteral(string operand) {
+    const string prologue = "@echo off\r\nsetlocal EnableExtensions EnableDelayedExpansion\r\nset /a \"value=-2147483647-1\"\r\nset \"result=7\"\r\n";
+    (int ExitCode, byte[] StandardOutput, string StandardError) Observe(string expression)
+      => NativeRun(prologue + $"for /l %%I in (1,1,1) do (\r\n  set /a \"result={expression}+1\"\r\n)\r\nexit /b %result%\r\n");
+
+    var literal = Observe("-2147483648");
+    var expanded = Observe(operand);
+    TestContext.Out.WriteLine($"Decimal minimum expansion returned {expanded.ExitCode} with {expanded.StandardOutput.Length} stdout bytes.");
+    TestContext.Out.WriteLine(expanded.StandardError);
+    Assert.That(expanded.ExitCode, Is.EqualTo(literal.ExitCode));
+    Assert.That(expanded.StandardOutput, Is.EqualTo(literal.StandardOutput));
+    Assert.That(expanded.StandardError, Is.EqualTo(literal.StandardError));
+  }
+
   private static void Compare(string source, int expected) {
     var lifted = BatchFrontend.Import("kernel.bat", source);
     Assert.That(lifted.Diagnostics, Is.Empty);
@@ -69,23 +101,21 @@ public sealed class BatchFrontendNativeTests {
     Assert.That(NativeStatus(source), Is.EqualTo(expected).And.EqualTo(ir));
   }
 
-  internal static int NativeStatus(string source) {
+  internal static int NativeStatus(string source, bool expectEmptyOutput = false) {
+    var observed = NativeRun(source);
+    if (expectEmptyOutput) {
+      Assert.That(observed.StandardOutput, Is.Empty, "Native standard output");
+      Assert.That(observed.StandardError, Is.Empty, "Native standard error");
+    }
+    return observed.ExitCode;
+  }
+
+  private static (int ExitCode, byte[] StandardOutput, string StandardError) NativeRun(string source) {
     var directory = Directory.CreateTempSubdirectory();
     try {
-      File.WriteAllText(Path.Combine(directory.FullName, "kernel.bat"), source);
-      var command = Path.Combine(Environment.SystemDirectory, "cmd.exe");
-      TestContext.Out.WriteLine($"{Environment.OSVersion}; cmd.exe {FileVersionInfo.GetVersionInfo(command).FileVersion}");
-      var start = new ProcessStartInfo(command) { WorkingDirectory = directory.FullName, UseShellExecute = false };
-      start.Environment.Remove("ERRORLEVEL");
-      foreach (var argument in new[] { "/d", "/e:on", "/v:off", "/c", "kernel.bat" })
-        start.ArgumentList.Add(argument);
-      using var process = Process.Start(start)!;
-      if (!process.WaitForExit(10000)) {
-        process.Kill(entireProcessTree: true);
-        process.WaitForExit();
-        Assert.Fail("Native cmd.exe timed out.");
-      }
-      return process.ExitCode;
+      const string file = "kernel.bat";
+      File.WriteAllText(Path.Combine(directory.FullName, file), source);
+      return BatchBackendTests.NativeRun(directory.FullName, file);
     } finally {
       directory.Delete(recursive: true);
     }
