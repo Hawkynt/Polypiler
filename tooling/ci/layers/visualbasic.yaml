@@ -1,0 +1,9 @@
+# The classic Visual Basic layer (docs/adr/2600-classic-visual-basic-oracle.md): LibreOffice Basic in its
+# VBA compatibility mode, run headless, the oracle of the VB6 / VBA frontend and backend, run by the job
+# layer-visualbasic of .github/workflows/ci.yml. Format: spec/schemas/ci-layer.schema.json.
+schema: 1
+layer: visualbasic
+toolchains: [libreoffice]
+os: [ubuntu-latest]
+paths: ["Polypiler.Core.Frontends.VisualBasic/**", "Polypiler.Core.Backends.VisualBasic/**", "Polypiler.Core.Verification/Runners/VisualBasic*", "tests/fixtures/visualbasic/**", "tooling/ci/layers/visualbasic.yaml", "tooling/ci/visualbasic/**", "Polypiler.Tests.Acceptance/VisualBasic/**", "Polypiler.Tests/Frontends/VisualBasic/**", "Polypiler.Tests/Backends/VisualBasic/**"]
+always: false

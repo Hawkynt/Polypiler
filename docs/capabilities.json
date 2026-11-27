@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "generatedFrom": {
-    "commit": "65d569574c04117b68cd6b24d9e6b1d56cac24a7",
+    "commit": "0000000000000000000000000000000000000000",
     "gateRecords": 0
   },
   "states": [
@@ -2783,6 +2783,860 @@
     {
       "from": "javascript",
       "sourceProfile": "es5",
+      "to": "javascript",
+      "targetProfile": "es5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vb6",
+      "to": "csharp",
+      "targetProfile": "net10.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vb6",
+      "to": "csharp",
+      "targetProfile": "net2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vb6",
+      "to": "csharp",
+      "targetProfile": "net3.5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vb6",
+      "to": "csharp",
+      "targetProfile": "net4.6",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vb6",
+      "to": "csharp",
+      "targetProfile": "net4.8",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vb6",
+      "to": "csharp",
+      "targetProfile": "net8.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vb6",
+      "to": "csharp",
+      "targetProfile": "netcoreapp3.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vb6",
+      "to": "csharp",
+      "targetProfile": "netstandard2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vb6",
+      "to": "csharp",
+      "targetProfile": "netstandard2.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vb6",
+      "to": "javascript",
+      "targetProfile": "es2015",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vb6",
+      "to": "javascript",
+      "targetProfile": "es2017",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vb6",
+      "to": "javascript",
+      "targetProfile": "es2020",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vb6",
+      "to": "javascript",
+      "targetProfile": "es2022",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vb6",
+      "to": "javascript",
+      "targetProfile": "es5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba6",
+      "to": "csharp",
+      "targetProfile": "net10.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba6",
+      "to": "csharp",
+      "targetProfile": "net2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba6",
+      "to": "csharp",
+      "targetProfile": "net3.5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba6",
+      "to": "csharp",
+      "targetProfile": "net4.6",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba6",
+      "to": "csharp",
+      "targetProfile": "net4.8",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba6",
+      "to": "csharp",
+      "targetProfile": "net8.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba6",
+      "to": "csharp",
+      "targetProfile": "netcoreapp3.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba6",
+      "to": "csharp",
+      "targetProfile": "netstandard2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba6",
+      "to": "csharp",
+      "targetProfile": "netstandard2.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba6",
+      "to": "javascript",
+      "targetProfile": "es2015",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba6",
+      "to": "javascript",
+      "targetProfile": "es2017",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba6",
+      "to": "javascript",
+      "targetProfile": "es2020",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba6",
+      "to": "javascript",
+      "targetProfile": "es2022",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba6",
+      "to": "javascript",
+      "targetProfile": "es5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba7",
+      "to": "csharp",
+      "targetProfile": "net10.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Variant, Currency, Date, Decimal, Object, LongPtr",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "GoTo, GoSub, With, For Each, Resume to a label",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "multidimensional arrays, arrays of String or Boolean",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Declare, Property",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "class modules, fixed-length strings, String fields of a Type",
+          "diagnostic": "PLY2646"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba7",
+      "to": "csharp",
+      "targetProfile": "net2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Variant, Currency, Date, Decimal, Object, LongPtr",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "GoTo, GoSub, With, For Each, Resume to a label",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "multidimensional arrays, arrays of String or Boolean",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Declare, Property",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "class modules, fixed-length strings, String fields of a Type",
+          "diagnostic": "PLY2646"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba7",
+      "to": "csharp",
+      "targetProfile": "net3.5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Variant, Currency, Date, Decimal, Object, LongPtr",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "GoTo, GoSub, With, For Each, Resume to a label",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "multidimensional arrays, arrays of String or Boolean",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Declare, Property",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "class modules, fixed-length strings, String fields of a Type",
+          "diagnostic": "PLY2646"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba7",
+      "to": "csharp",
+      "targetProfile": "net4.6",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Variant, Currency, Date, Decimal, Object, LongPtr",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "GoTo, GoSub, With, For Each, Resume to a label",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "multidimensional arrays, arrays of String or Boolean",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Declare, Property",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "class modules, fixed-length strings, String fields of a Type",
+          "diagnostic": "PLY2646"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba7",
+      "to": "csharp",
+      "targetProfile": "net4.8",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Variant, Currency, Date, Decimal, Object, LongPtr",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "GoTo, GoSub, With, For Each, Resume to a label",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "multidimensional arrays, arrays of String or Boolean",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Declare, Property",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "class modules, fixed-length strings, String fields of a Type",
+          "diagnostic": "PLY2646"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba7",
+      "to": "csharp",
+      "targetProfile": "net8.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Variant, Currency, Date, Decimal, Object, LongPtr",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "GoTo, GoSub, With, For Each, Resume to a label",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "multidimensional arrays, arrays of String or Boolean",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Declare, Property",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "class modules, fixed-length strings, String fields of a Type",
+          "diagnostic": "PLY2646"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba7",
+      "to": "csharp",
+      "targetProfile": "netcoreapp3.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Variant, Currency, Date, Decimal, Object, LongPtr",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "GoTo, GoSub, With, For Each, Resume to a label",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "multidimensional arrays, arrays of String or Boolean",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Declare, Property",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "class modules, fixed-length strings, String fields of a Type",
+          "diagnostic": "PLY2646"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba7",
+      "to": "csharp",
+      "targetProfile": "netstandard2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Variant, Currency, Date, Decimal, Object, LongPtr",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "GoTo, GoSub, With, For Each, Resume to a label",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "multidimensional arrays, arrays of String or Boolean",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Declare, Property",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "class modules, fixed-length strings, String fields of a Type",
+          "diagnostic": "PLY2646"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba7",
+      "to": "csharp",
+      "targetProfile": "netstandard2.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Variant, Currency, Date, Decimal, Object, LongPtr",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "GoTo, GoSub, With, For Each, Resume to a label",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "multidimensional arrays, arrays of String or Boolean",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Declare, Property",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "class modules, fixed-length strings, String fields of a Type",
+          "diagnostic": "PLY2646"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba7",
+      "to": "javascript",
+      "targetProfile": "es2015",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Variant, Currency, Date, Decimal, Object, LongPtr",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "GoTo, GoSub, With, For Each, Resume to a label",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "multidimensional arrays, arrays of String or Boolean",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Declare, Property",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "class modules, fixed-length strings, String fields of a Type",
+          "diagnostic": "PLY2646"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba7",
+      "to": "javascript",
+      "targetProfile": "es2017",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Variant, Currency, Date, Decimal, Object, LongPtr",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "GoTo, GoSub, With, For Each, Resume to a label",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "multidimensional arrays, arrays of String or Boolean",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Declare, Property",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "class modules, fixed-length strings, String fields of a Type",
+          "diagnostic": "PLY2646"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba7",
+      "to": "javascript",
+      "targetProfile": "es2020",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Variant, Currency, Date, Decimal, Object, LongPtr",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "GoTo, GoSub, With, For Each, Resume to a label",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "multidimensional arrays, arrays of String or Boolean",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Declare, Property",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "class modules, fixed-length strings, String fields of a Type",
+          "diagnostic": "PLY2646"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba7",
+      "to": "javascript",
+      "targetProfile": "es2022",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Variant, Currency, Date, Decimal, Object, LongPtr",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "GoTo, GoSub, With, For Each, Resume to a label",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "multidimensional arrays, arrays of String or Boolean",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Declare, Property",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "class modules, fixed-length strings, String fields of a Type",
+          "diagnostic": "PLY2646"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba7",
+      "to": "javascript",
+      "targetProfile": "es5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Variant, Currency, Date, Decimal, Object, LongPtr",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "GoTo, GoSub, With, For Each, Resume to a label",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "multidimensional arrays, arrays of String or Boolean",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Declare, Property",
+          "diagnostic": "PLY2646"
+        },
+        {
+          "construct": "class modules, fixed-length strings, String fields of a Type",
+          "diagnostic": "PLY2646"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba7-64",
+      "to": "csharp",
+      "targetProfile": "net10.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba7-64",
+      "to": "csharp",
+      "targetProfile": "net2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba7-64",
+      "to": "csharp",
+      "targetProfile": "net3.5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba7-64",
+      "to": "csharp",
+      "targetProfile": "net4.6",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba7-64",
+      "to": "csharp",
+      "targetProfile": "net4.8",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba7-64",
+      "to": "csharp",
+      "targetProfile": "net8.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba7-64",
+      "to": "csharp",
+      "targetProfile": "netcoreapp3.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba7-64",
+      "to": "csharp",
+      "targetProfile": "netstandard2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba7-64",
+      "to": "csharp",
+      "targetProfile": "netstandard2.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba7-64",
+      "to": "javascript",
+      "targetProfile": "es2015",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba7-64",
+      "to": "javascript",
+      "targetProfile": "es2017",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba7-64",
+      "to": "javascript",
+      "targetProfile": "es2020",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba7-64",
+      "to": "javascript",
+      "targetProfile": "es2022",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vba7-64",
       "to": "javascript",
       "targetProfile": "es5",
       "state": "planned",

@@ -378,7 +378,41 @@ enum's or a number's parse, a cast, a view) gives the trap as its value there an
 form, a trap inside a closure, a step of locked module state and a type named `Error` are refused with
 `PLY1552`.
 
+## Visual Basic
+
+Classic Visual Basic (VB6 / VBA) has no exception objects: an error is a number in `Err.Number`, raised
+by an operation or by `Err.Raise`, handled by the `On Error` statement in force
+([classic backend](../architecture/VISUALBASIC-BACKEND.md), [classic frontend](../architecture/VISUALBASIC-FRONTEND.md)).
+Both directions use one table:
+
+| IR class (trap) | Visual Basic run-time error |
+| --- | --- |
+| `DivideByZeroException` (`DivideByZero`) | 11 Division by zero |
+| `OverflowException` (`IntegerOverflow`) | 6 Overflow |
+| `IndexOutOfRangeException` (`IndexOutOfRange`) | 9 Subscript out of range |
+| `InvalidCastException` (`InvalidCast`) | 13 Type mismatch |
+| `NullReferenceException` (`NullReference`) | 91 Object variable not set |
+| `ArgumentException`, `ArgumentOutOfRangeException` (`ArgumentOutOfRange`) | 5 Invalid procedure call or argument |
+| `ArithmeticException` (`InvalidOperation`) and any other class | 5 |
+
+- **Backend.** A trap is the error Visual Basic's own operation raises, or `Err.Raise` of its number in
+  a helper; `throw new E()` of a library class is `Err.Raise`; a try is `On Error GoTo` whose handler
+  takes the number and resumes at a dispatch over the catch clauses (`ArithmeticException` selects 6 and
+  11, `Exception` every number), raising the number again where none selects it; `throw;` raises it
+  again. A catch clause that reads the exception or has a filter, a `finally`, and a class no number
+  stands for are refused with `PLY2655`/`PLY2657`.
+- **Frontend.** `On Error GoTo` with its handler at the end of the procedure is a try with one catch
+  clause per class of the table, each setting `Err.Number`; `On Error Resume Next` and a handler that
+  ends with `Resume Next` are a try around every following statement; `Err.Raise` and `Error` of 5, 6,
+  9, 11, 13 or 91 throw the class of the number; any other number is refused with `PLY2646`.
+
 ## Known differences
+
+- Visual Basic raises error 6 or 11 for a floating-point operation whose IEEE 754 result is an infinity
+  or a NaN; the IR gives the value. The classic frontend checks every floating-point result (error 6, 11
+  for a zero divisor, 6 for 0/0); the classic backend writes Visual Basic's own operations, so a module
+  translated to Visual Basic traps there where the IR does not. VBA clears `Err` when a procedure ends;
+  the frontend does not model that clearing.
 
 - .NET names a class in a namespace with it in the default message ("Exception of type 'N.X' was
   thrown."); the IR's class has no namespace, and neither has the generated C#.

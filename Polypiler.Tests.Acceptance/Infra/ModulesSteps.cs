@@ -42,6 +42,7 @@ public sealed class ModulesSteps {
     "Polypiler.Core.Backends.Python",
     "Polypiler.Core.Backends.Rust",
     "Polypiler.Core.Backends.VBScript",
+    "Polypiler.Core.Backends.VisualBasic",
     "Polypiler.Core.Frontends.Batch",
     "Polypiler.Core.Frontends.Cpp",
     "Polypiler.Core.Frontends.Go",
@@ -50,7 +51,8 @@ public sealed class ModulesSteps {
     "Polypiler.Core.Frontends.Perl",
     "Polypiler.Core.Frontends.Python",
     "Polypiler.Core.Frontends.Rust",
-    "Polypiler.Core.Frontends.VBScript"
+    "Polypiler.Core.Frontends.VBScript",
+    "Polypiler.Core.Frontends.VisualBasic"
   ];
 
   private static readonly string[] _tests = ["Polypiler.Benchmarks", "Polypiler.Tests", "Polypiler.Tests.Acceptance", "Polypiler.Tests.Generator", "Polypiler.Tests.Probe"];

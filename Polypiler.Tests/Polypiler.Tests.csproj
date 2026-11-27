@@ -63,6 +63,7 @@
     <ProjectReference Include="..\Polypiler.Core.Backends.Python\Polypiler.Core.Backends.Python.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Backends.Rust\Polypiler.Core.Backends.Rust.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Backends.VBScript\Polypiler.Core.Backends.VBScript.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Backends.VisualBasic\Polypiler.Core.Backends.VisualBasic.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Backends.Go\Polypiler.Core.Backends.Go.csproj" />
     <ProjectReference Include="..\Polypiler.Core.BinaryFormats\Polypiler.Core.BinaryFormats.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Frontends.Batch\Polypiler.Core.Frontends.Batch.csproj" />
@@ -75,6 +76,7 @@
     <ProjectReference Include="..\Polypiler.Core.Frontends.Python\Polypiler.Core.Frontends.Python.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Frontends.Rust\Polypiler.Core.Frontends.Rust.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Frontends.VBScript\Polypiler.Core.Frontends.VBScript.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Frontends.VisualBasic\Polypiler.Core.Frontends.VisualBasic.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Frontends.Go\Polypiler.Core.Frontends.Go.csproj" />
     <ProjectReference Include="..\Polypiler.Core.IR\Polypiler.Core.IR.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Legalize\Polypiler.Core.Legalize.csproj" />
