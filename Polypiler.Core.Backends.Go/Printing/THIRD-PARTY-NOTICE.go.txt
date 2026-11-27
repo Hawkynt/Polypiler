@@ -1,3 +1,6 @@
+Origin: https://go.googlesource.com/go/+/refs/tags/go1.27.4/src/go/printer/nodes.go
+Licence: BSD-3-Clause
+
 Polypiler.Core.Backends.Go/Printing/GoPrinter.cs converts the rules by which go/printer spaces binary
 expressions (src/go/printer/nodes.go: walkBinary, cutoff, diffPrec, reduceDepth, binaryExpr, expr1)
 of the Go distribution, https://go.dev, under the following licence.
