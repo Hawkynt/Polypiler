@@ -1,0 +1,96 @@
+id: MACHINE.x64
+title: x86-64 long-mode integer register profile
+version: 1
+status: draft
+owner: Hawkynt
+issue: ISA-X64-REGISTERS
+tests: [tests/features/native/isa-x64-registers.feature]
+introducedIn: P5
+compatibility: none
+reviewedRevision: 0
+normative: "https://cdrdv2-public.intel.com/843827/253665-sdm-vol-1-dec-24.pdf"
+spec:
+  # Intel SDM volume 1, §3.4.1.1, §3.4.3, and §3.5.1.
+  isa: x64
+  addressBits: 64
+  byteOrder: little
+  registers:
+    - {name: rax, bits: 64}
+    - {name: rcx, bits: 64}
+    - {name: rdx, bits: 64}
+    - {name: rbx, bits: 64}
+    - {name: rsp, bits: 64, class: stack-pointer}
+    - {name: rbp, bits: 64}
+    - {name: rsi, bits: 64}
+    - {name: rdi, bits: 64}
+    - {name: r8, bits: 64}
+    - {name: r9, bits: 64}
+    - {name: r10, bits: 64}
+    - {name: r11, bits: 64}
+    - {name: r12, bits: 64}
+    - {name: r13, bits: 64}
+    - {name: r14, bits: 64}
+    - {name: r15, bits: 64}
+    - {name: rip, bits: 64, class: program-counter}
+    - {name: rflags, bits: 64, class: status}
+    # Each alias names its root so that its write policy applies to the full register.
+    - {name: eax, bits: 32, parent: rax, offset: 0, write: zero-extend}
+    - {name: ax, bits: 16, parent: rax, offset: 0, write: preserve}
+    - {name: al, bits: 8, parent: rax, offset: 0, write: preserve}
+    - {name: ah, bits: 8, parent: rax, offset: 8, write: preserve}
+    - {name: ecx, bits: 32, parent: rcx, offset: 0, write: zero-extend}
+    - {name: cx, bits: 16, parent: rcx, offset: 0, write: preserve}
+    - {name: cl, bits: 8, parent: rcx, offset: 0, write: preserve}
+    - {name: ch, bits: 8, parent: rcx, offset: 8, write: preserve}
+    - {name: edx, bits: 32, parent: rdx, offset: 0, write: zero-extend}
+    - {name: dx, bits: 16, parent: rdx, offset: 0, write: preserve}
+    - {name: dl, bits: 8, parent: rdx, offset: 0, write: preserve}
+    - {name: dh, bits: 8, parent: rdx, offset: 8, write: preserve}
+    - {name: ebx, bits: 32, parent: rbx, offset: 0, write: zero-extend}
+    - {name: bx, bits: 16, parent: rbx, offset: 0, write: preserve}
+    - {name: bl, bits: 8, parent: rbx, offset: 0, write: preserve}
+    - {name: bh, bits: 8, parent: rbx, offset: 8, write: preserve}
+    - {name: esp, bits: 32, parent: rsp, offset: 0, write: zero-extend}
+    - {name: sp, bits: 16, parent: rsp, offset: 0, write: preserve}
+    - {name: spl, bits: 8, parent: rsp, offset: 0, write: preserve}
+    - {name: ebp, bits: 32, parent: rbp, offset: 0, write: zero-extend}
+    - {name: bp, bits: 16, parent: rbp, offset: 0, write: preserve}
+    - {name: bpl, bits: 8, parent: rbp, offset: 0, write: preserve}
+    - {name: esi, bits: 32, parent: rsi, offset: 0, write: zero-extend}
+    - {name: si, bits: 16, parent: rsi, offset: 0, write: preserve}
+    - {name: sil, bits: 8, parent: rsi, offset: 0, write: preserve}
+    - {name: edi, bits: 32, parent: rdi, offset: 0, write: zero-extend}
+    - {name: di, bits: 16, parent: rdi, offset: 0, write: preserve}
+    - {name: dil, bits: 8, parent: rdi, offset: 0, write: preserve}
+    - {name: r8d, bits: 32, parent: r8, offset: 0, write: zero-extend}
+    - {name: r8w, bits: 16, parent: r8, offset: 0, write: preserve}
+    - {name: r8b, bits: 8, parent: r8, offset: 0, write: preserve}
+    - {name: r9d, bits: 32, parent: r9, offset: 0, write: zero-extend}
+    - {name: r9w, bits: 16, parent: r9, offset: 0, write: preserve}
+    - {name: r9b, bits: 8, parent: r9, offset: 0, write: preserve}
+    - {name: r10d, bits: 32, parent: r10, offset: 0, write: zero-extend}
+    - {name: r10w, bits: 16, parent: r10, offset: 0, write: preserve}
+    - {name: r10b, bits: 8, parent: r10, offset: 0, write: preserve}
+    - {name: r11d, bits: 32, parent: r11, offset: 0, write: zero-extend}
+    - {name: r11w, bits: 16, parent: r11, offset: 0, write: preserve}
+    - {name: r11b, bits: 8, parent: r11, offset: 0, write: preserve}
+    - {name: r12d, bits: 32, parent: r12, offset: 0, write: zero-extend}
+    - {name: r12w, bits: 16, parent: r12, offset: 0, write: preserve}
+    - {name: r12b, bits: 8, parent: r12, offset: 0, write: preserve}
+    - {name: r13d, bits: 32, parent: r13, offset: 0, write: zero-extend}
+    - {name: r13w, bits: 16, parent: r13, offset: 0, write: preserve}
+    - {name: r13b, bits: 8, parent: r13, offset: 0, write: preserve}
+    - {name: r14d, bits: 32, parent: r14, offset: 0, write: zero-extend}
+    - {name: r14w, bits: 16, parent: r14, offset: 0, write: preserve}
+    - {name: r14b, bits: 8, parent: r14, offset: 0, write: preserve}
+    - {name: r15d, bits: 32, parent: r15, offset: 0, write: zero-extend}
+    - {name: r15w, bits: 16, parent: r15, offset: 0, write: preserve}
+    - {name: r15b, bits: 8, parent: r15, offset: 0, write: preserve}
+  flags:
+    - {name: cf, register: rflags, bit: 0}
+    - {name: pf, register: rflags, bit: 2}
+    - {name: af, register: rflags, bit: 4}
+    - {name: zf, register: rflags, bit: 6}
+    - {name: sf, register: rflags, bit: 7}
+    - {name: df, register: rflags, bit: 10}
+    - {name: of, register: rflags, bit: 11}
