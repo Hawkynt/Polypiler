@@ -11,7 +11,7 @@
 // "builtin", "value", "constant", "void", "novalue") and, for a constant, "const" with its exact
 // value (constant.Value.ExactString) and "constKind" (int, float, bool, string). An identifier
 // carries "obj": the kind of the object it names (var, const, func, type, builtin, pkg, nil,
-// label), "decl" the position of that object's declaration, "pkg" the import path of a package
+// label), "decl" the position of that object's declaration in this file, "pkg" the import path of a package
 // it names, and "field" true for a struct field.
 package main
 
@@ -181,7 +181,9 @@ func (d *dumper) node(value reflect.Value) any {
 		}
 		if object != nil {
 			result["obj"] = objectKind(object)
-			result["decl"] = d.position(object.Pos())
+			if object.Pkg() == d.pkg {
+				result["decl"] = d.position(object.Pos())
+			}
 			if name, ok := object.(*types.PkgName); ok {
 				result["pkg"] = name.Imported().Path()
 			}
