@@ -14,24 +14,24 @@ dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -- re
 
 | Construct | Category | JavaScript | C# | Python | Rust | Perl | Batch | MSIL | JVM | C++ | VBScript |
 | --- | --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| [Operators, Bitwise & Checked Arithmetic](#operators-bitwise--checked-arithmetic) | Core Language | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
-| [Recursion](#recursion) | Control Flow & Functions | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
-| [Method & Constructor Overloading](#method--constructor-overloading) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
-| [Structs & Value Records](#structs--value-records) | Types & Data | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
-| [Classes, Properties & Reference Records](#classes-properties--reference-records) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
-| [Statics & Module State](#statics--module-state) | Core Language | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
-| [Inheritance, Virtual Dispatch & Interfaces](#inheritance-virtual-dispatch--interfaces) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
-| [Generics](#generics) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
-| [Lambdas & Closures](#lambdas--closures) | Functional | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
-| [Callbacks & Delegates](#callbacks--delegates) | Functional | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
-| [Enums & Nullable Optionals](#enums--nullable-optionals) | Types & Data | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | `PLY3052` | `PLY3152` | ✅ | ✅ |
-| [Collections](#collections) | Collections & Sequences | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
-| [Iterators & Lazy Sequences](#iterators--lazy-sequences) | Collections & Sequences | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
-| [LINQ](#linq) | Collections & Sequences | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
-| [Exceptions & Resource Scopes](#exceptions--resource-scopes) | Error Handling | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
-| [Tasks & Async/Await](#tasks--asyncawait) | Concurrency & Asynchrony | ⚠️ 4/5 | ⚠️ 7/9 | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
+| [Operators, Bitwise & Checked Arithmetic](#operators-bitwise--checked-arithmetic) | Core Language | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
+| [Recursion](#recursion) | Control Flow & Functions | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
+| [Method & Constructor Overloading](#method--constructor-overloading) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
+| [Structs & Value Records](#structs--value-records) | Types & Data | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
+| [Classes, Properties & Reference Records](#classes-properties--reference-records) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
+| [Statics & Module State](#statics--module-state) | Core Language | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
+| [Inheritance, Virtual Dispatch & Interfaces](#inheritance-virtual-dispatch--interfaces) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
+| [Generics](#generics) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
+| [Lambdas & Closures](#lambdas--closures) | Functional | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
+| [Callbacks & Delegates](#callbacks--delegates) | Functional | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
+| [Enums & Nullable Optionals](#enums--nullable-optionals) | Types & Data | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
+| [Collections](#collections) | Collections & Sequences | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
+| [Iterators & Lazy Sequences](#iterators--lazy-sequences) | Collections & Sequences | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
+| [LINQ](#linq) | Collections & Sequences | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
+| [Exceptions & Resource Scopes](#exceptions--resource-scopes) | Error Handling | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
+| [Tasks & Async/Await](#tasks--asyncawait) | Concurrency & Asynchrony | ⚠️ 4/5 | ⚠️ 7/9 | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
 | [Standard Output (Stdio)](#standard-output-stdio) | I/O & Interop | `PLY1152` | `PLY1052` | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
-| [Spans, Bit Permutations & Unsafe Pointers](#spans-bit-permutations--unsafe-pointers) | Low-Level & Performance | ✅ | ✅ | ✅ | ✅ | ✅ | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | ✅ |
+| [Spans, Bit Permutations & Unsafe Pointers](#spans-bit-permutations--unsafe-pointers) | Low-Level & Performance | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
 | [Native Interop (P/Invoke)](#native-interop-pinvoke) | I/O & Interop | `PLY1152` | ✅ | ✅ | ✅ | `PLY1751` | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | `PLY2650` |
 | [User-Defined Operator Overloading (Boundary)](#user-defined-operator-overloading-boundary) | Unsupported Boundaries | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
 | [Hardware SIMD Vectorization (Boundary)](#hardware-simd-vectorization-boundary) | Unsupported Boundaries | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
@@ -200,24 +200,24 @@ dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -- re
 
 | Construct | `cmd` | `dos622` |
 | --- | :---: | :---: |
-| [Operators, Bitwise & Checked Arithmetic](#operators-bitwise--checked-arithmetic) | `PLY2850` | `PLY2851` |
-| [Recursion](#recursion) | `PLY2850` | `PLY2851` |
-| [Method & Constructor Overloading](#method--constructor-overloading) | `PLY2850` | `PLY2851` |
-| [Structs & Value Records](#structs--value-records) | `PLY2850` | `PLY2851` |
-| [Classes, Properties & Reference Records](#classes-properties--reference-records) | `PLY2850` | `PLY2851` |
-| [Statics & Module State](#statics--module-state) | `PLY2850` | `PLY2851` |
-| [Inheritance, Virtual Dispatch & Interfaces](#inheritance-virtual-dispatch--interfaces) | `PLY2850` | `PLY2851` |
-| [Generics](#generics) | `PLY2850` | `PLY2851` |
-| [Lambdas & Closures](#lambdas--closures) | `PLY2850` | `PLY2851` |
-| [Callbacks & Delegates](#callbacks--delegates) | `PLY2850` | `PLY2851` |
-| [Enums & Nullable Optionals](#enums--nullable-optionals) | `PLY2850` | `PLY2851` |
-| [Collections](#collections) | `PLY2850` | `PLY2851` |
-| [Iterators & Lazy Sequences](#iterators--lazy-sequences) | `PLY2850` | `PLY2851` |
-| [LINQ](#linq) | `PLY2850` | `PLY2851` |
-| [Exceptions & Resource Scopes](#exceptions--resource-scopes) | `PLY2850` | `PLY2851` |
-| [Tasks & Async/Await](#tasks--asyncawait) | `PLY2850` | `PLY2851` |
+| [Operators, Bitwise & Checked Arithmetic](#operators-bitwise--checked-arithmetic) | ✅ | `PLY2851` |
+| [Recursion](#recursion) | ✅ | `PLY2851` |
+| [Method & Constructor Overloading](#method--constructor-overloading) | ✅ | `PLY2851` |
+| [Structs & Value Records](#structs--value-records) | ✅ | `PLY2851` |
+| [Classes, Properties & Reference Records](#classes-properties--reference-records) | ✅ | `PLY2851` |
+| [Statics & Module State](#statics--module-state) | ✅ | `PLY2851` |
+| [Inheritance, Virtual Dispatch & Interfaces](#inheritance-virtual-dispatch--interfaces) | ✅ | `PLY2851` |
+| [Generics](#generics) | ✅ | `PLY2851` |
+| [Lambdas & Closures](#lambdas--closures) | ✅ | `PLY2851` |
+| [Callbacks & Delegates](#callbacks--delegates) | ✅ | `PLY2851` |
+| [Enums & Nullable Optionals](#enums--nullable-optionals) | ✅ | `PLY2851` |
+| [Collections](#collections) | ✅ | `PLY2851` |
+| [Iterators & Lazy Sequences](#iterators--lazy-sequences) | ✅ | `PLY2851` |
+| [LINQ](#linq) | ✅ | `PLY2851` |
+| [Exceptions & Resource Scopes](#exceptions--resource-scopes) | ✅ | `PLY2851` |
+| [Tasks & Async/Await](#tasks--asyncawait) | ✅ | `PLY2851` |
 | [Standard Output (Stdio)](#standard-output-stdio) | ✅ | `PLY2851` |
-| [Spans, Bit Permutations & Unsafe Pointers](#spans-bit-permutations--unsafe-pointers) | `PLY2850` | `PLY2851` |
+| [Spans, Bit Permutations & Unsafe Pointers](#spans-bit-permutations--unsafe-pointers) | ✅ | `PLY2851` |
 | [Native Interop (P/Invoke)](#native-interop-pinvoke) | `PLY2850` | `PLY2851` |
 | [User-Defined Operator Overloading (Boundary)](#user-defined-operator-overloading-boundary) | `PLY1002` | `PLY1002` |
 | [Hardware SIMD Vectorization (Boundary)](#hardware-simd-vectorization-boundary) | `PLY1002` | `PLY1002` |
@@ -241,7 +241,7 @@ dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -- re
 | [Generics](#generics) | ✅ | ✅ |
 | [Lambdas & Closures](#lambdas--closures) | ✅ | ✅ |
 | [Callbacks & Delegates](#callbacks--delegates) | ✅ | ✅ |
-| [Enums & Nullable Optionals](#enums--nullable-optionals) | `PLY3052` | `PLY3052` |
+| [Enums & Nullable Optionals](#enums--nullable-optionals) | ✅ | ✅ |
 | [Collections](#collections) | ✅ | ✅ |
 | [Iterators & Lazy Sequences](#iterators--lazy-sequences) | ✅ | ✅ |
 | [LINQ](#linq) | ✅ | ✅ |
@@ -272,7 +272,7 @@ dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -- re
 | [Generics](#generics) | ✅ | ✅ | ✅ |
 | [Lambdas & Closures](#lambdas--closures) | ✅ | ✅ | ✅ |
 | [Callbacks & Delegates](#callbacks--delegates) | ✅ | ✅ | ✅ |
-| [Enums & Nullable Optionals](#enums--nullable-optionals) | `PLY3152` | `PLY3152` | `PLY3152` |
+| [Enums & Nullable Optionals](#enums--nullable-optionals) | ✅ | ✅ | ✅ |
 | [Collections](#collections) | ✅ | ✅ | ✅ |
 | [Iterators & Lazy Sequences](#iterators--lazy-sequences) | ✅ | ✅ | ✅ |
 | [LINQ](#linq) | ✅ | ✅ | ✅ |
@@ -734,6 +734,168 @@ Returns i32.
 </details>
 
 <details>
+<summary><strong>Batch</strong> — 1/2 dialects (1 output)</summary>
+
+<details>
+<summary>Dialect: <code>cmd</code> (<code>kernel.bat</code>)</summary>
+
+```bat
+@echo off
+setlocal EnableExtensions EnableDelayedExpansion
+set "_SP=0"
+set "_HID=0"
+set "_CS=0"
+set "_WID=0"
+set "_EX_ACTIVE=0"
+set "_EX_STK_N=0"
+call :__ply_init
+if "%~1"=="Mix" goto :__ply_cli_Mix
+if "%~1"=="SafeAdd" goto :__ply_cli_SafeAdd
+>&2 echo PLY_BATCH_ERROR=UnknownEntryPoint
+exit /b 1
+:__ply_cli_Mix
+shift
+set "_raw=%~1"
+call :__ply_parse_u32 "!_raw!"
+set "_CLI_A0=!_RET!"
+set "_raw=%~2"
+set /a "_CLI_A1=!_raw!"
+call :fn_Mix "!_CLI_A0!" "!_CLI_A1!"
+if "!_EX_ACTIVE!"=="1" (>&2 echo PLY_BATCH_TRAP=!_EX_TRAP! & exit /b 97)
+call :__ply_fmt_u32 "!_RET!"
+echo(!_RET!
+exit /b 0
+:__ply_cli_SafeAdd
+shift
+set "_raw=%~1"
+set /a "_CLI_A0=!_raw!"
+set "_raw=%~2"
+set /a "_CLI_A1=!_raw!"
+call :fn_SafeAdd "!_CLI_A0!" "!_CLI_A1!"
+if "!_EX_ACTIVE!"=="1" (>&2 echo PLY_BATCH_TRAP=!_EX_TRAP! & exit /b 97)
+echo(!_RET!
+exit /b 0
+:__ply_init
+set "_ISA_1_1=1"
+set "_ISA_2_2=1"
+set "_ISA_2_1=1"
+set "_ISA_3_3=1"
+set "_ISA_3_2=1"
+set "_ISA_3_1=1"
+set "_ISA_4_4=1"
+set "_ISA_4_2=1"
+set "_ISA_4_1=1"
+set "_ISA_5_5=1"
+set "_ISA_5_1=1"
+set "_ISA_6_6=1"
+set "_ISA_6_1=1"
+set "_ISA_7_7=1"
+set "_ISA_7_1=1"
+set "_ISA_8_8=1"
+set "_ISA_8_1=1"
+set "_ISA_9_9=1"
+set "_ISA_9_1=1"
+set "_ISA_10_10=1"
+set "_ISA_10_9=1"
+set "_ISA_10_1=1"
+set "_ISA_11_11=1"
+set "_ISA_11_1=1"
+set "_ISA_12_12=1"
+set "_ISA_12_1=1"
+set "_ISA_13_13=1"
+set "_ISA_13_1=1"
+goto :eof
+:fn_Mix
+setlocal EnableExtensions EnableDelayedExpansion
+set "_v0=%~1"
+set "_v1=%~2"
+set "_t1=!_v0!"
+set "_t2=!_v1!"
+set /a "_rc=_t2&31, _t0=_t1"
+if !_rc! EQU 0 goto :_r32_d0
+set /a "_ic=32-_rc, _t0=(_t1<<_rc)|((_t1>>_ic)&(2147483647>>(_ic-1)))"
+:_r32_d0
+set "_v2=!_t0!"
+set "_t0=!_v2!"
+set "_t1=-1640531527"
+set /a "_t0=_t0^_t1"
+set "_t1=-2048144789"
+set /a "_t0=_t0*_t1"
+set "_RET=!_t0!"
+goto :_ret_fn_Mix
+:_ret_fn_Mix
+(
+  endlocal
+  set "_RET=%_RET%"
+)
+goto :eof
+:fn_SafeAdd
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_v1=%~2"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v1!"
+for %%S in (!_SP!) do set /a "_res=_F%%S_t0+_F%%S_t1, _ov=(((_F%%S_t0^_res)&(_F%%S_t1^_res))>>31)&1, _F%%S_t0=_res"
+if !_ov! EQU 0 goto :_ov_ok1
+call :__ply_trap 4 IntegerOverflow
+goto :_ret_fn_SafeAdd
+:_ov_ok1
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_SafeAdd
+:_ret_fn_SafeAdd
+set /a "_SP-=1"
+goto :eof
+:__ply_trap
+set /a "_HID+=1"
+set "_O_!_HID!___t=%~1"
+set /a "_HID+=1"
+set "_S_s!_HID!=%~2"
+set /a "_tid=_HID-1"
+for %%T in (!_tid!) do (
+  set "_O_%%T_f_Message=s!_HID!"
+  set "_O_%%T_f_InnerException=__PLY_NULL__"
+  set "_EX_OBJ=%%T"
+)
+set "_EX_TYPE=%~1"
+set "_EX_TRAP=%~2"
+set "_EX_ACTIVE=1"
+goto :eof
+:__ply_fmt_u32
+setlocal EnableExtensions EnableDelayedExpansion
+set /a "_x=%~1, _s=(_x>>31)&1"
+if !_s! EQU 0 (set "_RET=!_x!" & goto :_fu32_d)
+set /a "_h=(_x>>1)&2147483647, _q=_h/5, _r=(_x&1)+(_h%%5)*2"
+if !_r! GEQ 10 set /a "_q+=1, _r-=10"
+set "_RET=!_q!!_r!"
+:_fu32_d
+(
+  endlocal
+  set "_RET=%_RET%"
+)
+goto :eof
+:__ply_parse_u32
+setlocal EnableExtensions EnableDelayedExpansion
+set "_s=%~1"
+set /a "_acc=0"
+:_pu32_lp
+if not defined _s goto :_pu32_dn
+set "_ch=!_s:~0,1!"
+set "_s=!_s:~1!"
+set /a "_acc=_acc*10+_ch"
+goto :_pu32_lp
+:_pu32_dn
+set "_RET=!_acc!"
+(endlocal & set "_RET=%_RET%")
+goto :eof
+```
+
+</details>
+
+> **Refused dialects:** `dos622` (`PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
+
+</details>
+
+<details>
 <summary><strong>MSIL</strong> — <code>msil/net10</code>, <code>msil/net8</code> (identical output — <code>OperatorsShowcase.dll</code> (disassembled))</summary>
 
 **`OperatorsShowcase.dll`** *(disassembled mnemonics)*
@@ -1045,8 +1207,6 @@ End Function
 ```
 
 </details>
-
-> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
 
 ## Recursion
 
@@ -1477,6 +1637,182 @@ Returns i32.
 </details>
 
 <details>
+<summary><strong>Batch</strong> — 1/2 dialects (1 output)</summary>
+
+<details>
+<summary>Dialect: <code>cmd</code> (<code>kernel.bat</code>)</summary>
+
+```bat
+@echo off
+setlocal EnableExtensions EnableDelayedExpansion
+set "_SP=0"
+set "_HID=0"
+set "_CS=0"
+set "_WID=0"
+set "_EX_ACTIVE=0"
+set "_EX_STK_N=0"
+call :__ply_init
+if "%~1"=="Gcd" goto :__ply_cli_Gcd
+if "%~1"=="Fib" goto :__ply_cli_Fib
+>&2 echo PLY_BATCH_ERROR=UnknownEntryPoint
+exit /b 1
+:__ply_cli_Gcd
+shift
+set "_raw=%~1"
+set /a "_CLI_A0=!_raw!"
+set "_raw=%~2"
+set /a "_CLI_A1=!_raw!"
+call :fn_Gcd "!_CLI_A0!" "!_CLI_A1!"
+if "!_EX_ACTIVE!"=="1" (>&2 echo PLY_BATCH_TRAP=!_EX_TRAP! & exit /b 97)
+echo(!_RET!
+exit /b 0
+:__ply_cli_Fib
+shift
+set "_raw=%~1"
+set /a "_CLI_A0=!_raw!"
+call :fn_Fib "!_CLI_A0!"
+if "!_EX_ACTIVE!"=="1" (>&2 echo PLY_BATCH_TRAP=!_EX_TRAP! & exit /b 97)
+echo(!_RET!
+exit /b 0
+:__ply_init
+set "_ISA_1_1=1"
+set "_ISA_2_2=1"
+set "_ISA_2_1=1"
+set "_ISA_3_3=1"
+set "_ISA_3_2=1"
+set "_ISA_3_1=1"
+set "_ISA_4_4=1"
+set "_ISA_4_2=1"
+set "_ISA_4_1=1"
+set "_ISA_5_5=1"
+set "_ISA_5_1=1"
+set "_ISA_6_6=1"
+set "_ISA_6_1=1"
+set "_ISA_7_7=1"
+set "_ISA_7_1=1"
+set "_ISA_8_8=1"
+set "_ISA_8_1=1"
+set "_ISA_9_9=1"
+set "_ISA_9_1=1"
+set "_ISA_10_10=1"
+set "_ISA_10_9=1"
+set "_ISA_10_1=1"
+set "_ISA_11_11=1"
+set "_ISA_11_1=1"
+set "_ISA_12_12=1"
+set "_ISA_12_1=1"
+set "_ISA_13_13=1"
+set "_ISA_13_1=1"
+goto :eof
+:fn_Gcd
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_v1=%~2"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_F%%S_t1=0"
+for %%S in (!_SP!) do if "!_F%%S_t0!"=="!_F%%S_t1!" (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+for %%S in (!_SP!) do set "_br=!_F%%S_t0!"
+if "!_br!"=="1" goto :_if_t0
+goto :_if_e1
+:_if_t0
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_t1!"
+for %%S in (!_SP!) do set "_ab_v=!_F%%S_t0!"
+for %%S in (!_SP!) do set /a "_sg=(_ab_v>>31)&1" & if !_sg! EQU 1 set /a "_F%%S_t0=-_ab_v"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_Gcd
+:_if_e1
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t2=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_da=!_F%%S_t1!"
+for %%S in (!_SP!) do set "_db=!_F%%S_t2!"
+if not "!_db!"=="0" goto :_dv_nz2
+call :__ply_trap 3 DivideByZero
+goto :_ret_fn_Gcd
+:_dv_nz2
+if not "!_da!"=="-2147483648" goto :_dv_ok3
+if not "!_db!"=="-1" goto :_dv_ok3
+call :__ply_trap 4 IntegerOverflow
+goto :_ret_fn_Gcd
+:_dv_ok3
+for %%S in (!_SP!) do set /a "_F%%S_t1=_da%%_db"
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_ca1=!_F%%S_t1!"
+call :fn_Gcd "!_ca0!" "!_ca1!"
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_Gcd
+for %%S in (!_SP!) do set "_F%%S_t0=!_RET!"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_Gcd
+:_ret_fn_Gcd
+set /a "_SP-=1"
+goto :eof
+:fn_Fib
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=1"
+for %%S in (!_SP!) do set /a "_ca=_F%%S_t0, _cb=_F%%S_t1"
+set /a "_csa=(_ca>>31)&1, _csb=(_cb>>31)&1"
+if !_csa! EQU !_csb! goto :_cmp_s6
+for %%S in (!_SP!) do if !_csa! GTR !_csb! (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+goto :_cmp_d7
+:_cmp_s6
+set /a "_cma=_ca&2147483647, _cmb=_cb&2147483647"
+for %%S in (!_SP!) do if !_cma! LEQ !_cmb! (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+:_cmp_d7
+for %%S in (!_SP!) do set "_br=!_F%%S_t0!"
+if "!_br!"=="1" goto :_if_t4
+goto :_if_e5
+:_if_t4
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_Fib
+:_if_e5
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=1"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0-_F%%S_t1"
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t0!"
+call :fn_Fib "!_ca0!"
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_Fib
+for %%S in (!_SP!) do set "_F%%S_t0=!_RET!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t2=2"
+for %%S in (!_SP!) do set /a "_F%%S_t1=_F%%S_t1-_F%%S_t2"
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t1!"
+call :fn_Fib "!_ca0!"
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_Fib
+for %%S in (!_SP!) do set "_F%%S_t1=!_RET!"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0+_F%%S_t1"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_Fib
+:_ret_fn_Fib
+set /a "_SP-=1"
+goto :eof
+:__ply_trap
+set /a "_HID+=1"
+set "_O_!_HID!___t=%~1"
+set /a "_HID+=1"
+set "_S_s!_HID!=%~2"
+set /a "_tid=_HID-1"
+for %%T in (!_tid!) do (
+  set "_O_%%T_f_Message=s!_HID!"
+  set "_O_%%T_f_InnerException=__PLY_NULL__"
+  set "_EX_OBJ=%%T"
+)
+set "_EX_TYPE=%~1"
+set "_EX_TRAP=%~2"
+set "_EX_ACTIVE=1"
+goto :eof
+```
+
+</details>
+
+> **Refused dialects:** `dos622` (`PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
+
+</details>
+
+<details>
 <summary><strong>MSIL</strong> — <code>msil/net10</code>, <code>msil/net8</code> (identical output — <code>RecursionShowcase.dll</code> (disassembled))</summary>
 
 **`RecursionShowcase.dll`** *(disassembled mnemonics)*
@@ -1736,8 +2072,6 @@ End Function
 ```
 
 </details>
-
-> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
 
 ## Method & Constructor Overloading
 
@@ -2440,6 +2774,246 @@ Returns i32.
 </details>
 
 <details>
+<summary><strong>Batch</strong> — 1/2 dialects (1 output)</summary>
+
+<details>
+<summary>Dialect: <code>cmd</code> (<code>kernel.bat</code>)</summary>
+
+```bat
+@echo off
+setlocal EnableExtensions EnableDelayedExpansion
+set "_SP=0"
+set "_HID=0"
+set "_CS=0"
+set "_WID=0"
+set "_EX_ACTIVE=0"
+set "_EX_STK_N=0"
+call :__ply_init
+if "%~1"=="Run" goto :__ply_cli_Run
+>&2 echo PLY_BATCH_ERROR=UnknownEntryPoint
+exit /b 1
+:__ply_cli_Run
+shift
+set "_raw=%~1"
+set /a "_CLI_A0=!_raw!"
+set "_raw=%~2"
+set /a "_CLI_A1=!_raw!"
+set "_raw=%~3"
+set /a "_CLI_A2=!_raw!"
+call :fn_Run "!_CLI_A0!" "!_CLI_A1!" "!_CLI_A2!"
+if "!_EX_ACTIVE!"=="1" (>&2 echo PLY_BATCH_TRAP=!_EX_TRAP! & exit /b 97)
+echo(!_RET!
+exit /b 0
+:__ply_init
+set "_ISA_1_1=1"
+set "_ISA_2_2=1"
+set "_ISA_2_1=1"
+set "_ISA_3_3=1"
+set "_ISA_3_2=1"
+set "_ISA_3_1=1"
+set "_ISA_4_4=1"
+set "_ISA_4_2=1"
+set "_ISA_4_1=1"
+set "_ISA_5_5=1"
+set "_ISA_5_1=1"
+set "_ISA_6_6=1"
+set "_ISA_6_1=1"
+set "_ISA_7_7=1"
+set "_ISA_7_1=1"
+set "_ISA_8_8=1"
+set "_ISA_8_1=1"
+set "_ISA_9_9=1"
+set "_ISA_9_1=1"
+set "_ISA_10_10=1"
+set "_ISA_10_9=1"
+set "_ISA_10_1=1"
+set "_ISA_11_11=1"
+set "_ISA_11_1=1"
+set "_ISA_12_12=1"
+set "_ISA_12_1=1"
+set "_ISA_13_13=1"
+set "_ISA_13_1=1"
+set "_ISA_14_14=1"
+goto :eof
+:fn_Run
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_v1=%~2"
+for %%S in (!_SP!) do set "_F%%S_v2=%~3"
+set /a "_HID+=1"
+for %%S in (!_SP!) do set "_F%%S_t0=!_HID!"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O___t=14"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O_f14_0=0"
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t0!"
+call :fn_Accumulator_ctor "!_ca0!"
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_Run
+for %%S in (!_SP!) do set "_F%%S_v3=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v0!"
+set /a "_HID+=1"
+for %%S in (!_SP!) do set "_F%%S_t0=!_HID!"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O___t=14"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O_f14_0=0"
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_ca1=!_F%%S_t1!"
+call :fn_Accumulator_ctor2 "!_ca0!" "!_ca1!"
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_Run
+for %%S in (!_SP!) do set "_F%%S_v4=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v3!"
+for %%S in (!_SP!) do set "_mc_r=!_F%%S_t0!"
+if not "!_mc_r!"=="__PLY_NULL__" goto :_nn_ok0
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Run
+:_nn_ok0
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_ca1=!_F%%S_t1!"
+call :fn_Accumulator_Add "!_ca0!" "!_ca1!"
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_Run
+for %%S in (!_SP!) do set "_F%%S_t0=!_RET!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v4!"
+for %%S in (!_SP!) do set "_mc_r=!_F%%S_t1!"
+if not "!_mc_r!"=="__PLY_NULL__" goto :_nn_ok1
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Run
+:_nn_ok1
+for %%S in (!_SP!) do set "_F%%S_t2=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_F%%S_t3=!_F%%S_v2!"
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t1!"
+for %%S in (!_SP!) do set "_ca1=!_F%%S_t2!"
+for %%S in (!_SP!) do set "_ca2=!_F%%S_t3!"
+call :fn_Accumulator_Add2 "!_ca0!" "!_ca1!" "!_ca2!"
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_Run
+for %%S in (!_SP!) do set "_F%%S_t1=!_RET!"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0+_F%%S_t1"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_Run
+:_ret_fn_Run
+set /a "_SP-=1"
+goto :eof
+:fn_Accumulator_Add
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_v1=%~2"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_fl_o=!_F%%S_t1!"
+if not "!_fl_o!"=="__PLY_NULL__" goto :_nn_ok2
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Accumulator_Add
+:_nn_ok2
+for %%S in (!_SP!) do for %%O in (!_fl_o!) do set "_F%%S_t1=!_O_%%O_f14_0!"
+for %%S in (!_SP!) do set "_F%%S_t2=!_F%%S_v1!"
+for %%S in (!_SP!) do set /a "_F%%S_t1=_F%%S_t1+_F%%S_t2"
+for %%S in (!_SP!) do set "_fs_obj=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_fs_val=!_F%%S_t1!"
+if not "!_fs_obj!"=="__PLY_NULL__" goto :_nn_ok3
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Accumulator_Add
+:_nn_ok3
+for %%O in (!_fs_obj!) do set "_O_%%O_f14_0=!_fs_val!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_fl_o=!_F%%S_t0!"
+if not "!_fl_o!"=="__PLY_NULL__" goto :_nn_ok4
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Accumulator_Add
+:_nn_ok4
+for %%S in (!_SP!) do for %%O in (!_fl_o!) do set "_F%%S_t0=!_O_%%O_f14_0!"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_Accumulator_Add
+:_ret_fn_Accumulator_Add
+set /a "_SP-=1"
+goto :eof
+:fn_Accumulator_Add2
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_v1=%~2"
+for %%S in (!_SP!) do set "_F%%S_v2=%~3"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_fl_o=!_F%%S_t1!"
+if not "!_fl_o!"=="__PLY_NULL__" goto :_nn_ok5
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Accumulator_Add2
+:_nn_ok5
+for %%S in (!_SP!) do for %%O in (!_fl_o!) do set "_F%%S_t1=!_O_%%O_f14_0!"
+for %%S in (!_SP!) do set "_F%%S_t2=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_F%%S_t3=!_F%%S_v2!"
+for %%S in (!_SP!) do set /a "_F%%S_t2=_F%%S_t2+_F%%S_t3"
+for %%S in (!_SP!) do set /a "_F%%S_t1=_F%%S_t1+_F%%S_t2"
+for %%S in (!_SP!) do set "_fs_obj=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_fs_val=!_F%%S_t1!"
+if not "!_fs_obj!"=="__PLY_NULL__" goto :_nn_ok6
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Accumulator_Add2
+:_nn_ok6
+for %%O in (!_fs_obj!) do set "_O_%%O_f14_0=!_fs_val!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_fl_o=!_F%%S_t0!"
+if not "!_fl_o!"=="__PLY_NULL__" goto :_nn_ok7
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Accumulator_Add2
+:_nn_ok7
+for %%S in (!_SP!) do for %%O in (!_fl_o!) do set "_F%%S_t0=!_O_%%O_f14_0!"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_Accumulator_Add2
+:_ret_fn_Accumulator_Add2
+set /a "_SP-=1"
+goto :eof
+:fn_Accumulator_ctor
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=0"
+for %%S in (!_SP!) do set "_fs_obj=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_fs_val=!_F%%S_t1!"
+if not "!_fs_obj!"=="__PLY_NULL__" goto :_nn_ok8
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Accumulator_ctor
+:_nn_ok8
+for %%O in (!_fs_obj!) do set "_O_%%O_f14_0=!_fs_val!"
+:_ret_fn_Accumulator_ctor
+set /a "_SP-=1"
+goto :eof
+:fn_Accumulator_ctor2
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_v1=%~2"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_fs_obj=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_fs_val=!_F%%S_t1!"
+if not "!_fs_obj!"=="__PLY_NULL__" goto :_nn_ok9
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Accumulator_ctor2
+:_nn_ok9
+for %%O in (!_fs_obj!) do set "_O_%%O_f14_0=!_fs_val!"
+:_ret_fn_Accumulator_ctor2
+set /a "_SP-=1"
+goto :eof
+:__ply_trap
+set /a "_HID+=1"
+set "_O_!_HID!___t=%~1"
+set /a "_HID+=1"
+set "_S_s!_HID!=%~2"
+set /a "_tid=_HID-1"
+for %%T in (!_tid!) do (
+  set "_O_%%T_f_Message=s!_HID!"
+  set "_O_%%T_f_InnerException=__PLY_NULL__"
+  set "_EX_OBJ=%%T"
+)
+set "_EX_TYPE=%~1"
+set "_EX_TRAP=%~2"
+set "_EX_ACTIVE=1"
+goto :eof
+```
+
+</details>
+
+> **Refused dialects:** `dos622` (`PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
+
+</details>
+
+<details>
 <summary><strong>MSIL</strong> — <code>msil/net10</code>, <code>msil/net8</code> (identical output — <code>OverloadingShowcase.dll</code> (disassembled))</summary>
 
 **`OverloadingShowcase.dll`** *(disassembled mnemonics)*
@@ -2791,8 +3365,6 @@ End Sub
 ```
 
 </details>
-
-> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
 
 ## Structs & Value Records
 
@@ -3757,6 +4329,239 @@ Hash reference with keys: first, second.
 </details>
 
 <details>
+<summary><strong>Batch</strong> — 1/2 dialects (1 output)</summary>
+
+<details>
+<summary>Dialect: <code>cmd</code> (<code>kernel.bat</code>)</summary>
+
+```bat
+@echo off
+setlocal EnableExtensions EnableDelayedExpansion
+set "_SP=0"
+set "_HID=0"
+set "_CS=0"
+set "_WID=0"
+set "_EX_ACTIVE=0"
+set "_EX_STK_N=0"
+if "%~1"=="Dot" goto :__ply_cli_Dot
+if "%~1"=="AreEqual" goto :__ply_cli_AreEqual
+if "%~1"=="CopyValue" goto :__ply_cli_CopyValue
+>&2 echo PLY_BATCH_ERROR=UnknownEntryPoint
+exit /b 1
+:__ply_cli_Dot
+shift
+set "_raw=%~1"
+set "_raw=!_raw::=,!"
+set /a "_HID+=1"
+set "_CLI_A0=!_HID!"
+set "_fi=0"
+for %%E in (!_raw!) do (
+  set "_fe_!_fi!=%%~E"
+  set /a "_fi+=1"
+)
+set "_fraw=!_fe_0!"
+set /a "_fval=!_fraw!"
+for %%H in (!_CLI_A0!) do set "_O_%%H_sf0=!_fval!"
+set "_fraw=!_fe_1!"
+set /a "_fval=!_fraw!"
+for %%H in (!_CLI_A0!) do set "_O_%%H_sf1=!_fval!"
+set "_raw=%~2"
+set "_raw=!_raw::=,!"
+set /a "_HID+=1"
+set "_CLI_A1=!_HID!"
+set "_fi=0"
+for %%E in (!_raw!) do (
+  set "_fe_!_fi!=%%~E"
+  set /a "_fi+=1"
+)
+set "_fraw=!_fe_0!"
+set /a "_fval=!_fraw!"
+for %%H in (!_CLI_A1!) do set "_O_%%H_sf0=!_fval!"
+set "_fraw=!_fe_1!"
+set /a "_fval=!_fraw!"
+for %%H in (!_CLI_A1!) do set "_O_%%H_sf1=!_fval!"
+call :fn_Dot "!_CLI_A0!" "!_CLI_A1!"
+if "!_EX_ACTIVE!"=="1" (>&2 echo PLY_BATCH_TRAP=!_EX_TRAP! & exit /b 97)
+echo(!_RET!
+exit /b 0
+:__ply_cli_AreEqual
+shift
+set "_raw=%~1"
+set /a "_CLI_A0=!_raw!"
+set "_raw=%~2"
+set /a "_CLI_A1=!_raw!"
+call :fn_AreEqual "!_CLI_A0!" "!_CLI_A1!"
+if "!_EX_ACTIVE!"=="1" (>&2 echo PLY_BATCH_TRAP=!_EX_TRAP! & exit /b 97)
+if "!_RET!"=="1" (echo True) else (echo False)
+exit /b 0
+:__ply_cli_CopyValue
+shift
+set "_raw=%~1"
+set /a "_CLI_A0=!_raw!"
+call :fn_CopyValue "!_CLI_A0!"
+if "!_EX_ACTIVE!"=="1" (>&2 echo PLY_BATCH_TRAP=!_EX_TRAP! & exit /b 97)
+echo(!_RET!
+exit /b 0
+:fn_Dot
+setlocal EnableExtensions EnableDelayedExpansion
+set "_parg=%~1"
+call :__ply_copy_s1 "!_parg!"
+set "_parg=!_RET!"
+set "_v0=!_parg!"
+set "_parg=%~2"
+call :__ply_copy_s1 "!_parg!"
+set "_parg=!_RET!"
+set "_v1=!_parg!"
+set "_t0=!_v0!"
+set "_fl_o=!_t0!"
+for %%O in (!_fl_o!) do set "_t0=!_O_%%O_sf0!"
+set "_t1=!_v1!"
+set "_fl_o=!_t1!"
+for %%O in (!_fl_o!) do set "_t1=!_O_%%O_sf0!"
+set /a "_t0=_t0*_t1"
+set "_t1=!_v0!"
+set "_fl_o=!_t1!"
+for %%O in (!_fl_o!) do set "_t1=!_O_%%O_sf1!"
+set "_t2=!_v1!"
+set "_fl_o=!_t2!"
+for %%O in (!_fl_o!) do set "_t2=!_O_%%O_sf1!"
+set /a "_t1=_t1*_t2"
+set /a "_t0=_t0+_t1"
+set "_RET=!_t0!"
+goto :_ret_fn_Dot
+:_ret_fn_Dot
+(
+  endlocal
+  set "_RET=%_RET%"
+)
+goto :eof
+:fn_AreEqual
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_v1=%~2"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t2=!_F%%S_v1!"
+set /a "_HID+=1"
+for %%S in (!_SP!) do set "_F%%S_t0=!_HID!"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O_sf0=!_F%%S_t1!"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O_sf1=!_F%%S_t2!"
+for %%S in (!_SP!) do set "_cs_in=!_F%%S_t0!"
+call :__ply_copy_s1 "!_cs_in!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_RET!"
+for %%S in (!_SP!) do set "_F%%S_v2=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t2=!_F%%S_v1!"
+set /a "_HID+=1"
+for %%S in (!_SP!) do set "_F%%S_t0=!_HID!"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O_sf0=!_F%%S_t1!"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O_sf1=!_F%%S_t2!"
+for %%S in (!_SP!) do set "_cs_in=!_F%%S_t0!"
+call :__ply_copy_s1 "!_cs_in!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_RET!"
+for %%S in (!_SP!) do set "_F%%S_v3=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v2!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v3!"
+for %%S in (!_SP!) do set "_eq_a=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_eq_b=!_F%%S_t1!"
+call :__ply_eq_s1 "!_eq_a!" "!_eq_b!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_RET!"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_AreEqual
+:_ret_fn_AreEqual
+set /a "_SP-=1"
+goto :eof
+:fn_CopyValue
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+set /a "_HID+=1"
+for %%S in (!_SP!) do set "_F%%S_t0=!_HID!"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O_sf0=0"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O_sf1=0"
+for %%S in (!_SP!) do set "_cs_in=!_F%%S_t0!"
+call :__ply_copy_s2 "!_cs_in!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_RET!"
+for %%S in (!_SP!) do set "_F%%S_v1=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_fs_obj=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_fs_val=!_F%%S_t1!"
+for %%O in (!_fs_obj!) do set "_O_%%O_sf0=!_fs_val!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_F%%S_t1=10"
+for %%S in (!_SP!) do set "_fs_obj=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_fs_val=!_F%%S_t1!"
+for %%O in (!_fs_obj!) do set "_O_%%O_sf1=!_fs_val!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_cs_in=!_F%%S_t0!"
+call :__ply_copy_s2 "!_cs_in!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_RET!"
+for %%S in (!_SP!) do set "_F%%S_v2=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v2!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t2=1"
+for %%S in (!_SP!) do set /a "_F%%S_t1=_F%%S_t1+_F%%S_t2"
+for %%S in (!_SP!) do set "_fs_obj=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_fs_val=!_F%%S_t1!"
+for %%O in (!_fs_obj!) do set "_O_%%O_sf0=!_fs_val!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_fl_o=!_F%%S_t0!"
+for %%S in (!_SP!) do for %%O in (!_fl_o!) do set "_F%%S_t0=!_O_%%O_sf0!"
+for %%S in (!_SP!) do set "_F%%S_t1=100"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0*_F%%S_t1"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v2!"
+for %%S in (!_SP!) do set "_fl_o=!_F%%S_t1!"
+for %%S in (!_SP!) do for %%O in (!_fl_o!) do set "_F%%S_t1=!_O_%%O_sf0!"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0+_F%%S_t1"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_CopyValue
+:_ret_fn_CopyValue
+set /a "_SP-=1"
+goto :eof
+:__ply_copy_s1
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_s=%~1"
+set /a "_HID+=1"
+for %%S in (!_SP!) do set "_F%%S_d=!_HID!"
+for %%S in (!_SP!) do for %%A in (!_F%%S_s!) do for %%B in (!_F%%S_d!) do set "_O_%%B_sf0=!_O_%%A_sf0!"
+for %%S in (!_SP!) do for %%A in (!_F%%S_s!) do for %%B in (!_F%%S_d!) do set "_O_%%B_sf1=!_O_%%A_sf1!"
+for %%S in (!_SP!) do set "_RET=!_F%%S_d!"
+set /a "_SP-=1"
+goto :eof
+:__ply_copy_s2
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_s=%~1"
+set /a "_HID+=1"
+for %%S in (!_SP!) do set "_F%%S_d=!_HID!"
+for %%S in (!_SP!) do for %%A in (!_F%%S_s!) do for %%B in (!_F%%S_d!) do set "_O_%%B_sf0=!_O_%%A_sf0!"
+for %%S in (!_SP!) do for %%A in (!_F%%S_s!) do for %%B in (!_F%%S_d!) do set "_O_%%B_sf1=!_O_%%A_sf1!"
+for %%S in (!_SP!) do set "_RET=!_F%%S_d!"
+set /a "_SP-=1"
+goto :eof
+:__ply_eq_s1
+set /a "_SP+=1"
+for %%S in (!_SP!) do (set "_F%%S_a=%~1" & set "_F%%S_b=%~2")
+for %%S in (!_SP!) do for %%A in (!_F%%S_a!) do set "_ea=!_O_%%A_sf0!"
+for %%S in (!_SP!) do for %%B in (!_F%%S_b!) do set "_eb=!_O_%%B_sf0!"
+if not "!_ea!"=="!_eb!" goto :_ply_eq_s1_no
+for %%S in (!_SP!) do for %%A in (!_F%%S_a!) do set "_ea=!_O_%%A_sf1!"
+for %%S in (!_SP!) do for %%B in (!_F%%S_b!) do set "_eb=!_O_%%B_sf1!"
+if not "!_ea!"=="!_eb!" goto :_ply_eq_s1_no
+set "_RET=1"
+set /a "_SP-=1"
+goto :eof
+:_ply_eq_s1_no
+set "_RET=0"
+set /a "_SP-=1"
+goto :eof
+```
+
+</details>
+
+> **Refused dialects:** `dos622` (`PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
+
+</details>
+
+<details>
 <summary><strong>MSIL</strong> — <code>msil/net10</code>, <code>msil/net8</code> (identical output — <code>StructsAndRecordsShowcase.dll</code> (disassembled))</summary>
 
 **`StructsAndRecordsShowcase.dll`** *(disassembled mnemonics)*
@@ -4271,8 +5076,6 @@ End Function
 ```
 
 </details>
-
-> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
 
 ## Classes, Properties & Reference Records
 
@@ -5386,6 +6189,310 @@ Returns i32.
 </details>
 
 <details>
+<summary><strong>Batch</strong> — 1/2 dialects (1 output)</summary>
+
+<details>
+<summary>Dialect: <code>cmd</code> (<code>kernel.bat</code>)</summary>
+
+```bat
+@echo off
+setlocal EnableExtensions EnableDelayedExpansion
+set "_SP=0"
+set "_HID=0"
+set "_CS=0"
+set "_WID=0"
+set "_EX_ACTIVE=0"
+set "_EX_STK_N=0"
+call :__ply_init
+if "%~1"=="Measure" goto :__ply_cli_Measure
+>&2 echo PLY_BATCH_ERROR=UnknownEntryPoint
+exit /b 1
+:__ply_cli_Measure
+shift
+set "_raw=%~1"
+set /a "_CLI_A0=!_raw!"
+set "_raw=%~2"
+set /a "_CLI_A1=!_raw!"
+call :fn_Measure "!_CLI_A0!" "!_CLI_A1!"
+if "!_EX_ACTIVE!"=="1" (>&2 echo PLY_BATCH_TRAP=!_EX_TRAP! & exit /b 97)
+echo(!_RET!
+exit /b 0
+:__ply_init
+set "_ISA_1_1=1"
+set "_ISA_2_2=1"
+set "_ISA_2_1=1"
+set "_ISA_3_3=1"
+set "_ISA_3_2=1"
+set "_ISA_3_1=1"
+set "_ISA_4_4=1"
+set "_ISA_4_2=1"
+set "_ISA_4_1=1"
+set "_ISA_5_5=1"
+set "_ISA_5_1=1"
+set "_ISA_6_6=1"
+set "_ISA_6_1=1"
+set "_ISA_7_7=1"
+set "_ISA_7_1=1"
+set "_ISA_8_8=1"
+set "_ISA_8_1=1"
+set "_ISA_9_9=1"
+set "_ISA_9_1=1"
+set "_ISA_10_10=1"
+set "_ISA_10_9=1"
+set "_ISA_10_1=1"
+set "_ISA_11_11=1"
+set "_ISA_11_1=1"
+set "_ISA_12_12=1"
+set "_ISA_12_1=1"
+set "_ISA_13_13=1"
+set "_ISA_13_1=1"
+set "_ISA_14_14=1"
+set "_ISA_15_15=1"
+goto :eof
+:fn_Measure
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_v1=%~2"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v0!"
+set /a "_HID+=1"
+for %%S in (!_SP!) do set "_F%%S_t0=!_HID!"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O___t=14"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O_f14_0=0"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O_f14_1=0"
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_ca1=!_F%%S_t1!"
+call :fn_Meter_ctor "!_ca0!" "!_ca1!"
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_Measure
+for %%S in (!_SP!) do set "_F%%S_v2=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v2!"
+for %%S in (!_SP!) do set "_mc_r=!_F%%S_t0!"
+if not "!_mc_r!"=="__PLY_NULL__" goto :_nn_ok0
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Measure
+:_nn_ok0
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_ca1=!_F%%S_t1!"
+call :fn_Meter_Increment "!_ca0!" "!_ca1!"
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_Measure
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v2!"
+for %%S in (!_SP!) do set "_fl_o=!_F%%S_t1!"
+if not "!_fl_o!"=="__PLY_NULL__" goto :_nn_ok1
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Measure
+:_nn_ok1
+for %%S in (!_SP!) do for %%O in (!_fl_o!) do set "_F%%S_t1=!_O_%%O_f14_0!"
+for %%S in (!_SP!) do set "_F%%S_t2=!_F%%S_v2!"
+for %%S in (!_SP!) do set "_mc_r=!_F%%S_t2!"
+if not "!_mc_r!"=="__PLY_NULL__" goto :_nn_ok2
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Measure
+:_nn_ok2
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t2!"
+call :fn_Meter_get_Total "!_ca0!"
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_Measure
+for %%S in (!_SP!) do set "_F%%S_t2=!_RET!"
+set /a "_HID+=1"
+for %%S in (!_SP!) do set "_F%%S_t0=!_HID!"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O___t=15"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O_f15_0=0"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O_f15_1=0"
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_ca1=!_F%%S_t1!"
+for %%S in (!_SP!) do set "_ca2=!_F%%S_t2!"
+call :fn_PointRecord_ctor "!_ca0!" "!_ca1!" "!_ca2!"
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_Measure
+for %%S in (!_SP!) do set "_F%%S_v3=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v2!"
+for %%S in (!_SP!) do set "_fl_o=!_F%%S_t1!"
+if not "!_fl_o!"=="__PLY_NULL__" goto :_nn_ok3
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Measure
+:_nn_ok3
+for %%S in (!_SP!) do for %%O in (!_fl_o!) do set "_F%%S_t1=!_O_%%O_f14_0!"
+for %%S in (!_SP!) do set "_F%%S_t2=!_F%%S_v2!"
+for %%S in (!_SP!) do set "_mc_r=!_F%%S_t2!"
+if not "!_mc_r!"=="__PLY_NULL__" goto :_nn_ok4
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Measure
+:_nn_ok4
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t2!"
+call :fn_Meter_get_Total "!_ca0!"
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_Measure
+for %%S in (!_SP!) do set "_F%%S_t2=!_RET!"
+set /a "_HID+=1"
+for %%S in (!_SP!) do set "_F%%S_t0=!_HID!"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O___t=15"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O_f15_0=0"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O_f15_1=0"
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_ca1=!_F%%S_t1!"
+for %%S in (!_SP!) do set "_ca2=!_F%%S_t2!"
+call :fn_PointRecord_ctor "!_ca0!" "!_ca1!" "!_ca2!"
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_Measure
+for %%S in (!_SP!) do set "_F%%S_v4=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v3!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v4!"
+for %%S in (!_SP!) do set "_eq_a=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_eq_b=!_F%%S_t1!"
+call :__ply_req_c15 "!_eq_a!" "!_eq_b!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_RET!"
+for %%S in (!_SP!) do set "_br=!_F%%S_t0!"
+if "!_br!"=="1" goto :_cnd_t5
+goto :_cnd_f6
+:_cnd_t5
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v2!"
+for %%S in (!_SP!) do set "_mc_r=!_F%%S_t0!"
+if not "!_mc_r!"=="__PLY_NULL__" goto :_nn_ok8
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Measure
+:_nn_ok8
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t0!"
+call :fn_Meter_get_Total "!_ca0!"
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_Measure
+for %%S in (!_SP!) do set "_F%%S_t0=!_RET!"
+goto :_cnd_e7
+:_cnd_f6
+for %%S in (!_SP!) do set "_F%%S_t0=-1"
+:_cnd_e7
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_Measure
+:_ret_fn_Measure
+set /a "_SP-=1"
+goto :eof
+:fn_Meter_get_Total
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_fl_o=!_F%%S_t0!"
+if not "!_fl_o!"=="__PLY_NULL__" goto :_nn_ok9
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Meter_get_Total
+:_nn_ok9
+for %%S in (!_SP!) do for %%O in (!_fl_o!) do set "_F%%S_t0=!_O_%%O_f14_0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_fl_o=!_F%%S_t1!"
+if not "!_fl_o!"=="__PLY_NULL__" goto :_nn_ok10
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Meter_get_Total
+:_nn_ok10
+for %%S in (!_SP!) do for %%O in (!_fl_o!) do set "_F%%S_t1=!_O_%%O_f14_1!"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0*_F%%S_t1"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_Meter_get_Total
+:_ret_fn_Meter_get_Total
+set /a "_SP-=1"
+goto :eof
+:fn_Meter_Increment
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_v1=%~2"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_fl_o=!_F%%S_t1!"
+if not "!_fl_o!"=="__PLY_NULL__" goto :_nn_ok11
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Meter_Increment
+:_nn_ok11
+for %%S in (!_SP!) do for %%O in (!_fl_o!) do set "_F%%S_t1=!_O_%%O_f14_0!"
+for %%S in (!_SP!) do set "_F%%S_t2=!_F%%S_v1!"
+for %%S in (!_SP!) do set /a "_F%%S_t1=_F%%S_t1+_F%%S_t2"
+for %%S in (!_SP!) do set "_fs_obj=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_fs_val=!_F%%S_t1!"
+if not "!_fs_obj!"=="__PLY_NULL__" goto :_nn_ok12
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Meter_Increment
+:_nn_ok12
+for %%O in (!_fs_obj!) do set "_O_%%O_f14_0=!_fs_val!"
+:_ret_fn_Meter_Increment
+set /a "_SP-=1"
+goto :eof
+:fn_Meter_ctor
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_v1=%~2"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_fs_obj=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_fs_val=!_F%%S_t1!"
+if not "!_fs_obj!"=="__PLY_NULL__" goto :_nn_ok13
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Meter_ctor
+:_nn_ok13
+for %%O in (!_fs_obj!) do set "_O_%%O_f14_1=!_fs_val!"
+:_ret_fn_Meter_ctor
+set /a "_SP-=1"
+goto :eof
+:fn_PointRecord_ctor
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_v1=%~2"
+for %%S in (!_SP!) do set "_F%%S_v2=%~3"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_fs_obj=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_fs_val=!_F%%S_t1!"
+if not "!_fs_obj!"=="__PLY_NULL__" goto :_nn_ok14
+call :__ply_trap 6 NullReference
+goto :_ret_fn_PointRecord_ctor
+:_nn_ok14
+for %%O in (!_fs_obj!) do set "_O_%%O_f15_0=!_fs_val!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v2!"
+for %%S in (!_SP!) do set "_fs_obj=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_fs_val=!_F%%S_t1!"
+if not "!_fs_obj!"=="__PLY_NULL__" goto :_nn_ok15
+call :__ply_trap 6 NullReference
+goto :_ret_fn_PointRecord_ctor
+:_nn_ok15
+for %%O in (!_fs_obj!) do set "_O_%%O_f15_1=!_fs_val!"
+:_ret_fn_PointRecord_ctor
+set /a "_SP-=1"
+goto :eof
+:__ply_req_c15
+set /a "_SP+=1"
+for %%S in (!_SP!) do (set "_F%%S_a=%~1" & set "_F%%S_b=%~2")
+if "%~1"=="%~2" (set "_RET=1" & set /a "_SP-=1" & goto :eof)
+if "%~1"=="__PLY_NULL__" (set "_RET=0" & set /a "_SP-=1" & goto :eof)
+if "%~2"=="__PLY_NULL__" (set "_RET=0" & set /a "_SP-=1" & goto :eof)
+for %%A in (%~1) do for %%B in (%~2) do if not "!_O_%%A___t!"=="!_O_%%B___t!" (set "_RET=0" & set /a "_SP-=1" & goto :eof)
+for %%S in (!_SP!) do for %%A in (!_F%%S_a!) do set "_ea=!_O_%%A_f15_0!"
+for %%S in (!_SP!) do for %%B in (!_F%%S_b!) do set "_eb=!_O_%%B_f15_0!"
+if not "!_ea!"=="!_eb!" goto :_ply_req_c15_no
+for %%S in (!_SP!) do for %%A in (!_F%%S_a!) do set "_ea=!_O_%%A_f15_1!"
+for %%S in (!_SP!) do for %%B in (!_F%%S_b!) do set "_eb=!_O_%%B_f15_1!"
+if not "!_ea!"=="!_eb!" goto :_ply_req_c15_no
+set "_RET=1"
+set /a "_SP-=1"
+goto :eof
+:_ply_req_c15_no
+set "_RET=0"
+set /a "_SP-=1"
+goto :eof
+:__ply_trap
+set /a "_HID+=1"
+set "_O_!_HID!___t=%~1"
+set /a "_HID+=1"
+set "_S_s!_HID!=%~2"
+set /a "_tid=_HID-1"
+for %%T in (!_tid!) do (
+  set "_O_%%T_f_Message=s!_HID!"
+  set "_O_%%T_f_InnerException=__PLY_NULL__"
+  set "_EX_OBJ=%%T"
+)
+set "_EX_TYPE=%~1"
+set "_EX_TRAP=%~2"
+set "_EX_ACTIVE=1"
+goto :eof
+```
+
+</details>
+
+> **Refused dialects:** `dos622` (`PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
+
+</details>
+
+<details>
 <summary><strong>MSIL</strong> — <code>msil/net10</code>, <code>msil/net8</code> (identical output — <code>ClassesShowcase.dll</code> (disassembled))</summary>
 
 **`ClassesShowcase.dll`** *(disassembled mnemonics)*
@@ -5911,8 +7018,6 @@ End Sub
 
 </details>
 
-> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
-
 ## Statics & Module State
 
 Compile-time constants, read-only static lookup tables, and mutable static module state. Source: [`06-statics-and-module-state.cs`](showcase/06-statics-and-module-state.cs).
@@ -6318,6 +7423,137 @@ Returns i32.
 </details>
 
 <details>
+<summary><strong>Batch</strong> — 1/2 dialects (1 output)</summary>
+
+<details>
+<summary>Dialect: <code>cmd</code> (<code>kernel.bat</code>)</summary>
+
+```bat
+@echo off
+setlocal EnableExtensions EnableDelayedExpansion
+set "_SP=0"
+set "_HID=0"
+set "_CS=0"
+set "_WID=0"
+set "_EX_ACTIVE=0"
+set "_EX_STK_N=0"
+call :__ply_init
+if "%~1"=="NextWeighted" goto :__ply_cli_NextWeighted
+>&2 echo PLY_BATCH_ERROR=UnknownEntryPoint
+exit /b 1
+:__ply_cli_NextWeighted
+shift
+set "_raw=%~1"
+set /a "_CLI_A0=!_raw!"
+call :fn_NextWeighted "!_CLI_A0!"
+if "!_EX_ACTIVE!"=="1" (>&2 echo PLY_BATCH_TRAP=!_EX_TRAP! & exit /b 97)
+echo(!_RET!
+exit /b 0
+:__ply_init
+set "_ISA_1_1=1"
+set "_ISA_2_2=1"
+set "_ISA_2_1=1"
+set "_ISA_3_3=1"
+set "_ISA_3_2=1"
+set "_ISA_3_1=1"
+set "_ISA_4_4=1"
+set "_ISA_4_2=1"
+set "_ISA_4_1=1"
+set "_ISA_5_5=1"
+set "_ISA_5_1=1"
+set "_ISA_6_6=1"
+set "_ISA_6_1=1"
+set "_ISA_7_7=1"
+set "_ISA_7_1=1"
+set "_ISA_8_8=1"
+set "_ISA_8_1=1"
+set "_ISA_9_9=1"
+set "_ISA_9_1=1"
+set "_ISA_10_10=1"
+set "_ISA_10_9=1"
+set "_ISA_10_1=1"
+set "_ISA_11_11=1"
+set "_ISA_11_1=1"
+set "_ISA_12_12=1"
+set "_ISA_12_1=1"
+set "_ISA_13_13=1"
+set "_ISA_13_1=1"
+set "_K_0=7"
+set /a "_HID+=1"
+set "_K_1=!_HID!"
+set "_AL_!_HID!=4"
+for %%H in (!_K_1!) do set "_A_%%H_0=3"
+for %%H in (!_K_1!) do set "_A_%%H_1=5"
+for %%H in (!_K_1!) do set "_A_%%H_2=11"
+for %%H in (!_K_1!) do set "_A_%%H_3=17"
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_t0=1"
+for %%S in (!_SP!) do set "_G_0=!_F%%S_t0!"
+set /a "_SP-=1"
+goto :eof
+:fn_NextWeighted
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=3"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0&_F%%S_t1"
+for %%S in (!_SP!) do set "_F%%S_v1=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_G_0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_K_1!"
+for %%S in (!_SP!) do set "_F%%S_t2=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_la_id=!_F%%S_t1!"
+for %%S in (!_SP!) do set "_la_idx=!_F%%S_t2!"
+if not "!_la_id!"=="__PLY_NULL__" goto :_nn_ok0
+call :__ply_trap 6 NullReference
+goto :_ret_fn_NextWeighted
+:_nn_ok0
+for %%A in (!_la_id!) do set /a "_la_len=_AL_%%A"
+set /a "_bs=(_la_idx>>31)&1"
+if !_bs! NEQ 0 goto :_bd_bad2
+if !_la_idx! LSS !_la_len! goto :_bd_ok1
+:_bd_bad2
+call :__ply_trap 5 IndexOutOfRange
+goto :_ret_fn_NextWeighted
+:_bd_ok1
+for %%S in (!_SP!) do for %%A in (!_la_id!) do for %%I in (!_la_idx!) do set "_F%%S_t1=!_A_%%A_%%I!"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0*_F%%S_t1"
+for %%S in (!_SP!) do set "_F%%S_t1=7"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0+_F%%S_t1"
+for %%S in (!_SP!) do set "_F%%S_v2=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_G_0!"
+for %%S in (!_SP!) do set "_F%%S_t1=1"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0+_F%%S_t1"
+for %%S in (!_SP!) do set "_G_0=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v2!"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_NextWeighted
+:_ret_fn_NextWeighted
+set /a "_SP-=1"
+goto :eof
+:__ply_trap
+set /a "_HID+=1"
+set "_O_!_HID!___t=%~1"
+set /a "_HID+=1"
+set "_S_s!_HID!=%~2"
+set /a "_tid=_HID-1"
+for %%T in (!_tid!) do (
+  set "_O_%%T_f_Message=s!_HID!"
+  set "_O_%%T_f_InnerException=__PLY_NULL__"
+  set "_EX_OBJ=%%T"
+)
+set "_EX_TYPE=%~1"
+set "_EX_TRAP=%~2"
+set "_EX_ACTIVE=1"
+goto :eof
+```
+
+</details>
+
+> **Refused dialects:** `dos622` (`PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
+
+</details>
+
+<details>
 <summary><strong>MSIL</strong> — <code>msil/net10</code>, <code>msil/net8</code> (identical output — <code>StaticsShowcase.dll</code> (disassembled))</summary>
 
 **`StaticsShowcase.dll`** *(disassembled mnemonics)*
@@ -6581,8 +7817,6 @@ Call ply_init()
 ```
 
 </details>
-
-> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
 
 ## Inheritance, Virtual Dispatch & Interfaces
 
@@ -7735,6 +8969,304 @@ Returns i32.
 </details>
 
 <details>
+<summary><strong>Batch</strong> — 1/2 dialects (1 output)</summary>
+
+<details>
+<summary>Dialect: <code>cmd</code> (<code>kernel.bat</code>)</summary>
+
+```bat
+@echo off
+setlocal EnableExtensions EnableDelayedExpansion
+set "_SP=0"
+set "_HID=0"
+set "_CS=0"
+set "_WID=0"
+set "_EX_ACTIVE=0"
+set "_EX_STK_N=0"
+call :__ply_init
+if "%~1"=="Measure" goto :__ply_cli_Measure
+>&2 echo PLY_BATCH_ERROR=UnknownEntryPoint
+exit /b 1
+:__ply_cli_Measure
+shift
+set "_raw=%~1"
+if /i "!_raw!"=="true" (set "_CLI_A0=1") else if "!_raw!"=="1" (set "_CLI_A0=1") else (set "_CLI_A0=0")
+set "_raw=%~2"
+set /a "_CLI_A1=!_raw!"
+set "_raw=%~3"
+set /a "_CLI_A2=!_raw!"
+call :fn_Measure "!_CLI_A0!" "!_CLI_A1!" "!_CLI_A2!"
+if "!_EX_ACTIVE!"=="1" (>&2 echo PLY_BATCH_TRAP=!_EX_TRAP! & exit /b 97)
+echo(!_RET!
+exit /b 0
+:__ply_init
+set "_ISA_1_1=1"
+set "_ISA_2_2=1"
+set "_ISA_2_1=1"
+set "_ISA_3_3=1"
+set "_ISA_3_2=1"
+set "_ISA_3_1=1"
+set "_ISA_4_4=1"
+set "_ISA_4_2=1"
+set "_ISA_4_1=1"
+set "_ISA_5_5=1"
+set "_ISA_5_1=1"
+set "_ISA_6_6=1"
+set "_ISA_6_1=1"
+set "_ISA_7_7=1"
+set "_ISA_7_1=1"
+set "_ISA_8_8=1"
+set "_ISA_8_1=1"
+set "_ISA_9_9=1"
+set "_ISA_9_1=1"
+set "_ISA_10_10=1"
+set "_ISA_10_9=1"
+set "_ISA_10_1=1"
+set "_ISA_11_11=1"
+set "_ISA_11_1=1"
+set "_ISA_12_12=1"
+set "_ISA_12_1=1"
+set "_ISA_13_13=1"
+set "_ISA_13_1=1"
+set "_ISA_15_15=1"
+set "_ISA_15_14=1"
+set "_ISA_16_16=1"
+set "_ISA_16_15=1"
+set "_ISA_16_14=1"
+set "_ISA_17_17=1"
+set "_ISA_17_15=1"
+set "_ISA_17_14=1"
+goto :eof
+:fn_Measure
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_v1=%~2"
+for %%S in (!_SP!) do set "_F%%S_v2=%~3"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_br=!_F%%S_t0!"
+if "!_br!"=="1" goto :_if_t0
+goto :_if_f2
+:_if_t0
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_F%%S_t2=!_F%%S_v2!"
+for %%S in (!_SP!) do set "_F%%S_t3=2"
+set /a "_HID+=1"
+for %%S in (!_SP!) do set "_F%%S_t0=!_HID!"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O___t=16"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O_f15_0=0"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O_f16_0=0"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O_f16_1=0"
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_ca1=!_F%%S_t1!"
+for %%S in (!_SP!) do set "_ca2=!_F%%S_t2!"
+for %%S in (!_SP!) do set "_ca3=!_F%%S_t3!"
+call :fn_Rect_ctor "!_ca0!" "!_ca1!" "!_ca2!" "!_ca3!"
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_Measure
+for %%S in (!_SP!) do set "_F%%S_v3=!_F%%S_t0!"
+goto :_if_e1
+:_if_f2
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v1!"
+set /a "_HID+=1"
+for %%S in (!_SP!) do set "_F%%S_t0=!_HID!"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O___t=17"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O_f15_0=0"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O_f17_0=0"
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_ca1=!_F%%S_t1!"
+call :fn_Square_ctor "!_ca0!" "!_ca1!"
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_Measure
+for %%S in (!_SP!) do set "_F%%S_v3=!_F%%S_t0!"
+:_if_e1
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v3!"
+for %%S in (!_SP!) do set "_tt_o=!_F%%S_t0!"
+if not "!_tt_o!"=="__PLY_NULL__" goto :_tt_nn6
+for %%S in (!_SP!) do set "_F%%S_t0=0"
+goto :_tt_dn7
+:_tt_nn6
+for %%O in (!_tt_o!) do set "_tt_t=!_O_%%O___t!"
+for %%S in (!_SP!) do if defined _ISA_!_tt_t!_17 (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+:_tt_dn7
+for %%S in (!_SP!) do set "_br=!_F%%S_t0!"
+if "!_br!"=="1" goto :_cnd_t3
+goto :_cnd_f4
+:_cnd_t3
+for %%S in (!_SP!) do set "_F%%S_t0=1"
+goto :_cnd_e5
+:_cnd_f4
+for %%S in (!_SP!) do set "_F%%S_t0=0"
+:_cnd_e5
+for %%S in (!_SP!) do set "_F%%S_v4=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v3!"
+for %%S in (!_SP!) do set "_mc_r=!_F%%S_t0!"
+if not "!_mc_r!"=="__PLY_NULL__" goto :_nn_ok8
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Measure
+:_nn_ok8
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t0!"
+call :__ply_i_1 "!_ca0!"
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_Measure
+for %%S in (!_SP!) do set "_F%%S_t0=!_RET!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v4!"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0+_F%%S_t1"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_Measure
+:_ret_fn_Measure
+set /a "_SP-=1"
+goto :eof
+:fn_Shape_ctor
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_v1=%~2"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_fs_obj=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_fs_val=!_F%%S_t1!"
+if not "!_fs_obj!"=="__PLY_NULL__" goto :_nn_ok9
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Shape_ctor
+:_nn_ok9
+for %%O in (!_fs_obj!) do set "_O_%%O_f15_0=!_fs_val!"
+:_ret_fn_Shape_ctor
+set /a "_SP-=1"
+goto :eof
+:fn_Rect_Area
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_fl_o=!_F%%S_t0!"
+if not "!_fl_o!"=="__PLY_NULL__" goto :_nn_ok10
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Rect_Area
+:_nn_ok10
+for %%S in (!_SP!) do for %%O in (!_fl_o!) do set "_F%%S_t0=!_O_%%O_f16_0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_fl_o=!_F%%S_t1!"
+if not "!_fl_o!"=="__PLY_NULL__" goto :_nn_ok11
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Rect_Area
+:_nn_ok11
+for %%S in (!_SP!) do for %%O in (!_fl_o!) do set "_F%%S_t1=!_O_%%O_f16_1!"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0*_F%%S_t1"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_fl_o=!_F%%S_t1!"
+if not "!_fl_o!"=="__PLY_NULL__" goto :_nn_ok12
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Rect_Area
+:_nn_ok12
+for %%S in (!_SP!) do for %%O in (!_fl_o!) do set "_F%%S_t1=!_O_%%O_f15_0!"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0*_F%%S_t1"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_Rect_Area
+:_ret_fn_Rect_Area
+set /a "_SP-=1"
+goto :eof
+:fn_Rect_ctor
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_v1=%~2"
+for %%S in (!_SP!) do set "_F%%S_v2=%~3"
+for %%S in (!_SP!) do set "_F%%S_v3=%~4"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v3!"
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_ca1=!_F%%S_t1!"
+call :fn_Shape_ctor "!_ca0!" "!_ca1!"
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_Rect_ctor
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_fs_obj=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_fs_val=!_F%%S_t1!"
+if not "!_fs_obj!"=="__PLY_NULL__" goto :_nn_ok13
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Rect_ctor
+:_nn_ok13
+for %%O in (!_fs_obj!) do set "_O_%%O_f16_0=!_fs_val!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v2!"
+for %%S in (!_SP!) do set "_fs_obj=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_fs_val=!_F%%S_t1!"
+if not "!_fs_obj!"=="__PLY_NULL__" goto :_nn_ok14
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Rect_ctor
+:_nn_ok14
+for %%O in (!_fs_obj!) do set "_O_%%O_f16_1=!_fs_val!"
+:_ret_fn_Rect_ctor
+set /a "_SP-=1"
+goto :eof
+:fn_Square_Area
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_fl_o=!_F%%S_t0!"
+if not "!_fl_o!"=="__PLY_NULL__" goto :_nn_ok15
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Square_Area
+:_nn_ok15
+for %%S in (!_SP!) do for %%O in (!_fl_o!) do set "_F%%S_t0=!_O_%%O_f17_0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_fl_o=!_F%%S_t1!"
+if not "!_fl_o!"=="__PLY_NULL__" goto :_nn_ok16
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Square_Area
+:_nn_ok16
+for %%S in (!_SP!) do for %%O in (!_fl_o!) do set "_F%%S_t1=!_O_%%O_f17_0!"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0*_F%%S_t1"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_Square_Area
+:_ret_fn_Square_Area
+set /a "_SP-=1"
+goto :eof
+:fn_Square_ctor
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_v1=%~2"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=1"
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_ca1=!_F%%S_t1!"
+call :fn_Shape_ctor "!_ca0!" "!_ca1!"
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_Square_ctor
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_fs_obj=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_fs_val=!_F%%S_t1!"
+if not "!_fs_obj!"=="__PLY_NULL__" goto :_nn_ok17
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Square_ctor
+:_nn_ok17
+for %%O in (!_fs_obj!) do set "_O_%%O_f17_0=!_fs_val!"
+:_ret_fn_Square_ctor
+set /a "_SP-=1"
+goto :eof
+:__ply_i_1
+for %%O in (%~1) do set "_vt=!_O_%%O___t!"
+if "!_vt!"=="16" goto :fn_Rect_Area
+if "!_vt!"=="17" goto :fn_Square_Area
+goto :eof
+:__ply_trap
+set /a "_HID+=1"
+set "_O_!_HID!___t=%~1"
+set /a "_HID+=1"
+set "_S_s!_HID!=%~2"
+set /a "_tid=_HID-1"
+for %%T in (!_tid!) do (
+  set "_O_%%T_f_Message=s!_HID!"
+  set "_O_%%T_f_InnerException=__PLY_NULL__"
+  set "_EX_OBJ=%%T"
+)
+set "_EX_TYPE=%~1"
+set "_EX_TRAP=%~2"
+set "_EX_ACTIVE=1"
+goto :eof
+```
+
+</details>
+
+> **Refused dialects:** `dos622` (`PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
+
+</details>
+
+<details>
 <summary><strong>MSIL</strong> — <code>msil/net10</code>, <code>msil/net8</code> (identical output — <code>InheritanceShowcase.dll</code> (disassembled))</summary>
 
 **`InheritanceShowcase.dll`** *(disassembled mnemonics)*
@@ -8285,8 +9817,6 @@ End Sub
 ```
 
 </details>
-
-> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
 
 ## Generics
 
@@ -9183,6 +10713,510 @@ Returns i64.
 </details>
 
 <details>
+<summary><strong>Batch</strong> — 1/2 dialects (1 output)</summary>
+
+<details>
+<summary>Dialect: <code>cmd</code> (<code>kernel.bat</code>)</summary>
+
+```bat
+@echo off
+setlocal EnableExtensions EnableDelayedExpansion
+set "_SP=0"
+set "_HID=0"
+set "_CS=0"
+set "_WID=0"
+set "_EX_ACTIVE=0"
+set "_EX_STK_N=0"
+call :__ply_init
+if "%~1"=="Run" goto :__ply_cli_Run
+>&2 echo PLY_BATCH_ERROR=UnknownEntryPoint
+exit /b 1
+:__ply_cli_Run
+shift
+set "_raw=%~1"
+set /a "_CLI_A0=!_raw!"
+set "_raw=%~2"
+call :__ply_parse_i64 "!_raw!"
+set "_CLI_A1=!_RET!"
+call :fn_Run "!_CLI_A0!" "!_CLI_A1!"
+if "!_EX_ACTIVE!"=="1" (>&2 echo PLY_BATCH_TRAP=!_EX_TRAP! & exit /b 97)
+call :__ply_fmt_i64 "!_RET!"
+echo(!_RET!
+exit /b 0
+:__ply_init
+set "_ISA_1_1=1"
+set "_ISA_2_2=1"
+set "_ISA_2_1=1"
+set "_ISA_3_3=1"
+set "_ISA_3_2=1"
+set "_ISA_3_1=1"
+set "_ISA_4_4=1"
+set "_ISA_4_2=1"
+set "_ISA_4_1=1"
+set "_ISA_5_5=1"
+set "_ISA_5_1=1"
+set "_ISA_6_6=1"
+set "_ISA_6_1=1"
+set "_ISA_7_7=1"
+set "_ISA_7_1=1"
+set "_ISA_8_8=1"
+set "_ISA_8_1=1"
+set "_ISA_9_9=1"
+set "_ISA_9_1=1"
+set "_ISA_10_10=1"
+set "_ISA_10_9=1"
+set "_ISA_10_1=1"
+set "_ISA_11_11=1"
+set "_ISA_11_1=1"
+set "_ISA_12_12=1"
+set "_ISA_12_1=1"
+set "_ISA_13_13=1"
+set "_ISA_13_1=1"
+set "_ISA_14_14=1"
+set "_ISA_15_15=1"
+goto :eof
+:fn_Run
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_v1=%~2"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t2=0"
+for %%S in (!_SP!) do set "_F%%S_t3=100"
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t1!"
+for %%S in (!_SP!) do set "_ca1=!_F%%S_t2!"
+for %%S in (!_SP!) do set "_ca2=!_F%%S_t3!"
+call :fn_Clamp_i32_ "!_ca0!" "!_ca1!" "!_ca2!"
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_Run
+for %%S in (!_SP!) do set "_F%%S_t1=!_RET!"
+set /a "_HID+=1"
+for %%S in (!_SP!) do set "_F%%S_t0=!_HID!"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O___t=14"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O_f14_0=0"
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_ca1=!_F%%S_t1!"
+call :fn_Box_i32__ctor "!_ca0!" "!_ca1!"
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_Run
+for %%S in (!_SP!) do set "_F%%S_v2=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_F%%S_t2=-1:-50"
+for %%S in (!_SP!) do set "_F%%S_t3=0:50"
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t1!"
+for %%S in (!_SP!) do set "_ca1=!_F%%S_t2!"
+for %%S in (!_SP!) do set "_ca2=!_F%%S_t3!"
+call :fn_Clamp_i64_ "!_ca0!" "!_ca1!" "!_ca2!"
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_Run
+for %%S in (!_SP!) do set "_F%%S_t1=!_RET!"
+set /a "_HID+=1"
+for %%S in (!_SP!) do set "_F%%S_t0=!_HID!"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O___t=15"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O_f15_0=0:0"
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_ca1=!_F%%S_t1!"
+call :fn_Box_i64__ctor "!_ca0!" "!_ca1!"
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_Run
+for %%S in (!_SP!) do set "_F%%S_v3=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v2!"
+for %%S in (!_SP!) do set "_fl_o=!_F%%S_t0!"
+if not "!_fl_o!"=="__PLY_NULL__" goto :_nn_ok0
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Run
+:_nn_ok0
+for %%S in (!_SP!) do for %%O in (!_fl_o!) do set "_F%%S_t0=!_O_%%O_f14_0!"
+for %%S in (!_SP!) do set "_cv=!_F%%S_t0!"
+set /a "_hi=-((_cv>>31)&1)"
+for %%S in (!_SP!) do set "_F%%S_t0=!_hi!:!_cv!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v3!"
+for %%S in (!_SP!) do set "_fl_o=!_F%%S_t1!"
+if not "!_fl_o!"=="__PLY_NULL__" goto :_nn_ok1
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Run
+:_nn_ok1
+for %%S in (!_SP!) do for %%O in (!_fl_o!) do set "_F%%S_t1=!_O_%%O_f15_0!"
+for %%S in (!_SP!) do set "_b64_l=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_b64_r=!_F%%S_t1!"
+call :__ply_add64 "!_b64_l!" "!_b64_r!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_RET!"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_Run
+:_ret_fn_Run
+set /a "_SP-=1"
+goto :eof
+:fn_Box_i32__ctor
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_v1=%~2"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_fs_obj=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_fs_val=!_F%%S_t1!"
+if not "!_fs_obj!"=="__PLY_NULL__" goto :_nn_ok2
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Box_i32__ctor
+:_nn_ok2
+for %%O in (!_fs_obj!) do set "_O_%%O_f14_0=!_fs_val!"
+:_ret_fn_Box_i32__ctor
+set /a "_SP-=1"
+goto :eof
+:fn_Box_i64__ctor
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_v1=%~2"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_fs_obj=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_fs_val=!_F%%S_t1!"
+if not "!_fs_obj!"=="__PLY_NULL__" goto :_nn_ok3
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Box_i64__ctor
+:_nn_ok3
+for %%O in (!_fs_obj!) do set "_O_%%O_f15_0=!_fs_val!"
+:_ret_fn_Box_i64__ctor
+set /a "_SP-=1"
+goto :eof
+:fn_Clamp_i32_
+setlocal EnableExtensions EnableDelayedExpansion
+set "_v0=%~1"
+set "_v1=%~2"
+set "_v2=%~3"
+set "_t0=!_v0!"
+set "_t1=!_v1!"
+set /a "_ca=_t0, _cb=_t1"
+set /a "_csa=(_ca>>31)&1, _csb=(_cb>>31)&1"
+if !_csa! EQU !_csb! goto :_gc_s6
+if !_csa! GTR !_csb! (set "_t0=-1") else (set "_t0=1")
+goto :_gc_d7
+:_gc_s6
+set /a "_cma=_ca&2147483647, _cmb=_cb&2147483647"
+if !_cma! LSS !_cmb! (set "_t0=-1") else if !_cma! GTR !_cmb! (set "_t0=1") else (set "_t0=0")
+:_gc_d7
+set "_t1=0"
+set /a "_ca=_t0, _cb=_t1"
+set /a "_csa=(_ca>>31)&1, _csb=(_cb>>31)&1"
+if !_csa! EQU !_csb! goto :_cmp_s8
+if !_csa! GTR !_csb! (set "_t0=1") else (set "_t0=0")
+goto :_cmp_d9
+:_cmp_s8
+set /a "_cma=_ca&2147483647, _cmb=_cb&2147483647"
+if !_cma! LSS !_cmb! (set "_t0=1") else (set "_t0=0")
+:_cmp_d9
+set "_br=!_t0!"
+if "!_br!"=="1" goto :_if_t4
+goto :_if_e5
+:_if_t4
+set "_t0=!_v1!"
+set "_RET=!_t0!"
+goto :_ret_fn_Clamp_i32_
+:_if_e5
+set "_t0=!_v0!"
+set "_t1=!_v2!"
+set /a "_ca=_t0, _cb=_t1"
+set /a "_csa=(_ca>>31)&1, _csb=(_cb>>31)&1"
+if !_csa! EQU !_csb! goto :_gc_s12
+if !_csa! GTR !_csb! (set "_t0=-1") else (set "_t0=1")
+goto :_gc_d13
+:_gc_s12
+set /a "_cma=_ca&2147483647, _cmb=_cb&2147483647"
+if !_cma! LSS !_cmb! (set "_t0=-1") else if !_cma! GTR !_cmb! (set "_t0=1") else (set "_t0=0")
+:_gc_d13
+set "_t1=0"
+set /a "_ca=_t0, _cb=_t1"
+set /a "_csa=(_ca>>31)&1, _csb=(_cb>>31)&1"
+if !_csa! EQU !_csb! goto :_cmp_s14
+if !_csa! LSS !_csb! (set "_t0=1") else (set "_t0=0")
+goto :_cmp_d15
+:_cmp_s14
+set /a "_cma=_ca&2147483647, _cmb=_cb&2147483647"
+if !_cma! GTR !_cmb! (set "_t0=1") else (set "_t0=0")
+:_cmp_d15
+set "_br=!_t0!"
+if "!_br!"=="1" goto :_if_t10
+goto :_if_e11
+:_if_t10
+set "_t0=!_v2!"
+set "_RET=!_t0!"
+goto :_ret_fn_Clamp_i32_
+:_if_e11
+set "_t0=!_v0!"
+set "_RET=!_t0!"
+goto :_ret_fn_Clamp_i32_
+:_ret_fn_Clamp_i32_
+(
+  endlocal
+  set "_RET=%_RET%"
+)
+goto :eof
+:fn_Clamp_i64_
+setlocal EnableExtensions EnableDelayedExpansion
+set "_v0=%~1"
+set "_v1=%~2"
+set "_v2=%~3"
+set "_t0=!_v0!"
+set "_t1=!_v1!"
+set "_gc_a=!_t0!"
+set "_gc_b=!_t1!"
+call :__ply_cmp_i64 "!_gc_a!" "!_gc_b!"
+set "_t0=!_RET!"
+set "_t1=0"
+set /a "_ca=_t0, _cb=_t1"
+set /a "_csa=(_ca>>31)&1, _csb=(_cb>>31)&1"
+if !_csa! EQU !_csb! goto :_cmp_s18
+if !_csa! GTR !_csb! (set "_t0=1") else (set "_t0=0")
+goto :_cmp_d19
+:_cmp_s18
+set /a "_cma=_ca&2147483647, _cmb=_cb&2147483647"
+if !_cma! LSS !_cmb! (set "_t0=1") else (set "_t0=0")
+:_cmp_d19
+set "_br=!_t0!"
+if "!_br!"=="1" goto :_if_t16
+goto :_if_e17
+:_if_t16
+set "_t0=!_v1!"
+set "_RET=!_t0!"
+goto :_ret_fn_Clamp_i64_
+:_if_e17
+set "_t0=!_v0!"
+set "_t1=!_v2!"
+set "_gc_a=!_t0!"
+set "_gc_b=!_t1!"
+call :__ply_cmp_i64 "!_gc_a!" "!_gc_b!"
+set "_t0=!_RET!"
+set "_t1=0"
+set /a "_ca=_t0, _cb=_t1"
+set /a "_csa=(_ca>>31)&1, _csb=(_cb>>31)&1"
+if !_csa! EQU !_csb! goto :_cmp_s22
+if !_csa! LSS !_csb! (set "_t0=1") else (set "_t0=0")
+goto :_cmp_d23
+:_cmp_s22
+set /a "_cma=_ca&2147483647, _cmb=_cb&2147483647"
+if !_cma! GTR !_cmb! (set "_t0=1") else (set "_t0=0")
+:_cmp_d23
+set "_br=!_t0!"
+if "!_br!"=="1" goto :_if_t20
+goto :_if_e21
+:_if_t20
+set "_t0=!_v2!"
+set "_RET=!_t0!"
+goto :_ret_fn_Clamp_i64_
+:_if_e21
+set "_t0=!_v0!"
+set "_RET=!_t0!"
+goto :_ret_fn_Clamp_i64_
+:_ret_fn_Clamp_i64_
+(
+  endlocal
+  set "_RET=%_RET%"
+)
+goto :eof
+:__ply_trap
+set /a "_HID+=1"
+set "_O_!_HID!___t=%~1"
+set /a "_HID+=1"
+set "_S_s!_HID!=%~2"
+set /a "_tid=_HID-1"
+for %%T in (!_tid!) do (
+  set "_O_%%T_f_Message=s!_HID!"
+  set "_O_%%T_f_InnerException=__PLY_NULL__"
+  set "_EX_OBJ=%%T"
+)
+set "_EX_TYPE=%~1"
+set "_EX_TRAP=%~2"
+set "_EX_ACTIVE=1"
+goto :eof
+:__ply_cmp_u32
+setlocal EnableExtensions EnableDelayedExpansion
+set /a "_a=%~1^(-2147483647-1), _b=%~2^(-2147483647-1)"
+set /a "_sa=(_a>>31)&1, _sb=(_b>>31)&1"
+if !_sa! EQU !_sb! goto :_cu32_s
+if !_sa! GTR !_sb! (set "_RET=-1") else (set "_RET=1")
+goto :_cu32_d
+:_cu32_s
+set /a "_ma=_a&2147483647, _mb=_b&2147483647"
+if !_ma! LSS !_mb! (set "_RET=-1") else if !_ma! GTR !_mb! (set "_RET=1") else (set "_RET=0")
+:_cu32_d
+(
+  endlocal
+  set "_RET=%_RET%"
+)
+goto :eof
+:__ply_add64
+setlocal EnableExtensions EnableDelayedExpansion
+for /f "tokens=1,2 delims=:" %%A in ("%~1") do set /a "_h1=%%A, _l1=%%B"
+for /f "tokens=1,2 delims=:" %%A in ("%~2") do set /a "_h2=%%A, _l2=%%B"
+set /a "_lo=_l1+_l2, _s1=(_l1>>31)&1, _s2=(_l2>>31)&1, _ss=(_lo>>31)&1"
+set /a "_c1=_s1&_s2, _c2=_s1|_s2, _c3=_ss^1, _cy=_c1|(_c2&_c3), _hi=_h1+_h2+_cy"
+set "_RET=!_hi!:!_lo!"
+(
+  endlocal
+  set "_RET=%_RET%"
+)
+goto :eof
+:__ply_sub64
+setlocal EnableExtensions EnableDelayedExpansion
+for /f "tokens=1,2 delims=:" %%A in ("%~1") do set /a "_h1=%%A, _l1=%%B"
+for /f "tokens=1,2 delims=:" %%A in ("%~2") do set /a "_h2=%%A, _l2=%%B"
+set /a "_lo=_l1-_l2, _s1=(_l1>>31)&1, _s2=(_l2>>31)&1, _sd=(_lo>>31)&1"
+set /a "_b1=(_s1^1)&_s2, _b2=(_s1^_s2)^1, _bw=_b1|(_b2&_sd), _hi=_h1-_h2-_bw"
+set "_RET=!_hi!:!_lo!"
+(
+  endlocal
+  set "_RET=%_RET%"
+)
+goto :eof
+:__ply_neg64
+call :__ply_sub64 "0:0" "%~1"
+goto :eof
+:__ply_mul64
+setlocal EnableExtensions EnableDelayedExpansion
+for /f "tokens=1,2 delims=:" %%A in ("%~1") do set /a "_h1=%%A, _l1=%%B"
+for /f "tokens=1,2 delims=:" %%A in ("%~2") do set /a "_h2=%%A, _l2=%%B"
+set /a "_a0=_l1&65535, _a1=(_l1>>16)&65535, _b0=_l2&65535, _b1=(_l2>>16)&65535"
+set /a "_p00=_a0*_b0, _p01=_a0*_b1, _p10=_a1*_b0, _p11=_a1*_b1"
+set /a "_m0=(_p00>>16)&65535, _m1=_p01&65535, _m2=_p10&65535, _m=_m0+_m1+_m2"
+set /a "_k1=(_p01>>16)&65535, _k2=(_p10>>16)&65535, _k3=(_m>>16)&65535"
+set /a "_k4=_h1*_l2, _k5=_l1*_h2, _hi=_p11+_k1+_k2+_k3+_k4+_k5, _lo=_l1*_l2"
+set "_RET=!_hi!:!_lo!"
+(
+  endlocal
+  set "_RET=%_RET%"
+)
+goto :eof
+:__ply_shl64
+setlocal EnableExtensions EnableDelayedExpansion
+for /f "tokens=1,2 delims=:" %%A in ("%~1") do set /a "_h=%%A, _l=%%B"
+set /a "_c=%~2&63"
+if !_c! EQU 0 (set "_RET=!_h!:!_l!" & goto :_shl64_d)
+if !_c! EQU 32 (set "_RET=!_l!:0" & goto :_shl64_d)
+if !_c! GTR 32 (set /a "_nh=_l<<(_c-32)" & set "_RET=!_nh!:0" & goto :_shl64_d)
+set /a "_rc=32-_c, _mk=2147483647>>(_rc-1), _hi1=_h<<_c, _hi2=(_l>>_rc)&_mk, _nh=_hi1|_hi2, _nl=_l<<_c"
+set "_RET=!_nh!:!_nl!"
+:_shl64_d
+(
+  endlocal
+  set "_RET=%_RET%"
+)
+goto :eof
+:__ply_cmp_i64
+setlocal EnableExtensions EnableDelayedExpansion
+for /f "tokens=1,2 delims=:" %%A in ("%~1") do (set /a "_h1=%%A, _l1=%%B")
+for /f "tokens=1,2 delims=:" %%A in ("%~2") do (set /a "_h2=%%A, _l2=%%B")
+set /a "_s1=(_h1>>31)&1, _s2=(_h2>>31)&1"
+if !_s1! EQU !_s2! goto :_ci64_s
+if !_s1! GTR !_s2! (set "_RET=-1") else (set "_RET=1")
+goto :_ci64_d
+:_ci64_s
+set /a "_m1=_h1&2147483647, _m2=_h2&2147483647"
+if !_m1! LSS !_m2! (set "_RET=-1" & goto :_ci64_d)
+if !_m1! GTR !_m2! (set "_RET=1" & goto :_ci64_d)
+call :__ply_cmp_u32 "!_l1!" "!_l2!"
+:_ci64_d
+(
+  endlocal
+  set "_RET=%_RET%"
+)
+goto :eof
+:__ply_cmp_u64
+setlocal EnableExtensions EnableDelayedExpansion
+for /f "tokens=1,2 delims=:" %%A in ("%~1") do (set /a "_h1=%%A, _l1=%%B")
+for /f "tokens=1,2 delims=:" %%A in ("%~2") do (set /a "_h2=%%A, _l2=%%B")
+call :__ply_cmp_u32 "!_h1!" "!_h2!"
+if "!_RET!"=="0" call :__ply_cmp_u32 "!_l1!" "!_l2!"
+(endlocal & set "_RET=%_RET%")
+goto :eof
+:__ply_udiv64
+if "%~2"=="0:0" (call :__ply_trap 3 DivideByZero & goto :eof)
+set "_u64_a=%~1"
+set "_u64_b=%~2"
+for /f "tokens=1,2 delims=:" %%A in ("!_u64_a!") do (set /a "_u64_ah=%%A, _u64_al=%%B")
+set "_u64_q=0:0"
+set "_u64_r=0:0"
+for /l %%I in (63,-1,0) do (
+  call :__ply_shl64 "!_u64_r!" "1"
+  set "_u64_r=!_RET!"
+  if %%I GEQ 32 (set /a "_bit=(_u64_ah>>(%%I-32))&1") else (set /a "_bit=(_u64_al>>%%I)&1")
+  if !_bit! EQU 1 (call :__ply_add64 "!_u64_r!" "0:1" & set "_u64_r=!_RET!")
+  call :__ply_cmp_u64 "!_u64_r!" "!_u64_b!"
+  if !_RET! GEQ 0 (
+    call :__ply_sub64 "!_u64_r!" "!_u64_b!"
+    set "_u64_r=!_RET!"
+    call :__ply_shl64 "0:1" "%%I"
+    call :__ply_add64 "!_u64_q!" "!_RET!"
+    set "_u64_q=!_RET!"
+  )
+)
+set "_RET=!_u64_q!"
+set "_REM=!_u64_r!"
+goto :eof
+:__ply_fmt_u64
+setlocal EnableExtensions EnableDelayedExpansion
+set "_v=%~1"
+for /f "tokens=1,2 delims=:" %%A in ("!_v!") do (set /a "_h=%%A, _l=%%B")
+if !_h! EQU 0 if !_l! GEQ 0 (set "_RET=!_l!" & goto :_fu64_out)
+set "_out="
+:_fu64_lp
+if "!_v!"=="0:0" goto :_fu64_dn
+call :__ply_udiv64 "!_v!" "0:10"
+set "_v=!_RET!"
+for /f "tokens=2 delims=:" %%D in ("!_REM!") do set "_out=%%D!_out!"
+goto :_fu64_lp
+:_fu64_dn
+if not defined _out set "_out=0"
+set "_RET=!_out!"
+:_fu64_out
+(endlocal & set "_RET=%_RET%")
+goto :eof
+:__ply_fmt_i64
+setlocal EnableExtensions EnableDelayedExpansion
+set "_v=%~1"
+for /f "tokens=1,2 delims=:" %%A in ("!_v!") do (set /a "_h=%%A, _l=%%B, _sg=(%%A>>31)&1")
+if !_h! EQU 0 if !_l! GEQ 0 (set "_RET=!_l!" & goto :_fi64_out)
+if !_h! EQU -1 if !_l! LSS 0 (set "_RET=!_l!" & goto :_fi64_out)
+if !_sg! EQU 0 goto :_fi64_pos
+call :__ply_neg64 "!_v!"
+call :__ply_fmt_u64 "!_RET!"
+set "_RET=-!_RET!"
+goto :_fi64_out
+:_fi64_pos
+call :__ply_fmt_u64 "!_v!"
+:_fi64_out
+(
+  endlocal
+  set "_RET=%_RET%"
+)
+goto :eof
+:__ply_parse_u64
+setlocal EnableExtensions EnableDelayedExpansion
+set "_s=%~1"
+set "_acc=0:0"
+:_pu64_lp
+if not defined _s goto :_pu64_dn
+set "_d=!_s:~0,1!"
+set "_s=!_s:~1!"
+call :__ply_mul64 "!_acc!" "0:10"
+call :__ply_add64 "!_RET!" "0:!_d!"
+set "_acc=!_RET!"
+goto :_pu64_lp
+:_pu64_dn
+set "_RET=!_acc!"
+(endlocal & set "_RET=%_RET%")
+goto :eof
+:__ply_parse_i64
+setlocal EnableExtensions EnableDelayedExpansion
+set "_s=%~1"
+set "_neg=0"
+if "!_s:~0,1!"=="-" (set "_neg=1" & set "_s=!_s:~1!")
+call :__ply_parse_u64 "!_s!"
+if "!_neg!"=="1" call :__ply_neg64 "!_RET!"
+(endlocal & set "_RET=%_RET%")
+goto :eof
+```
+
+</details>
+
+> **Refused dialects:** `dos622` (`PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
+
+</details>
+
+<details>
 <summary><strong>MSIL</strong> — <code>msil/net10</code>, <code>msil/net8</code> (identical output — <code>GenericsShowcase.dll</code> (disassembled))</summary>
 
 **`GenericsShowcase.dll`** *(disassembled mnemonics)*
@@ -9705,8 +11739,6 @@ End Function
 
 </details>
 
-> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
-
 ## Lambdas & Closures
 
 Lambda expressions and local functions capturing and mutating shared outer locals. Source: [`09-lambdas-and-closures.cs`](showcase/09-lambdas-and-closures.cs).
@@ -10161,6 +12193,172 @@ Returns i32.
 </details>
 
 <details>
+<summary><strong>Batch</strong> — 1/2 dialects (1 output)</summary>
+
+<details>
+<summary>Dialect: <code>cmd</code> (<code>kernel.bat</code>)</summary>
+
+```bat
+@echo off
+setlocal EnableExtensions EnableDelayedExpansion
+set "_SP=0"
+set "_HID=0"
+set "_CS=0"
+set "_WID=0"
+set "_EX_ACTIVE=0"
+set "_EX_STK_N=0"
+call :__ply_init
+if "%~1"=="Run" goto :__ply_cli_Run
+>&2 echo PLY_BATCH_ERROR=UnknownEntryPoint
+exit /b 1
+:__ply_cli_Run
+shift
+set "_raw=%~1"
+set /a "_CLI_A0=!_raw!"
+set "_raw=%~2"
+set /a "_CLI_A1=!_raw!"
+call :fn_Run "!_CLI_A0!" "!_CLI_A1!"
+if "!_EX_ACTIVE!"=="1" (>&2 echo PLY_BATCH_TRAP=!_EX_TRAP! & exit /b 97)
+echo(!_RET!
+exit /b 0
+:__ply_init
+set "_ISA_1_1=1"
+set "_ISA_2_2=1"
+set "_ISA_2_1=1"
+set "_ISA_3_3=1"
+set "_ISA_3_2=1"
+set "_ISA_3_1=1"
+set "_ISA_4_4=1"
+set "_ISA_4_2=1"
+set "_ISA_4_1=1"
+set "_ISA_5_5=1"
+set "_ISA_5_1=1"
+set "_ISA_6_6=1"
+set "_ISA_6_1=1"
+set "_ISA_7_7=1"
+set "_ISA_7_1=1"
+set "_ISA_8_8=1"
+set "_ISA_8_1=1"
+set "_ISA_9_9=1"
+set "_ISA_9_1=1"
+set "_ISA_10_10=1"
+set "_ISA_10_9=1"
+set "_ISA_10_1=1"
+set "_ISA_11_11=1"
+set "_ISA_11_1=1"
+set "_ISA_12_12=1"
+set "_ISA_12_1=1"
+set "_ISA_13_13=1"
+set "_ISA_13_1=1"
+goto :eof
+:fn_Run
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_v1=%~2"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+set /a "_HID+=1"
+for %%S in (!_SP!) do set "_O_!_HID!_v=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_v3=!_HID!"
+set /a "_HID+=1"
+set "_cl_id=!_HID!"
+set "_O_!_cl_id!___fn=lam_0"
+set "_O_!_cl_id!___kind=1"
+for %%S in (!_SP!) do set "_O_!_cl_id!_c0=!_F%%S_v3!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_cl_id!"
+for %%S in (!_SP!) do set "_F%%S_v2=!_F%%S_t0!"
+set /a "_HID+=1"
+set "_cl_id=!_HID!"
+set "_O_!_cl_id!___fn=lam_1"
+set "_O_!_cl_id!___kind=1"
+for %%S in (!_SP!) do set "_O_!_cl_id!_c0=!_F%%S_v3!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_cl_id!"
+for %%S in (!_SP!) do set "_F%%S_v4=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v4!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_iv_c=!_F%%S_t0!"
+if not "!_iv_c!"=="__PLY_NULL__" goto :_nn_ok0
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Run
+:_nn_ok0
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t1!"
+for %%C in (!_iv_c!) do (set "_iv_fn=!_O_%%C___fn!" & set "_iv_k=!_O_%%C___kind!" & set "_iv_r=!_O_%%C___recv!")
+if "!_iv_k!"=="1" (call :!_iv_fn! "!_iv_c!" "!_ca0!") else if "!_iv_k!"=="2" (call :!_iv_fn! "!_iv_r!" "!_ca0!") else (call :!_iv_fn! "!_ca0!")
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_Run
+for %%S in (!_SP!) do set "_F%%S_t0=!_RET!"
+for %%S in (!_SP!) do set "_F%%S_v5=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v2!"
+for %%S in (!_SP!) do set "_iv_c=!_F%%S_t0!"
+if not "!_iv_c!"=="__PLY_NULL__" goto :_nn_ok1
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Run
+:_nn_ok1
+for %%C in (!_iv_c!) do (set "_iv_fn=!_O_%%C___fn!" & set "_iv_k=!_O_%%C___kind!" & set "_iv_r=!_O_%%C___recv!")
+if "!_iv_k!"=="1" (call :!_iv_fn! "!_iv_c!") else if "!_iv_k!"=="2" (call :!_iv_fn! "!_iv_r!") else (call :!_iv_fn!)
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_Run
+for %%S in (!_SP!) do set "_F%%S_t0=!_RET!"
+for %%S in (!_SP!) do set "_F%%S_v6=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v5!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v6!"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0+_F%%S_t1"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_Run
+:_ret_fn_Run
+set /a "_SP-=1"
+goto :eof
+:lam_0
+set /a "_SP+=1"
+set "_clos_id=%~1"
+for %%S in (!_SP!) do for %%C in (!_clos_id!) do set "_F%%S_v0=!_O_%%C_c0!"
+for %%S in (!_SP!) do for %%C in (!_F%%S_v0!) do set "_F%%S_t0=!_O_%%C_v!"
+for %%S in (!_SP!) do set "_F%%S_t1=2"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0*_F%%S_t1"
+for %%S in (!_SP!) do for %%C in (!_F%%S_v0!) do set "_O_%%C_v=!_F%%S_t0!"
+for %%S in (!_SP!) do for %%C in (!_F%%S_v0!) do set "_F%%S_t0=!_O_%%C_v!"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_lam_0
+:_ret_lam_0
+set /a "_SP-=1"
+goto :eof
+:lam_1
+set /a "_SP+=1"
+set "_clos_id=%~1"
+for %%S in (!_SP!) do for %%C in (!_clos_id!) do set "_F%%S_v0=!_O_%%C_c0!"
+shift
+for %%S in (!_SP!) do set "_F%%S_v1=%~1"
+for %%S in (!_SP!) do for %%C in (!_F%%S_v0!) do set "_F%%S_t0=!_O_%%C_v!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v1!"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0+_F%%S_t1"
+for %%S in (!_SP!) do for %%C in (!_F%%S_v0!) do set "_O_%%C_v=!_F%%S_t0!"
+for %%S in (!_SP!) do for %%C in (!_F%%S_v0!) do set "_F%%S_t0=!_O_%%C_v!"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_lam_1
+:_ret_lam_1
+set /a "_SP-=1"
+goto :eof
+:__ply_trap
+set /a "_HID+=1"
+set "_O_!_HID!___t=%~1"
+set /a "_HID+=1"
+set "_S_s!_HID!=%~2"
+set /a "_tid=_HID-1"
+for %%T in (!_tid!) do (
+  set "_O_%%T_f_Message=s!_HID!"
+  set "_O_%%T_f_InnerException=__PLY_NULL__"
+  set "_EX_OBJ=%%T"
+)
+set "_EX_TYPE=%~1"
+set "_EX_TRAP=%~2"
+set "_EX_ACTIVE=1"
+goto :eof
+```
+
+</details>
+
+> **Refused dialects:** `dos622` (`PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
+
+</details>
+
+<details>
 <summary><strong>MSIL</strong> — <code>msil/net10</code>, <code>msil/net8</code> (identical output — <code>ClosuresShowcase.dll</code> (disassembled))</summary>
 
 **`ClosuresShowcase.dll`** *(disassembled mnemonics)*
@@ -10578,8 +12776,6 @@ End Function
 ```
 
 </details>
-
-> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
 
 ## Callbacks & Delegates
 
@@ -11100,6 +13296,194 @@ Returns i32.
 </details>
 
 <details>
+<summary><strong>Batch</strong> — 1/2 dialects (1 output)</summary>
+
+<details>
+<summary>Dialect: <code>cmd</code> (<code>kernel.bat</code>)</summary>
+
+```bat
+@echo off
+setlocal EnableExtensions EnableDelayedExpansion
+set "_SP=0"
+set "_HID=0"
+set "_CS=0"
+set "_WID=0"
+set "_EX_ACTIVE=0"
+set "_EX_STK_N=0"
+call :__ply_init
+if "%~1"=="Run" goto :__ply_cli_Run
+>&2 echo PLY_BATCH_ERROR=UnknownEntryPoint
+exit /b 1
+:__ply_cli_Run
+shift
+set "_raw=%~1"
+set /a "_HID+=1"
+set "_CLI_A0=!_HID!"
+set "_AL_!_HID!=0"
+if not defined _raw goto :_ca9
+if /i "!_raw!"=="null" (set "_CLI_A0=__PLY_NULL__" & goto :_ca9)
+set "_raw=!_raw::=,!"
+set "_ai=0"
+for %%E in (!_raw!) do (
+  set "_ae=%%~E"
+  set /a "_CE=!_ae!"
+  for %%H in (!_CLI_A0!) do set "_A_%%H_!_ai!=!_CE!"
+  set /a "_ai+=1"
+)
+for %%H in (!_CLI_A0!) do set "_AL_%%H=!_ai!"
+:_ca9
+set "_raw=%~2"
+set /a "_CLI_A1=!_raw!"
+call :fn_Run "!_CLI_A0!" "!_CLI_A1!"
+if "!_EX_ACTIVE!"=="1" (>&2 echo PLY_BATCH_TRAP=!_EX_TRAP! & exit /b 97)
+echo(!_RET!
+exit /b 0
+:__ply_init
+set "_ISA_1_1=1"
+set "_ISA_2_2=1"
+set "_ISA_2_1=1"
+set "_ISA_3_3=1"
+set "_ISA_3_2=1"
+set "_ISA_3_1=1"
+set "_ISA_4_4=1"
+set "_ISA_4_2=1"
+set "_ISA_4_1=1"
+set "_ISA_5_5=1"
+set "_ISA_5_1=1"
+set "_ISA_6_6=1"
+set "_ISA_6_1=1"
+set "_ISA_7_7=1"
+set "_ISA_7_1=1"
+set "_ISA_8_8=1"
+set "_ISA_8_1=1"
+set "_ISA_9_9=1"
+set "_ISA_9_1=1"
+set "_ISA_10_10=1"
+set "_ISA_10_9=1"
+set "_ISA_10_1=1"
+set "_ISA_11_11=1"
+set "_ISA_11_1=1"
+set "_ISA_12_12=1"
+set "_ISA_12_1=1"
+set "_ISA_13_13=1"
+set "_ISA_13_1=1"
+goto :eof
+:fn_Square
+setlocal EnableExtensions EnableDelayedExpansion
+set "_v0=%~1"
+set "_t0=!_v0!"
+set "_t1=!_v0!"
+set /a "_t0=_t0*_t1"
+set "_RET=!_t0!"
+goto :_ret_fn_Square
+:_ret_fn_Square
+(
+  endlocal
+  set "_RET=%_RET%"
+)
+goto :eof
+:fn_Run
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_v1=%~2"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t0!"
+call :fn_Square "!_ca0!"
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_Run
+for %%S in (!_SP!) do set "_F%%S_t0=!_RET!"
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t0!"
+call :fn_Square "!_ca0!"
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_Run
+for %%S in (!_SP!) do set "_F%%S_t0=!_RET!"
+for %%S in (!_SP!) do set "_F%%S_v3=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=0"
+for %%S in (!_SP!) do set "_F%%S_v5=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=0"
+for %%S in (!_SP!) do set "_F%%S_v6=!_F%%S_t0!"
+goto :_lp_t1
+:_lp_s0
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v6!"
+for %%S in (!_SP!) do set "_la_id=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_la_idx=!_F%%S_t1!"
+if not "!_la_id!"=="__PLY_NULL__" goto :_nn_ok3
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Run
+:_nn_ok3
+for %%A in (!_la_id!) do set /a "_la_len=_AL_%%A"
+set /a "_bs=(_la_idx>>31)&1"
+if !_bs! NEQ 0 goto :_bd_bad5
+if !_la_idx! LSS !_la_len! goto :_bd_ok4
+:_bd_bad5
+call :__ply_trap 5 IndexOutOfRange
+goto :_ret_fn_Run
+:_bd_ok4
+for %%S in (!_SP!) do for %%A in (!_la_id!) do for %%I in (!_la_idx!) do set "_F%%S_t0=!_A_%%A_%%I!"
+for %%S in (!_SP!) do set "_F%%S_v8=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v5!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v8!"
+for %%S in (!_SP!) do set "_F%%S_t2=1"
+for %%S in (!_SP!) do set /a "_F%%S_t1=_F%%S_t1+_F%%S_t2"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0+_F%%S_t1"
+for %%S in (!_SP!) do set "_F%%S_v5=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v6!"
+for %%S in (!_SP!) do set "_F%%S_t1=1"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0+_F%%S_t1"
+for %%S in (!_SP!) do set "_F%%S_v6=!_F%%S_t0!"
+:_lp_t1
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v6!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_al_id=!_F%%S_t1!"
+if not "!_al_id!"=="__PLY_NULL__" goto :_nn_ok6
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Run
+:_nn_ok6
+for %%S in (!_SP!) do for %%A in (!_al_id!) do set "_F%%S_t1=!_AL_%%A!"
+for %%S in (!_SP!) do set /a "_ca=_F%%S_t0, _cb=_F%%S_t1"
+set /a "_csa=(_ca>>31)&1, _csb=(_cb>>31)&1"
+if !_csa! EQU !_csb! goto :_cmp_s7
+for %%S in (!_SP!) do if !_csa! GTR !_csb! (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+goto :_cmp_d8
+:_cmp_s7
+set /a "_cma=_ca&2147483647, _cmb=_cb&2147483647"
+for %%S in (!_SP!) do if !_cma! LSS !_cmb! (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+:_cmp_d8
+for %%S in (!_SP!) do set "_br=!_F%%S_t0!"
+if "!_br!"=="1" goto :_lp_s0
+goto :_lp_e2
+:_lp_e2
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v3!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v5!"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0+_F%%S_t1"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_Run
+:_ret_fn_Run
+set /a "_SP-=1"
+goto :eof
+:__ply_trap
+set /a "_HID+=1"
+set "_O_!_HID!___t=%~1"
+set /a "_HID+=1"
+set "_S_s!_HID!=%~2"
+set /a "_tid=_HID-1"
+for %%T in (!_tid!) do (
+  set "_O_%%T_f_Message=s!_HID!"
+  set "_O_%%T_f_InnerException=__PLY_NULL__"
+  set "_EX_OBJ=%%T"
+)
+set "_EX_TYPE=%~1"
+set "_EX_TRAP=%~2"
+set "_EX_ACTIVE=1"
+goto :eof
+```
+
+</details>
+
+> **Refused dialects:** `dos622` (`PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
+
+</details>
+
+<details>
 <summary><strong>MSIL</strong> — <code>msil/net10</code>, <code>msil/net8</code> (identical output — <code>CallbacksShowcase.dll</code> (disassembled))</summary>
 
 **`CallbacksShowcase.dll`** *(disassembled mnemonics)*
@@ -11369,8 +13753,6 @@ End Function
 ```
 
 </details>
-
-> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
 
 ## Enums & Nullable Optionals
 
@@ -11802,6 +14184,220 @@ Returns i32.
 </details>
 
 <details>
+<summary><strong>Batch</strong> — 1/2 dialects (1 output)</summary>
+
+<details>
+<summary>Dialect: <code>cmd</code> (<code>kernel.bat</code>)</summary>
+
+```bat
+@echo off
+setlocal EnableExtensions EnableDelayedExpansion
+set "_SP=0"
+set "_HID=0"
+set "_CS=0"
+set "_WID=0"
+set "_EX_ACTIVE=0"
+set "_EX_STK_N=0"
+if "%~1"=="Resolve" goto :__ply_cli_Resolve
+>&2 echo PLY_BATCH_ERROR=UnknownEntryPoint
+exit /b 1
+:__ply_cli_Resolve
+shift
+set "_raw=%~1"
+set /a "_CLI_A0=!_raw!"
+set "_raw=%~2"
+if "!_raw!"=="" (set "_CLI_A1=__PLY_NONE__" & goto :_cd8)
+if /i "!_raw!"=="null" (set "_CLI_A1=__PLY_NONE__" & goto :_cd8)
+:_cp7
+set /a "_CLI_A1=!_raw!"
+:_cd8
+call :fn_Resolve "!_CLI_A0!" "!_CLI_A1!"
+if "!_EX_ACTIVE!"=="1" (>&2 echo PLY_BATCH_TRAP=!_EX_TRAP! & exit /b 97)
+echo(!_RET!
+exit /b 0
+:fn_Resolve
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_v1=%~2"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t2=2"
+for %%S in (!_SP!) do set /a "_ef_m=_F%%S_t1&_F%%S_t2"
+for %%S in (!_SP!) do if "!_ef_m!"=="!_F%%S_t2!" (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+for %%S in (!_SP!) do set "_br=!_F%%S_t0!"
+if "!_br!"=="1" goto :_cnd_t0
+goto :_cnd_f1
+:_cnd_t0
+for %%S in (!_SP!) do set "_F%%S_t0=10"
+goto :_cnd_e2
+:_cnd_f1
+for %%S in (!_SP!) do set "_F%%S_t0=1"
+:_cnd_e2
+for %%S in (!_SP!) do set "_F%%S_v2=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v1!"
+for %%S in (!_SP!) do if "!_F%%S_t0!"=="__PLY_NONE__" (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+for %%S in (!_SP!) do set "_br=!_F%%S_t0!"
+if "!_br!"=="1" goto :_cnd_t3
+goto :_cnd_f4
+:_cnd_t3
+for %%S in (!_SP!) do set "_F%%S_t0=__PLY_NONE__"
+goto :_cnd_e5
+:_cnd_f4
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v2!"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0+_F%%S_t1"
+:_cnd_e5
+for %%S in (!_SP!) do set "_F%%S_v3=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v3!"
+for %%S in (!_SP!) do set "_cv=!_F%%S_t0!"
+if not "!_cv!"=="__PLY_NONE__" goto :_coa_d6
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v2!"
+:_coa_d6
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_Resolve
+:_ret_fn_Resolve
+set /a "_SP-=1"
+goto :eof
+```
+
+</details>
+
+> **Refused dialects:** `dos622` (`PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
+
+</details>
+
+<details>
+<summary><strong>MSIL</strong> — <code>msil/net10</code>, <code>msil/net8</code> (identical output — <code>EnumsAndOptionalsShowcase.dll</code> (disassembled))</summary>
+
+**`EnumsAndOptionalsShowcase.dll`** *(disassembled mnemonics)*
+
+```il
+.assembly EnumsAndOptionalsShowcase {}
+
+.class public sealed Permissions extends System.Enum {
+  .field public int32 value__
+  .field public static Permissions None
+  .field public static Permissions Read
+  .field public static Permissions Write
+  .field public static Permissions Execute
+}
+
+.class public abstract sealed EnumsAndOptionalsShowcase extends System.Object {
+  .method public hidebysig static int32 Resolve(Permissions flags, System.Nullable`1<int32> overrideValue) cil managed {
+    .maxstack 64
+    .locals init ([0] int32, [1] System.Nullable`1<int32>, [2] Permissions, [3] System.Nullable`1<int32>, [4] System.Nullable`1<int32>, [5] System.Nullable`1<int32>, [6] System.Nullable`1<int32>)
+    IL_0000: ldarg.0
+    IL_0001: ldc.i4.2
+    IL_0002: stloc.2
+    IL_0003: ldloc.2
+    IL_0004: and
+    IL_0005: ldloc.2
+    IL_0006: ceq
+    IL_0008: brfalse IL_0014
+    IL_000D: ldc.i4.s 10
+    IL_000F: br IL_0015
+    IL_0014: ldc.i4.1
+    IL_0015: stloc.0
+    IL_0016: ldarg.1
+    IL_0017: stloc.3
+    IL_0018: ldloca.s 3
+    IL_001A: call bool 0x1B000001::get_HasValue()
+    IL_001F: ldc.i4.0
+    IL_0020: ceq
+    IL_0022: brfalse IL_0036
+    IL_0027: ldloca.s 4
+    IL_0029: initobj 0x1B000001
+    IL_002F: ldloc.s 4
+    IL_0031: br IL_0047
+    IL_0036: ldarg.1
+    IL_0037: stloc.s 5
+    IL_0039: ldloca.s 5
+    IL_003B: call !0 0x1B000001::get_Value()
+    IL_0040: ldloc.0
+    IL_0041: add
+    IL_0042: newobj void 0x1B000001::.ctor(!0)
+    IL_0047: stloc.1
+    IL_0048: ldloc.1
+    IL_0049: stloc.s 6
+    IL_004B: ldloca.s 6
+    IL_004D: call bool 0x1B000001::get_HasValue()
+    IL_0052: brtrue IL_005D
+    IL_0057: ldloc.0
+    IL_0058: br IL_0064
+    IL_005D: ldloca.s 6
+    IL_005F: call !0 0x1B000001::get_Value()
+    IL_0064: ret
+    IL_0065: ldc.i4.0
+    IL_0066: ret
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><strong>JVM</strong> — <code>jvm/21</code>, <code>jvm/17</code>, <code>jvm/8</code> (identical output — <code>EnumsAndOptionalsShowcase.jar</code> (disassembled))</summary>
+
+**`EnumsAndOptionalsShowcase.jar`** *(disassembled mnemonics)*
+
+```text
+// classfile version 65.0
+public class EnumsAndOptionalsShowcase {
+  public <init>()V;
+    Code: stack=1, locals=1
+      0: aload_0
+      1: invokespecial // Method java/lang/Object.<init>:()V
+      4: return
+  public static Resolve(ILjava/lang/Integer;)I;
+    Code: stack=2, locals=5
+      0: iconst_0
+      1: istore_2
+      2: aconst_null
+      3: astore_3
+      4: iconst_0
+      5: istore 4
+      7: iload_0
+      8: iconst_2
+      9: istore 4
+      11: iload 4
+      13: iand
+      14: iload 4
+      16: if_icmpeq 23
+      19: iconst_0
+      20: goto 24
+      23: iconst_1
+      24: ifeq 32
+      27: bipush 10
+      29: goto 33
+      32: iconst_1
+      33: istore_2
+      34: aload_1
+      35: ifnull 42
+      38: iconst_0
+      39: goto 43
+      42: iconst_1
+      43: ifeq 50
+      46: aconst_null
+      47: goto 59
+      50: aload_1
+      51: invokevirtual // Method java/lang/Integer.intValue:()I
+      54: iload_2
+      55: iadd
+      56: invokestatic // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      59: astore_3
+      60: aload_3
+      61: dup
+      62: ifnonnull 70
+      65: pop
+      66: iload_2
+      67: goto 73
+      70: invokevirtual // Method java/lang/Integer.intValue:()I
+      73: ireturn
+}
+```
+
+</details>
+
+<details>
 <summary><strong>C++</strong> — <code>cpp/cpp17</code>, <code>cpp/cpp20</code>, <code>cpp/cpp23</code> (identical output — <code>enums_and_optionals_showcase.cpp</code>, <code>enums_and_optionals_showcase.hpp</code>)</summary>
 
 **`enums_and_optionals_showcase.cpp`**
@@ -11892,8 +14488,6 @@ End Function
 ```
 
 </details>
-
-> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile); `msil` (`PLY3052`: intrinsic 'EnumHasFlag' is not supported by the MSIL backend); `jvm` (`PLY3152`: intrinsic 'EnumHasFlag' is not supported by the JVM backend)
 
 ## Collections
 
@@ -12910,6 +15504,400 @@ Returns i32.
 ```
 
 </details>
+
+</details>
+
+<details>
+<summary><strong>Batch</strong> — 1/2 dialects (1 output)</summary>
+
+<details>
+<summary>Dialect: <code>cmd</code> (<code>kernel.bat</code>)</summary>
+
+```bat
+@echo off
+setlocal EnableExtensions EnableDelayedExpansion
+set "_SP=0"
+set "_HID=0"
+set "_CS=0"
+set "_WID=0"
+set "_EX_ACTIVE=0"
+set "_EX_STK_N=0"
+call :__ply_init
+if "%~1"=="Run" goto :__ply_cli_Run
+>&2 echo PLY_BATCH_ERROR=UnknownEntryPoint
+exit /b 1
+:__ply_cli_Run
+shift
+set "_raw=%~1"
+set /a "_HID+=1"
+set "_CLI_A0=!_HID!"
+set "_AL_!_HID!=0"
+if not defined _raw goto :_ca29
+if /i "!_raw!"=="null" (set "_CLI_A0=__PLY_NULL__" & goto :_ca29)
+set "_raw=!_raw::=,!"
+set "_ai=0"
+for %%E in (!_raw!) do (
+  set "_ae=%%~E"
+  set /a "_CE=!_ae!"
+  for %%H in (!_CLI_A0!) do set "_A_%%H_!_ai!=!_CE!"
+  set /a "_ai+=1"
+)
+for %%H in (!_CLI_A0!) do set "_AL_%%H=!_ai!"
+:_ca29
+call :fn_Run "!_CLI_A0!"
+if "!_EX_ACTIVE!"=="1" (>&2 echo PLY_BATCH_TRAP=!_EX_TRAP! & exit /b 97)
+echo(!_RET!
+exit /b 0
+:__ply_init
+set "_ISA_1_1=1"
+set "_ISA_2_2=1"
+set "_ISA_2_1=1"
+set "_ISA_3_3=1"
+set "_ISA_3_2=1"
+set "_ISA_3_1=1"
+set "_ISA_4_4=1"
+set "_ISA_4_2=1"
+set "_ISA_4_1=1"
+set "_ISA_5_5=1"
+set "_ISA_5_1=1"
+set "_ISA_6_6=1"
+set "_ISA_6_1=1"
+set "_ISA_7_7=1"
+set "_ISA_7_1=1"
+set "_ISA_8_8=1"
+set "_ISA_8_1=1"
+set "_ISA_9_9=1"
+set "_ISA_9_1=1"
+set "_ISA_10_10=1"
+set "_ISA_10_9=1"
+set "_ISA_10_1=1"
+set "_ISA_11_11=1"
+set "_ISA_11_1=1"
+set "_ISA_12_12=1"
+set "_ISA_12_1=1"
+set "_ISA_13_13=1"
+set "_ISA_13_1=1"
+goto :eof
+:fn_Run
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+set /a "_HID+=1"
+set "_L_!_HID!_len=0" & set "_L_!_HID!_ver=0"
+for %%S in (!_SP!) do set "_F%%S_t0=!_HID!"
+for %%S in (!_SP!) do set "_F%%S_v1=!_F%%S_t0!"
+set /a "_HID+=1"
+set "_M_!_HID!_cap=0" & set "_M_!_HID!_cnt=0" & set "_M_!_HID!_ver=0" & set "_M_!_HID!_ord=1" & set "_M_!_HID!_fn=0"
+for %%S in (!_SP!) do set "_F%%S_t0=!_HID!"
+for %%S in (!_SP!) do set "_F%%S_v2=!_F%%S_t0!"
+set /a "_HID+=1"
+set "_M_!_HID!_cap=0" & set "_M_!_HID!_cnt=0" & set "_M_!_HID!_ver=0" & set "_M_!_HID!_ord=1" & set "_M_!_HID!_fn=0"
+for %%S in (!_SP!) do set "_F%%S_t0=!_HID!"
+for %%S in (!_SP!) do set "_F%%S_v3=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=0"
+for %%S in (!_SP!) do set "_F%%S_v4=!_F%%S_t0!"
+goto :_lp_t1
+:_lp_s0
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v4!"
+for %%S in (!_SP!) do set "_la_id=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_la_idx=!_F%%S_t1!"
+if not "!_la_id!"=="__PLY_NULL__" goto :_nn_ok3
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Run
+:_nn_ok3
+for %%A in (!_la_id!) do set /a "_la_len=_AL_%%A"
+set /a "_bs=(_la_idx>>31)&1"
+if !_bs! NEQ 0 goto :_bd_bad5
+if !_la_idx! LSS !_la_len! goto :_bd_ok4
+:_bd_bad5
+call :__ply_trap 5 IndexOutOfRange
+goto :_ret_fn_Run
+:_bd_ok4
+for %%S in (!_SP!) do for %%A in (!_la_id!) do for %%I in (!_la_idx!) do set "_F%%S_t0=!_A_%%A_%%I!"
+for %%S in (!_SP!) do set "_F%%S_v5=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v2!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v5!"
+for %%S in (!_SP!) do set "_sa_id=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_sa_k=!_F%%S_t1!"
+call :__ply_map_find "!_sa_id!" "!_sa_k!" "0"
+if "!_RET!"=="-1" goto :_sa_y8
+for %%S in (!_SP!) do set "_F%%S_t0=0"
+goto :_sa_d9
+:_sa_y8
+call :__ply_map_alloc "!_sa_id!"
+for %%M in (!_sa_id!) do (for %%I in (!_RET!) do (set "_M_%%M_u_%%I=1" & set "_M_%%M_k_%%I=!_sa_k!") & set /a "_M_%%M_cnt+=1, _M_%%M_ver+=1")
+for %%S in (!_SP!) do set "_F%%S_t0=1"
+:_sa_d9
+for %%S in (!_SP!) do set "_br=!_F%%S_t0!"
+if "!_br!"=="1" goto :_if_t6
+goto :_if_e7
+:_if_t6
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v5!"
+for %%S in (!_SP!) do set "_la_id=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_la_v=!_F%%S_t1!"
+for %%L in (!_la_id!) do (set /a "_la_i=_L_%%L_len" & for %%I in (!_la_i!) do set "_L_%%L_%%I=!_la_v!" & set /a "_L_%%L_len+=1, _L_%%L_ver+=1")
+:_if_e7
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v5!"
+for %%S in (!_SP!) do set "_F%%S_t1=0"
+for %%S in (!_SP!) do set /a "_ca=_F%%S_t0, _cb=_F%%S_t1"
+set /a "_csa=(_ca>>31)&1, _csb=(_cb>>31)&1"
+if !_csa! EQU !_csb! goto :_cmp_s13
+for %%S in (!_SP!) do if !_csa! LSS !_csb! (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+goto :_cmp_d14
+:_cmp_s13
+set /a "_cma=_ca&2147483647, _cmb=_cb&2147483647"
+for %%S in (!_SP!) do if !_cma! GEQ !_cmb! (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+:_cmp_d14
+for %%S in (!_SP!) do set "_br=!_F%%S_t0!"
+if "!_br!"=="1" goto :_cnd_t10
+goto :_cnd_f11
+:_cnd_t10
+set /a "_HID+=1"
+set "_S_s!_HID!=pos"
+for %%S in (!_SP!) do set "_F%%S_t0=s!_HID!"
+goto :_cnd_e12
+:_cnd_f11
+set /a "_HID+=1"
+set "_S_s!_HID!=neg"
+for %%S in (!_SP!) do set "_F%%S_t0=s!_HID!"
+:_cnd_e12
+for %%S in (!_SP!) do set "_F%%S_v6=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v3!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v6!"
+for %%S in (!_SP!) do set "_mk_id=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_mk_k=!_F%%S_t1!"
+call :__ply_map_find "!_mk_id!" "!_mk_k!" "1"
+for %%S in (!_SP!) do if "!_RET!"=="-1" (set "_F%%S_t0=0") else (set "_F%%S_t0=1")
+for %%S in (!_SP!) do set "_br=!_F%%S_t0!"
+if "!_br!"=="1" goto :_if_t15
+goto :_if_f17
+:_if_t15
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v3!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v6!"
+for %%S in (!_SP!) do set "_mg_id=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_mg_k=!_F%%S_t1!"
+call :__ply_map_find "!_mg_id!" "!_mg_k!" "1"
+if not "!_RET!"=="-1" goto :_mg_ok18
+call :__ply_trap 11 KeyNotFound
+goto :_ret_fn_Run
+:_mg_ok18
+for %%S in (!_SP!) do for %%M in (!_mg_id!) do for %%I in (!_RET!) do set "_F%%S_t0=!_M_%%M_v_%%I!"
+for %%S in (!_SP!) do set "_F%%S_v7=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v3!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v6!"
+for %%S in (!_SP!) do set "_F%%S_t2=!_F%%S_v7!"
+for %%S in (!_SP!) do set "_F%%S_t3=1"
+for %%S in (!_SP!) do set /a "_F%%S_t2=_F%%S_t2+_F%%S_t3"
+for %%S in (!_SP!) do set "_mp_id=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_mp_k=!_F%%S_t1!"
+for %%S in (!_SP!) do set "_mp_v=!_F%%S_t2!"
+call :__ply_map_find "!_mp_id!" "!_mp_k!" "1"
+if "!_RET!"=="-1" goto :_mp_n19
+for %%M in (!_mp_id!) do for %%I in (!_RET!) do set "_M_%%M_v_%%I=!_mp_v!"
+goto :_mp_d20
+:_mp_n19
+call :__ply_map_alloc "!_mp_id!"
+for %%M in (!_mp_id!) do (for %%I in (!_RET!) do (set "_M_%%M_u_%%I=1" & set "_M_%%M_k_%%I=!_mp_k!" & set "_M_%%M_v_%%I=!_mp_v!") & set /a "_M_%%M_cnt+=1, _M_%%M_ver+=1")
+:_mp_d20
+goto :_if_e16
+:_if_f17
+for %%S in (!_SP!) do set "_F%%S_t0=0"
+for %%S in (!_SP!) do set "_F%%S_v7=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v3!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v6!"
+for %%S in (!_SP!) do set "_F%%S_t2=1"
+for %%S in (!_SP!) do set "_ma_id=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_ma_k=!_F%%S_t1!"
+for %%S in (!_SP!) do set "_ma_v=!_F%%S_t2!"
+call :__ply_map_find "!_ma_id!" "!_ma_k!" "1"
+if "!_RET!"=="-1" goto :_ma_ok21
+call :__ply_trap 9 DuplicateKey
+goto :_ret_fn_Run
+:_ma_ok21
+call :__ply_map_alloc "!_ma_id!"
+for %%M in (!_ma_id!) do (for %%I in (!_RET!) do (set "_M_%%M_u_%%I=1" & set "_M_%%M_k_%%I=!_ma_k!" & set "_M_%%M_v_%%I=!_ma_v!") & set /a "_M_%%M_cnt+=1, _M_%%M_ver+=1")
+:_if_e16
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v4!"
+for %%S in (!_SP!) do set "_F%%S_t1=1"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0+_F%%S_t1"
+for %%S in (!_SP!) do set "_F%%S_v4=!_F%%S_t0!"
+:_lp_t1
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v4!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_al_id=!_F%%S_t1!"
+if not "!_al_id!"=="__PLY_NULL__" goto :_nn_ok22
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Run
+:_nn_ok22
+for %%S in (!_SP!) do for %%A in (!_al_id!) do set "_F%%S_t1=!_AL_%%A!"
+for %%S in (!_SP!) do set /a "_ca=_F%%S_t0, _cb=_F%%S_t1"
+set /a "_csa=(_ca>>31)&1, _csb=(_cb>>31)&1"
+if !_csa! EQU !_csb! goto :_cmp_s23
+for %%S in (!_SP!) do if !_csa! GTR !_csb! (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+goto :_cmp_d24
+:_cmp_s23
+set /a "_cma=_ca&2147483647, _cmb=_cb&2147483647"
+for %%S in (!_SP!) do if !_cma! LSS !_cmb! (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+:_cmp_d24
+for %%S in (!_SP!) do set "_br=!_F%%S_t0!"
+if "!_br!"=="1" goto :_lp_s0
+goto :_lp_e2
+:_lp_e2
+for %%S in (!_SP!) do set "_F%%S_t0=0"
+for %%S in (!_SP!) do set "_F%%S_v8=!_F%%S_t0!"
+set /a "_HID+=1"
+set "_S_s!_HID!=pos"
+for %%S in (!_SP!) do set "_F%%S_t0=s!_HID!"
+for %%S in (!_SP!) do set "_F%%S_v9=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v3!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v9!"
+for %%S in (!_SP!) do set "_mk_id=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_mk_k=!_F%%S_t1!"
+call :__ply_map_find "!_mk_id!" "!_mk_k!" "1"
+for %%S in (!_SP!) do if "!_RET!"=="-1" (set "_F%%S_t0=0") else (set "_F%%S_t0=1")
+for %%S in (!_SP!) do set "_br=!_F%%S_t0!"
+if "!_br!"=="1" goto :_if_t25
+goto :_if_f27
+:_if_t25
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v3!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v9!"
+for %%S in (!_SP!) do set "_mg_id=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_mg_k=!_F%%S_t1!"
+call :__ply_map_find "!_mg_id!" "!_mg_k!" "1"
+if not "!_RET!"=="-1" goto :_mg_ok28
+call :__ply_trap 11 KeyNotFound
+goto :_ret_fn_Run
+:_mg_ok28
+for %%S in (!_SP!) do for %%M in (!_mg_id!) do for %%I in (!_RET!) do set "_F%%S_t0=!_M_%%M_v_%%I!"
+for %%S in (!_SP!) do set "_F%%S_v10=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v10!"
+for %%S in (!_SP!) do set "_F%%S_v8=!_F%%S_t0!"
+goto :_if_e26
+:_if_f27
+for %%S in (!_SP!) do set "_F%%S_t0=0"
+for %%S in (!_SP!) do set "_F%%S_v10=!_F%%S_t0!"
+:_if_e26
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_lc_id=!_F%%S_t0!"
+for %%S in (!_SP!) do for %%L in (!_lc_id!) do set "_F%%S_t0=!_L_%%L_len!"
+for %%S in (!_SP!) do set "_F%%S_t1=10"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0*_F%%S_t1"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v8!"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0+_F%%S_t1"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_Run
+:_ret_fn_Run
+set /a "_SP-=1"
+goto :eof
+:__ply_trap
+set /a "_HID+=1"
+set "_O_!_HID!___t=%~1"
+set /a "_HID+=1"
+set "_S_s!_HID!=%~2"
+set /a "_tid=_HID-1"
+for %%T in (!_tid!) do (
+  set "_O_%%T_f_Message=s!_HID!"
+  set "_O_%%T_f_InnerException=__PLY_NULL__"
+  set "_EX_OBJ=%%T"
+)
+set "_EX_TYPE=%~1"
+set "_EX_TRAP=%~2"
+set "_EX_ACTIVE=1"
+goto :eof
+:__ply_strlen
+setlocal EnableExtensions EnableDelayedExpansion
+for %%H in (%~1) do set "_s=!_S_%%H!"
+if not defined _s (set "_RET=0" & goto :_sl_out)
+set /a "_len=0"
+for %%P in (4096 2048 1024 512 256 128 64 32 16 8 4 2 1) do (if not "!_s:~%%P,1!"=="" (set /a "_len+=%%P" & set "_s=!_s:~%%P!"))
+set /a "_len+=1"
+set "_RET=!_len!"
+:_sl_out
+(endlocal & set "_RET=%_RET%")
+goto :eof
+:__ply_streq
+setlocal EnableExtensions EnableDelayedExpansion
+set "_h1=%~1"
+set "_h2=%~2"
+if "!_h1!"=="!_h2!" (set "_RET=1" & goto :_seq_out)
+if "!_h1!"=="__PLY_NULL__" (set "_RET=0" & goto :_seq_out)
+if "!_h2!"=="__PLY_NULL__" (set "_RET=0" & goto :_seq_out)
+call :__ply_strlen "!_h1!"
+set "_l1=!_RET!"
+call :__ply_strlen "!_h2!"
+if not "!_l1!"=="!_RET!" (set "_RET=0" & goto :_seq_out)
+if "!_l1!"=="0" (set "_RET=1" & goto :_seq_out)
+for %%A in (!_h1!) do set "_s1=!_S_%%A!"
+for %%B in (!_h2!) do set "_s2=!_S_%%B!"
+set "_n1=!_s1:"=!"
+set "_n2=!_s2:"=!"
+if "!_n1!"=="!_s1!" if "!_n2!"=="!_s2!" (if "!_s1!"=="!_s2!" (set "_RET=1") else (set "_RET=0") & goto :_seq_out)
+set /a "_lim=_l1-1"
+for /l %%I in (0,1,!_lim!) do (
+  set "_c1=!_s1:~%%I,1!"
+  set "_c2=!_s2:~%%I,1!"
+  set "_q1=!_c1:"=!"
+  set "_q2=!_c2:"=!"
+  if not defined _q1 (if defined _q2 (set "_RET=0" & goto :_seq_out)) else if not defined _q2 (set "_RET=0" & goto :_seq_out) else if not "!_c1!"=="!_c2!" (set "_RET=0" & goto :_seq_out)
+)
+set "_RET=1"
+:_seq_out
+(endlocal & set "_RET=%_RET%")
+goto :eof
+:__ply_map_find
+set "_mf_id=%~1"
+set "_mf_key=%~2"
+set "_mf_str=%~3"
+for %%M in (!_mf_id!) do set /a "_mf_n=_M_%%M_cap-1"
+if !_mf_n! LSS 0 (set "_RET=-1" & goto :eof)
+for /l %%I in (0,1,!_mf_n!) do (
+  for %%M in (!_mf_id!) do set "_mf_u=!_M_%%M_u_%%I!"
+  if "!_mf_u!"=="1" (
+    for %%M in (!_mf_id!) do set "_mf_k=!_M_%%M_k_%%I!"
+    if "!_mf_str!"=="1" (
+      call :__ply_streq "!_mf_k!" "!_mf_key!"
+      if "!_RET!"=="1" (set "_RET=%%I" & goto :eof)
+    ) else (
+      if "!_mf_k!"=="!_mf_key!" (set "_RET=%%I" & goto :eof)
+    )
+  )
+)
+set "_RET=-1"
+goto :eof
+:__ply_map_alloc
+set "_ma_id=%~1"
+for %%M in (!_ma_id!) do (set "_ma_ord=!_M_%%M_ord!" & set /a "_ma_fn=_M_%%M_fn" & set /a "_ma_cap=_M_%%M_cap")
+if "!_ma_ord!"=="1" if !_ma_fn! GTR 0 (
+  set /a "_ma_fn-=1"
+  for %%M in (!_ma_id!) do (set "_M_%%M_fn=!_ma_fn!" & for %%F in (!_ma_fn!) do set "_RET=!_M_%%M_f_%%F!")
+  goto :eof
+)
+set "_RET=!_ma_cap!"
+set /a "_ma_cap+=1"
+for %%M in (!_ma_id!) do set "_M_%%M_cap=!_ma_cap!"
+goto :eof
+:__ply_map_rem
+set "_mr_id=%~1"
+call :__ply_map_find "%~1" "%~2" "%~3"
+if "!_RET!"=="-1" (set "_RET=0" & goto :eof)
+set "_mr_sl=!_RET!"
+for %%M in (!_mr_id!) do (
+  for %%S in (!_mr_sl!) do set "_M_%%M_u_%%S=0"
+  set /a "_M_%%M_cnt-=1"
+  if "!_M_%%M_ord!"=="1" (
+    set /a "_fn=_M_%%M_fn"
+    for %%F in (!_fn!) do set "_M_%%M_f_%%F=!_mr_sl!"
+    set /a "_M_%%M_fn+=1"
+  )
+)
+set "_RET=1"
+goto :eof
+```
+
+</details>
+
+> **Refused dialects:** `dos622` (`PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
 
 </details>
 
@@ -14042,8 +17030,6 @@ End Function
 
 </details>
 
-> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
-
 ## Iterators & Lazy Sequences
 
 Restartable iterator methods with yield return and yield break consumed lazily via foreach. Source: [`13-iterators-and-yield.cs`](showcase/13-iterators-and-yield.cs).
@@ -14623,6 +17609,139 @@ Returns i32.
 ```
 
 </details>
+
+</details>
+
+<details>
+<summary><strong>Batch</strong> — 1/2 dialects (1 output)</summary>
+
+<details>
+<summary>Dialect: <code>cmd</code> (<code>kernel.bat</code>)</summary>
+
+```bat
+@echo off
+setlocal EnableExtensions EnableDelayedExpansion
+set "_SP=0"
+set "_HID=0"
+set "_CS=0"
+set "_WID=0"
+set "_EX_ACTIVE=0"
+set "_EX_STK_N=0"
+if "%~1"=="SumEvens" goto :__ply_cli_SumEvens
+>&2 echo PLY_BATCH_ERROR=UnknownEntryPoint
+exit /b 1
+:__ply_cli_SumEvens
+shift
+set "_raw=%~1"
+set /a "_CLI_A0=!_raw!"
+call :fn_SumEvens "!_CLI_A0!"
+if "!_EX_ACTIVE!"=="1" (>&2 echo PLY_BATCH_TRAP=!_EX_TRAP! & exit /b 97)
+echo(!_RET!
+exit /b 0
+:seq_EvensUpTo
+set /a "_SP+=1"
+set "_seq_id=%~1"
+for %%Q in (!_seq_id!) do set "_parg=!_O_%%Q_a0!"
+for %%S in (!_SP!) do set "_F%%S_v0=!_parg!"
+for %%S in (!_SP!) do set "_F%%S_t0=0"
+for %%S in (!_SP!) do set "_F%%S_v1=!_F%%S_t0!"
+goto :_lp_t1
+:_lp_s0
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_F%%S_t1=100"
+for %%S in (!_SP!) do set /a "_ca=_F%%S_t0, _cb=_F%%S_t1"
+set /a "_csa=(_ca>>31)&1, _csb=(_cb>>31)&1"
+if !_csa! EQU !_csb! goto :_cmp_s5
+for %%S in (!_SP!) do if !_csa! LSS !_csb! (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+goto :_cmp_d6
+:_cmp_s5
+set /a "_cma=_ca&2147483647, _cmb=_cb&2147483647"
+for %%S in (!_SP!) do if !_cma! GTR !_cmb! (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+:_cmp_d6
+for %%S in (!_SP!) do set "_br=!_F%%S_t0!"
+if "!_br!"=="1" goto :_if_t3
+goto :_if_e4
+:_if_t3
+goto :_ret_seq_EvensUpTo
+:_if_e4
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_YVAL=!_F%%S_t0!"
+for %%C in (!_CS!) do call :!_C%%C_cb! "!_C%%C_sp!"
+for %%C in (!_CS!) do set "_yctl=!_C%%C_ctl!"
+if "!_yctl!"=="0" goto :_yld_c7
+goto :_ret_seq_EvensUpTo
+:_yld_c7
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_F%%S_t1=2"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0+_F%%S_t1"
+for %%S in (!_SP!) do set "_F%%S_v1=!_F%%S_t0!"
+:_lp_t1
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v0!"
+for %%S in (!_SP!) do set /a "_ca=_F%%S_t0, _cb=_F%%S_t1"
+set /a "_csa=(_ca>>31)&1, _csb=(_cb>>31)&1"
+if !_csa! EQU !_csb! goto :_cmp_s8
+for %%S in (!_SP!) do if !_csa! GTR !_csb! (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+goto :_cmp_d9
+:_cmp_s8
+set /a "_cma=_ca&2147483647, _cmb=_cb&2147483647"
+for %%S in (!_SP!) do if !_cma! LEQ !_cmb! (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+:_cmp_d9
+for %%S in (!_SP!) do set "_br=!_F%%S_t0!"
+if "!_br!"=="1" goto :_lp_s0
+goto :_lp_e2
+:_lp_e2
+:_ret_seq_EvensUpTo
+set /a "_SP-=1"
+goto :eof
+:fn_SumEvens
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_t0=0"
+for %%S in (!_SP!) do set "_F%%S_v1=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+set /a "_HID+=1"
+set "_sq_id=!_HID!"
+set "_O_!_sq_id!___seq=seq_EvensUpTo"
+for %%S in (!_SP!) do set "_sq_a=!_F%%S_t0!"
+set "_O_!_sq_id!_a0=!_sq_a!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_sq_id!"
+for %%S in (!_SP!) do set "_seq_obj=!_F%%S_t0!"
+set /a "_CS+=1"
+for %%C in (!_CS!) do (set "_C%%C_cb=_ply_feb_0" & set "_C%%C_sp=!_SP!" & set "_C%%C_ctl=0")
+for %%Q in (!_seq_obj!) do set "_seq_fn=!_O_%%Q___seq!"
+call :!_seq_fn! "!_seq_obj!"
+for %%C in (!_CS!) do (set "_fe_ctl=!_C%%C_ctl!" & set "_fe_ret=!_C%%C_ret!")
+set /a "_CS-=1"
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_SumEvens
+if not "!_fe_ctl!"=="2" goto :_fes_ok10
+set "_RET=!_fe_ret!"
+goto :_ret_fn_SumEvens
+:_fes_ok10
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_SumEvens
+:_ret_fn_SumEvens
+set /a "_SP-=1"
+goto :eof
+:_ply_feb_0
+set "_cb_save_sp=!_SP!"
+set "_SP=%~1"
+for %%S in (!_SP!) do set "_F%%S_t0=!_YVAL!"
+for %%S in (!_SP!) do set "_F%%S_v2=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v2!"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0+_F%%S_t1"
+for %%S in (!_SP!) do set "_F%%S_v1=!_F%%S_t0!"
+:_ret__ply_feb_0
+if "!_EX_ACTIVE!"=="1" for %%C in (!_CS!) do set "_C%%C_ctl=3"
+set "_SP=!_cb_save_sp!"
+goto :eof
+```
+
+</details>
+
+> **Refused dialects:** `dos622` (`PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
 
 </details>
 
@@ -15442,8 +18561,6 @@ End Function
 
 </details>
 
-> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
-
 ## LINQ
 
 Deferred LINQ query pipelines combining Where, Select, Take, and Sum. Source: [`14-linq.cs`](showcase/14-linq.cs).
@@ -16042,6 +19159,313 @@ Returns i32.
 </details>
 
 <details>
+<summary><strong>Batch</strong> — 1/2 dialects (1 output)</summary>
+
+<details>
+<summary>Dialect: <code>cmd</code> (<code>kernel.bat</code>)</summary>
+
+```bat
+@echo off
+setlocal EnableExtensions EnableDelayedExpansion
+set "_SP=0"
+set "_HID=0"
+set "_CS=0"
+set "_WID=0"
+set "_EX_ACTIVE=0"
+set "_EX_STK_N=0"
+call :__ply_init
+if "%~1"=="TopSquaredSum" goto :__ply_cli_TopSquaredSum
+>&2 echo PLY_BATCH_ERROR=UnknownEntryPoint
+exit /b 1
+:__ply_cli_TopSquaredSum
+shift
+set "_raw=%~1"
+set /a "_HID+=1"
+set "_CLI_A0=!_HID!"
+set "_AL_!_HID!=0"
+if not defined _raw goto :_ca26
+if /i "!_raw!"=="null" (set "_CLI_A0=__PLY_NULL__" & goto :_ca26)
+set "_raw=!_raw::=,!"
+set "_ai=0"
+for %%E in (!_raw!) do (
+  set "_ae=%%~E"
+  set /a "_CE=!_ae!"
+  for %%H in (!_CLI_A0!) do set "_A_%%H_!_ai!=!_CE!"
+  set /a "_ai+=1"
+)
+for %%H in (!_CLI_A0!) do set "_AL_%%H=!_ai!"
+:_ca26
+set "_raw=%~2"
+set /a "_CLI_A1=!_raw!"
+call :fn_TopSquaredSum "!_CLI_A0!" "!_CLI_A1!"
+if "!_EX_ACTIVE!"=="1" (>&2 echo PLY_BATCH_TRAP=!_EX_TRAP! & exit /b 97)
+echo(!_RET!
+exit /b 0
+:__ply_init
+set "_ISA_1_1=1"
+set "_ISA_2_2=1"
+set "_ISA_2_1=1"
+set "_ISA_3_3=1"
+set "_ISA_3_2=1"
+set "_ISA_3_1=1"
+set "_ISA_4_4=1"
+set "_ISA_4_2=1"
+set "_ISA_4_1=1"
+set "_ISA_5_5=1"
+set "_ISA_5_1=1"
+set "_ISA_6_6=1"
+set "_ISA_6_1=1"
+set "_ISA_7_7=1"
+set "_ISA_7_1=1"
+set "_ISA_8_8=1"
+set "_ISA_8_1=1"
+set "_ISA_9_9=1"
+set "_ISA_9_1=1"
+set "_ISA_10_10=1"
+set "_ISA_10_9=1"
+set "_ISA_10_1=1"
+set "_ISA_11_11=1"
+set "_ISA_11_1=1"
+set "_ISA_12_12=1"
+set "_ISA_12_1=1"
+set "_ISA_13_13=1"
+set "_ISA_13_1=1"
+goto :eof
+:fn_TopSquaredSum
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_v1=%~2"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+set /a "_HID+=1"
+set "_cl_id=!_HID!"
+set "_O_!_cl_id!___fn=lam_0"
+set "_O_!_cl_id!___kind=1"
+for %%S in (!_SP!) do set "_F%%S_t1=!_cl_id!"
+set /a "_HID+=1"
+set "_cl_id=!_HID!"
+set "_O_!_cl_id!___fn=lam_1"
+set "_O_!_cl_id!___kind=1"
+for %%S in (!_SP!) do set "_F%%S_t2=!_cl_id!"
+for %%S in (!_SP!) do set "_F%%S_t3=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_ca1=!_F%%S_t1!"
+for %%S in (!_SP!) do set "_ca2=!_F%%S_t2!"
+for %%S in (!_SP!) do set "_ca3=!_F%%S_t3!"
+call :fn_TopSquaredSum_Sum "!_ca0!" "!_ca1!" "!_ca2!" "!_ca3!"
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_TopSquaredSum
+for %%S in (!_SP!) do set "_F%%S_t0=!_RET!"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_TopSquaredSum
+:_ret_fn_TopSquaredSum
+set /a "_SP-=1"
+goto :eof
+:fn_TopSquaredSum_Sum
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_v1=%~2"
+for %%S in (!_SP!) do set "_F%%S_v2=%~3"
+for %%S in (!_SP!) do set "_F%%S_v3=%~4"
+for %%S in (!_SP!) do set "_F%%S_t0=0"
+for %%S in (!_SP!) do set "_F%%S_v4=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v3!"
+for %%S in (!_SP!) do set "_F%%S_t1=0"
+for %%S in (!_SP!) do set /a "_ca=_F%%S_t0, _cb=_F%%S_t1"
+set /a "_csa=(_ca>>31)&1, _csb=(_cb>>31)&1"
+if !_csa! EQU !_csb! goto :_cmp_s4
+for %%S in (!_SP!) do if !_csa! GTR !_csb! (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+goto :_cmp_d5
+:_cmp_s4
+set /a "_cma=_ca&2147483647, _cmb=_cb&2147483647"
+for %%S in (!_SP!) do if !_cma! LEQ !_cmb! (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+:_cmp_d5
+for %%S in (!_SP!) do set "_br=!_F%%S_t0!"
+if "!_br!"=="1" goto :_if_e3
+goto :_if_t2
+:_if_t2
+for %%S in (!_SP!) do set "_F%%S_t0=0"
+for %%S in (!_SP!) do set "_F%%S_v5=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=0"
+for %%S in (!_SP!) do set "_F%%S_v7=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=0"
+for %%S in (!_SP!) do set "_F%%S_v9=!_F%%S_t0!"
+goto :_lp_t7
+:_lp_s6
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v7!"
+for %%S in (!_SP!) do set "_la_id=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_la_idx=!_F%%S_t1!"
+if not "!_la_id!"=="__PLY_NULL__" goto :_nn_ok9
+call :__ply_trap 6 NullReference
+goto :_ret_fn_TopSquaredSum_Sum
+:_nn_ok9
+for %%A in (!_la_id!) do set /a "_la_len=_AL_%%A"
+set /a "_bs=(_la_idx>>31)&1"
+if !_bs! NEQ 0 goto :_bd_bad11
+if !_la_idx! LSS !_la_len! goto :_bd_ok10
+:_bd_bad11
+call :__ply_trap 5 IndexOutOfRange
+goto :_ret_fn_TopSquaredSum_Sum
+:_bd_ok10
+for %%S in (!_SP!) do for %%A in (!_la_id!) do for %%I in (!_la_idx!) do set "_F%%S_t0=!_A_%%A_%%I!"
+for %%S in (!_SP!) do set "_F%%S_v6=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v7!"
+for %%S in (!_SP!) do set "_F%%S_t1=1"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0+_F%%S_t1"
+for %%S in (!_SP!) do set "_F%%S_v7=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v6!"
+for %%S in (!_SP!) do set "_iv_c=!_F%%S_t0!"
+if not "!_iv_c!"=="__PLY_NULL__" goto :_nn_ok14
+call :__ply_trap 6 NullReference
+goto :_ret_fn_TopSquaredSum_Sum
+:_nn_ok14
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t1!"
+for %%C in (!_iv_c!) do (set "_iv_fn=!_O_%%C___fn!" & set "_iv_k=!_O_%%C___kind!" & set "_iv_r=!_O_%%C___recv!")
+if "!_iv_k!"=="1" (call :!_iv_fn! "!_iv_c!" "!_ca0!") else if "!_iv_k!"=="2" (call :!_iv_fn! "!_iv_r!" "!_ca0!") else (call :!_iv_fn! "!_ca0!")
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_TopSquaredSum_Sum
+for %%S in (!_SP!) do set "_F%%S_t0=!_RET!"
+for %%S in (!_SP!) do set "_br=!_F%%S_t0!"
+if "!_br!"=="1" goto :_if_t12
+goto :_if_e13
+:_if_t12
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v2!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v6!"
+for %%S in (!_SP!) do set "_iv_c=!_F%%S_t0!"
+if not "!_iv_c!"=="__PLY_NULL__" goto :_nn_ok15
+call :__ply_trap 6 NullReference
+goto :_ret_fn_TopSquaredSum_Sum
+:_nn_ok15
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t1!"
+for %%C in (!_iv_c!) do (set "_iv_fn=!_O_%%C___fn!" & set "_iv_k=!_O_%%C___kind!" & set "_iv_r=!_O_%%C___recv!")
+if "!_iv_k!"=="1" (call :!_iv_fn! "!_iv_c!" "!_ca0!") else if "!_iv_k!"=="2" (call :!_iv_fn! "!_iv_r!" "!_ca0!") else (call :!_iv_fn! "!_ca0!")
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_TopSquaredSum_Sum
+for %%S in (!_SP!) do set "_F%%S_t0=!_RET!"
+for %%S in (!_SP!) do set "_F%%S_v8=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v9!"
+for %%S in (!_SP!) do set "_F%%S_t1=1"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0+_F%%S_t1"
+for %%S in (!_SP!) do set "_F%%S_v9=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v4!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v8!"
+for %%S in (!_SP!) do set /a "_res=_F%%S_t0+_F%%S_t1, _ov=(((_F%%S_t0^_res)&(_F%%S_t1^_res))>>31)&1, _F%%S_t0=_res"
+if !_ov! EQU 0 goto :_ov_ok16
+call :__ply_trap 4 IntegerOverflow
+goto :_ret_fn_TopSquaredSum_Sum
+:_ov_ok16
+for %%S in (!_SP!) do set "_F%%S_v4=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v9!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v3!"
+for %%S in (!_SP!) do set /a "_ca=_F%%S_t0, _cb=_F%%S_t1"
+set /a "_csa=(_ca>>31)&1, _csb=(_cb>>31)&1"
+if !_csa! EQU !_csb! goto :_cmp_s19
+for %%S in (!_SP!) do if !_csa! LSS !_csb! (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+goto :_cmp_d20
+:_cmp_s19
+set /a "_cma=_ca&2147483647, _cmb=_cb&2147483647"
+for %%S in (!_SP!) do if !_cma! GEQ !_cmb! (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+:_cmp_d20
+for %%S in (!_SP!) do set "_br=!_F%%S_t0!"
+if "!_br!"=="1" goto :_if_t17
+goto :_if_e18
+:_if_t17
+for %%S in (!_SP!) do set "_F%%S_t0=1"
+for %%S in (!_SP!) do set "_F%%S_v5=!_F%%S_t0!"
+:_if_e18
+:_if_e13
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v5!"
+for %%S in (!_SP!) do set "_br=!_F%%S_t0!"
+if "!_br!"=="1" goto :_if_t21
+goto :_if_e22
+:_if_t21
+goto :_lp_e8
+:_if_e22
+:_lp_t7
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v7!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_al_id=!_F%%S_t1!"
+if not "!_al_id!"=="__PLY_NULL__" goto :_nn_ok23
+call :__ply_trap 6 NullReference
+goto :_ret_fn_TopSquaredSum_Sum
+:_nn_ok23
+for %%S in (!_SP!) do for %%A in (!_al_id!) do set "_F%%S_t1=!_AL_%%A!"
+for %%S in (!_SP!) do set /a "_ca=_F%%S_t0, _cb=_F%%S_t1"
+set /a "_csa=(_ca>>31)&1, _csb=(_cb>>31)&1"
+if !_csa! EQU !_csb! goto :_cmp_s24
+for %%S in (!_SP!) do if !_csa! GTR !_csb! (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+goto :_cmp_d25
+:_cmp_s24
+set /a "_cma=_ca&2147483647, _cmb=_cb&2147483647"
+for %%S in (!_SP!) do if !_cma! LSS !_cmb! (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+:_cmp_d25
+for %%S in (!_SP!) do set "_br=!_F%%S_t0!"
+if "!_br!"=="1" goto :_lp_s6
+goto :_lp_e8
+:_lp_e8
+:_if_e3
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v4!"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_TopSquaredSum_Sum
+:_ret_fn_TopSquaredSum_Sum
+set /a "_SP-=1"
+goto :eof
+:lam_0
+set /a "_SP+=1"
+set "_clos_id=%~1"
+shift
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=0"
+for %%S in (!_SP!) do set /a "_ca=_F%%S_t0, _cb=_F%%S_t1"
+set /a "_csa=(_ca>>31)&1, _csb=(_cb>>31)&1"
+if !_csa! EQU !_csb! goto :_cmp_s0
+for %%S in (!_SP!) do if !_csa! LSS !_csb! (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+goto :_cmp_d1
+:_cmp_s0
+set /a "_cma=_ca&2147483647, _cmb=_cb&2147483647"
+for %%S in (!_SP!) do if !_cma! GTR !_cmb! (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+:_cmp_d1
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_lam_0
+:_ret_lam_0
+set /a "_SP-=1"
+goto :eof
+:lam_1
+set /a "_SP+=1"
+set "_clos_id=%~1"
+shift
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v0!"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0*_F%%S_t1"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_lam_1
+:_ret_lam_1
+set /a "_SP-=1"
+goto :eof
+:__ply_trap
+set /a "_HID+=1"
+set "_O_!_HID!___t=%~1"
+set /a "_HID+=1"
+set "_S_s!_HID!=%~2"
+set /a "_tid=_HID-1"
+for %%T in (!_tid!) do (
+  set "_O_%%T_f_Message=s!_HID!"
+  set "_O_%%T_f_InnerException=__PLY_NULL__"
+  set "_EX_OBJ=%%T"
+)
+set "_EX_TYPE=%~1"
+set "_EX_TRAP=%~2"
+set "_EX_ACTIVE=1"
+goto :eof
+```
+
+</details>
+
+> **Refused dialects:** `dos622` (`PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
+
+</details>
+
+<details>
 <summary><strong>MSIL</strong> — <code>msil/net10</code>, <code>msil/net8</code> (identical output — <code>LinqShowcase.dll</code> (disassembled))</summary>
 
 **`LinqShowcase.dll`** *(disassembled mnemonics)*
@@ -16402,8 +19826,6 @@ End Function
 ```
 
 </details>
-
-> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
 
 ## Exceptions & Resource Scopes
 
@@ -17488,6 +20910,340 @@ Returns i32.
 </details>
 
 <details>
+<summary><strong>Batch</strong> — 1/2 dialects (1 output)</summary>
+
+<details>
+<summary>Dialect: <code>cmd</code> (<code>kernel.bat</code>)</summary>
+
+```bat
+@echo off
+setlocal EnableExtensions EnableDelayedExpansion
+set "_SP=0"
+set "_HID=0"
+set "_CS=0"
+set "_WID=0"
+set "_EX_ACTIVE=0"
+set "_EX_STK_N=0"
+call :__ply_init
+if "%~1"=="Evaluate" goto :__ply_cli_Evaluate
+>&2 echo PLY_BATCH_ERROR=UnknownEntryPoint
+exit /b 1
+:__ply_cli_Evaluate
+shift
+set "_raw=%~1"
+set /a "_CLI_A0=!_raw!"
+call :fn_Evaluate "!_CLI_A0!"
+if "!_EX_ACTIVE!"=="1" (>&2 echo PLY_BATCH_TRAP=!_EX_TRAP! & exit /b 97)
+echo(!_RET!
+exit /b 0
+:__ply_init
+set "_ISA_1_1=1"
+set "_ISA_2_2=1"
+set "_ISA_2_1=1"
+set "_ISA_3_3=1"
+set "_ISA_3_2=1"
+set "_ISA_3_1=1"
+set "_ISA_4_4=1"
+set "_ISA_4_2=1"
+set "_ISA_4_1=1"
+set "_ISA_5_5=1"
+set "_ISA_5_1=1"
+set "_ISA_6_6=1"
+set "_ISA_6_1=1"
+set "_ISA_7_7=1"
+set "_ISA_7_1=1"
+set "_ISA_8_8=1"
+set "_ISA_8_1=1"
+set "_ISA_9_9=1"
+set "_ISA_9_1=1"
+set "_ISA_10_10=1"
+set "_ISA_10_9=1"
+set "_ISA_10_1=1"
+set "_ISA_11_11=1"
+set "_ISA_11_1=1"
+set "_ISA_12_12=1"
+set "_ISA_12_1=1"
+set "_ISA_13_13=1"
+set "_ISA_13_1=1"
+set "_ISA_15_15=1"
+set "_ISA_15_1=1"
+set "_ISA_16_16=1"
+set "_ISA_16_14=1"
+goto :eof
+:fn_Evaluate
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+set /a "_HID+=1"
+for %%S in (!_SP!) do set "_F%%S_t0=!_HID!"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O___t=16"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O_f16_0=0"
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t0!"
+call :fn_ScopeTracker_ctor "!_ca0!"
+if "!_EX_ACTIVE!"=="1" goto :_ret_fn_Evaluate
+for %%S in (!_SP!) do set "_F%%S_v1=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=0"
+for %%S in (!_SP!) do set "_F%%S_v2=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_fn0=0"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_F%%S_v3=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_fn1=0"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=0"
+for %%S in (!_SP!) do set /a "_ca=_F%%S_t0, _cb=_F%%S_t1"
+set /a "_csa=(_ca>>31)&1, _csb=(_cb>>31)&1"
+if !_csa! EQU !_csb! goto :_cmp_s7
+for %%S in (!_SP!) do if !_csa! GTR !_csb! (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+goto :_cmp_d8
+:_cmp_s7
+set /a "_cma=_ca&2147483647, _cmb=_cb&2147483647"
+for %%S in (!_SP!) do if !_cma! LSS !_cmb! (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+:_cmp_d8
+for %%S in (!_SP!) do set "_br=!_F%%S_t0!"
+if "!_br!"=="1" goto :_if_t5
+goto :_if_e6
+:_if_t5
+set /a "_HID+=1"
+set "_S_s!_HID!=negative"
+for %%S in (!_SP!) do set "_F%%S_t1=s!_HID!"
+set /a "_HID+=1"
+for %%S in (!_SP!) do set "_F%%S_t0=!_HID!"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O___t=15"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O_f_Message=__PLY_NULL__"
+for %%S in (!_SP!) do for %%O in (!_F%%S_t0!) do set "_O_%%O_f_InnerException=__PLY_NULL__"
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_ca1=!_F%%S_t1!"
+call :fn_DomainException_ctor "!_ca0!" "!_ca1!"
+if "!_EX_ACTIVE!"=="1" goto :_try_f3
+for %%S in (!_SP!) do set "_th_obj=!_F%%S_t0!"
+if not "!_th_obj!"=="__PLY_NULL__" goto :_th_ok9
+call :__ply_trap 6 NullReference
+goto :_try_f3
+:_th_ok9
+for %%O in (!_th_obj!) do (set "_EX_OBJ=%%O" & set "_EX_TYPE=!_O_%%O___t!" & set "_EX_TRAP=Exception")
+set "_EX_ACTIVE=1"
+goto :_try_f3
+:_if_e6
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=2"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0*_F%%S_t1"
+for %%S in (!_SP!) do set "_F%%S_v2=!_F%%S_t0!"
+goto :_try_f3
+:_try_f3
+for %%S in (!_SP!) do if "!_EX_ACTIVE!"=="1" set "_F%%S_fn1=4"
+for %%S in (!_SP!) do set "_F%%S_fn1_eo=!_EX_OBJ!"
+for %%S in (!_SP!) do set "_F%%S_fn1_et=!_EX_TYPE!"
+for %%S in (!_SP!) do set "_F%%S_fn1_em=!_EX_TRAP!"
+set "_EX_ACTIVE=0"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v3!"
+for %%S in (!_SP!) do set "_F%%S_t1=__PLY_NULL__"
+for %%S in (!_SP!) do if "!_F%%S_t0!"=="!_F%%S_t1!" (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+for %%S in (!_SP!) do set "_br=!_F%%S_t0!"
+if "!_br!"=="1" goto :_if_e11
+goto :_if_t10
+:_if_t10
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v3!"
+for %%S in (!_SP!) do set "_mc_r=!_F%%S_t0!"
+if not "!_mc_r!"=="__PLY_NULL__" goto :_nn_ok12
+call :__ply_trap 6 NullReference
+goto :_try_c0
+:_nn_ok12
+for %%S in (!_SP!) do set "_ca0=!_F%%S_t0!"
+call :__ply_i_1 "!_ca0!"
+if "!_EX_ACTIVE!"=="1" goto :_try_c0
+:_if_e11
+for %%S in (!_SP!) do set "_fmode=!_F%%S_fn1!"
+if "!_fmode!"=="0" goto :_try_e4
+if not "!_fmode!"=="4" goto :_fin_r13
+for %%S in (!_SP!) do set "_EX_OBJ=!_F%%S_fn1_eo!"
+for %%S in (!_SP!) do set "_EX_TYPE=!_F%%S_fn1_et!"
+for %%S in (!_SP!) do set "_EX_TRAP=!_F%%S_fn1_em!"
+set "_EX_ACTIVE=1"
+goto :_try_c0
+:_fin_r13
+if not "!_fmode!"=="1" goto :_fin_b14
+for %%S in (!_SP!) do set "_RET=!_F%%S_fn1_val!"
+for %%S in (!_SP!) do set "_F%%S_fn0=1"
+for %%S in (!_SP!) do set "_F%%S_fn0_val=!_RET!"
+goto :_try_f1
+:_fin_b14
+if not "!_fmode!"=="2" goto :_fin_c15
+for %%S in (!_SP!) do set "_ftgt=!_F%%S_fn1_tgt!"
+goto :_try_e4
+:_fin_c15
+goto :_try_e4
+:_try_e4
+goto :_try_f1
+:_try_c0
+if not defined _ISA_!_EX_TYPE!_15 goto :_try_cn16
+for %%S in (!_SP!) do set "_F%%S_t0=!_EX_OBJ!"
+for %%S in (!_SP!) do set "_F%%S_v4=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_fex_o=!_EX_OBJ!" & set "_fex_t=!_EX_TYPE!" & set "_fex_m=!_EX_TRAP!"
+set "_EX_ACTIVE=0"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v4!"
+for %%S in (!_SP!) do set "_fl_o=!_F%%S_t1!"
+if not "!_fl_o!"=="__PLY_NULL__" goto :_nn_ok19
+call :__ply_trap 6 NullReference
+goto :_try_ff17
+:_nn_ok19
+for %%S in (!_SP!) do for %%O in (!_fl_o!) do set "_F%%S_t1=!_O_%%O_f_Message!"
+for %%S in (!_SP!) do set "_sl_h=!_F%%S_t1!"
+if not "!_sl_h!"=="__PLY_NULL__" goto :_nn_ok20
+call :__ply_trap 6 NullReference
+goto :_try_ff17
+:_nn_ok20
+call :__ply_strlen "!_sl_h!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_RET!"
+for %%S in (!_SP!) do set "_F%%S_t1=0"
+for %%S in (!_SP!) do set /a "_ca=_F%%S_t0, _cb=_F%%S_t1"
+set /a "_csa=(_ca>>31)&1, _csb=(_cb>>31)&1"
+if !_csa! EQU !_csb! goto :_cmp_s21
+for %%S in (!_SP!) do if !_csa! LSS !_csb! (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+goto :_cmp_d22
+:_cmp_s21
+set /a "_cma=_ca&2147483647, _cmb=_cb&2147483647"
+for %%S in (!_SP!) do if !_cma! GTR !_cmb! (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+:_cmp_d22
+for %%S in (!_SP!) do set "_br=!_F%%S_t0!"
+if "!_br!"=="1" goto :_try_fo18
+goto :_try_ff17
+:_try_ff17
+set "_EX_ACTIVE=1"
+for %%S in (!_SP!) do set "_EX_OBJ=!_fex_o!" & set "_EX_TYPE=!_fex_t!" & set "_EX_TRAP=!_fex_m!"
+goto :_try_cn16
+:_try_fo18
+for %%S in (!_SP!) do set "_EX_OBJ=!_fex_o!" & set "_EX_TYPE=!_fex_t!" & set "_EX_TRAP=!_fex_m!"
+set /a "_EX_STK_N+=1"
+for %%E in (!_EX_STK_N!) do (set "_EX_STK_O_%%E=!_EX_OBJ!" & set "_EX_STK_T_%%E=!_EX_TYPE!" & set "_EX_STK_M_%%E=!_EX_TRAP!")
+set "_EX_ACTIVE=0"
+for %%S in (!_SP!) do set "_F%%S_t0=-1"
+for %%S in (!_SP!) do set "_F%%S_v2=!_F%%S_t0!"
+set /a "_EX_STK_N-=1"
+goto :_try_f1
+:_try_cn16
+for %%S in (!_SP!) do set "_F%%S_fn0=4"
+goto :_try_f1
+:_try_f1
+for %%S in (!_SP!) do if "!_EX_ACTIVE!"=="1" set "_F%%S_fn0=4"
+for %%S in (!_SP!) do set "_F%%S_fn0_eo=!_EX_OBJ!"
+for %%S in (!_SP!) do set "_F%%S_fn0_et=!_EX_TYPE!"
+for %%S in (!_SP!) do set "_F%%S_fn0_em=!_EX_TRAP!"
+set "_EX_ACTIVE=0"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v2!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_fl_o=!_F%%S_t1!"
+if not "!_fl_o!"=="__PLY_NULL__" goto :_nn_ok23
+call :__ply_trap 6 NullReference
+goto :_ret_fn_Evaluate
+:_nn_ok23
+for %%S in (!_SP!) do for %%O in (!_fl_o!) do set "_F%%S_t1=!_O_%%O_f16_0!"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0+_F%%S_t1"
+for %%S in (!_SP!) do set "_F%%S_v2=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_fmode=!_F%%S_fn0!"
+if "!_fmode!"=="0" goto :_try_e2
+if not "!_fmode!"=="4" goto :_fin_r24
+for %%S in (!_SP!) do set "_EX_OBJ=!_F%%S_fn0_eo!"
+for %%S in (!_SP!) do set "_EX_TYPE=!_F%%S_fn0_et!"
+for %%S in (!_SP!) do set "_EX_TRAP=!_F%%S_fn0_em!"
+set "_EX_ACTIVE=1"
+goto :_ret_fn_Evaluate
+:_fin_r24
+if not "!_fmode!"=="1" goto :_fin_b25
+for %%S in (!_SP!) do set "_RET=!_F%%S_fn0_val!"
+goto :_ret_fn_Evaluate
+:_fin_b25
+if not "!_fmode!"=="2" goto :_fin_c26
+for %%S in (!_SP!) do set "_ftgt=!_F%%S_fn0_tgt!"
+goto :_try_e2
+:_fin_c26
+goto :_try_e2
+:_try_e2
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v2!"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_Evaluate
+:_ret_fn_Evaluate
+set /a "_SP-=1"
+goto :eof
+:fn_ScopeTracker_Dispose
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_fl_o=!_F%%S_t1!"
+if not "!_fl_o!"=="__PLY_NULL__" goto :_nn_ok27
+call :__ply_trap 6 NullReference
+goto :_ret_fn_ScopeTracker_Dispose
+:_nn_ok27
+for %%S in (!_SP!) do for %%O in (!_fl_o!) do set "_F%%S_t1=!_O_%%O_f16_0!"
+for %%S in (!_SP!) do set "_F%%S_t2=1"
+for %%S in (!_SP!) do set /a "_F%%S_t1=_F%%S_t1+_F%%S_t2"
+for %%S in (!_SP!) do set "_fs_obj=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_fs_val=!_F%%S_t1!"
+if not "!_fs_obj!"=="__PLY_NULL__" goto :_nn_ok28
+call :__ply_trap 6 NullReference
+goto :_ret_fn_ScopeTracker_Dispose
+:_nn_ok28
+for %%O in (!_fs_obj!) do set "_O_%%O_f16_0=!_fs_val!"
+:_ret_fn_ScopeTracker_Dispose
+set /a "_SP-=1"
+goto :eof
+:fn_ScopeTracker_ctor
+setlocal EnableExtensions EnableDelayedExpansion
+set "_v0=%~1"
+:_ret_fn_ScopeTracker_ctor
+endlocal
+goto :eof
+:fn_DomainException_ctor
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_v1=%~2"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_eo=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_em=!_F%%S_t1!"
+for %%O in (!_eo!) do set "_O_%%O_f_Message=!_em!"
+for %%O in (!_eo!) do set "_O_%%O_f_InnerException=__PLY_NULL__"
+:_ret_fn_DomainException_ctor
+set /a "_SP-=1"
+goto :eof
+:__ply_i_1
+for %%O in (%~1) do set "_vt=!_O_%%O___t!"
+if "!_vt!"=="16" goto :fn_ScopeTracker_Dispose
+goto :eof
+:__ply_trap
+set /a "_HID+=1"
+set "_O_!_HID!___t=%~1"
+set /a "_HID+=1"
+set "_S_s!_HID!=%~2"
+set /a "_tid=_HID-1"
+for %%T in (!_tid!) do (
+  set "_O_%%T_f_Message=s!_HID!"
+  set "_O_%%T_f_InnerException=__PLY_NULL__"
+  set "_EX_OBJ=%%T"
+)
+set "_EX_TYPE=%~1"
+set "_EX_TRAP=%~2"
+set "_EX_ACTIVE=1"
+goto :eof
+:__ply_strlen
+setlocal EnableExtensions EnableDelayedExpansion
+for %%H in (%~1) do set "_s=!_S_%%H!"
+if not defined _s (set "_RET=0" & goto :_sl_out)
+set /a "_len=0"
+for %%P in (4096 2048 1024 512 256 128 64 32 16 8 4 2 1) do (if not "!_s:~%%P,1!"=="" (set /a "_len+=%%P" & set "_s=!_s:~%%P!"))
+set /a "_len+=1"
+set "_RET=!_len!"
+:_sl_out
+(endlocal & set "_RET=%_RET%")
+goto :eof
+```
+
+</details>
+
+> **Refused dialects:** `dos622` (`PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
+
+</details>
+
+<details>
 <summary><strong>MSIL</strong> — <code>msil/net10</code>, <code>msil/net8</code> (identical output — <code>ExceptionsAndUsingShowcase.dll</code> (disassembled))</summary>
 
 **`ExceptionsAndUsingShowcase.dll`** *(disassembled mnemonics)*
@@ -18131,8 +21887,6 @@ End Sub
 
 </details>
 
-> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
-
 ## Tasks & Async/Await
 
 Asynchronous Task<T> workflows using async/await, Task.FromResult, and Task.WhenAll. Source: [`16-tasks-and-async.cs`](showcase/16-tasks-and-async.cs).
@@ -18701,6 +22455,203 @@ Returns async<i32>.
 ```
 
 </details>
+
+</details>
+
+<details>
+<summary><strong>Batch</strong> — 1/2 dialects (1 output)</summary>
+
+<details>
+<summary>Dialect: <code>cmd</code> (<code>kernel.bat</code>)</summary>
+
+```bat
+@echo off
+setlocal EnableExtensions EnableDelayedExpansion
+if "%~1"=="__ply_worker" goto :__ply_worker
+set "_SP=0"
+set "_HID=0"
+set "_CS=0"
+set "_WID=0"
+set "_EX_ACTIVE=0"
+set "_EX_STK_N=0"
+call :__ply_init
+if "%~1"=="CombineAsync" goto :__ply_cli_CombineAsync
+>&2 echo PLY_BATCH_ERROR=UnknownEntryPoint
+exit /b 1
+:__ply_cli_CombineAsync
+shift
+set "_raw=%~1"
+set /a "_CLI_A0=!_raw!"
+set "_raw=%~2"
+set /a "_CLI_A1=!_raw!"
+call :fn_CombineAsync "!_CLI_A0!" "!_CLI_A1!"
+if "!_EX_ACTIVE!"=="1" (>&2 echo PLY_BATCH_TRAP=!_EX_TRAP! & exit /b 97)
+echo(!_RET!
+exit /b 0
+:__ply_worker
+set "_SP=0"
+set "_HID=0"
+set "_CS=0"
+set "_WID=0"
+set "_EX_ACTIVE=0"
+set "_EX_STK_N=0"
+call :__ply_init
+set "_w_res=%~2"
+set "_w_err=%~3"
+set "_w_done=%~4"
+set "_w_fn=%~5"
+call :!_w_fn! "%~6" "%~7" "%~8" "%~9"
+if "!_EX_ACTIVE!"=="1" goto :__ply_worker_err
+>"!_w_res!" echo(!_RET!
+goto :__ply_worker_done
+:__ply_worker_err
+>"!_w_err!" echo(!_EX_TYPE!:!_EX_TRAP!
+:__ply_worker_done
+>"!_w_done!" echo(1
+exit /b 0
+:__ply_init
+set "_ISA_1_1=1"
+set "_ISA_2_2=1"
+set "_ISA_2_1=1"
+set "_ISA_3_3=1"
+set "_ISA_3_2=1"
+set "_ISA_3_1=1"
+set "_ISA_4_4=1"
+set "_ISA_4_2=1"
+set "_ISA_4_1=1"
+set "_ISA_5_5=1"
+set "_ISA_5_1=1"
+set "_ISA_6_6=1"
+set "_ISA_6_1=1"
+set "_ISA_7_7=1"
+set "_ISA_7_1=1"
+set "_ISA_8_8=1"
+set "_ISA_8_1=1"
+set "_ISA_9_9=1"
+set "_ISA_9_1=1"
+set "_ISA_10_10=1"
+set "_ISA_10_9=1"
+set "_ISA_10_1=1"
+set "_ISA_11_11=1"
+set "_ISA_11_1=1"
+set "_ISA_12_12=1"
+set "_ISA_12_1=1"
+set "_ISA_13_13=1"
+set "_ISA_13_1=1"
+goto :eof
+:fn_ComputeAsync
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v0!"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0*_F%%S_t1"
+for %%S in (!_SP!) do set "_F%%S_t1=1"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0+_F%%S_t1"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_ComputeAsync
+:_ret_fn_ComputeAsync
+set /a "_SP-=1"
+goto :eof
+:fn_CombineAsync
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_v1=%~2"
+set /a "_WID+=1"
+set "_wdir=%TEMP%\ply_w_!RANDOM!_!_WID!"
+md "!_wdir!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t2=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_wa0=!_F%%S_t1!"
+start "" /B cmd /c ""%~f0" __ply_worker "!_wdir!\t0.res" "!_wdir!\t0.err" "!_wdir!\t0.done" fn_ComputeAsync "!_wa0!""
+for %%S in (!_SP!) do set "_wa0=!_F%%S_t2!"
+start "" /B cmd /c ""%~f0" __ply_worker "!_wdir!\t1.res" "!_wdir!\t1.err" "!_wdir!\t1.done" fn_ComputeAsync "!_wa0!""
+:_wa_w0
+if not exist "!_wdir!\t0.done" goto :_wa_w0
+if not exist "!_wdir!\t1.done" goto :_wa_w0
+if not exist "!_wdir!\t0.err" goto :_wa_ok1
+set /p _werr=<"!_wdir!\t0.err"
+rd /s /q "!_wdir!"
+for /f "tokens=1,2 delims=:" %%A in ("!_werr!") do call :__ply_trap %%A %%B
+goto :_ret_fn_CombineAsync
+:_wa_ok1
+if not exist "!_wdir!\t1.err" goto :_wa_ok2
+set /p _werr=<"!_wdir!\t1.err"
+rd /s /q "!_wdir!"
+for /f "tokens=1,2 delims=:" %%A in ("!_werr!") do call :__ply_trap %%A %%B
+goto :_ret_fn_CombineAsync
+:_wa_ok2
+set /a "_HID+=1"
+set "_wa_arr=!_HID!"
+set "_AL_!_wa_arr!=2"
+set "_wr="
+set /p _wr=<"!_wdir!\t0.res"
+set "_A_!_wa_arr!_0=!_wr!"
+set "_wr="
+set /p _wr=<"!_wdir!\t1.res"
+set "_A_!_wa_arr!_1=!_wr!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_wa_arr!"
+rd /s /q "!_wdir!"
+for %%S in (!_SP!) do set "_F%%S_v2=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v2!"
+for %%S in (!_SP!) do set "_F%%S_t1=0"
+for %%S in (!_SP!) do set "_la_id=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_la_idx=!_F%%S_t1!"
+if not "!_la_id!"=="__PLY_NULL__" goto :_nn_ok3
+call :__ply_trap 6 NullReference
+goto :_ret_fn_CombineAsync
+:_nn_ok3
+for %%A in (!_la_id!) do set /a "_la_len=_AL_%%A"
+set /a "_bs=(_la_idx>>31)&1"
+if !_bs! NEQ 0 goto :_bd_bad5
+if !_la_idx! LSS !_la_len! goto :_bd_ok4
+:_bd_bad5
+call :__ply_trap 5 IndexOutOfRange
+goto :_ret_fn_CombineAsync
+:_bd_ok4
+for %%S in (!_SP!) do for %%A in (!_la_id!) do for %%I in (!_la_idx!) do set "_F%%S_t0=!_A_%%A_%%I!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v2!"
+for %%S in (!_SP!) do set "_F%%S_t2=1"
+for %%S in (!_SP!) do set "_la_id=!_F%%S_t1!"
+for %%S in (!_SP!) do set "_la_idx=!_F%%S_t2!"
+if not "!_la_id!"=="__PLY_NULL__" goto :_nn_ok6
+call :__ply_trap 6 NullReference
+goto :_ret_fn_CombineAsync
+:_nn_ok6
+for %%A in (!_la_id!) do set /a "_la_len=_AL_%%A"
+set /a "_bs=(_la_idx>>31)&1"
+if !_bs! NEQ 0 goto :_bd_bad8
+if !_la_idx! LSS !_la_len! goto :_bd_ok7
+:_bd_bad8
+call :__ply_trap 5 IndexOutOfRange
+goto :_ret_fn_CombineAsync
+:_bd_ok7
+for %%S in (!_SP!) do for %%A in (!_la_id!) do for %%I in (!_la_idx!) do set "_F%%S_t1=!_A_%%A_%%I!"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0+_F%%S_t1"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_CombineAsync
+:_ret_fn_CombineAsync
+set /a "_SP-=1"
+goto :eof
+:__ply_trap
+set /a "_HID+=1"
+set "_O_!_HID!___t=%~1"
+set /a "_HID+=1"
+set "_S_s!_HID!=%~2"
+set /a "_tid=_HID-1"
+for %%T in (!_tid!) do (
+  set "_O_%%T_f_Message=s!_HID!"
+  set "_O_%%T_f_InnerException=__PLY_NULL__"
+  set "_EX_OBJ=%%T"
+)
+set "_EX_TYPE=%~1"
+set "_EX_TRAP=%~2"
+set "_EX_ACTIVE=1"
+goto :eof
+```
+
+</details>
+
+> **Refused dialects:** `dos622` (`PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
 
 </details>
 
@@ -19290,8 +23241,6 @@ End Function
 
 </details>
 
-> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
-
 ## Standard Output (Stdio)
 
 Console.WriteLine with string literals and integer interpolation. Source: [`17-stdio.cs`](showcase/17-stdio.cs).
@@ -19552,40 +23501,100 @@ Returns i32.
 
 ```bat
 @echo off
-setlocal EnableExtensions DisableDelayedExpansion
-set /a "_ply_t0=0"
-set /a "_ply_v0=_ply_t0"
-set /a "_ply_t0=1"
-set /a "_ply_v1=_ply_t0"
-goto _ply_l1
-:_ply_l0
-set /a "_ply_t2=_ply_v1*_ply_v1"
-set /a "_ply_t0=_ply_v0+_ply_t2"
-set /a "_ply_v0=_ply_t0"
-set /a "_ply_w0=_ply_v1"
-set /a "_ply_w1=_ply_v0"
-set _ply_o0=step 
-set _ply_o1=: sum=
-setlocal EnableDelayedExpansion
-echo(!_ply_o0!!_ply_w0!!_ply_o1!!_ply_w1!
-endlocal
-set /a "_ply_t2=1"
-set /a "_ply_t0=_ply_v1+_ply_t2"
-set /a "_ply_v1=_ply_t0"
-:_ply_l1
-set /a "_ply_t1=3"
-set /a "_ply_t2=(_ply_v1>>31)&1"
-set /a "_ply_t3=(_ply_t1>>31)&1"
-if %_ply_t2% EQU %_ply_t3% goto _ply_l3
-if %_ply_t2% GTR %_ply_t3% goto _ply_l0
-goto _ply_l2
-:_ply_l3
-set /a "_ply_t2=_ply_v1&2147483647"
-set /a "_ply_t3=_ply_t1&2147483647"
-if %_ply_t2% LEQ %_ply_t3% goto _ply_l0
-goto _ply_l2
-:_ply_l2
-exit /b %_ply_v0%
+setlocal EnableExtensions EnableDelayedExpansion
+set "_SP=0"
+set "_HID=0"
+set "_CS=0"
+set "_WID=0"
+set "_EX_ACTIVE=0"
+set "_EX_STK_N=0"
+if "%~1"=="" goto :__ply_default
+if "%~1"=="Run" goto :__ply_cli_Run
+:__ply_default
+call :fn_Run
+if "!_EX_ACTIVE!"=="1" (>&2 echo PLY_BATCH_TRAP=!_EX_TRAP! & exit /b 97)
+exit /b !_RET!
+:__ply_cli_Run
+shift
+call :fn_Run
+if "!_EX_ACTIVE!"=="1" (>&2 echo PLY_BATCH_TRAP=!_EX_TRAP! & exit /b 97)
+echo(!_RET!
+exit /b 0
+:fn_Run
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_t0=0"
+for %%S in (!_SP!) do set "_F%%S_v0=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=1"
+for %%S in (!_SP!) do set "_F%%S_v1=!_F%%S_t0!"
+goto :_lp_t1
+:_lp_s0
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_F%%S_t2=!_F%%S_v1!"
+for %%S in (!_SP!) do set /a "_F%%S_t1=_F%%S_t1*_F%%S_t2"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0+_F%%S_t1"
+for %%S in (!_SP!) do set "_F%%S_v0=!_F%%S_t0!"
+set /a "_HID+=1"
+set "_S_s!_HID!=step "
+for %%S in (!_SP!) do set "_F%%S_t1=s!_HID!"
+for %%S in (!_SP!) do set "_F%%S_t3=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_fi_v=!_F%%S_t3!"
+set /a "_HID+=1"
+set "_S_s!_HID!=!_fi_v!"
+for %%S in (!_SP!) do set "_F%%S_t2=s!_HID!"
+set /a "_HID+=1"
+set "_S_s!_HID!=: sum="
+for %%S in (!_SP!) do set "_F%%S_t3=s!_HID!"
+for %%S in (!_SP!) do set "_F%%S_t5=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_fi_v=!_F%%S_t5!"
+set /a "_HID+=1"
+set "_S_s!_HID!=!_fi_v!"
+for %%S in (!_SP!) do set "_F%%S_t4=s!_HID!"
+set "_sc_out="
+for %%S in (!_SP!) do set "_sc_h=!_F%%S_t1!"
+if not "!_sc_h!"=="__PLY_NULL__" for %%H in (!_sc_h!) do set "_sc_out=!_sc_out!!_S_%%H!"
+for %%S in (!_SP!) do set "_sc_h=!_F%%S_t2!"
+if not "!_sc_h!"=="__PLY_NULL__" for %%H in (!_sc_h!) do set "_sc_out=!_sc_out!!_S_%%H!"
+for %%S in (!_SP!) do set "_sc_h=!_F%%S_t3!"
+if not "!_sc_h!"=="__PLY_NULL__" for %%H in (!_sc_h!) do set "_sc_out=!_sc_out!!_S_%%H!"
+for %%S in (!_SP!) do set "_sc_h=!_F%%S_t4!"
+if not "!_sc_h!"=="__PLY_NULL__" for %%H in (!_sc_h!) do set "_sc_out=!_sc_out!!_S_%%H!"
+set /a "_HID+=1"
+set "_S_s!_HID!=!_sc_out!"
+for %%S in (!_SP!) do set "_F%%S_t0=s!_HID!"
+for %%S in (!_SP!) do set "_wl_h=!_F%%S_t0!"
+if "!_wl_h!"=="__PLY_NULL__" goto :_wl_nl3
+for %%H in (!_wl_h!) do echo(!_S_%%H!
+goto :_wl_dn4
+:_wl_nl3
+echo(
+:_wl_dn4
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_F%%S_t1=1"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0+_F%%S_t1"
+for %%S in (!_SP!) do set "_F%%S_v1=!_F%%S_t0!"
+:_lp_t1
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_F%%S_t1=3"
+for %%S in (!_SP!) do set /a "_ca=_F%%S_t0, _cb=_F%%S_t1"
+set /a "_csa=(_ca>>31)&1, _csb=(_cb>>31)&1"
+if !_csa! EQU !_csb! goto :_cmp_s5
+for %%S in (!_SP!) do if !_csa! GTR !_csb! (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+goto :_cmp_d6
+:_cmp_s5
+set /a "_cma=_ca&2147483647, _cmb=_cb&2147483647"
+for %%S in (!_SP!) do if !_cma! LEQ !_cmb! (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+:_cmp_d6
+for %%S in (!_SP!) do set "_br=!_F%%S_t0!"
+if "!_br!"=="1" goto :_lp_s0
+goto :_lp_e2
+:_lp_e2
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_Run
+:_ret_fn_Run
+set /a "_SP-=1"
+goto :eof
 ```
 
 </details>
@@ -21554,6 +25563,278 @@ Returns i32.
 </details>
 
 <details>
+<summary><strong>Batch</strong> — 1/2 dialects (1 output)</summary>
+
+<details>
+<summary>Dialect: <code>cmd</code> (<code>kernel.bat</code>)</summary>
+
+```bat
+@echo off
+setlocal EnableExtensions EnableDelayedExpansion
+set "_SP=0"
+set "_HID=0"
+set "_CS=0"
+set "_WID=0"
+set "_EX_ACTIVE=0"
+set "_EX_STK_N=0"
+call :__ply_init
+if "%~1"=="ExtractBits" goto :__ply_cli_ExtractBits
+if "%~1"=="SumSlice" goto :__ply_cli_SumSlice
+>&2 echo PLY_BATCH_ERROR=UnknownEntryPoint
+exit /b 1
+:__ply_cli_ExtractBits
+shift
+set "_raw=%~1"
+call :__ply_parse_u32 "!_raw!"
+set "_CLI_A0=!_RET!"
+set "_raw=%~2"
+call :__ply_parse_u32 "!_raw!"
+set "_CLI_A1=!_RET!"
+call :fn_ExtractBits "!_CLI_A0!" "!_CLI_A1!"
+if "!_EX_ACTIVE!"=="1" (>&2 echo PLY_BATCH_TRAP=!_EX_TRAP! & exit /b 97)
+call :__ply_fmt_u32 "!_RET!"
+echo(!_RET!
+exit /b 0
+:__ply_cli_SumSlice
+shift
+set "_raw=%~1"
+set /a "_HID+=1"
+set "_CLI_A0=!_HID!"
+set "_AL_!_HID!=0"
+if not defined _raw goto :_ca14
+if /i "!_raw!"=="null" (set "_CLI_A0=__PLY_NULL__" & goto :_ca14)
+set "_raw=!_raw::=,!"
+set "_ai=0"
+for %%E in (!_raw!) do (
+  set "_ae=%%~E"
+  set /a "_CE=!_ae!"
+  for %%H in (!_CLI_A0!) do set "_A_%%H_!_ai!=!_CE!"
+  set /a "_ai+=1"
+)
+for %%H in (!_CLI_A0!) do set "_AL_%%H=!_ai!"
+:_ca14
+set "_raw=%~2"
+set /a "_CLI_A1=!_raw!"
+set "_raw=%~3"
+set /a "_CLI_A2=!_raw!"
+call :fn_SumSlice "!_CLI_A0!" "!_CLI_A1!" "!_CLI_A2!"
+if "!_EX_ACTIVE!"=="1" (>&2 echo PLY_BATCH_TRAP=!_EX_TRAP! & exit /b 97)
+echo(!_RET!
+exit /b 0
+:__ply_init
+set "_ISA_1_1=1"
+set "_ISA_2_2=1"
+set "_ISA_2_1=1"
+set "_ISA_3_3=1"
+set "_ISA_3_2=1"
+set "_ISA_3_1=1"
+set "_ISA_4_4=1"
+set "_ISA_4_2=1"
+set "_ISA_4_1=1"
+set "_ISA_5_5=1"
+set "_ISA_5_1=1"
+set "_ISA_6_6=1"
+set "_ISA_6_1=1"
+set "_ISA_7_7=1"
+set "_ISA_7_1=1"
+set "_ISA_8_8=1"
+set "_ISA_8_1=1"
+set "_ISA_9_9=1"
+set "_ISA_9_1=1"
+set "_ISA_10_10=1"
+set "_ISA_10_9=1"
+set "_ISA_10_1=1"
+set "_ISA_11_11=1"
+set "_ISA_11_1=1"
+set "_ISA_12_12=1"
+set "_ISA_12_1=1"
+set "_ISA_13_13=1"
+set "_ISA_13_1=1"
+goto :eof
+:fn_ExtractBits
+setlocal EnableExtensions EnableDelayedExpansion
+set "_v0=%~1"
+set "_v1=%~2"
+set "_t1=!_v0!"
+set "_t2=!_v1!"
+set "_px_v=!_t1!"
+set "_px_m=!_t2!"
+call :__ply_pext32 "!_px_v!" "!_px_m!"
+set "_t0=!_RET!"
+set "_RET=!_t0!"
+goto :_ret_fn_ExtractBits
+:_ret_fn_ExtractBits
+(
+  endlocal
+  set "_RET=%_RET%"
+)
+goto :eof
+:fn_SumSlice
+set /a "_SP+=1"
+for %%S in (!_SP!) do set "_F%%S_v0=%~1"
+for %%S in (!_SP!) do set "_F%%S_v1=%~2"
+for %%S in (!_SP!) do set "_F%%S_v2=%~3"
+for %%S in (!_SP!) do set "_F%%S_t2=!_F%%S_v0!"
+for %%S in (!_SP!) do set "_F%%S_t3=!_F%%S_v1!"
+for %%S in (!_SP!) do set "_F%%S_t4=!_F%%S_v2!"
+for %%S in (!_SP!) do set "_vo_src=!_F%%S_t2!"
+if not "!_vo_src!"=="__PLY_NULL__" goto :_vo_nn0
+call :__ply_trap 10 ArgumentOutOfRange
+goto :_ret_fn_SumSlice
+:_vo_nn0
+set "_vo_arr=!_vo_src!" & set "_vo_base=0"
+for %%A in (!_vo_arr!) do set /a "_vo_slen=_AL_%%A"
+for %%S in (!_SP!) do set "_vo_st=!_F%%S_t3!"
+for %%S in (!_SP!) do set "_vo_ln=!_F%%S_t4!"
+set /a "_vo_end=_vo_st+_vo_ln, _vs1=(_vo_st>>31)&1, _vs2=(_vo_ln>>31)&1"
+if !_vs1! EQU 0 if !_vs2! EQU 0 if !_vo_end! LEQ !_vo_slen! goto :_vs_ok2
+call :__ply_trap 10 ArgumentOutOfRange
+goto :_ret_fn_SumSlice
+:_vs_ok2
+set /a "_HID+=1, _vo_off=_vo_base+_vo_st"
+set "_V_!_HID!_arr=!_vo_arr!" & set "_V_!_HID!_off=!_vo_off!" & set "_V_!_HID!_len=!_vo_ln!" & set "_V_!_HID!_esz=4"
+for %%S in (!_SP!) do set "_F%%S_t1=!_HID!"
+:_vo_dn1
+for %%S in (!_SP!) do set "_vo_src=!_F%%S_t1!"
+for %%V in (!_vo_src!) do (set "_vo_arr=!_V_%%V_arr!" & set /a "_vo_base=_V_%%V_off, _vo_slen=_V_%%V_len")
+set "_vo_st=0" & set "_vo_ln=!_vo_slen!"
+set /a "_vo_end=_vo_st+_vo_ln, _vs1=(_vo_st>>31)&1, _vs2=(_vo_ln>>31)&1"
+if !_vs1! EQU 0 if !_vs2! EQU 0 if !_vo_end! LEQ !_vo_slen! goto :_vs_ok3
+call :__ply_trap 10 ArgumentOutOfRange
+goto :_ret_fn_SumSlice
+:_vs_ok3
+set /a "_HID+=1, _vo_off=_vo_base+_vo_st"
+set "_V_!_HID!_arr=!_vo_arr!" & set "_V_!_HID!_off=!_vo_off!" & set "_V_!_HID!_len=!_vo_ln!" & set "_V_!_HID!_esz=4"
+for %%S in (!_SP!) do set "_F%%S_t0=!_HID!"
+for %%S in (!_SP!) do set "_F%%S_v3=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=0"
+for %%S in (!_SP!) do set "_F%%S_v4=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t1=!_F%%S_v3!"
+for %%S in (!_SP!) do set "_pn_src=!_F%%S_t1!"
+for %%V in (!_pn_src!) do (set "_pn_arr=!_V_%%V_arr!" & set /a "_pn_base=_V_%%V_off, _pn_len=_V_%%V_len")
+if !_pn_len! GTR 0 goto :_pn_ne6
+for %%S in (!_SP!) do set "_F%%S_t0=0"
+goto :_pn_dn4
+:_pn_ne6
+set /a "_HID+=1, _pn_rb=_pn_len*4"
+set "_P_!_HID!_arr=!_pn_arr!" & set "_P_!_HID!_base=!_pn_base!" & set "_P_!_HID!_boff=0" & set "_P_!_HID!_rb=!_pn_rb!" & set "_P_!_HID!_esz=4"
+for %%S in (!_SP!) do set "_F%%S_t0=!_HID!"
+:_pn_dn4
+for %%S in (!_SP!) do set "_F%%S_v5=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=0"
+for %%S in (!_SP!) do set "_F%%S_v6=!_F%%S_t0!"
+goto :_lp_t8
+:_lp_s7
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v4!"
+for %%S in (!_SP!) do set "_F%%S_t3=!_F%%S_v5!"
+for %%S in (!_SP!) do set "_F%%S_t4=!_F%%S_v6!"
+for %%S in (!_SP!) do set "_pa_p=!_F%%S_t3!"
+for %%S in (!_SP!) do set "_pa_n=!_F%%S_t4!"
+if "!_pa_p!"=="0" (set "_pa_arr=0" & set "_pa_base=0" & set "_pa_boff=0" & set "_pa_rb=0") else (for %%P in (!_pa_p!) do (set "_pa_arr=!_P_%%P_arr!" & set "_pa_base=!_P_%%P_base!" & set "_pa_boff=!_P_%%P_boff!" & set "_pa_rb=!_P_%%P_rb!"))
+set /a "_HID+=1, _pa_nb=_pa_boff+_pa_n*4"
+set "_P_!_HID!_arr=!_pa_arr!" & set "_P_!_HID!_base=!_pa_base!" & set "_P_!_HID!_boff=!_pa_nb!" & set "_P_!_HID!_rb=!_pa_rb!" & set "_P_!_HID!_esz=4"
+for %%S in (!_SP!) do set "_F%%S_t2=!_HID!"
+for %%S in (!_SP!) do set "_pl_p=!_F%%S_t2!"
+if not "!_pl_p!"=="0" for %%P in (!_pl_p!) do if not "!_P_%%P_arr!"=="0" goto :_pt_nn10
+call :__ply_trap 6 NullReference
+goto :_ret_fn_SumSlice
+:_pt_nn10
+for %%P in (!_pl_p!) do (set "_pt_arr=!_P_%%P_arr!" & set /a "_pt_base=_P_%%P_base, _pt_boff=_P_%%P_boff, _pt_rb=_P_%%P_rb")
+set /a "_pt_max=_pt_rb-4, _pt_s=(_pt_boff>>31)&1"
+if !_pt_s! EQU 0 if !_pt_boff! LEQ !_pt_max! goto :_pt_ok11
+call :__ply_trap 5 IndexOutOfRange
+goto :_ret_fn_SumSlice
+:_pt_ok11
+set /a "_pt_idx=_pt_base+(_pt_boff/4)"
+for %%S in (!_SP!) do for %%A in (!_pt_arr!) do for %%I in (!_pt_idx!) do set "_F%%S_t1=!_A_%%A_%%I!"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0+_F%%S_t1"
+for %%S in (!_SP!) do set "_F%%S_v4=!_F%%S_t0!"
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v6!"
+for %%S in (!_SP!) do set "_F%%S_t1=1"
+for %%S in (!_SP!) do set /a "_F%%S_t0=_F%%S_t0+_F%%S_t1"
+for %%S in (!_SP!) do set "_F%%S_v6=!_F%%S_t0!"
+:_lp_t8
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v6!"
+for %%S in (!_SP!) do set "_F%%S_t2=!_F%%S_v3!"
+for %%S in (!_SP!) do set "_vl_id=!_F%%S_t2!"
+for %%S in (!_SP!) do for %%V in (!_vl_id!) do set "_F%%S_t1=!_V_%%V_len!"
+for %%S in (!_SP!) do set /a "_ca=_F%%S_t0, _cb=_F%%S_t1"
+set /a "_csa=(_ca>>31)&1, _csb=(_cb>>31)&1"
+if !_csa! EQU !_csb! goto :_cmp_s12
+for %%S in (!_SP!) do if !_csa! GTR !_csb! (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+goto :_cmp_d13
+:_cmp_s12
+set /a "_cma=_ca&2147483647, _cmb=_cb&2147483647"
+for %%S in (!_SP!) do if !_cma! LSS !_cmb! (set "_F%%S_t0=1") else (set "_F%%S_t0=0")
+:_cmp_d13
+for %%S in (!_SP!) do set "_br=!_F%%S_t0!"
+if "!_br!"=="1" goto :_lp_s7
+goto :_lp_e9
+:_lp_e9
+for %%S in (!_SP!) do set "_F%%S_t0=!_F%%S_v4!"
+for %%S in (!_SP!) do set "_RET=!_F%%S_t0!"
+goto :_ret_fn_SumSlice
+:_ret_fn_SumSlice
+set /a "_SP-=1"
+goto :eof
+:__ply_trap
+set /a "_HID+=1"
+set "_O_!_HID!___t=%~1"
+set /a "_HID+=1"
+set "_S_s!_HID!=%~2"
+set /a "_tid=_HID-1"
+for %%T in (!_tid!) do (
+  set "_O_%%T_f_Message=s!_HID!"
+  set "_O_%%T_f_InnerException=__PLY_NULL__"
+  set "_EX_OBJ=%%T"
+)
+set "_EX_TYPE=%~1"
+set "_EX_TRAP=%~2"
+set "_EX_ACTIVE=1"
+goto :eof
+:__ply_fmt_u32
+setlocal EnableExtensions EnableDelayedExpansion
+set /a "_x=%~1, _s=(_x>>31)&1"
+if !_s! EQU 0 (set "_RET=!_x!" & goto :_fu32_d)
+set /a "_h=(_x>>1)&2147483647, _q=_h/5, _r=(_x&1)+(_h%%5)*2"
+if !_r! GEQ 10 set /a "_q+=1, _r-=10"
+set "_RET=!_q!!_r!"
+:_fu32_d
+(
+  endlocal
+  set "_RET=%_RET%"
+)
+goto :eof
+:__ply_parse_u32
+setlocal EnableExtensions EnableDelayedExpansion
+set "_s=%~1"
+set /a "_acc=0"
+:_pu32_lp
+if not defined _s goto :_pu32_dn
+set "_ch=!_s:~0,1!"
+set "_s=!_s:~1!"
+set /a "_acc=_acc*10+_ch"
+goto :_pu32_lp
+:_pu32_dn
+set "_RET=!_acc!"
+(endlocal & set "_RET=%_RET%")
+goto :eof
+:__ply_pext32
+setlocal EnableExtensions EnableDelayedExpansion
+set /a "_pv=%~1, _pm=%~2, _pr=0, _pn=0"
+for /l %%I in (0,1,31) do (set /a "_pb=(_pm>>%%I)&1" & if !_pb! EQU 1 (set /a "_pr|=(((_pv>>%%I)&1)<<_pn), _pn+=1"))
+set "_RET=!_pr!"
+(endlocal & set "_RET=%_RET%")
+goto :eof
+```
+
+</details>
+
+> **Refused dialects:** `dos622` (`PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
+
+</details>
+
+<details>
 <summary><strong>MSIL</strong> — <code>msil/net10</code>, <code>msil/net8</code> (identical output — <code>LowLevelShowcase.dll</code> (disassembled))</summary>
 
 **`LowLevelShowcase.dll`** *(disassembled mnemonics)*
@@ -23034,8 +27315,6 @@ End Function
 
 </details>
 
-> **Refused by:** `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile)
-
 ## Native Interop (P/Invoke)
 
 Sequential StructLayout ABI records and DllImport native library declarations. Source: [`19-native-interop.cs`](showcase/19-native-interop.cs).
@@ -23462,7 +27741,7 @@ std::int32_t measure(std::int32_t x, std::int32_t y);
 
 </details>
 
-> **Refused by:** `javascript` (`es5`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es5' cannot call; --bind geom=<module or global> supplies a binding; `es2015`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2015' cannot call; --bind geom=<module or global> supplies a binding; `es2017`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2017' cannot call; --bind geom=<module or global> supplies a binding; `es2020`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2020' cannot call; --bind geom=<module or global> supplies a binding; `es2022`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2022' cannot call; --bind geom=<module or global> supplies a binding); `perl` (`PLY1751`: operation 'IrForeignCall' cannot be emitted as Perl); `batch` (`cmd`: `PLY2850`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile); `vbscript` (`PLY2650`: construct 'foreign function 'geom_norm'' cannot be emitted as VBScript)
+> **Refused by:** `javascript` (`es5`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es5' cannot call; --bind geom=<module or global> supplies a binding; `es2015`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2015' cannot call; --bind geom=<module or global> supplies a binding; `es2017`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2017' cannot call; --bind geom=<module or global> supplies a binding; `es2020`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2020' cannot call; --bind geom=<module or global> supplies a binding; `es2022`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2022' cannot call; --bind geom=<module or global> supplies a binding); `perl` (`PLY1751`: operation 'IrForeignCall' cannot be emitted as Perl); `batch` (`cmd`: `PLY2850`: 'foreign native interop functions' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile); `vbscript` (`PLY2650`: construct 'foreign function 'geom_norm'' cannot be emitted as VBScript)
 
 ## User-Defined Operator Overloading (Boundary)
 
