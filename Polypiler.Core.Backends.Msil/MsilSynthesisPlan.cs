@@ -61,6 +61,22 @@ internal sealed class MsilSynthesisPlan {
 
   public bool NeedsPdep64 { get; private set; }
 
+  public bool NeedsBitRev32 { get; private set; }
+
+  public bool NeedsBitRev64 { get; private set; }
+
+  public bool NeedsStrLastIndexOf { get; private set; }
+
+  public bool NeedsStrSplit { get; private set; }
+
+  public bool NeedsStrTrimEcma { get; private set; }
+
+  public List<IrEnumType> EnumIsDefinedTypes { get; } = [];
+
+  public List<IrEnumType> EnumToStringTypes { get; } = [];
+
+  public List<IrEnumType> EnumParseTypes { get; } = [];
+
   private readonly HashSet<IrType> _cellTypeSet = [];
   private readonly HashSet<IrFunctionType> _fnTypeSet = [];
   private readonly HashSet<(string, IrFunctionType)> _fnRefSet = [];
@@ -72,6 +88,9 @@ internal sealed class MsilSynthesisPlan {
   private readonly HashSet<IrType> _ptrStoreSet = [];
   private readonly HashSet<IrClassType> _recordEqSet = new(ReferenceEqualityComparer.Instance);
   private readonly HashSet<IrLambda> _lambdaSet = new(ReferenceEqualityComparer.Instance);
+  private readonly HashSet<IrEnumType> _enumIsDefinedSet = new(ReferenceEqualityComparer.Instance);
+  private readonly HashSet<IrEnumType> _enumToStringSet = new(ReferenceEqualityComparer.Instance);
+  private readonly HashSet<IrEnumType> _enumParseSet = new(ReferenceEqualityComparer.Instance);
 
   /// <summary>Analyzes <paramref name="module"/> and returns its deterministic synthesis plan.</summary>
   public static MsilSynthesisPlan Analyze(IrModule module) {
@@ -508,6 +527,40 @@ internal sealed class MsilSynthesisPlan {
           this.NeedsPdep64 = true;
         else
           this.NeedsPdep32 = true;
+        break;
+      case IrIntrinsicOp.BitReverse:
+        if (intrinsic.Type.IsLong)
+          this.NeedsBitRev64 = true;
+        else
+          this.NeedsBitRev32 = true;
+        break;
+      case IrIntrinsicOp.EnumIsDefined: {
+        var enumType = EnumOperations.Of(intrinsic);
+        if (this._enumIsDefinedSet.Add(enumType))
+          this.EnumIsDefinedTypes.Add(enumType);
+        break;
+      }
+      case IrIntrinsicOp.EnumToString: {
+        var enumType = EnumOperations.Of(intrinsic);
+        if (this._enumToStringSet.Add(enumType))
+          this.EnumToStringTypes.Add(enumType);
+        break;
+      }
+      case IrIntrinsicOp.EnumParse: {
+        var enumType = EnumOperations.Of(intrinsic);
+        if (this._enumParseSet.Add(enumType))
+          this.EnumParseTypes.Add(enumType);
+        break;
+      }
+      case IrIntrinsicOp.StrLastIndexOf:
+        this.NeedsStrLastIndexOf = true;
+        break;
+      case IrIntrinsicOp.StrSplit:
+        this.NeedsStrSplit = true;
+        break;
+      case IrIntrinsicOp.StrTrim or IrIntrinsicOp.StrTrimStart or IrIntrinsicOp.StrTrimEnd:
+        if (StringOperations.SetOf(intrinsic) == WhitespaceSet.Ecma)
+          this.NeedsStrTrimEcma = true;
         break;
     }
   }

@@ -11,9 +11,9 @@ internal static class JvmLibrary {
 
   /// <summary>Whether the JVM emitter lowers a floating-point intrinsic natively without library expansion.</summary>
   public static bool WritesFloat(IrIntrinsic intrinsic) => intrinsic.Op switch {
-    IrIntrinsicOp.Abs or IrIntrinsicOp.Min or IrIntrinsicOp.Max or IrIntrinsicOp.Sign
+    IrIntrinsicOp.Abs or IrIntrinsicOp.Min or IrIntrinsicOp.Max or IrIntrinsicOp.Sign or IrIntrinsicOp.Clamp
       or IrIntrinsicOp.Sqrt or IrIntrinsicOp.Floor or IrIntrinsicOp.Ceiling or IrIntrinsicOp.Truncate
-      or IrIntrinsicOp.RoundEven or IrIntrinsicOp.RoundAway or IrIntrinsicOp.CopySign
+      or IrIntrinsicOp.RoundEven or IrIntrinsicOp.RoundAway or IrIntrinsicOp.CopySign or IrIntrinsicOp.FusedMultiplyAdd
       or IrIntrinsicOp.FloatBits or IrIntrinsicOp.BitsFloat
       or IrIntrinsicOp.IsNaN or IrIntrinsicOp.IsInfinity or IrIntrinsicOp.IsFinite
       or IrIntrinsicOp.IsNormal or IrIntrinsicOp.IsSubnormal or IrIntrinsicOp.IsNegative => true,
@@ -26,10 +26,11 @@ internal static class JvmLibrary {
       return false;
 
     return intrinsic.Op switch {
-      IrIntrinsicOp.Abs or IrIntrinsicOp.Min or IrIntrinsicOp.Max
+      IrIntrinsicOp.Abs or IrIntrinsicOp.Min or IrIntrinsicOp.Max or IrIntrinsicOp.Clamp
         or IrIntrinsicOp.RotateLeft or IrIntrinsicOp.RotateRight
         or IrIntrinsicOp.LeadingZeroCount or IrIntrinsicOp.TrailingZeroCount or IrIntrinsicOp.PopCount
-        or IrIntrinsicOp.ByteSwap or IrIntrinsicOp.HighWord or IrIntrinsicOp.JoinWords
+        or IrIntrinsicOp.ByteSwap or IrIntrinsicOp.BitReverse or IrIntrinsicOp.IsPow2
+        or IrIntrinsicOp.HighWord or IrIntrinsicOp.JoinWords or IrIntrinsicOp.BigMul
         or IrIntrinsicOp.ParallelBitExtract or IrIntrinsicOp.ParallelBitDeposit
         or IrIntrinsicOp.LoadLittle or IrIntrinsicOp.LoadBig
         or IrIntrinsicOp.StoreLittle or IrIntrinsicOp.StoreBig => false,

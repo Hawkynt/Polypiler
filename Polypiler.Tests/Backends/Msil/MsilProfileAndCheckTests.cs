@@ -68,16 +68,11 @@ public sealed class MsilProfileAndCheckTests {
     var bigIntMod = Returning(IrType.BigInt, [bigIntParam], R(bigIntParam));
     Assert.That(MsilEmitter.Check(bigIntMod).Select(d => d.Code), Does.Contain(MsilEmitter.UnsupportedTypeCode));
 
-    // Unsupported intrinsic: ByteSwap (unlegalized) (PLY3052)
-    var p = L("n", IrType.I32);
-    var swapMod = Returning(IrType.I32, [p], new IrIntrinsic(IrIntrinsicOp.ByteSwap, IrType.I32, [R(p)]));
-    Assert.That(MsilEmitter.Check(swapMod).Select(d => d.Code), Does.Contain(MsilEmitter.UnsupportedIntrinsicCode));
-    Assert.That(() => MsilEmitter.Emit(swapMod), Throws.ArgumentException.With.Message.Contains("ByteSwap"));
-
     // Unsupported intrinsic: RegexTest (PLY3052)
     var s = L("s", IrType.String);
     var rxMod = Returning(IrType.Bool, [s], new IrIntrinsic(IrIntrinsicOp.RegexTest, IrType.Bool, [R(s), new IrStrConst("a"), new IrStrConst("")]));
     Assert.That(MsilEmitter.Check(rxMod).Select(d => d.Code), Does.Contain(MsilEmitter.UnsupportedIntrinsicCode));
+    Assert.That(() => MsilEmitter.Emit(rxMod), Throws.ArgumentException.With.Message.Contains("RegexTest"));
 
     // Unsupported intrinsic: FormatEcma on f64 (PLY3052)
     var dParam = L("d", IrType.F64);
