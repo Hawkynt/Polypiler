@@ -12,31 +12,31 @@ dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -- re
 
 ## Summary matrix
 
-| Construct | Category | JavaScript | C# | Python | Rust | Perl | Batch | MSIL | JVM | C++ | VBScript |
-| --- | --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| [Operators, Bitwise & Checked Arithmetic](#operators-bitwise--checked-arithmetic) | Core Language | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
-| [Recursion](#recursion) | Control Flow & Functions | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
-| [Method & Constructor Overloading](#method--constructor-overloading) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
-| [Structs & Value Records](#structs--value-records) | Types & Data | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
-| [Classes, Properties & Reference Records](#classes-properties--reference-records) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
-| [Statics & Module State](#statics--module-state) | Core Language | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
-| [Inheritance, Virtual Dispatch & Interfaces](#inheritance-virtual-dispatch--interfaces) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
-| [Generics](#generics) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
-| [Lambdas & Closures](#lambdas--closures) | Functional | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
-| [Callbacks & Delegates](#callbacks--delegates) | Functional | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
-| [Enums & Nullable Optionals](#enums--nullable-optionals) | Types & Data | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
-| [Collections](#collections) | Collections & Sequences | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
-| [Iterators & Lazy Sequences](#iterators--lazy-sequences) | Collections & Sequences | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
-| [LINQ](#linq) | Collections & Sequences | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
-| [Exceptions & Resource Scopes](#exceptions--resource-scopes) | Error Handling | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
-| [Tasks & Async/Await](#tasks--asyncawait) | Concurrency & Asynchrony | ⚠️ 4/5 | ⚠️ 7/9 | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
-| [Standard Output (Stdio)](#standard-output-stdio) | I/O & Interop | `PLY1152` | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
-| [Spans, Bit Permutations & Unsafe Pointers](#spans-bit-permutations--unsafe-pointers) | Low-Level & Performance | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ |
-| [Native Interop (P/Invoke)](#native-interop-pinvoke) | I/O & Interop | `PLY1152` | ✅ | ✅ | ✅ | `PLY1751` | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | `PLY2650` |
-| [User-Defined Operator Overloading (Boundary)](#user-defined-operator-overloading-boundary) | Unsupported Boundaries | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
-| [Hardware SIMD Vectorization (Boundary)](#hardware-simd-vectorization-boundary) | Unsupported Boundaries | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
-| [Multithreading & Synchronization (Boundary)](#multithreading--synchronization-boundary) | Unsupported Boundaries | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
-| [File I/O (Boundary)](#file-io-boundary) | Unsupported Boundaries | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
+| Construct | Category | JavaScript | C# | Python | Rust | Perl | Batch | MSIL | JVM | C++ | VBScript | kotlin |
+| --- | --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| [Operators, Bitwise & Checked Arithmetic](#operators-bitwise--checked-arithmetic) | Core Language | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [Recursion](#recursion) | Control Flow & Functions | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [Method & Constructor Overloading](#method--constructor-overloading) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY1682` |
+| [Structs & Value Records](#structs--value-records) | Types & Data | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY1682` |
+| [Classes, Properties & Reference Records](#classes-properties--reference-records) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY1682` |
+| [Statics & Module State](#statics--module-state) | Core Language | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [Inheritance, Virtual Dispatch & Interfaces](#inheritance-virtual-dispatch--interfaces) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY1682` |
+| [Generics](#generics) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY1682` |
+| [Lambdas & Closures](#lambdas--closures) | Functional | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY1650` |
+| [Callbacks & Delegates](#callbacks--delegates) | Functional | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [Enums & Nullable Optionals](#enums--nullable-optionals) | Types & Data | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY1650` |
+| [Collections](#collections) | Collections & Sequences | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY1651` |
+| [Iterators & Lazy Sequences](#iterators--lazy-sequences) | Collections & Sequences | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY1658` |
+| [LINQ](#linq) | Collections & Sequences | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [Exceptions & Resource Scopes](#exceptions--resource-scopes) | Error Handling | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY1682` |
+| [Tasks & Async/Await](#tasks--asyncawait) | Concurrency & Asynchrony | ⚠️ 4/5 | ⚠️ 7/9 | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY1651` |
+| [Standard Output (Stdio)](#standard-output-stdio) | I/O & Interop | `PLY1152` | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY1651` |
+| [Spans, Bit Permutations & Unsafe Pointers](#spans-bit-permutations--unsafe-pointers) | Low-Level & Performance | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY1651` |
+| [Native Interop (P/Invoke)](#native-interop-pinvoke) | I/O & Interop | `PLY1152` | ✅ | ✅ | ✅ | `PLY1751` | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | `PLY2650` | `PLY1666` |
+| [User-Defined Operator Overloading (Boundary)](#user-defined-operator-overloading-boundary) | Unsupported Boundaries | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
+| [Hardware SIMD Vectorization (Boundary)](#hardware-simd-vectorization-boundary) | Unsupported Boundaries | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
+| [Multithreading & Synchronization (Boundary)](#multithreading--synchronization-boundary) | Unsupported Boundaries | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
+| [File I/O (Boundary)](#file-io-boundary) | Unsupported Boundaries | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
 
 ## Dialect support by backend
 
@@ -316,6 +316,37 @@ dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -- re
 | [Hardware SIMD Vectorization (Boundary)](#hardware-simd-vectorization-boundary) | `PLY1002` | `PLY1002` | `PLY1002` |
 | [Multithreading & Synchronization (Boundary)](#multithreading--synchronization-boundary) | `PLY1002` | `PLY1002` | `PLY1002` |
 | [File I/O (Boundary)](#file-io-boundary) | `PLY1002` | `PLY1002` | `PLY1002` |
+
+</details>
+
+<details>
+<summary><strong>kotlin</strong> (20 dialects: <code>kotlin2.0</code>, <code>kotlin2.0-jvm11</code>, <code>kotlin2.0-jvm17</code>, <code>kotlin2.0-jvm21</code>, <code>kotlin2.1</code>, <code>kotlin2.1-jvm11</code>, <code>kotlin2.1-jvm17</code>, <code>kotlin2.1-jvm21</code>, <code>kotlin2.2</code>, <code>kotlin2.2-jvm11</code>, <code>kotlin2.2-jvm17</code>, <code>kotlin2.2-jvm21</code>, <code>kotlin2.3</code>, <code>kotlin2.3-jvm11</code>, <code>kotlin2.3-jvm17</code>, <code>kotlin2.3-jvm21</code>, <code>kotlin2.4</code>, <code>kotlin2.4-jvm11</code>, <code>kotlin2.4-jvm17</code>, <code>kotlin2.4-jvm21</code>)</summary>
+
+| Construct | `kotlin2.0` | `kotlin2.0-jvm11` | `kotlin2.0-jvm17` | `kotlin2.0-jvm21` | `kotlin2.1` | `kotlin2.1-jvm11` | `kotlin2.1-jvm17` | `kotlin2.1-jvm21` | `kotlin2.2` | `kotlin2.2-jvm11` | `kotlin2.2-jvm17` | `kotlin2.2-jvm21` | `kotlin2.3` | `kotlin2.3-jvm11` | `kotlin2.3-jvm17` | `kotlin2.3-jvm21` | `kotlin2.4` | `kotlin2.4-jvm11` | `kotlin2.4-jvm17` | `kotlin2.4-jvm21` |
+| --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| [Operators, Bitwise & Checked Arithmetic](#operators-bitwise--checked-arithmetic) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [Recursion](#recursion) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [Method & Constructor Overloading](#method--constructor-overloading) | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` |
+| [Structs & Value Records](#structs--value-records) | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` |
+| [Classes, Properties & Reference Records](#classes-properties--reference-records) | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` |
+| [Statics & Module State](#statics--module-state) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [Inheritance, Virtual Dispatch & Interfaces](#inheritance-virtual-dispatch--interfaces) | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` |
+| [Generics](#generics) | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` |
+| [Lambdas & Closures](#lambdas--closures) | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` |
+| [Callbacks & Delegates](#callbacks--delegates) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [Enums & Nullable Optionals](#enums--nullable-optionals) | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` | `PLY1650` |
+| [Collections](#collections) | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` |
+| [Iterators & Lazy Sequences](#iterators--lazy-sequences) | `PLY1658` | `PLY1658` | `PLY1658` | `PLY1658` | `PLY1658` | `PLY1658` | `PLY1658` | `PLY1658` | `PLY1658` | `PLY1658` | `PLY1658` | `PLY1658` | `PLY1658` | `PLY1658` | `PLY1658` | `PLY1658` | `PLY1658` | `PLY1658` | `PLY1658` | `PLY1658` |
+| [LINQ](#linq) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [Exceptions & Resource Scopes](#exceptions--resource-scopes) | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` | `PLY1682` |
+| [Tasks & Async/Await](#tasks--asyncawait) | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` |
+| [Standard Output (Stdio)](#standard-output-stdio) | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` |
+| [Spans, Bit Permutations & Unsafe Pointers](#spans-bit-permutations--unsafe-pointers) | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` | `PLY1651` |
+| [Native Interop (P/Invoke)](#native-interop-pinvoke) | `PLY1666` | `PLY1666` | `PLY1666` | `PLY1666` | `PLY1666` | `PLY1666` | `PLY1666` | `PLY1666` | `PLY1666` | `PLY1666` | `PLY1666` | `PLY1666` | `PLY1666` | `PLY1666` | `PLY1666` | `PLY1666` | `PLY1666` | `PLY1666` | `PLY1666` | `PLY1666` |
+| [User-Defined Operator Overloading (Boundary)](#user-defined-operator-overloading-boundary) | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
+| [Hardware SIMD Vectorization (Boundary)](#hardware-simd-vectorization-boundary) | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
+| [Multithreading & Synchronization (Boundary)](#multithreading--synchronization-boundary) | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
+| [File I/O (Boundary)](#file-io-boundary) | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
 
 </details>
 
@@ -1208,6 +1239,391 @@ End Function
 
 </details>
 
+<details>
+<summary><strong>kotlin</strong> — 20 dialects (20 distinct outputs)</summary>
+
+<details>
+<summary>Dialect: <code>kotlin2.0</code> (<code>OperatorsShowcase.kt</code>)</summary>
+
+```text
+// OperatorsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.0, JVM target 1.8.
+
+package operatorsshowcase
+
+fun mix(value_: UInt, shift: Int): UInt {
+    val rotated: UInt = value_.rotateLeft(shift)
+    return (rotated xor 2654435769u) * 2246822507u
+}
+
+fun safeAdd(a: Int, b: Int): Int = Math.addExact(a, b)
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.0-jvm11</code> (<code>OperatorsShowcase.kt</code>)</summary>
+
+```text
+// OperatorsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.0, JVM target 11.
+
+package operatorsshowcase
+
+fun mix(value_: UInt, shift: Int): UInt {
+    val rotated: UInt = value_.rotateLeft(shift)
+    return (rotated xor 2654435769u) * 2246822507u
+}
+
+fun safeAdd(a: Int, b: Int): Int = Math.addExact(a, b)
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.0-jvm17</code> (<code>OperatorsShowcase.kt</code>)</summary>
+
+```text
+// OperatorsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.0, JVM target 17.
+
+package operatorsshowcase
+
+fun mix(value_: UInt, shift: Int): UInt {
+    val rotated: UInt = value_.rotateLeft(shift)
+    return (rotated xor 2654435769u) * 2246822507u
+}
+
+fun safeAdd(a: Int, b: Int): Int = Math.addExact(a, b)
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.0-jvm21</code> (<code>OperatorsShowcase.kt</code>)</summary>
+
+```text
+// OperatorsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.0, JVM target 21.
+
+package operatorsshowcase
+
+fun mix(value_: UInt, shift: Int): UInt {
+    val rotated: UInt = value_.rotateLeft(shift)
+    return (rotated xor 2654435769u) * 2246822507u
+}
+
+fun safeAdd(a: Int, b: Int): Int = Math.addExact(a, b)
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.1</code> (<code>OperatorsShowcase.kt</code>)</summary>
+
+```text
+// OperatorsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.1, JVM target 1.8.
+
+package operatorsshowcase
+
+fun mix(value_: UInt, shift: Int): UInt {
+    val rotated: UInt = value_.rotateLeft(shift)
+    return (rotated xor 2654435769u) * 2246822507u
+}
+
+fun safeAdd(a: Int, b: Int): Int = Math.addExact(a, b)
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.1-jvm11</code> (<code>OperatorsShowcase.kt</code>)</summary>
+
+```text
+// OperatorsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.1, JVM target 11.
+
+package operatorsshowcase
+
+fun mix(value_: UInt, shift: Int): UInt {
+    val rotated: UInt = value_.rotateLeft(shift)
+    return (rotated xor 2654435769u) * 2246822507u
+}
+
+fun safeAdd(a: Int, b: Int): Int = Math.addExact(a, b)
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.1-jvm17</code> (<code>OperatorsShowcase.kt</code>)</summary>
+
+```text
+// OperatorsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.1, JVM target 17.
+
+package operatorsshowcase
+
+fun mix(value_: UInt, shift: Int): UInt {
+    val rotated: UInt = value_.rotateLeft(shift)
+    return (rotated xor 2654435769u) * 2246822507u
+}
+
+fun safeAdd(a: Int, b: Int): Int = Math.addExact(a, b)
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.1-jvm21</code> (<code>OperatorsShowcase.kt</code>)</summary>
+
+```text
+// OperatorsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.1, JVM target 21.
+
+package operatorsshowcase
+
+fun mix(value_: UInt, shift: Int): UInt {
+    val rotated: UInt = value_.rotateLeft(shift)
+    return (rotated xor 2654435769u) * 2246822507u
+}
+
+fun safeAdd(a: Int, b: Int): Int = Math.addExact(a, b)
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.2</code> (<code>OperatorsShowcase.kt</code>)</summary>
+
+```text
+// OperatorsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.2, JVM target 1.8.
+
+package operatorsshowcase
+
+fun mix(value_: UInt, shift: Int): UInt {
+    val rotated: UInt = value_.rotateLeft(shift)
+    return (rotated xor 2654435769u) * 2246822507u
+}
+
+fun safeAdd(a: Int, b: Int): Int = Math.addExact(a, b)
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.2-jvm11</code> (<code>OperatorsShowcase.kt</code>)</summary>
+
+```text
+// OperatorsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.2, JVM target 11.
+
+package operatorsshowcase
+
+fun mix(value_: UInt, shift: Int): UInt {
+    val rotated: UInt = value_.rotateLeft(shift)
+    return (rotated xor 2654435769u) * 2246822507u
+}
+
+fun safeAdd(a: Int, b: Int): Int = Math.addExact(a, b)
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.2-jvm17</code> (<code>OperatorsShowcase.kt</code>)</summary>
+
+```text
+// OperatorsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.2, JVM target 17.
+
+package operatorsshowcase
+
+fun mix(value_: UInt, shift: Int): UInt {
+    val rotated: UInt = value_.rotateLeft(shift)
+    return (rotated xor 2654435769u) * 2246822507u
+}
+
+fun safeAdd(a: Int, b: Int): Int = Math.addExact(a, b)
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.2-jvm21</code> (<code>OperatorsShowcase.kt</code>)</summary>
+
+```text
+// OperatorsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.2, JVM target 21.
+
+package operatorsshowcase
+
+fun mix(value_: UInt, shift: Int): UInt {
+    val rotated: UInt = value_.rotateLeft(shift)
+    return (rotated xor 2654435769u) * 2246822507u
+}
+
+fun safeAdd(a: Int, b: Int): Int = Math.addExact(a, b)
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.3</code> (<code>OperatorsShowcase.kt</code>)</summary>
+
+```text
+// OperatorsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.3, JVM target 1.8.
+
+package operatorsshowcase
+
+fun mix(value_: UInt, shift: Int): UInt {
+    val rotated: UInt = value_.rotateLeft(shift)
+    return (rotated xor 2654435769u) * 2246822507u
+}
+
+fun safeAdd(a: Int, b: Int): Int = Math.addExact(a, b)
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.3-jvm11</code> (<code>OperatorsShowcase.kt</code>)</summary>
+
+```text
+// OperatorsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.3, JVM target 11.
+
+package operatorsshowcase
+
+fun mix(value_: UInt, shift: Int): UInt {
+    val rotated: UInt = value_.rotateLeft(shift)
+    return (rotated xor 2654435769u) * 2246822507u
+}
+
+fun safeAdd(a: Int, b: Int): Int = Math.addExact(a, b)
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.3-jvm17</code> (<code>OperatorsShowcase.kt</code>)</summary>
+
+```text
+// OperatorsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.3, JVM target 17.
+
+package operatorsshowcase
+
+fun mix(value_: UInt, shift: Int): UInt {
+    val rotated: UInt = value_.rotateLeft(shift)
+    return (rotated xor 2654435769u) * 2246822507u
+}
+
+fun safeAdd(a: Int, b: Int): Int = Math.addExact(a, b)
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.3-jvm21</code> (<code>OperatorsShowcase.kt</code>)</summary>
+
+```text
+// OperatorsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.3, JVM target 21.
+
+package operatorsshowcase
+
+fun mix(value_: UInt, shift: Int): UInt {
+    val rotated: UInt = value_.rotateLeft(shift)
+    return (rotated xor 2654435769u) * 2246822507u
+}
+
+fun safeAdd(a: Int, b: Int): Int = Math.addExact(a, b)
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.4</code> (<code>OperatorsShowcase.kt</code>)</summary>
+
+```text
+// OperatorsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.4, JVM target 1.8.
+
+package operatorsshowcase
+
+fun mix(value_: UInt, shift: Int): UInt {
+    val rotated: UInt = value_.rotateLeft(shift)
+    return (rotated xor 2654435769u) * 2246822507u
+}
+
+fun safeAdd(a: Int, b: Int): Int = Math.addExact(a, b)
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.4-jvm11</code> (<code>OperatorsShowcase.kt</code>)</summary>
+
+```text
+// OperatorsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.4, JVM target 11.
+
+package operatorsshowcase
+
+fun mix(value_: UInt, shift: Int): UInt {
+    val rotated: UInt = value_.rotateLeft(shift)
+    return (rotated xor 2654435769u) * 2246822507u
+}
+
+fun safeAdd(a: Int, b: Int): Int = Math.addExact(a, b)
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.4-jvm17</code> (<code>OperatorsShowcase.kt</code>)</summary>
+
+```text
+// OperatorsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.4, JVM target 17.
+
+package operatorsshowcase
+
+fun mix(value_: UInt, shift: Int): UInt {
+    val rotated: UInt = value_.rotateLeft(shift)
+    return (rotated xor 2654435769u) * 2246822507u
+}
+
+fun safeAdd(a: Int, b: Int): Int = Math.addExact(a, b)
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.4-jvm21</code> (<code>OperatorsShowcase.kt</code>)</summary>
+
+```text
+// OperatorsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.4, JVM target 21.
+
+package operatorsshowcase
+
+fun mix(value_: UInt, shift: Int): UInt {
+    val rotated: UInt = value_.rotateLeft(shift)
+    return (rotated xor 2654435769u) * 2246822507u
+}
+
+fun safeAdd(a: Int, b: Int): Int = Math.addExact(a, b)
+```
+
+</details>
+
+</details>
+
 ## Recursion
 
 Direct recursive Euclidean GCD and recursive Fibonacci with base cases. Source: [`02-recursion.cs`](showcase/02-recursion.cs).
@@ -2070,6 +2486,691 @@ Function Fib(ByVal n)
   Exit Function
 End Function
 ```
+
+</details>
+
+<details>
+<summary><strong>kotlin</strong> — 20 dialects (20 distinct outputs)</summary>
+
+<details>
+<summary>Dialect: <code>kotlin2.0</code> (<code>RecursionShowcase.kt</code>)</summary>
+
+```text
+// RecursionShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.0, JVM target 1.8.
+// Helpers added by polypiler: MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source.
+
+package recursionshowcase
+
+fun gcd(a: Int, b: Int): Int {
+    if (b == 0) {
+        return if (a < 0) -a else a
+    }
+    return gcd(b, plyRemainderInt(a, b))
+}
+
+fun fib(n: Int): Int {
+    if (n <= 1) {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+private fun plyRemainderInt(a: Int, b: Int): Int {
+    if (b == -1 && a == Int.MIN_VALUE) {
+        throw ArithmeticException("integer overflow")
+    }
+    return a % b
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.0-jvm11</code> (<code>RecursionShowcase.kt</code>)</summary>
+
+```text
+// RecursionShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.0, JVM target 11.
+// Helpers added by polypiler: MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source.
+
+package recursionshowcase
+
+fun gcd(a: Int, b: Int): Int {
+    if (b == 0) {
+        return if (a < 0) -a else a
+    }
+    return gcd(b, plyRemainderInt(a, b))
+}
+
+fun fib(n: Int): Int {
+    if (n <= 1) {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+private fun plyRemainderInt(a: Int, b: Int): Int {
+    if (b == -1 && a == Int.MIN_VALUE) {
+        throw ArithmeticException("integer overflow")
+    }
+    return a % b
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.0-jvm17</code> (<code>RecursionShowcase.kt</code>)</summary>
+
+```text
+// RecursionShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.0, JVM target 17.
+// Helpers added by polypiler: MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source.
+
+package recursionshowcase
+
+fun gcd(a: Int, b: Int): Int {
+    if (b == 0) {
+        return if (a < 0) -a else a
+    }
+    return gcd(b, plyRemainderInt(a, b))
+}
+
+fun fib(n: Int): Int {
+    if (n <= 1) {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+private fun plyRemainderInt(a: Int, b: Int): Int {
+    if (b == -1 && a == Int.MIN_VALUE) {
+        throw ArithmeticException("integer overflow")
+    }
+    return a % b
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.0-jvm21</code> (<code>RecursionShowcase.kt</code>)</summary>
+
+```text
+// RecursionShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.0, JVM target 21.
+// Helpers added by polypiler: MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source.
+
+package recursionshowcase
+
+fun gcd(a: Int, b: Int): Int {
+    if (b == 0) {
+        return if (a < 0) -a else a
+    }
+    return gcd(b, plyRemainderInt(a, b))
+}
+
+fun fib(n: Int): Int {
+    if (n <= 1) {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+private fun plyRemainderInt(a: Int, b: Int): Int {
+    if (b == -1 && a == Int.MIN_VALUE) {
+        throw ArithmeticException("integer overflow")
+    }
+    return a % b
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.1</code> (<code>RecursionShowcase.kt</code>)</summary>
+
+```text
+// RecursionShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.1, JVM target 1.8.
+// Helpers added by polypiler: MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source.
+
+package recursionshowcase
+
+fun gcd(a: Int, b: Int): Int {
+    if (b == 0) {
+        return if (a < 0) -a else a
+    }
+    return gcd(b, plyRemainderInt(a, b))
+}
+
+fun fib(n: Int): Int {
+    if (n <= 1) {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+private fun plyRemainderInt(a: Int, b: Int): Int {
+    if (b == -1 && a == Int.MIN_VALUE) {
+        throw ArithmeticException("integer overflow")
+    }
+    return a % b
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.1-jvm11</code> (<code>RecursionShowcase.kt</code>)</summary>
+
+```text
+// RecursionShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.1, JVM target 11.
+// Helpers added by polypiler: MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source.
+
+package recursionshowcase
+
+fun gcd(a: Int, b: Int): Int {
+    if (b == 0) {
+        return if (a < 0) -a else a
+    }
+    return gcd(b, plyRemainderInt(a, b))
+}
+
+fun fib(n: Int): Int {
+    if (n <= 1) {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+private fun plyRemainderInt(a: Int, b: Int): Int {
+    if (b == -1 && a == Int.MIN_VALUE) {
+        throw ArithmeticException("integer overflow")
+    }
+    return a % b
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.1-jvm17</code> (<code>RecursionShowcase.kt</code>)</summary>
+
+```text
+// RecursionShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.1, JVM target 17.
+// Helpers added by polypiler: MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source.
+
+package recursionshowcase
+
+fun gcd(a: Int, b: Int): Int {
+    if (b == 0) {
+        return if (a < 0) -a else a
+    }
+    return gcd(b, plyRemainderInt(a, b))
+}
+
+fun fib(n: Int): Int {
+    if (n <= 1) {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+private fun plyRemainderInt(a: Int, b: Int): Int {
+    if (b == -1 && a == Int.MIN_VALUE) {
+        throw ArithmeticException("integer overflow")
+    }
+    return a % b
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.1-jvm21</code> (<code>RecursionShowcase.kt</code>)</summary>
+
+```text
+// RecursionShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.1, JVM target 21.
+// Helpers added by polypiler: MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source.
+
+package recursionshowcase
+
+fun gcd(a: Int, b: Int): Int {
+    if (b == 0) {
+        return if (a < 0) -a else a
+    }
+    return gcd(b, plyRemainderInt(a, b))
+}
+
+fun fib(n: Int): Int {
+    if (n <= 1) {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+private fun plyRemainderInt(a: Int, b: Int): Int {
+    if (b == -1 && a == Int.MIN_VALUE) {
+        throw ArithmeticException("integer overflow")
+    }
+    return a % b
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.2</code> (<code>RecursionShowcase.kt</code>)</summary>
+
+```text
+// RecursionShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.2, JVM target 1.8.
+// Helpers added by polypiler: MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source.
+
+package recursionshowcase
+
+fun gcd(a: Int, b: Int): Int {
+    if (b == 0) {
+        return if (a < 0) -a else a
+    }
+    return gcd(b, plyRemainderInt(a, b))
+}
+
+fun fib(n: Int): Int {
+    if (n <= 1) {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+private fun plyRemainderInt(a: Int, b: Int): Int {
+    if (b == -1 && a == Int.MIN_VALUE) {
+        throw ArithmeticException("integer overflow")
+    }
+    return a % b
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.2-jvm11</code> (<code>RecursionShowcase.kt</code>)</summary>
+
+```text
+// RecursionShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.2, JVM target 11.
+// Helpers added by polypiler: MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source.
+
+package recursionshowcase
+
+fun gcd(a: Int, b: Int): Int {
+    if (b == 0) {
+        return if (a < 0) -a else a
+    }
+    return gcd(b, plyRemainderInt(a, b))
+}
+
+fun fib(n: Int): Int {
+    if (n <= 1) {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+private fun plyRemainderInt(a: Int, b: Int): Int {
+    if (b == -1 && a == Int.MIN_VALUE) {
+        throw ArithmeticException("integer overflow")
+    }
+    return a % b
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.2-jvm17</code> (<code>RecursionShowcase.kt</code>)</summary>
+
+```text
+// RecursionShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.2, JVM target 17.
+// Helpers added by polypiler: MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source.
+
+package recursionshowcase
+
+fun gcd(a: Int, b: Int): Int {
+    if (b == 0) {
+        return if (a < 0) -a else a
+    }
+    return gcd(b, plyRemainderInt(a, b))
+}
+
+fun fib(n: Int): Int {
+    if (n <= 1) {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+private fun plyRemainderInt(a: Int, b: Int): Int {
+    if (b == -1 && a == Int.MIN_VALUE) {
+        throw ArithmeticException("integer overflow")
+    }
+    return a % b
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.2-jvm21</code> (<code>RecursionShowcase.kt</code>)</summary>
+
+```text
+// RecursionShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.2, JVM target 21.
+// Helpers added by polypiler: MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source.
+
+package recursionshowcase
+
+fun gcd(a: Int, b: Int): Int {
+    if (b == 0) {
+        return if (a < 0) -a else a
+    }
+    return gcd(b, plyRemainderInt(a, b))
+}
+
+fun fib(n: Int): Int {
+    if (n <= 1) {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+private fun plyRemainderInt(a: Int, b: Int): Int {
+    if (b == -1 && a == Int.MIN_VALUE) {
+        throw ArithmeticException("integer overflow")
+    }
+    return a % b
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.3</code> (<code>RecursionShowcase.kt</code>)</summary>
+
+```text
+// RecursionShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.3, JVM target 1.8.
+// Helpers added by polypiler: MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source.
+
+package recursionshowcase
+
+fun gcd(a: Int, b: Int): Int {
+    if (b == 0) {
+        return if (a < 0) -a else a
+    }
+    return gcd(b, plyRemainderInt(a, b))
+}
+
+fun fib(n: Int): Int {
+    if (n <= 1) {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+private fun plyRemainderInt(a: Int, b: Int): Int {
+    if (b == -1 && a == Int.MIN_VALUE) {
+        throw ArithmeticException("integer overflow")
+    }
+    return a % b
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.3-jvm11</code> (<code>RecursionShowcase.kt</code>)</summary>
+
+```text
+// RecursionShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.3, JVM target 11.
+// Helpers added by polypiler: MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source.
+
+package recursionshowcase
+
+fun gcd(a: Int, b: Int): Int {
+    if (b == 0) {
+        return if (a < 0) -a else a
+    }
+    return gcd(b, plyRemainderInt(a, b))
+}
+
+fun fib(n: Int): Int {
+    if (n <= 1) {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+private fun plyRemainderInt(a: Int, b: Int): Int {
+    if (b == -1 && a == Int.MIN_VALUE) {
+        throw ArithmeticException("integer overflow")
+    }
+    return a % b
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.3-jvm17</code> (<code>RecursionShowcase.kt</code>)</summary>
+
+```text
+// RecursionShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.3, JVM target 17.
+// Helpers added by polypiler: MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source.
+
+package recursionshowcase
+
+fun gcd(a: Int, b: Int): Int {
+    if (b == 0) {
+        return if (a < 0) -a else a
+    }
+    return gcd(b, plyRemainderInt(a, b))
+}
+
+fun fib(n: Int): Int {
+    if (n <= 1) {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+private fun plyRemainderInt(a: Int, b: Int): Int {
+    if (b == -1 && a == Int.MIN_VALUE) {
+        throw ArithmeticException("integer overflow")
+    }
+    return a % b
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.3-jvm21</code> (<code>RecursionShowcase.kt</code>)</summary>
+
+```text
+// RecursionShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.3, JVM target 21.
+// Helpers added by polypiler: MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source.
+
+package recursionshowcase
+
+fun gcd(a: Int, b: Int): Int {
+    if (b == 0) {
+        return if (a < 0) -a else a
+    }
+    return gcd(b, plyRemainderInt(a, b))
+}
+
+fun fib(n: Int): Int {
+    if (n <= 1) {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+private fun plyRemainderInt(a: Int, b: Int): Int {
+    if (b == -1 && a == Int.MIN_VALUE) {
+        throw ArithmeticException("integer overflow")
+    }
+    return a % b
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.4</code> (<code>RecursionShowcase.kt</code>)</summary>
+
+```text
+// RecursionShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.4, JVM target 1.8.
+// Helpers added by polypiler: MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source.
+
+package recursionshowcase
+
+fun gcd(a: Int, b: Int): Int {
+    if (b == 0) {
+        return if (a < 0) -a else a
+    }
+    return gcd(b, plyRemainderInt(a, b))
+}
+
+fun fib(n: Int): Int {
+    if (n <= 1) {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+private fun plyRemainderInt(a: Int, b: Int): Int {
+    if (b == -1 && a == Int.MIN_VALUE) {
+        throw ArithmeticException("integer overflow")
+    }
+    return a % b
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.4-jvm11</code> (<code>RecursionShowcase.kt</code>)</summary>
+
+```text
+// RecursionShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.4, JVM target 11.
+// Helpers added by polypiler: MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source.
+
+package recursionshowcase
+
+fun gcd(a: Int, b: Int): Int {
+    if (b == 0) {
+        return if (a < 0) -a else a
+    }
+    return gcd(b, plyRemainderInt(a, b))
+}
+
+fun fib(n: Int): Int {
+    if (n <= 1) {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+private fun plyRemainderInt(a: Int, b: Int): Int {
+    if (b == -1 && a == Int.MIN_VALUE) {
+        throw ArithmeticException("integer overflow")
+    }
+    return a % b
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.4-jvm17</code> (<code>RecursionShowcase.kt</code>)</summary>
+
+```text
+// RecursionShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.4, JVM target 17.
+// Helpers added by polypiler: MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source.
+
+package recursionshowcase
+
+fun gcd(a: Int, b: Int): Int {
+    if (b == 0) {
+        return if (a < 0) -a else a
+    }
+    return gcd(b, plyRemainderInt(a, b))
+}
+
+fun fib(n: Int): Int {
+    if (n <= 1) {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+private fun plyRemainderInt(a: Int, b: Int): Int {
+    if (b == -1 && a == Int.MIN_VALUE) {
+        throw ArithmeticException("integer overflow")
+    }
+    return a % b
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.4-jvm21</code> (<code>RecursionShowcase.kt</code>)</summary>
+
+```text
+// RecursionShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.4, JVM target 21.
+// Helpers added by polypiler: MIT (https://github.com/Hawkynt/Polypiler/blob/main/LICENSE-OUTPUT.md); the translated code keeps the licence of its source.
+
+package recursionshowcase
+
+fun gcd(a: Int, b: Int): Int {
+    if (b == 0) {
+        return if (a < 0) -a else a
+    }
+    return gcd(b, plyRemainderInt(a, b))
+}
+
+fun fib(n: Int): Int {
+    if (n <= 1) {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+private fun plyRemainderInt(a: Int, b: Int): Int {
+    if (b == -1 && a == Int.MIN_VALUE) {
+        throw ArithmeticException("integer overflow")
+    }
+    return a % b
+}
+```
+
+</details>
 
 </details>
 
@@ -3365,6 +4466,8 @@ End Sub
 ```
 
 </details>
+
+> **Refused by:** `kotlin` (`PLY1682`: the class 'Accumulator' has no Kotlin form yet)
 
 ## Structs & Value Records
 
@@ -5076,6 +6179,8 @@ End Function
 ```
 
 </details>
+
+> **Refused by:** `kotlin` (`PLY1682`: the struct 'MutablePair' has a field that is written; a mutable value type has no Kotlin form yet)
 
 ## Classes, Properties & Reference Records
 
@@ -7018,6 +8123,8 @@ End Sub
 
 </details>
 
+> **Refused by:** `kotlin` (`PLY1682`: the class 'Meter' has no Kotlin form yet)
+
 ## Statics & Module State
 
 Compile-time constants, read-only static lookup tables, and mutable static module state. Source: [`06-statics-and-module-state.cs`](showcase/06-statics-and-module-state.cs).
@@ -7815,6 +8922,511 @@ Sub ply_init()
 End Sub
 Call ply_init()
 ```
+
+</details>
+
+<details>
+<summary><strong>kotlin</strong> — 20 dialects (20 distinct outputs)</summary>
+
+<details>
+<summary>Dialect: <code>kotlin2.0</code> (<code>StaticsShowcase.kt</code>)</summary>
+
+```text
+// StaticsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.0, JVM target 1.8.
+
+package staticsshowcase
+
+private const val SALT: Int = 7
+
+private val WEIGHTS: IntArray = intArrayOf(3, 5, 11, 17)
+
+private var counter: Int = 1
+
+fun nextWeighted(index: Int): Int {
+    val slot: Int = index and 3
+    val value_: Int = counter * WEIGHTS[slot] + 7
+    counter += 1
+    return value_
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.0-jvm11</code> (<code>StaticsShowcase.kt</code>)</summary>
+
+```text
+// StaticsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.0, JVM target 11.
+
+package staticsshowcase
+
+private const val SALT: Int = 7
+
+private val WEIGHTS: IntArray = intArrayOf(3, 5, 11, 17)
+
+private var counter: Int = 1
+
+fun nextWeighted(index: Int): Int {
+    val slot: Int = index and 3
+    val value_: Int = counter * WEIGHTS[slot] + 7
+    counter += 1
+    return value_
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.0-jvm17</code> (<code>StaticsShowcase.kt</code>)</summary>
+
+```text
+// StaticsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.0, JVM target 17.
+
+package staticsshowcase
+
+private const val SALT: Int = 7
+
+private val WEIGHTS: IntArray = intArrayOf(3, 5, 11, 17)
+
+private var counter: Int = 1
+
+fun nextWeighted(index: Int): Int {
+    val slot: Int = index and 3
+    val value_: Int = counter * WEIGHTS[slot] + 7
+    counter += 1
+    return value_
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.0-jvm21</code> (<code>StaticsShowcase.kt</code>)</summary>
+
+```text
+// StaticsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.0, JVM target 21.
+
+package staticsshowcase
+
+private const val SALT: Int = 7
+
+private val WEIGHTS: IntArray = intArrayOf(3, 5, 11, 17)
+
+private var counter: Int = 1
+
+fun nextWeighted(index: Int): Int {
+    val slot: Int = index and 3
+    val value_: Int = counter * WEIGHTS[slot] + 7
+    counter += 1
+    return value_
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.1</code> (<code>StaticsShowcase.kt</code>)</summary>
+
+```text
+// StaticsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.1, JVM target 1.8.
+
+package staticsshowcase
+
+private const val SALT: Int = 7
+
+private val WEIGHTS: IntArray = intArrayOf(3, 5, 11, 17)
+
+private var counter: Int = 1
+
+fun nextWeighted(index: Int): Int {
+    val slot: Int = index and 3
+    val value_: Int = counter * WEIGHTS[slot] + 7
+    counter += 1
+    return value_
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.1-jvm11</code> (<code>StaticsShowcase.kt</code>)</summary>
+
+```text
+// StaticsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.1, JVM target 11.
+
+package staticsshowcase
+
+private const val SALT: Int = 7
+
+private val WEIGHTS: IntArray = intArrayOf(3, 5, 11, 17)
+
+private var counter: Int = 1
+
+fun nextWeighted(index: Int): Int {
+    val slot: Int = index and 3
+    val value_: Int = counter * WEIGHTS[slot] + 7
+    counter += 1
+    return value_
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.1-jvm17</code> (<code>StaticsShowcase.kt</code>)</summary>
+
+```text
+// StaticsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.1, JVM target 17.
+
+package staticsshowcase
+
+private const val SALT: Int = 7
+
+private val WEIGHTS: IntArray = intArrayOf(3, 5, 11, 17)
+
+private var counter: Int = 1
+
+fun nextWeighted(index: Int): Int {
+    val slot: Int = index and 3
+    val value_: Int = counter * WEIGHTS[slot] + 7
+    counter += 1
+    return value_
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.1-jvm21</code> (<code>StaticsShowcase.kt</code>)</summary>
+
+```text
+// StaticsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.1, JVM target 21.
+
+package staticsshowcase
+
+private const val SALT: Int = 7
+
+private val WEIGHTS: IntArray = intArrayOf(3, 5, 11, 17)
+
+private var counter: Int = 1
+
+fun nextWeighted(index: Int): Int {
+    val slot: Int = index and 3
+    val value_: Int = counter * WEIGHTS[slot] + 7
+    counter += 1
+    return value_
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.2</code> (<code>StaticsShowcase.kt</code>)</summary>
+
+```text
+// StaticsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.2, JVM target 1.8.
+
+package staticsshowcase
+
+private const val SALT: Int = 7
+
+private val WEIGHTS: IntArray = intArrayOf(3, 5, 11, 17)
+
+private var counter: Int = 1
+
+fun nextWeighted(index: Int): Int {
+    val slot: Int = index and 3
+    val value_: Int = counter * WEIGHTS[slot] + 7
+    counter += 1
+    return value_
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.2-jvm11</code> (<code>StaticsShowcase.kt</code>)</summary>
+
+```text
+// StaticsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.2, JVM target 11.
+
+package staticsshowcase
+
+private const val SALT: Int = 7
+
+private val WEIGHTS: IntArray = intArrayOf(3, 5, 11, 17)
+
+private var counter: Int = 1
+
+fun nextWeighted(index: Int): Int {
+    val slot: Int = index and 3
+    val value_: Int = counter * WEIGHTS[slot] + 7
+    counter += 1
+    return value_
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.2-jvm17</code> (<code>StaticsShowcase.kt</code>)</summary>
+
+```text
+// StaticsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.2, JVM target 17.
+
+package staticsshowcase
+
+private const val SALT: Int = 7
+
+private val WEIGHTS: IntArray = intArrayOf(3, 5, 11, 17)
+
+private var counter: Int = 1
+
+fun nextWeighted(index: Int): Int {
+    val slot: Int = index and 3
+    val value_: Int = counter * WEIGHTS[slot] + 7
+    counter += 1
+    return value_
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.2-jvm21</code> (<code>StaticsShowcase.kt</code>)</summary>
+
+```text
+// StaticsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.2, JVM target 21.
+
+package staticsshowcase
+
+private const val SALT: Int = 7
+
+private val WEIGHTS: IntArray = intArrayOf(3, 5, 11, 17)
+
+private var counter: Int = 1
+
+fun nextWeighted(index: Int): Int {
+    val slot: Int = index and 3
+    val value_: Int = counter * WEIGHTS[slot] + 7
+    counter += 1
+    return value_
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.3</code> (<code>StaticsShowcase.kt</code>)</summary>
+
+```text
+// StaticsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.3, JVM target 1.8.
+
+package staticsshowcase
+
+private const val SALT: Int = 7
+
+private val WEIGHTS: IntArray = intArrayOf(3, 5, 11, 17)
+
+private var counter: Int = 1
+
+fun nextWeighted(index: Int): Int {
+    val slot: Int = index and 3
+    val value_: Int = counter * WEIGHTS[slot] + 7
+    counter += 1
+    return value_
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.3-jvm11</code> (<code>StaticsShowcase.kt</code>)</summary>
+
+```text
+// StaticsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.3, JVM target 11.
+
+package staticsshowcase
+
+private const val SALT: Int = 7
+
+private val WEIGHTS: IntArray = intArrayOf(3, 5, 11, 17)
+
+private var counter: Int = 1
+
+fun nextWeighted(index: Int): Int {
+    val slot: Int = index and 3
+    val value_: Int = counter * WEIGHTS[slot] + 7
+    counter += 1
+    return value_
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.3-jvm17</code> (<code>StaticsShowcase.kt</code>)</summary>
+
+```text
+// StaticsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.3, JVM target 17.
+
+package staticsshowcase
+
+private const val SALT: Int = 7
+
+private val WEIGHTS: IntArray = intArrayOf(3, 5, 11, 17)
+
+private var counter: Int = 1
+
+fun nextWeighted(index: Int): Int {
+    val slot: Int = index and 3
+    val value_: Int = counter * WEIGHTS[slot] + 7
+    counter += 1
+    return value_
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.3-jvm21</code> (<code>StaticsShowcase.kt</code>)</summary>
+
+```text
+// StaticsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.3, JVM target 21.
+
+package staticsshowcase
+
+private const val SALT: Int = 7
+
+private val WEIGHTS: IntArray = intArrayOf(3, 5, 11, 17)
+
+private var counter: Int = 1
+
+fun nextWeighted(index: Int): Int {
+    val slot: Int = index and 3
+    val value_: Int = counter * WEIGHTS[slot] + 7
+    counter += 1
+    return value_
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.4</code> (<code>StaticsShowcase.kt</code>)</summary>
+
+```text
+// StaticsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.4, JVM target 1.8.
+
+package staticsshowcase
+
+private const val SALT: Int = 7
+
+private val WEIGHTS: IntArray = intArrayOf(3, 5, 11, 17)
+
+private var counter: Int = 1
+
+fun nextWeighted(index: Int): Int {
+    val slot: Int = index and 3
+    val value_: Int = counter * WEIGHTS[slot] + 7
+    counter += 1
+    return value_
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.4-jvm11</code> (<code>StaticsShowcase.kt</code>)</summary>
+
+```text
+// StaticsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.4, JVM target 11.
+
+package staticsshowcase
+
+private const val SALT: Int = 7
+
+private val WEIGHTS: IntArray = intArrayOf(3, 5, 11, 17)
+
+private var counter: Int = 1
+
+fun nextWeighted(index: Int): Int {
+    val slot: Int = index and 3
+    val value_: Int = counter * WEIGHTS[slot] + 7
+    counter += 1
+    return value_
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.4-jvm17</code> (<code>StaticsShowcase.kt</code>)</summary>
+
+```text
+// StaticsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.4, JVM target 17.
+
+package staticsshowcase
+
+private const val SALT: Int = 7
+
+private val WEIGHTS: IntArray = intArrayOf(3, 5, 11, 17)
+
+private var counter: Int = 1
+
+fun nextWeighted(index: Int): Int {
+    val slot: Int = index and 3
+    val value_: Int = counter * WEIGHTS[slot] + 7
+    counter += 1
+    return value_
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.4-jvm21</code> (<code>StaticsShowcase.kt</code>)</summary>
+
+```text
+// StaticsShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.4, JVM target 21.
+
+package staticsshowcase
+
+private const val SALT: Int = 7
+
+private val WEIGHTS: IntArray = intArrayOf(3, 5, 11, 17)
+
+private var counter: Int = 1
+
+fun nextWeighted(index: Int): Int {
+    val slot: Int = index and 3
+    val value_: Int = counter * WEIGHTS[slot] + 7
+    counter += 1
+    return value_
+}
+```
+
+</details>
 
 </details>
 
@@ -9818,6 +11430,8 @@ End Sub
 
 </details>
 
+> **Refused by:** `kotlin` (`PLY1682`: the interface 'IScalable' has no Kotlin form yet)
+
 ## Generics
 
 Constrained generic static methods and generic classes monomorphized per type instantiation. Source: [`08-generics.cs`](showcase/08-generics.cs).
@@ -11739,6 +13353,8 @@ End Function
 
 </details>
 
+> **Refused by:** `kotlin` (`PLY1682`: the class 'Box<i32>' has no Kotlin form yet)
+
 ## Lambdas & Closures
 
 Lambda expressions and local functions capturing and mutating shared outer locals. Source: [`09-lambdas-and-closures.cs`](showcase/09-lambdas-and-closures.cs).
@@ -12777,6 +14393,8 @@ End Function
 
 </details>
 
+> **Refused by:** `kotlin` (`kotlin2.0`: `PLY1650`: type 'fn() -> i32' has no Kotlin representation in profile 'kotlin2.0' (function 'Run'); `kotlin2.0-jvm11`: `PLY1650`: type 'fn() -> i32' has no Kotlin representation in profile 'kotlin2.0-jvm11' (function 'Run'); `kotlin2.0-jvm17`: `PLY1650`: type 'fn() -> i32' has no Kotlin representation in profile 'kotlin2.0-jvm17' (function 'Run'); `kotlin2.0-jvm21`: `PLY1650`: type 'fn() -> i32' has no Kotlin representation in profile 'kotlin2.0-jvm21' (function 'Run'); `kotlin2.1`: `PLY1650`: type 'fn() -> i32' has no Kotlin representation in profile 'kotlin2.1' (function 'Run'); `kotlin2.1-jvm11`: `PLY1650`: type 'fn() -> i32' has no Kotlin representation in profile 'kotlin2.1-jvm11' (function 'Run'); `kotlin2.1-jvm17`: `PLY1650`: type 'fn() -> i32' has no Kotlin representation in profile 'kotlin2.1-jvm17' (function 'Run'); `kotlin2.1-jvm21`: `PLY1650`: type 'fn() -> i32' has no Kotlin representation in profile 'kotlin2.1-jvm21' (function 'Run'); `kotlin2.2`: `PLY1650`: type 'fn() -> i32' has no Kotlin representation in profile 'kotlin2.2' (function 'Run'); `kotlin2.2-jvm11`: `PLY1650`: type 'fn() -> i32' has no Kotlin representation in profile 'kotlin2.2-jvm11' (function 'Run'); `kotlin2.2-jvm17`: `PLY1650`: type 'fn() -> i32' has no Kotlin representation in profile 'kotlin2.2-jvm17' (function 'Run'); `kotlin2.2-jvm21`: `PLY1650`: type 'fn() -> i32' has no Kotlin representation in profile 'kotlin2.2-jvm21' (function 'Run'); `kotlin2.3`: `PLY1650`: type 'fn() -> i32' has no Kotlin representation in profile 'kotlin2.3' (function 'Run'); `kotlin2.3-jvm11`: `PLY1650`: type 'fn() -> i32' has no Kotlin representation in profile 'kotlin2.3-jvm11' (function 'Run'); `kotlin2.3-jvm17`: `PLY1650`: type 'fn() -> i32' has no Kotlin representation in profile 'kotlin2.3-jvm17' (function 'Run'); `kotlin2.3-jvm21`: `PLY1650`: type 'fn() -> i32' has no Kotlin representation in profile 'kotlin2.3-jvm21' (function 'Run'); `kotlin2.4`: `PLY1650`: type 'fn() -> i32' has no Kotlin representation in profile 'kotlin2.4' (function 'Run'); `kotlin2.4-jvm11`: `PLY1650`: type 'fn() -> i32' has no Kotlin representation in profile 'kotlin2.4-jvm11' (function 'Run'); `kotlin2.4-jvm17`: `PLY1650`: type 'fn() -> i32' has no Kotlin representation in profile 'kotlin2.4-jvm17' (function 'Run'); `kotlin2.4-jvm21`: `PLY1650`: type 'fn() -> i32' has no Kotlin representation in profile 'kotlin2.4-jvm21' (function 'Run'))
+
 ## Callbacks & Delegates
 
 Higher-order functions accepting Func<T, T> and custom delegates via lambdas and method groups. Source: [`10-callbacks-and-delegates.cs`](showcase/10-callbacks-and-delegates.cs).
@@ -13754,6 +15372,531 @@ End Function
 
 </details>
 
+<details>
+<summary><strong>kotlin</strong> — 20 dialects (20 distinct outputs)</summary>
+
+<details>
+<summary>Dialect: <code>kotlin2.0</code> (<code>CallbacksShowcase.kt</code>)</summary>
+
+```text
+// CallbacksShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.0, JVM target 1.8.
+
+package callbacksshowcase
+
+private fun square(x: Int): Int = x * x
+
+fun run_(values: IntArray, seed: Int): Int {
+    val applyTwiceBound: Int = square(square(seed))
+    var sum: Int = 0
+    var i: Int = 0
+    while (i < values.size) {
+        val x: Int = values[i]
+        sum += x + 1
+        i += 1
+    }
+    return applyTwiceBound + sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.0-jvm11</code> (<code>CallbacksShowcase.kt</code>)</summary>
+
+```text
+// CallbacksShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.0, JVM target 11.
+
+package callbacksshowcase
+
+private fun square(x: Int): Int = x * x
+
+fun run_(values: IntArray, seed: Int): Int {
+    val applyTwiceBound: Int = square(square(seed))
+    var sum: Int = 0
+    var i: Int = 0
+    while (i < values.size) {
+        val x: Int = values[i]
+        sum += x + 1
+        i += 1
+    }
+    return applyTwiceBound + sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.0-jvm17</code> (<code>CallbacksShowcase.kt</code>)</summary>
+
+```text
+// CallbacksShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.0, JVM target 17.
+
+package callbacksshowcase
+
+private fun square(x: Int): Int = x * x
+
+fun run_(values: IntArray, seed: Int): Int {
+    val applyTwiceBound: Int = square(square(seed))
+    var sum: Int = 0
+    var i: Int = 0
+    while (i < values.size) {
+        val x: Int = values[i]
+        sum += x + 1
+        i += 1
+    }
+    return applyTwiceBound + sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.0-jvm21</code> (<code>CallbacksShowcase.kt</code>)</summary>
+
+```text
+// CallbacksShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.0, JVM target 21.
+
+package callbacksshowcase
+
+private fun square(x: Int): Int = x * x
+
+fun run_(values: IntArray, seed: Int): Int {
+    val applyTwiceBound: Int = square(square(seed))
+    var sum: Int = 0
+    var i: Int = 0
+    while (i < values.size) {
+        val x: Int = values[i]
+        sum += x + 1
+        i += 1
+    }
+    return applyTwiceBound + sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.1</code> (<code>CallbacksShowcase.kt</code>)</summary>
+
+```text
+// CallbacksShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.1, JVM target 1.8.
+
+package callbacksshowcase
+
+private fun square(x: Int): Int = x * x
+
+fun run_(values: IntArray, seed: Int): Int {
+    val applyTwiceBound: Int = square(square(seed))
+    var sum: Int = 0
+    var i: Int = 0
+    while (i < values.size) {
+        val x: Int = values[i]
+        sum += x + 1
+        i += 1
+    }
+    return applyTwiceBound + sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.1-jvm11</code> (<code>CallbacksShowcase.kt</code>)</summary>
+
+```text
+// CallbacksShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.1, JVM target 11.
+
+package callbacksshowcase
+
+private fun square(x: Int): Int = x * x
+
+fun run_(values: IntArray, seed: Int): Int {
+    val applyTwiceBound: Int = square(square(seed))
+    var sum: Int = 0
+    var i: Int = 0
+    while (i < values.size) {
+        val x: Int = values[i]
+        sum += x + 1
+        i += 1
+    }
+    return applyTwiceBound + sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.1-jvm17</code> (<code>CallbacksShowcase.kt</code>)</summary>
+
+```text
+// CallbacksShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.1, JVM target 17.
+
+package callbacksshowcase
+
+private fun square(x: Int): Int = x * x
+
+fun run_(values: IntArray, seed: Int): Int {
+    val applyTwiceBound: Int = square(square(seed))
+    var sum: Int = 0
+    var i: Int = 0
+    while (i < values.size) {
+        val x: Int = values[i]
+        sum += x + 1
+        i += 1
+    }
+    return applyTwiceBound + sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.1-jvm21</code> (<code>CallbacksShowcase.kt</code>)</summary>
+
+```text
+// CallbacksShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.1, JVM target 21.
+
+package callbacksshowcase
+
+private fun square(x: Int): Int = x * x
+
+fun run_(values: IntArray, seed: Int): Int {
+    val applyTwiceBound: Int = square(square(seed))
+    var sum: Int = 0
+    var i: Int = 0
+    while (i < values.size) {
+        val x: Int = values[i]
+        sum += x + 1
+        i += 1
+    }
+    return applyTwiceBound + sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.2</code> (<code>CallbacksShowcase.kt</code>)</summary>
+
+```text
+// CallbacksShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.2, JVM target 1.8.
+
+package callbacksshowcase
+
+private fun square(x: Int): Int = x * x
+
+fun run_(values: IntArray, seed: Int): Int {
+    val applyTwiceBound: Int = square(square(seed))
+    var sum: Int = 0
+    var i: Int = 0
+    while (i < values.size) {
+        val x: Int = values[i]
+        sum += x + 1
+        i += 1
+    }
+    return applyTwiceBound + sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.2-jvm11</code> (<code>CallbacksShowcase.kt</code>)</summary>
+
+```text
+// CallbacksShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.2, JVM target 11.
+
+package callbacksshowcase
+
+private fun square(x: Int): Int = x * x
+
+fun run_(values: IntArray, seed: Int): Int {
+    val applyTwiceBound: Int = square(square(seed))
+    var sum: Int = 0
+    var i: Int = 0
+    while (i < values.size) {
+        val x: Int = values[i]
+        sum += x + 1
+        i += 1
+    }
+    return applyTwiceBound + sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.2-jvm17</code> (<code>CallbacksShowcase.kt</code>)</summary>
+
+```text
+// CallbacksShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.2, JVM target 17.
+
+package callbacksshowcase
+
+private fun square(x: Int): Int = x * x
+
+fun run_(values: IntArray, seed: Int): Int {
+    val applyTwiceBound: Int = square(square(seed))
+    var sum: Int = 0
+    var i: Int = 0
+    while (i < values.size) {
+        val x: Int = values[i]
+        sum += x + 1
+        i += 1
+    }
+    return applyTwiceBound + sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.2-jvm21</code> (<code>CallbacksShowcase.kt</code>)</summary>
+
+```text
+// CallbacksShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.2, JVM target 21.
+
+package callbacksshowcase
+
+private fun square(x: Int): Int = x * x
+
+fun run_(values: IntArray, seed: Int): Int {
+    val applyTwiceBound: Int = square(square(seed))
+    var sum: Int = 0
+    var i: Int = 0
+    while (i < values.size) {
+        val x: Int = values[i]
+        sum += x + 1
+        i += 1
+    }
+    return applyTwiceBound + sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.3</code> (<code>CallbacksShowcase.kt</code>)</summary>
+
+```text
+// CallbacksShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.3, JVM target 1.8.
+
+package callbacksshowcase
+
+private fun square(x: Int): Int = x * x
+
+fun run_(values: IntArray, seed: Int): Int {
+    val applyTwiceBound: Int = square(square(seed))
+    var sum: Int = 0
+    var i: Int = 0
+    while (i < values.size) {
+        val x: Int = values[i]
+        sum += x + 1
+        i += 1
+    }
+    return applyTwiceBound + sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.3-jvm11</code> (<code>CallbacksShowcase.kt</code>)</summary>
+
+```text
+// CallbacksShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.3, JVM target 11.
+
+package callbacksshowcase
+
+private fun square(x: Int): Int = x * x
+
+fun run_(values: IntArray, seed: Int): Int {
+    val applyTwiceBound: Int = square(square(seed))
+    var sum: Int = 0
+    var i: Int = 0
+    while (i < values.size) {
+        val x: Int = values[i]
+        sum += x + 1
+        i += 1
+    }
+    return applyTwiceBound + sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.3-jvm17</code> (<code>CallbacksShowcase.kt</code>)</summary>
+
+```text
+// CallbacksShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.3, JVM target 17.
+
+package callbacksshowcase
+
+private fun square(x: Int): Int = x * x
+
+fun run_(values: IntArray, seed: Int): Int {
+    val applyTwiceBound: Int = square(square(seed))
+    var sum: Int = 0
+    var i: Int = 0
+    while (i < values.size) {
+        val x: Int = values[i]
+        sum += x + 1
+        i += 1
+    }
+    return applyTwiceBound + sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.3-jvm21</code> (<code>CallbacksShowcase.kt</code>)</summary>
+
+```text
+// CallbacksShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.3, JVM target 21.
+
+package callbacksshowcase
+
+private fun square(x: Int): Int = x * x
+
+fun run_(values: IntArray, seed: Int): Int {
+    val applyTwiceBound: Int = square(square(seed))
+    var sum: Int = 0
+    var i: Int = 0
+    while (i < values.size) {
+        val x: Int = values[i]
+        sum += x + 1
+        i += 1
+    }
+    return applyTwiceBound + sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.4</code> (<code>CallbacksShowcase.kt</code>)</summary>
+
+```text
+// CallbacksShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.4, JVM target 1.8.
+
+package callbacksshowcase
+
+private fun square(x: Int): Int = x * x
+
+fun run_(values: IntArray, seed: Int): Int {
+    val applyTwiceBound: Int = square(square(seed))
+    var sum: Int = 0
+    var i: Int = 0
+    while (i < values.size) {
+        val x: Int = values[i]
+        sum += x + 1
+        i += 1
+    }
+    return applyTwiceBound + sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.4-jvm11</code> (<code>CallbacksShowcase.kt</code>)</summary>
+
+```text
+// CallbacksShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.4, JVM target 11.
+
+package callbacksshowcase
+
+private fun square(x: Int): Int = x * x
+
+fun run_(values: IntArray, seed: Int): Int {
+    val applyTwiceBound: Int = square(square(seed))
+    var sum: Int = 0
+    var i: Int = 0
+    while (i < values.size) {
+        val x: Int = values[i]
+        sum += x + 1
+        i += 1
+    }
+    return applyTwiceBound + sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.4-jvm17</code> (<code>CallbacksShowcase.kt</code>)</summary>
+
+```text
+// CallbacksShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.4, JVM target 17.
+
+package callbacksshowcase
+
+private fun square(x: Int): Int = x * x
+
+fun run_(values: IntArray, seed: Int): Int {
+    val applyTwiceBound: Int = square(square(seed))
+    var sum: Int = 0
+    var i: Int = 0
+    while (i < values.size) {
+        val x: Int = values[i]
+        sum += x + 1
+        i += 1
+    }
+    return applyTwiceBound + sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.4-jvm21</code> (<code>CallbacksShowcase.kt</code>)</summary>
+
+```text
+// CallbacksShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.4, JVM target 21.
+
+package callbacksshowcase
+
+private fun square(x: Int): Int = x * x
+
+fun run_(values: IntArray, seed: Int): Int {
+    val applyTwiceBound: Int = square(square(seed))
+    var sum: Int = 0
+    var i: Int = 0
+    while (i < values.size) {
+        val x: Int = values[i]
+        sum += x + 1
+        i += 1
+    }
+    return applyTwiceBound + sum
+}
+```
+
+</details>
+
+</details>
+
 ## Enums & Nullable Optionals
 
 Flags enum bit operations and nullable scalar types with null-coalescing and lifted arithmetic. Source: [`11-enums-and-optionals.cs`](showcase/11-enums-and-optionals.cs).
@@ -14488,6 +16631,8 @@ End Function
 ```
 
 </details>
+
+> **Refused by:** `kotlin` (`kotlin2.0`: `PLY1650`: type 'i32?' has no Kotlin representation in profile 'kotlin2.0' (function 'Resolve'); `kotlin2.0-jvm11`: `PLY1650`: type 'i32?' has no Kotlin representation in profile 'kotlin2.0-jvm11' (function 'Resolve'); `kotlin2.0-jvm17`: `PLY1650`: type 'i32?' has no Kotlin representation in profile 'kotlin2.0-jvm17' (function 'Resolve'); `kotlin2.0-jvm21`: `PLY1650`: type 'i32?' has no Kotlin representation in profile 'kotlin2.0-jvm21' (function 'Resolve'); `kotlin2.1`: `PLY1650`: type 'i32?' has no Kotlin representation in profile 'kotlin2.1' (function 'Resolve'); `kotlin2.1-jvm11`: `PLY1650`: type 'i32?' has no Kotlin representation in profile 'kotlin2.1-jvm11' (function 'Resolve'); `kotlin2.1-jvm17`: `PLY1650`: type 'i32?' has no Kotlin representation in profile 'kotlin2.1-jvm17' (function 'Resolve'); `kotlin2.1-jvm21`: `PLY1650`: type 'i32?' has no Kotlin representation in profile 'kotlin2.1-jvm21' (function 'Resolve'); `kotlin2.2`: `PLY1650`: type 'i32?' has no Kotlin representation in profile 'kotlin2.2' (function 'Resolve'); `kotlin2.2-jvm11`: `PLY1650`: type 'i32?' has no Kotlin representation in profile 'kotlin2.2-jvm11' (function 'Resolve'); `kotlin2.2-jvm17`: `PLY1650`: type 'i32?' has no Kotlin representation in profile 'kotlin2.2-jvm17' (function 'Resolve'); `kotlin2.2-jvm21`: `PLY1650`: type 'i32?' has no Kotlin representation in profile 'kotlin2.2-jvm21' (function 'Resolve'); `kotlin2.3`: `PLY1650`: type 'i32?' has no Kotlin representation in profile 'kotlin2.3' (function 'Resolve'); `kotlin2.3-jvm11`: `PLY1650`: type 'i32?' has no Kotlin representation in profile 'kotlin2.3-jvm11' (function 'Resolve'); `kotlin2.3-jvm17`: `PLY1650`: type 'i32?' has no Kotlin representation in profile 'kotlin2.3-jvm17' (function 'Resolve'); `kotlin2.3-jvm21`: `PLY1650`: type 'i32?' has no Kotlin representation in profile 'kotlin2.3-jvm21' (function 'Resolve'); `kotlin2.4`: `PLY1650`: type 'i32?' has no Kotlin representation in profile 'kotlin2.4' (function 'Resolve'); `kotlin2.4-jvm11`: `PLY1650`: type 'i32?' has no Kotlin representation in profile 'kotlin2.4-jvm11' (function 'Resolve'); `kotlin2.4-jvm17`: `PLY1650`: type 'i32?' has no Kotlin representation in profile 'kotlin2.4-jvm17' (function 'Resolve'); `kotlin2.4-jvm21`: `PLY1650`: type 'i32?' has no Kotlin representation in profile 'kotlin2.4-jvm21' (function 'Resolve'))
 
 ## Collections
 
@@ -17030,6 +19175,8 @@ End Function
 
 </details>
 
+> **Refused by:** `kotlin` (`kotlin2.0`: `PLY1651`: 'Collection' cannot be expressed in Kotlin profile 'kotlin2.0' (function 'Run'); `kotlin2.0-jvm11`: `PLY1651`: 'Collection' cannot be expressed in Kotlin profile 'kotlin2.0-jvm11' (function 'Run'); `kotlin2.0-jvm17`: `PLY1651`: 'Collection' cannot be expressed in Kotlin profile 'kotlin2.0-jvm17' (function 'Run'); `kotlin2.0-jvm21`: `PLY1651`: 'Collection' cannot be expressed in Kotlin profile 'kotlin2.0-jvm21' (function 'Run'); `kotlin2.1`: `PLY1651`: 'Collection' cannot be expressed in Kotlin profile 'kotlin2.1' (function 'Run'); `kotlin2.1-jvm11`: `PLY1651`: 'Collection' cannot be expressed in Kotlin profile 'kotlin2.1-jvm11' (function 'Run'); `kotlin2.1-jvm17`: `PLY1651`: 'Collection' cannot be expressed in Kotlin profile 'kotlin2.1-jvm17' (function 'Run'); `kotlin2.1-jvm21`: `PLY1651`: 'Collection' cannot be expressed in Kotlin profile 'kotlin2.1-jvm21' (function 'Run'); `kotlin2.2`: `PLY1651`: 'Collection' cannot be expressed in Kotlin profile 'kotlin2.2' (function 'Run'); `kotlin2.2-jvm11`: `PLY1651`: 'Collection' cannot be expressed in Kotlin profile 'kotlin2.2-jvm11' (function 'Run'); `kotlin2.2-jvm17`: `PLY1651`: 'Collection' cannot be expressed in Kotlin profile 'kotlin2.2-jvm17' (function 'Run'); `kotlin2.2-jvm21`: `PLY1651`: 'Collection' cannot be expressed in Kotlin profile 'kotlin2.2-jvm21' (function 'Run'); `kotlin2.3`: `PLY1651`: 'Collection' cannot be expressed in Kotlin profile 'kotlin2.3' (function 'Run'); `kotlin2.3-jvm11`: `PLY1651`: 'Collection' cannot be expressed in Kotlin profile 'kotlin2.3-jvm11' (function 'Run'); `kotlin2.3-jvm17`: `PLY1651`: 'Collection' cannot be expressed in Kotlin profile 'kotlin2.3-jvm17' (function 'Run'); `kotlin2.3-jvm21`: `PLY1651`: 'Collection' cannot be expressed in Kotlin profile 'kotlin2.3-jvm21' (function 'Run'); `kotlin2.4`: `PLY1651`: 'Collection' cannot be expressed in Kotlin profile 'kotlin2.4' (function 'Run'); `kotlin2.4-jvm11`: `PLY1651`: 'Collection' cannot be expressed in Kotlin profile 'kotlin2.4-jvm11' (function 'Run'); `kotlin2.4-jvm17`: `PLY1651`: 'Collection' cannot be expressed in Kotlin profile 'kotlin2.4-jvm17' (function 'Run'); `kotlin2.4-jvm21`: `PLY1651`: 'Collection' cannot be expressed in Kotlin profile 'kotlin2.4-jvm21' (function 'Run'))
+
 ## Iterators & Lazy Sequences
 
 Restartable iterator methods with yield return and yield break consumed lazily via foreach. Source: [`13-iterators-and-yield.cs`](showcase/13-iterators-and-yield.cs).
@@ -18561,6 +20708,8 @@ End Function
 
 </details>
 
+> **Refused by:** `kotlin` (`PLY1658`: the statement 'YieldBreak' has no Kotlin form yet (function 'EvensUpTo'))
+
 ## LINQ
 
 Deferred LINQ query pipelines combining Where, Select, Take, and Sum. Source: [`14-linq.cs`](showcase/14-linq.cs).
@@ -19824,6 +21973,751 @@ Function TopSquaredSum(ByRef values, ByVal count)
   Exit Function
 End Function
 ```
+
+</details>
+
+<details>
+<summary><strong>kotlin</strong> — 20 dialects (20 distinct outputs)</summary>
+
+<details>
+<summary>Dialect: <code>kotlin2.0</code> (<code>LinqShowcase.kt</code>)</summary>
+
+```text
+// LinqShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.0, JVM target 1.8.
+
+package linqshowcase
+
+fun topSquaredSum(values: IntArray, count: Int): Int {
+    var sum: Int = 0
+    if (!(count <= 0)) {
+        var stop: Boolean = false
+        var i: Int = 0
+        var n: Int = 0
+        while (i < values.size) {
+            val x: Int = values[i]
+            i += 1
+            if (x > 0) {
+                val y: Int = x * x
+                n += 1
+                sum = Math.addExact(sum, y)
+                if (n >= count) {
+                    stop = true
+                }
+            }
+            if (stop) {
+                break
+            }
+        }
+    }
+    return sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.0-jvm11</code> (<code>LinqShowcase.kt</code>)</summary>
+
+```text
+// LinqShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.0, JVM target 11.
+
+package linqshowcase
+
+fun topSquaredSum(values: IntArray, count: Int): Int {
+    var sum: Int = 0
+    if (!(count <= 0)) {
+        var stop: Boolean = false
+        var i: Int = 0
+        var n: Int = 0
+        while (i < values.size) {
+            val x: Int = values[i]
+            i += 1
+            if (x > 0) {
+                val y: Int = x * x
+                n += 1
+                sum = Math.addExact(sum, y)
+                if (n >= count) {
+                    stop = true
+                }
+            }
+            if (stop) {
+                break
+            }
+        }
+    }
+    return sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.0-jvm17</code> (<code>LinqShowcase.kt</code>)</summary>
+
+```text
+// LinqShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.0, JVM target 17.
+
+package linqshowcase
+
+fun topSquaredSum(values: IntArray, count: Int): Int {
+    var sum: Int = 0
+    if (!(count <= 0)) {
+        var stop: Boolean = false
+        var i: Int = 0
+        var n: Int = 0
+        while (i < values.size) {
+            val x: Int = values[i]
+            i += 1
+            if (x > 0) {
+                val y: Int = x * x
+                n += 1
+                sum = Math.addExact(sum, y)
+                if (n >= count) {
+                    stop = true
+                }
+            }
+            if (stop) {
+                break
+            }
+        }
+    }
+    return sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.0-jvm21</code> (<code>LinqShowcase.kt</code>)</summary>
+
+```text
+// LinqShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.0, JVM target 21.
+
+package linqshowcase
+
+fun topSquaredSum(values: IntArray, count: Int): Int {
+    var sum: Int = 0
+    if (!(count <= 0)) {
+        var stop: Boolean = false
+        var i: Int = 0
+        var n: Int = 0
+        while (i < values.size) {
+            val x: Int = values[i]
+            i += 1
+            if (x > 0) {
+                val y: Int = x * x
+                n += 1
+                sum = Math.addExact(sum, y)
+                if (n >= count) {
+                    stop = true
+                }
+            }
+            if (stop) {
+                break
+            }
+        }
+    }
+    return sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.1</code> (<code>LinqShowcase.kt</code>)</summary>
+
+```text
+// LinqShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.1, JVM target 1.8.
+
+package linqshowcase
+
+fun topSquaredSum(values: IntArray, count: Int): Int {
+    var sum: Int = 0
+    if (!(count <= 0)) {
+        var stop: Boolean = false
+        var i: Int = 0
+        var n: Int = 0
+        while (i < values.size) {
+            val x: Int = values[i]
+            i += 1
+            if (x > 0) {
+                val y: Int = x * x
+                n += 1
+                sum = Math.addExact(sum, y)
+                if (n >= count) {
+                    stop = true
+                }
+            }
+            if (stop) {
+                break
+            }
+        }
+    }
+    return sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.1-jvm11</code> (<code>LinqShowcase.kt</code>)</summary>
+
+```text
+// LinqShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.1, JVM target 11.
+
+package linqshowcase
+
+fun topSquaredSum(values: IntArray, count: Int): Int {
+    var sum: Int = 0
+    if (!(count <= 0)) {
+        var stop: Boolean = false
+        var i: Int = 0
+        var n: Int = 0
+        while (i < values.size) {
+            val x: Int = values[i]
+            i += 1
+            if (x > 0) {
+                val y: Int = x * x
+                n += 1
+                sum = Math.addExact(sum, y)
+                if (n >= count) {
+                    stop = true
+                }
+            }
+            if (stop) {
+                break
+            }
+        }
+    }
+    return sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.1-jvm17</code> (<code>LinqShowcase.kt</code>)</summary>
+
+```text
+// LinqShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.1, JVM target 17.
+
+package linqshowcase
+
+fun topSquaredSum(values: IntArray, count: Int): Int {
+    var sum: Int = 0
+    if (!(count <= 0)) {
+        var stop: Boolean = false
+        var i: Int = 0
+        var n: Int = 0
+        while (i < values.size) {
+            val x: Int = values[i]
+            i += 1
+            if (x > 0) {
+                val y: Int = x * x
+                n += 1
+                sum = Math.addExact(sum, y)
+                if (n >= count) {
+                    stop = true
+                }
+            }
+            if (stop) {
+                break
+            }
+        }
+    }
+    return sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.1-jvm21</code> (<code>LinqShowcase.kt</code>)</summary>
+
+```text
+// LinqShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.1, JVM target 21.
+
+package linqshowcase
+
+fun topSquaredSum(values: IntArray, count: Int): Int {
+    var sum: Int = 0
+    if (!(count <= 0)) {
+        var stop: Boolean = false
+        var i: Int = 0
+        var n: Int = 0
+        while (i < values.size) {
+            val x: Int = values[i]
+            i += 1
+            if (x > 0) {
+                val y: Int = x * x
+                n += 1
+                sum = Math.addExact(sum, y)
+                if (n >= count) {
+                    stop = true
+                }
+            }
+            if (stop) {
+                break
+            }
+        }
+    }
+    return sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.2</code> (<code>LinqShowcase.kt</code>)</summary>
+
+```text
+// LinqShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.2, JVM target 1.8.
+
+package linqshowcase
+
+fun topSquaredSum(values: IntArray, count: Int): Int {
+    var sum: Int = 0
+    if (!(count <= 0)) {
+        var stop: Boolean = false
+        var i: Int = 0
+        var n: Int = 0
+        while (i < values.size) {
+            val x: Int = values[i]
+            i += 1
+            if (x > 0) {
+                val y: Int = x * x
+                n += 1
+                sum = Math.addExact(sum, y)
+                if (n >= count) {
+                    stop = true
+                }
+            }
+            if (stop) {
+                break
+            }
+        }
+    }
+    return sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.2-jvm11</code> (<code>LinqShowcase.kt</code>)</summary>
+
+```text
+// LinqShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.2, JVM target 11.
+
+package linqshowcase
+
+fun topSquaredSum(values: IntArray, count: Int): Int {
+    var sum: Int = 0
+    if (!(count <= 0)) {
+        var stop: Boolean = false
+        var i: Int = 0
+        var n: Int = 0
+        while (i < values.size) {
+            val x: Int = values[i]
+            i += 1
+            if (x > 0) {
+                val y: Int = x * x
+                n += 1
+                sum = Math.addExact(sum, y)
+                if (n >= count) {
+                    stop = true
+                }
+            }
+            if (stop) {
+                break
+            }
+        }
+    }
+    return sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.2-jvm17</code> (<code>LinqShowcase.kt</code>)</summary>
+
+```text
+// LinqShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.2, JVM target 17.
+
+package linqshowcase
+
+fun topSquaredSum(values: IntArray, count: Int): Int {
+    var sum: Int = 0
+    if (!(count <= 0)) {
+        var stop: Boolean = false
+        var i: Int = 0
+        var n: Int = 0
+        while (i < values.size) {
+            val x: Int = values[i]
+            i += 1
+            if (x > 0) {
+                val y: Int = x * x
+                n += 1
+                sum = Math.addExact(sum, y)
+                if (n >= count) {
+                    stop = true
+                }
+            }
+            if (stop) {
+                break
+            }
+        }
+    }
+    return sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.2-jvm21</code> (<code>LinqShowcase.kt</code>)</summary>
+
+```text
+// LinqShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.2, JVM target 21.
+
+package linqshowcase
+
+fun topSquaredSum(values: IntArray, count: Int): Int {
+    var sum: Int = 0
+    if (!(count <= 0)) {
+        var stop: Boolean = false
+        var i: Int = 0
+        var n: Int = 0
+        while (i < values.size) {
+            val x: Int = values[i]
+            i += 1
+            if (x > 0) {
+                val y: Int = x * x
+                n += 1
+                sum = Math.addExact(sum, y)
+                if (n >= count) {
+                    stop = true
+                }
+            }
+            if (stop) {
+                break
+            }
+        }
+    }
+    return sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.3</code> (<code>LinqShowcase.kt</code>)</summary>
+
+```text
+// LinqShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.3, JVM target 1.8.
+
+package linqshowcase
+
+fun topSquaredSum(values: IntArray, count: Int): Int {
+    var sum: Int = 0
+    if (!(count <= 0)) {
+        var stop: Boolean = false
+        var i: Int = 0
+        var n: Int = 0
+        while (i < values.size) {
+            val x: Int = values[i]
+            i += 1
+            if (x > 0) {
+                val y: Int = x * x
+                n += 1
+                sum = Math.addExact(sum, y)
+                if (n >= count) {
+                    stop = true
+                }
+            }
+            if (stop) {
+                break
+            }
+        }
+    }
+    return sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.3-jvm11</code> (<code>LinqShowcase.kt</code>)</summary>
+
+```text
+// LinqShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.3, JVM target 11.
+
+package linqshowcase
+
+fun topSquaredSum(values: IntArray, count: Int): Int {
+    var sum: Int = 0
+    if (!(count <= 0)) {
+        var stop: Boolean = false
+        var i: Int = 0
+        var n: Int = 0
+        while (i < values.size) {
+            val x: Int = values[i]
+            i += 1
+            if (x > 0) {
+                val y: Int = x * x
+                n += 1
+                sum = Math.addExact(sum, y)
+                if (n >= count) {
+                    stop = true
+                }
+            }
+            if (stop) {
+                break
+            }
+        }
+    }
+    return sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.3-jvm17</code> (<code>LinqShowcase.kt</code>)</summary>
+
+```text
+// LinqShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.3, JVM target 17.
+
+package linqshowcase
+
+fun topSquaredSum(values: IntArray, count: Int): Int {
+    var sum: Int = 0
+    if (!(count <= 0)) {
+        var stop: Boolean = false
+        var i: Int = 0
+        var n: Int = 0
+        while (i < values.size) {
+            val x: Int = values[i]
+            i += 1
+            if (x > 0) {
+                val y: Int = x * x
+                n += 1
+                sum = Math.addExact(sum, y)
+                if (n >= count) {
+                    stop = true
+                }
+            }
+            if (stop) {
+                break
+            }
+        }
+    }
+    return sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.3-jvm21</code> (<code>LinqShowcase.kt</code>)</summary>
+
+```text
+// LinqShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.3, JVM target 21.
+
+package linqshowcase
+
+fun topSquaredSum(values: IntArray, count: Int): Int {
+    var sum: Int = 0
+    if (!(count <= 0)) {
+        var stop: Boolean = false
+        var i: Int = 0
+        var n: Int = 0
+        while (i < values.size) {
+            val x: Int = values[i]
+            i += 1
+            if (x > 0) {
+                val y: Int = x * x
+                n += 1
+                sum = Math.addExact(sum, y)
+                if (n >= count) {
+                    stop = true
+                }
+            }
+            if (stop) {
+                break
+            }
+        }
+    }
+    return sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.4</code> (<code>LinqShowcase.kt</code>)</summary>
+
+```text
+// LinqShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.4, JVM target 1.8.
+
+package linqshowcase
+
+fun topSquaredSum(values: IntArray, count: Int): Int {
+    var sum: Int = 0
+    if (!(count <= 0)) {
+        var stop: Boolean = false
+        var i: Int = 0
+        var n: Int = 0
+        while (i < values.size) {
+            val x: Int = values[i]
+            i += 1
+            if (x > 0) {
+                val y: Int = x * x
+                n += 1
+                sum = Math.addExact(sum, y)
+                if (n >= count) {
+                    stop = true
+                }
+            }
+            if (stop) {
+                break
+            }
+        }
+    }
+    return sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.4-jvm11</code> (<code>LinqShowcase.kt</code>)</summary>
+
+```text
+// LinqShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.4, JVM target 11.
+
+package linqshowcase
+
+fun topSquaredSum(values: IntArray, count: Int): Int {
+    var sum: Int = 0
+    if (!(count <= 0)) {
+        var stop: Boolean = false
+        var i: Int = 0
+        var n: Int = 0
+        while (i < values.size) {
+            val x: Int = values[i]
+            i += 1
+            if (x > 0) {
+                val y: Int = x * x
+                n += 1
+                sum = Math.addExact(sum, y)
+                if (n >= count) {
+                    stop = true
+                }
+            }
+            if (stop) {
+                break
+            }
+        }
+    }
+    return sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.4-jvm17</code> (<code>LinqShowcase.kt</code>)</summary>
+
+```text
+// LinqShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.4, JVM target 17.
+
+package linqshowcase
+
+fun topSquaredSum(values: IntArray, count: Int): Int {
+    var sum: Int = 0
+    if (!(count <= 0)) {
+        var stop: Boolean = false
+        var i: Int = 0
+        var n: Int = 0
+        while (i < values.size) {
+            val x: Int = values[i]
+            i += 1
+            if (x > 0) {
+                val y: Int = x * x
+                n += 1
+                sum = Math.addExact(sum, y)
+                if (n >= count) {
+                    stop = true
+                }
+            }
+            if (stop) {
+                break
+            }
+        }
+    }
+    return sum
+}
+```
+
+</details>
+
+<details>
+<summary>Dialect: <code>kotlin2.4-jvm21</code> (<code>LinqShowcase.kt</code>)</summary>
+
+```text
+// LinqShowcase: generated by polypiler. Change the source, not this file.
+// Kotlin profile: kotlin2.4, JVM target 21.
+
+package linqshowcase
+
+fun topSquaredSum(values: IntArray, count: Int): Int {
+    var sum: Int = 0
+    if (!(count <= 0)) {
+        var stop: Boolean = false
+        var i: Int = 0
+        var n: Int = 0
+        while (i < values.size) {
+            val x: Int = values[i]
+            i += 1
+            if (x > 0) {
+                val y: Int = x * x
+                n += 1
+                sum = Math.addExact(sum, y)
+                if (n >= count) {
+                    stop = true
+                }
+            }
+            if (stop) {
+                break
+            }
+        }
+    }
+    return sum
+}
+```
+
+</details>
 
 </details>
 
@@ -21887,6 +24781,8 @@ End Sub
 
 </details>
 
+> **Refused by:** `kotlin` (`PLY1682`: the interface 'IDisposable' has no Kotlin form yet)
+
 ## Tasks & Async/Await
 
 Asynchronous Task<T> workflows using async/await, Task.FromResult, and Task.WhenAll. Source: [`16-tasks-and-async.cs`](showcase/16-tasks-and-async.cs).
@@ -23241,6 +26137,8 @@ End Function
 
 </details>
 
+> **Refused by:** `kotlin` (`kotlin2.0`: `PLY1651`: 'Await' cannot be expressed in Kotlin profile 'kotlin2.0' (function 'ComputeAsync'); `kotlin2.0-jvm11`: `PLY1651`: 'Await' cannot be expressed in Kotlin profile 'kotlin2.0-jvm11' (function 'ComputeAsync'); `kotlin2.0-jvm17`: `PLY1651`: 'Await' cannot be expressed in Kotlin profile 'kotlin2.0-jvm17' (function 'ComputeAsync'); `kotlin2.0-jvm21`: `PLY1651`: 'Await' cannot be expressed in Kotlin profile 'kotlin2.0-jvm21' (function 'ComputeAsync'); `kotlin2.1`: `PLY1651`: 'Await' cannot be expressed in Kotlin profile 'kotlin2.1' (function 'ComputeAsync'); `kotlin2.1-jvm11`: `PLY1651`: 'Await' cannot be expressed in Kotlin profile 'kotlin2.1-jvm11' (function 'ComputeAsync'); `kotlin2.1-jvm17`: `PLY1651`: 'Await' cannot be expressed in Kotlin profile 'kotlin2.1-jvm17' (function 'ComputeAsync'); `kotlin2.1-jvm21`: `PLY1651`: 'Await' cannot be expressed in Kotlin profile 'kotlin2.1-jvm21' (function 'ComputeAsync'); `kotlin2.2`: `PLY1651`: 'Await' cannot be expressed in Kotlin profile 'kotlin2.2' (function 'ComputeAsync'); `kotlin2.2-jvm11`: `PLY1651`: 'Await' cannot be expressed in Kotlin profile 'kotlin2.2-jvm11' (function 'ComputeAsync'); `kotlin2.2-jvm17`: `PLY1651`: 'Await' cannot be expressed in Kotlin profile 'kotlin2.2-jvm17' (function 'ComputeAsync'); `kotlin2.2-jvm21`: `PLY1651`: 'Await' cannot be expressed in Kotlin profile 'kotlin2.2-jvm21' (function 'ComputeAsync'); `kotlin2.3`: `PLY1651`: 'Await' cannot be expressed in Kotlin profile 'kotlin2.3' (function 'ComputeAsync'); `kotlin2.3-jvm11`: `PLY1651`: 'Await' cannot be expressed in Kotlin profile 'kotlin2.3-jvm11' (function 'ComputeAsync'); `kotlin2.3-jvm17`: `PLY1651`: 'Await' cannot be expressed in Kotlin profile 'kotlin2.3-jvm17' (function 'ComputeAsync'); `kotlin2.3-jvm21`: `PLY1651`: 'Await' cannot be expressed in Kotlin profile 'kotlin2.3-jvm21' (function 'ComputeAsync'); `kotlin2.4`: `PLY1651`: 'Await' cannot be expressed in Kotlin profile 'kotlin2.4' (function 'ComputeAsync'); `kotlin2.4-jvm11`: `PLY1651`: 'Await' cannot be expressed in Kotlin profile 'kotlin2.4-jvm11' (function 'ComputeAsync'); `kotlin2.4-jvm17`: `PLY1651`: 'Await' cannot be expressed in Kotlin profile 'kotlin2.4-jvm17' (function 'ComputeAsync'); `kotlin2.4-jvm21`: `PLY1651`: 'Await' cannot be expressed in Kotlin profile 'kotlin2.4-jvm21' (function 'ComputeAsync'))
+
 ## Standard Output (Stdio)
 
 Console.WriteLine with string literals and integer interpolation. Source: [`17-stdio.cs`](showcase/17-stdio.cs).
@@ -23790,7 +26688,7 @@ End Function
 
 </details>
 
-> **Refused by:** `javascript` (`es5`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es5'; `es2015`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es2015'; `es2017`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es2017'; `es2020`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es2020'; `es2022`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es2022')
+> **Refused by:** `javascript` (`es5`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es5'; `es2015`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es2015'; `es2017`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es2017'; `es2020`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es2020'; `es2022`: `PLY1152`: 'WriteLine' cannot be expressed in JavaScript profile 'es2022'); `kotlin` (`kotlin2.0`: `PLY1651`: 'the operation FormatDotNet of i32' cannot be expressed in Kotlin profile 'kotlin2.0' (function 'Run'); `kotlin2.0-jvm11`: `PLY1651`: 'the operation FormatDotNet of i32' cannot be expressed in Kotlin profile 'kotlin2.0-jvm11' (function 'Run'); `kotlin2.0-jvm17`: `PLY1651`: 'the operation FormatDotNet of i32' cannot be expressed in Kotlin profile 'kotlin2.0-jvm17' (function 'Run'); `kotlin2.0-jvm21`: `PLY1651`: 'the operation FormatDotNet of i32' cannot be expressed in Kotlin profile 'kotlin2.0-jvm21' (function 'Run'); `kotlin2.1`: `PLY1651`: 'the operation FormatDotNet of i32' cannot be expressed in Kotlin profile 'kotlin2.1' (function 'Run'); `kotlin2.1-jvm11`: `PLY1651`: 'the operation FormatDotNet of i32' cannot be expressed in Kotlin profile 'kotlin2.1-jvm11' (function 'Run'); `kotlin2.1-jvm17`: `PLY1651`: 'the operation FormatDotNet of i32' cannot be expressed in Kotlin profile 'kotlin2.1-jvm17' (function 'Run'); `kotlin2.1-jvm21`: `PLY1651`: 'the operation FormatDotNet of i32' cannot be expressed in Kotlin profile 'kotlin2.1-jvm21' (function 'Run'); `kotlin2.2`: `PLY1651`: 'the operation FormatDotNet of i32' cannot be expressed in Kotlin profile 'kotlin2.2' (function 'Run'); `kotlin2.2-jvm11`: `PLY1651`: 'the operation FormatDotNet of i32' cannot be expressed in Kotlin profile 'kotlin2.2-jvm11' (function 'Run'); `kotlin2.2-jvm17`: `PLY1651`: 'the operation FormatDotNet of i32' cannot be expressed in Kotlin profile 'kotlin2.2-jvm17' (function 'Run'); `kotlin2.2-jvm21`: `PLY1651`: 'the operation FormatDotNet of i32' cannot be expressed in Kotlin profile 'kotlin2.2-jvm21' (function 'Run'); `kotlin2.3`: `PLY1651`: 'the operation FormatDotNet of i32' cannot be expressed in Kotlin profile 'kotlin2.3' (function 'Run'); `kotlin2.3-jvm11`: `PLY1651`: 'the operation FormatDotNet of i32' cannot be expressed in Kotlin profile 'kotlin2.3-jvm11' (function 'Run'); `kotlin2.3-jvm17`: `PLY1651`: 'the operation FormatDotNet of i32' cannot be expressed in Kotlin profile 'kotlin2.3-jvm17' (function 'Run'); `kotlin2.3-jvm21`: `PLY1651`: 'the operation FormatDotNet of i32' cannot be expressed in Kotlin profile 'kotlin2.3-jvm21' (function 'Run'); `kotlin2.4`: `PLY1651`: 'the operation FormatDotNet of i32' cannot be expressed in Kotlin profile 'kotlin2.4' (function 'Run'); `kotlin2.4-jvm11`: `PLY1651`: 'the operation FormatDotNet of i32' cannot be expressed in Kotlin profile 'kotlin2.4-jvm11' (function 'Run'); `kotlin2.4-jvm17`: `PLY1651`: 'the operation FormatDotNet of i32' cannot be expressed in Kotlin profile 'kotlin2.4-jvm17' (function 'Run'); `kotlin2.4-jvm21`: `PLY1651`: 'the operation FormatDotNet of i32' cannot be expressed in Kotlin profile 'kotlin2.4-jvm21' (function 'Run'))
 
 ## Spans, Bit Permutations & Unsafe Pointers
 
@@ -27285,6 +30183,8 @@ End Function
 
 </details>
 
+> **Refused by:** `kotlin` (`kotlin2.0`: `PLY1651`: 'the operation ViewOf of span<i32>' cannot be expressed in Kotlin profile 'kotlin2.0' (function 'SumSlice'); `kotlin2.0-jvm11`: `PLY1651`: 'the operation ViewOf of span<i32>' cannot be expressed in Kotlin profile 'kotlin2.0-jvm11' (function 'SumSlice'); `kotlin2.0-jvm17`: `PLY1651`: 'the operation ViewOf of span<i32>' cannot be expressed in Kotlin profile 'kotlin2.0-jvm17' (function 'SumSlice'); `kotlin2.0-jvm21`: `PLY1651`: 'the operation ViewOf of span<i32>' cannot be expressed in Kotlin profile 'kotlin2.0-jvm21' (function 'SumSlice'); `kotlin2.1`: `PLY1651`: 'the operation ViewOf of span<i32>' cannot be expressed in Kotlin profile 'kotlin2.1' (function 'SumSlice'); `kotlin2.1-jvm11`: `PLY1651`: 'the operation ViewOf of span<i32>' cannot be expressed in Kotlin profile 'kotlin2.1-jvm11' (function 'SumSlice'); `kotlin2.1-jvm17`: `PLY1651`: 'the operation ViewOf of span<i32>' cannot be expressed in Kotlin profile 'kotlin2.1-jvm17' (function 'SumSlice'); `kotlin2.1-jvm21`: `PLY1651`: 'the operation ViewOf of span<i32>' cannot be expressed in Kotlin profile 'kotlin2.1-jvm21' (function 'SumSlice'); `kotlin2.2`: `PLY1651`: 'the operation ViewOf of span<i32>' cannot be expressed in Kotlin profile 'kotlin2.2' (function 'SumSlice'); `kotlin2.2-jvm11`: `PLY1651`: 'the operation ViewOf of span<i32>' cannot be expressed in Kotlin profile 'kotlin2.2-jvm11' (function 'SumSlice'); `kotlin2.2-jvm17`: `PLY1651`: 'the operation ViewOf of span<i32>' cannot be expressed in Kotlin profile 'kotlin2.2-jvm17' (function 'SumSlice'); `kotlin2.2-jvm21`: `PLY1651`: 'the operation ViewOf of span<i32>' cannot be expressed in Kotlin profile 'kotlin2.2-jvm21' (function 'SumSlice'); `kotlin2.3`: `PLY1651`: 'the operation ViewOf of span<i32>' cannot be expressed in Kotlin profile 'kotlin2.3' (function 'SumSlice'); `kotlin2.3-jvm11`: `PLY1651`: 'the operation ViewOf of span<i32>' cannot be expressed in Kotlin profile 'kotlin2.3-jvm11' (function 'SumSlice'); `kotlin2.3-jvm17`: `PLY1651`: 'the operation ViewOf of span<i32>' cannot be expressed in Kotlin profile 'kotlin2.3-jvm17' (function 'SumSlice'); `kotlin2.3-jvm21`: `PLY1651`: 'the operation ViewOf of span<i32>' cannot be expressed in Kotlin profile 'kotlin2.3-jvm21' (function 'SumSlice'); `kotlin2.4`: `PLY1651`: 'the operation ViewOf of span<i32>' cannot be expressed in Kotlin profile 'kotlin2.4' (function 'SumSlice'); `kotlin2.4-jvm11`: `PLY1651`: 'the operation ViewOf of span<i32>' cannot be expressed in Kotlin profile 'kotlin2.4-jvm11' (function 'SumSlice'); `kotlin2.4-jvm17`: `PLY1651`: 'the operation ViewOf of span<i32>' cannot be expressed in Kotlin profile 'kotlin2.4-jvm17' (function 'SumSlice'); `kotlin2.4-jvm21`: `PLY1651`: 'the operation ViewOf of span<i32>' cannot be expressed in Kotlin profile 'kotlin2.4-jvm21' (function 'SumSlice'))
+
 ## Native Interop (P/Invoke)
 
 Sequential StructLayout ABI records and DllImport native library declarations. Source: [`19-native-interop.cs`](showcase/19-native-interop.cs).
@@ -27711,7 +30611,7 @@ std::int32_t measure(std::int32_t x, std::int32_t y);
 
 </details>
 
-> **Refused by:** `javascript` (`es5`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es5' cannot call; --bind geom=<module or global> supplies a binding; `es2015`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2015' cannot call; --bind geom=<module or global> supplies a binding; `es2017`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2017' cannot call; --bind geom=<module or global> supplies a binding; `es2020`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2020' cannot call; --bind geom=<module or global> supplies a binding; `es2022`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2022' cannot call; --bind geom=<module or global> supplies a binding); `perl` (`PLY1751`: operation 'IrForeignCall' cannot be emitted as Perl); `batch` (`cmd`: `PLY2850`: 'foreign native interop functions' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile); `vbscript` (`PLY2650`: construct 'foreign function 'geom_norm'' cannot be emitted as VBScript)
+> **Refused by:** `javascript` (`es5`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es5' cannot call; --bind geom=<module or global> supplies a binding; `es2015`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2015' cannot call; --bind geom=<module or global> supplies a binding; `es2017`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2017' cannot call; --bind geom=<module or global> supplies a binding; `es2020`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2020' cannot call; --bind geom=<module or global> supplies a binding; `es2022`: `PLY1152`: 'geom_norm' (geom) is a native function, which JavaScript profile 'es2022' cannot call; --bind geom=<module or global> supplies a binding); `perl` (`PLY1751`: operation 'IrForeignCall' cannot be emitted as Perl); `batch` (`cmd`: `PLY2850`: 'foreign native interop functions' cannot be emitted for the cmd Batch profile; `dos622`: `PLY2851`: 'module other than a single public parameterless Int32 kernel' cannot be emitted for the dos622 Batch profile); `vbscript` (`PLY2650`: construct 'foreign function 'geom_norm'' cannot be emitted as VBScript); `kotlin` (`PLY1666`: the layout of the struct 'NativePoint' has no Kotlin form: a class of the JVM has no fields at offsets)
 
 ## User-Defined Operator Overloading (Boundary)
 
