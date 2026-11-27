@@ -1,6 +1,6 @@
 # ADR 2600 — The oracle of classic Visual Basic (VB6 / VBA): LibreOffice Basic in VBA mode
 
-Area: visualbasic
+Area: languages
 
 | | |
 | --- | --- |
@@ -84,6 +84,7 @@ language reference and [MS-VBAL] document.
 | `CStr(1E+20)`, `CStr(CSng(1 / 3))` | 1E+020, 0.333333343 | 1E+20, 0.3333333 | **no** |
 | `LongLong`, `LongPtr` | no such type (a compile error) | `LongLong` on Win64, `LongPtr` in VBA 7 | **no** |
 | a function `As Long()` | a compile error | allowed since VB6 | **no** |
+| a record assigned from a record parameter passed by reference, then changed | changes the caller's record too (an alias) | a copy | **no** |
 
 Beyond the table: a module LibreOffice cannot compile, and a run-time error no handler catches, stop
 the headless office at a dialog; the runner reports `PLY2691` when the run's time limit (60 s) ends.
@@ -100,7 +101,7 @@ number, nor for `LongLong`. What follows:
    `Single` arithmetic goes through its conversion function (`CInt(a + b)`, `CLng(…)`, `CSng(…)`),
    which traps where Visual Basic's operator does; signed 32-bit division is the helper `PlyDiv32`,
    which raises error 6 itself before `\` could fault; an array is returned in a `Variant`, which holds
-   the typed array in every dialect. The differential tests therefore compare the documented semantics.
+   the typed array in every dialect; a record is copied out of a record parameter field by field. The differential tests therefore compare the documented semantics.
 2. **The frontend imports the documented semantics** - `Integer * Integer` traps, 0/0 is error 6 -
    and the tests that compare an import with the oracle use only the rows that agree.
 3. **Not verified, and documented as such**: `LongLong` (profile `vba7-64`: emitted, compiled by no

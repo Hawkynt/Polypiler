@@ -562,6 +562,8 @@ internal static class VbaParser {
       } else if (this.Current.Kind == Kind.Integer && !this.Current.Radix) {
         statements.Add(new VbaLabel(this.Current.Text, line));
         ++this._at;
+        if (this.Current.Kind == Kind.End)
+          return statements;
       }
 
       statements.Add(this.Statement());

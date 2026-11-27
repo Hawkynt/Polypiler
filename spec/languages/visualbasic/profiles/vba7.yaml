@@ -1,0 +1,38 @@
+id: LANGUAGES.visualbasic.vba7
+title: Visual Basic, VBA 7
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#1090"
+tests: []
+introducedIn: P5
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: profile
+  language: LANGUAGES.visualbasic
+  languageVersion: VBA 7
+  toolchain: libreoffice
+  evaluationOrder: left-to-right
+  integerOverflow: {signed: trap, unsigned: trap}
+  divisionRounding: truncate
+  remainderSign: dividend
+  shiftAmount: masked
+  stringEncoding: utf-16
+  exceptions: on-error-goto
+  memoryModel: managed
+  defaultRuntime: libreoffice
+  constructs:
+    - {construct: "Boolean, Byte, Integer (16 bits), Long, Single, Double, String", family: scalars, state: supported}
+    - {construct: "arithmetic that raises error 6 outside the result type, banker's rounding of CInt, CLng and CByte", family: scalars, state: supported}
+    - {construct: "Variant, Currency, Date, Decimal, Object, LongPtr", family: scalars, state: diagnosed, diagnostic: PLY2646}
+    - {construct: "If, Select Case, For with Step, Do, While, Exit", family: control, state: supported}
+    - {construct: "On Error GoTo with a handler at the end, On Error Resume Next, Resume Next handlers, Err.Number, Err.Clear, Err.Raise", family: control, state: supported}
+    - {construct: "GoTo, GoSub, With, For Each, Resume to a label", family: control, state: diagnosed, diagnostic: PLY2646}
+    - {construct: "arrays with their lower bound, Option Base, ReDim, ReDim Preserve, Erase", family: memory, state: supported}
+    - {construct: "multidimensional arrays, arrays of String or Boolean", family: memory, state: diagnosed, diagnostic: PLY2646}
+    - {construct: "Function and Sub, ByVal, unassigned ByRef, Optional with a default", family: functions, state: supported}
+    - {construct: "ByRef parameters that are assigned, ParamArray, Declare, Property", family: functions, state: diagnosed, diagnostic: PLY2646}
+    - {construct: "user-defined Type of numbers, Booleans and records, Enum, Const, module variables", family: types, state: supported}
+    - {construct: "class modules, fixed-length strings, String fields of a Type", family: types, state: diagnosed, diagnostic: PLY2646}

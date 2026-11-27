@@ -95,7 +95,7 @@ internal sealed partial class VbaLowerer {
 
     var upper = this.ConstantValue(variable.Bounds[0].Upper, variable.Line);
     var length = upper - type.LowerBound + 1;
-    if (length < 0)
+    if (length < 1)
       throw this.Unresolved(variable.Line, $"the array '{variable.Name}' has an upper bound below its lower bound");
     return NewArray(type, new IrConst(IrType.I32, length));
   }
@@ -421,7 +421,7 @@ internal sealed partial class VbaLowerer {
     var source = this.Temporary(value.Type.Ir, value.Expr);
     var length = new IrArrayLength(new IrLocalRef(source));
     var copy = this.Temporary(value.Type.Ir, new IrNewArray(value.Type.Ir, length));
-    if (!value.Type.Element!.IsNumeric || value.Type.Element.Kind == VbaKind.Boolean) {
+    if (value.Type.Element!.Kind == VbaKind.Record) {
       var index = this.Temporary(IrType.I32, new IrConst(IrType.I32, 0));
       this._pending.Add(new IrWhile(new IrBinary(IrBinaryOp.Less, new IrLocalRef(index), length), new IrBlock([
         new IrStore(new IrLocalRef(copy), new IrLocalRef(index), new IrArrayLoad(new IrLocalRef(source), new IrLocalRef(index))),
@@ -606,8 +606,8 @@ internal sealed partial class VbaLowerer {
     var statements = new List<IrStmt>();
     if (preserve) {
       var fresh = this.Temporary(variable.Type.Ir, created);
-      if (!variable.Type.Element!.IsNumeric || variable.Type.Element.Kind == VbaKind.Boolean)
-        throw this.Unsupported(line, "ReDim Preserve of an array of strings, Booleans or records");
+      if (variable.Type.Element!.Kind == VbaKind.Record)
+        throw this.Unsupported(line, "ReDim Preserve of an array of records");
       var kept = new IrConditional(new IrBinary(IrBinaryOp.Less, new IrArrayLength(Old()), new IrLocalRef(length)), new IrArrayLength(Old()), new IrLocalRef(length));
       statements.Add(new IrExprStmt(new IrIntrinsic(IrIntrinsicOp.ArrayCopy, IrType.Void, [Old(), new IrConst(IrType.I32, 0), new IrLocalRef(fresh), new IrConst(IrType.I32, 0), kept])));
       created = new IrLocalRef(fresh);

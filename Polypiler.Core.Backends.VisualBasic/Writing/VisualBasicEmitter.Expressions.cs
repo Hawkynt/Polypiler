@@ -146,8 +146,6 @@ public static partial class VisualBasicEmitter {
         case IrNewArray created:
           return new VbCall(new VbName(this.ArrayHelper(ArrayHelpers.New, created.Type)), [this.Expression(created.Length)]);
         case IrCall call:
-          if (call.Type == IrType.Void)
-            return this.Inexpressible("the value of a procedure without a result");
           return new VbCall(new VbName(this.FunctionName(call.Function)), this.Arguments(call));
         case IrStep step:
           return this.Step(step, true);
@@ -276,15 +274,9 @@ public static partial class VisualBasicEmitter {
       var type = binary.Left.Type;
       var operands = this.Sequence([binary.Left, binary.Right]);
       var (left, right) = (operands[0], operands[1]);
-      if (type == IrType.Bool || type.IsString)
-        return binary.Op switch {
-          IrBinaryOp.Equal => new VbBinary(left, "=", right),
-          IrBinaryOp.NotEqual => new VbBinary(left, "<>", right),
-          IrBinaryOp.And => new VbBinary(left, "And", right),
-          IrBinaryOp.Or => new VbBinary(left, "Or", right),
-          IrBinaryOp.Xor => new VbBinary(left, "Xor", right),
-          _ => this.Inexpressible($"'{binary.Op}' of '{type}'")
-        };
+      // Of two truth values the IR compares only for equality.
+      if (type == IrType.Bool)
+        return new VbBinary(left, binary.Op == IrBinaryOp.Equal ? "=" : "<>", right);
 
       if (type.IsFloat)
         return this.FloatBinary(binary.Op, type, left, right);
@@ -477,8 +469,6 @@ public static partial class VisualBasicEmitter {
 
     private static bool InLong(IrType type) => type.Kind is IrTypeKind.U16 or IrTypeKind.I32 or IrTypeKind.U32;
 
-    private static bool InInteger(IrType type) => type.Kind is IrTypeKind.I8 or IrTypeKind.I16;
-
     private VbExpression Widen(IrType from, IrType to, VbExpression value) {
       switch (to.Kind) {
         case IrTypeKind.I16:
@@ -531,10 +521,9 @@ public static partial class VisualBasicEmitter {
           return this.CallHelper(VisualBasicHelpers.CheckUnsigned16, InLong(from) ? operand : Call("CLng", operand));
         case IrTypeKind.U8:
           return Call("CByte", value);
-        case IrTypeKind.I8:
-          return this.CallHelper(VisualBasicHelpers.Check8, InLong(from) ? operand : Call("CLng", operand));
         default:
-          return this.Widen(from, to, value);
+          // i8: every wider target fits the operand, so no other type is checked here.
+          return this.CallHelper(VisualBasicHelpers.Check8, InLong(from) ? operand : Call("CLng", operand));
       }
     }
 

@@ -125,7 +125,7 @@ internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnosti
       case VbaVariableDeclaration variables:
         foreach (var variable in variables.Variables) {
           var type = this.VariableType(variable, false, this._module.OfType<VbaProcedure>().SelectMany(procedure => procedure.Body));
-          var global = new IrGlobal("g" + variable.Name, type.Ir, this.Default(type, variable.Line));
+          var global = new IrGlobal("g" + variable.Name, type.Ir, this.Initial(variable, type));
           this._globals[variable.Name] = (global, type);
         }
 
@@ -200,10 +200,7 @@ internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnosti
   };
 
   /// <summary>The type a name of a type denotes.</summary>
-  private VbaType TypeOf(VbaTypeRef? type, bool field) {
-    if (type is null)
-      throw this.Unsupported(0, "Variant");
-
+  private VbaType TypeOf(VbaTypeRef type, bool field) {
     switch (type.Name.ToLowerInvariant()) {
       case "boolean":
         return VbaType.Boolean;
@@ -258,10 +255,8 @@ internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnosti
       throw this.Unsupported(variable.Line, $"the array field '{variable.Name}' of a Type");
     if (variable.Bounds.Count > 1)
       throw this.Unsupported(variable.Line, "a multidimensional array");
-    if (element.IsArray)
-      throw this.Unsupported(variable.Line, "an array of arrays");
-    if (element.Kind == VbaKind.String)
-      throw this.Unsupported(variable.Line, $"the array of Strings '{variable.Name}', which the IR cannot create without its elements");
+    if (element.Kind is VbaKind.String or VbaKind.Boolean)
+      throw this.Unsupported(variable.Line, $"the array of {element}s '{variable.Name}', which the IR's arrays do not hold");
 
     // A dynamic array takes the lower bound its first ReDim gives it.
     var first = variable.IsDynamicArray ? ReDims(resized ?? [], variable.Name).FirstOrDefault() : null;

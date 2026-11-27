@@ -6,7 +6,7 @@ open and is cited by the issues that implement it.
 
 A record is `docs/adr/<nnnn>-<slug>.md`: a four-digit number and a lower-case hyphenated slug. The
 line after its title is `Area: <area>`. Numbers are allocated in blocks per area — 0001–0029 is the
-foundation block, the catalog block starts at 0030, the Visual Basic block at 2600 (its diagnostic range) — and are never reused; a superseded record keeps
+foundation block, the catalog block starts at 0030, the languages block spans 1000–2999 — and are never reused; a superseded record keeps
 its number and names its successor. The pull request that adds a record adds its row here, which is how a number is claimed.
 Probe programs and recorded output a record measured live under `docs/adr/evidence/<nnnn>/`.
 

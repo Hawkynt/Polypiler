@@ -212,7 +212,7 @@ public sealed class VisualBasicEmitterTests {
       public static int F(string s, string t) {
         var r = s + t + "\n";
         if (s == t) return 1;
-        return r.Length + s[0] + (string.CompareOrdinal(s, t) < 0 ? 1 : 0) + s.Substring(1, 2).Length + s.IndexOf(t) + s.IndexOf('x', 1) + s.Substring(1).Length;
+        return r.Length + s[0] + (string.CompareOrdinal(s, t) < 0 ? 1 : 0) + s.Substring(1, 2).Length + s.IndexOf(t, System.StringComparison.Ordinal) + s.IndexOf('x', 1) + s.Substring(1).Length;
       }
       public static string G(char c, int n) => new string(c, n) + c;
       """);
