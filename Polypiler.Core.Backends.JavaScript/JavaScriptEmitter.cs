@@ -486,6 +486,8 @@ public static partial class JavaScriptEmitter {
         case IrTypeKind.BigInt:
           this.RequireBigInt();
           return "bigint";
+        case IrTypeKind.Variant:
+          return "[tag, value]";
         case IrTypeKind.I64 or IrTypeKind.U64:
           if (!this.Halves)
             return "bigint";

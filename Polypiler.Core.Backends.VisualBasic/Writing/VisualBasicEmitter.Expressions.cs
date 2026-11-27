@@ -165,6 +165,12 @@ public static partial class VisualBasicEmitter {
           return new VbCall(new VbName(this.StructHelper(EqualsPrefix, type)), [this.Variable(equals.Left, pair[0]), this.Variable(equals.Right, pair[1])]);
         case IrIntrinsic intrinsic:
           return this.Intrinsic(intrinsic);
+        case IrVariantOf made:
+          return this.VariantOf(made);
+        case IrVariantTagOf tag:
+          return Call("VarType", this.Expression(tag.Value));
+        case IrVariantValue value:
+          return this.VariantValue(value);
         case IrThrowExpression thrown when this.Conversion(thrown.Type) is not null:
           this.Throw(thrown.Exception);
           return thrown.Type.IsString ? new VbString("") : this.Literal(thrown.Type, 0);
@@ -423,6 +429,45 @@ public static partial class VisualBasicEmitter {
       whenFalse.Add(new VbAssign(new VbName(held), no));
       this._out.Add(new VbIf([new(condition, whenTrue)], whenFalse));
       return new VbName(held);
+    }
+
+    /// <summary>
+    /// A value of the dynamic type as a <c>Variant</c>: <c>Empty</c>, <c>Null</c>, or the payload through
+    /// the conversion function of its type, which gives the <c>Variant</c> that subtype also where a
+    /// literal would have another (<c>5</c> is an <c>Integer</c>, <c>CLng(5)</c> a <c>Long</c>).
+    /// </summary>
+    private VbExpression VariantOf(IrVariantOf made) {
+      switch (made.Tag) {
+        case IrVariantTag.Empty:
+          return new VbName("Empty");
+        case IrVariantTag.Null:
+          return new VbName("Null");
+        case IrVariantTag.String:
+          return this.Expression(made.Value!);
+        case IrVariantTag.Currency or IrVariantTag.Date:
+          return this.Inexpressible($"a Variant of the tag {made.Tag}");
+        default:
+          var value = this.Expression(made.Value!);
+          return Call(this.Conversion(made.Value!.Type)!, value);
+      }
+    }
+
+    /// <summary>
+    /// The payload of a <c>Variant</c> of a tag: its conversion function, which reads a <c>Variant</c>
+    /// of that subtype exactly; where the frontend has not tested the tag, a test that raises error 13
+    /// (type mismatch) for another one first.
+    /// </summary>
+    private VbExpression VariantValue(IrVariantValue value) {
+      var variant = this.Expression(value.Value);
+      if (value.Tag is IrVariantTag.Currency or IrVariantTag.Date)
+        return this.Inexpressible($"the payload of a Variant of the tag {value.Tag}");
+      if (!value.IsTested) {
+        variant = this.Variable(value.Value, variant);
+        var raise = new VbCallStatement(new VbMember(new VbName("Err"), "Raise"), [new VbInteger(13)]);
+        this._out.Add(new VbIf([new(new VbBinary(Call("VarType", variant), "<>", new VbInteger((int)value.Tag)), [raise])], null));
+      }
+
+      return Call(this.Conversion(value.Type)!, variant);
     }
 
     /// <summary>The conversion function that gives a <c>Variant</c> back its type, or <see langword="null"/> for an array or a record.</summary>
