@@ -45,6 +45,7 @@
     <Compile Include="..\Polypiler.Tests\Frontends\JavaScript\Support\*.cs" LinkBase="Frontends\JavaScript\Support" />
     <Compile Include="..\Polypiler.Tests\Frontends\Python\Support\*.cs" LinkBase="Frontends\Python\Support" />
     <Compile Include="..\Polypiler.Tests\Frontends\Rust\Support\*.cs" LinkBase="Frontends\Rust\Support" />
+    <Compile Include="..\Polypiler.Tests\Frontends\Go\Support\*.cs" LinkBase="Frontends\Go\Support" />
     <Compile Include="..\Polypiler.Tests\Float\Support\FloatVectors.cs" LinkBase="Float\Support" />
     <Compile Include="..\Polypiler.Tests\Recognize\Support\*.cs" LinkBase="Recognize\Support" />
     <Compile Include="..\Polypiler.Tests\Architecture\ModuleRules.cs" LinkBase="Infra\Support" />

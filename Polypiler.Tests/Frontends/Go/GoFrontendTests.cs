@@ -6,6 +6,7 @@ using NUnit.Framework;
 using Polypiler.Core.Frontends.Go;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using Polypiler.Tests.Frontends.Go.Support;
 
 namespace Polypiler.Tests.Frontends.Go;
 
@@ -138,6 +139,24 @@ public sealed class GoFrontendTests {
 
   private static System.Collections.Generic.IEnumerable<IrStmt> Statements(IrStmt statement)
     => statement is IrBlock block ? block.Statements.SelectMany(Statements).Prepend(statement) : [statement];
+
+  /// <summary>Every construct of <c>constructs.go</c> imported, called in the interpreter with Go's own outcome as go recorded it.</summary>
+  [Test]
+  public void Constructs_HaveTheOutcomesGoRecorded() {
+    var result = Imported("constructs.go");
+    Assert.That(result.Diagnostics, Is.Empty, () => string.Join("\n", result.Diagnostics));
+    var recorded = System.Text.Json.JsonSerializer.Deserialize<string[]>(File.ReadAllText(GoConstructCalls.Recorded))!;
+    var calls = GoConstructCalls.All;
+    Assert.That(recorded, Has.Length.EqualTo(calls.Count));
+    var outcomes = calls.Select(call => {
+      try {
+        return PrototypeFixture.InterpretedOutcome(result.Module!, call);
+      } catch (IrException exception) when (exception is not IrTrapException) {
+        return "exception: " + exception.Message;
+      }
+    });
+    Assert.That(outcomes, Is.EqualTo(recorded));
+  }
 
   [TestCase("import_fmt", "PLY2102", "import \"fmt\"")]
   [TestCase("method", "PLY2102", "method Get")]

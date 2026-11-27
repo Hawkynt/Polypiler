@@ -8,7 +8,9 @@ using Polypiler.Core.Backends.Go;
 using Polypiler.Core.Frontends.Go;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
+using System.Text.Json;
 using Polypiler.Tests.Acceptance.Infra;
+using Polypiler.Tests.Frontends.Go.Support;
 
 namespace Polypiler.Tests.Acceptance.Go;
 
@@ -72,6 +74,41 @@ public sealed class GoDifferentialTests {
     Compare("checksums.go", GoFixtures.Translate(module), calls, call => expected[calls.IndexOf(call)], call => PrototypeFixture.InterpretedOutcome(module, call));
   }
 
+  /// <summary>
+  /// The constructs of the Go frontend, run by go itself as the oracle: the interpreter of the imported
+  /// module and the Go the backend writes from it have Go's outcome for every call, and the outcomes the
+  /// unit tests compare with are Go's (<c>constructs.outcomes.json</c>; <c>POLYPILER_RECORD=1</c> writes them).
+  /// </summary>
+  [Test]
+  [RequiresToolchain("go")]
+  public void GoConstructs_HaveGosOwnOutcomes() {
+    var path = Path.Combine(PrototypeFixture.RepositoryRoot, "tests", "fixtures", "go", "frontend", "constructs.go");
+    var source = File.ReadAllText(path);
+    var imported = GoFrontend.Import("constructs.go", source);
+    Assert.That(imported.Diagnostics, Is.Empty);
+    var calls = GoConstructCalls.All;
+    var names = calls.Select(call => call.Method).Distinct().ToDictionary(name => name, name => name);
+    var original = GoDriver.Outcomes([new("go.mod", "module constructs\n\ngo 1.27\n"), new("constructs.go", source)], names, calls, vet: false);
+    if (Environment.GetEnvironmentVariable("POLYPILER_RECORD") == "1")
+      File.WriteAllText(GoConstructCalls.Recorded, JsonSerializer.Serialize(original, new JsonSerializerOptions { WriteIndented = true }) + "\n");
+
+    Assert.That(JsonSerializer.Deserialize<string[]>(File.ReadAllText(GoConstructCalls.Recorded)), Is.EqualTo(original), "the recorded outcomes are go's");
+    var indexes = new Dictionary<PrototypeCall, int>(ReferenceEqualityComparer.Instance);
+    for (var index = 0; index < calls.Count; ++index)
+      indexes[calls[index]] = index;
+
+    Compare("constructs.go", GoFixtures.Translate(imported.Module!), calls, call => original[indexes[call]], call => Interpreted(imported.Module!, call));
+  }
+
+  /// <summary>What the interpreter does for a call, a thrown exception that is no trap - a panic of the source - as the driver reports one.</summary>
+  internal static string Interpreted(IrModule module, PrototypeCall call) {
+    try {
+      return PrototypeFixture.InterpretedOutcome(module, call);
+    } catch (IrException exception) when (exception is not IrTrapException) {
+      return "exception: " + exception.Message;
+    }
+  }
+
   private static void Compare(string fixture, GoTranslation translated, IReadOnlyList<PrototypeCall> calls, Func<PrototypeCall, string> expected, Func<PrototypeCall, string> interpreted) {
     if (translated.Files is null) {
       Assert.That(translated.Problems, Is.Not.Empty.And.All.Match(@"^error PLY21[5-7][0-9]: "), "a refusal names its construct with a code of the Go backend");
@@ -80,7 +117,7 @@ public sealed class GoDifferentialTests {
     }
 
     var crossing = calls.Where(call => GoDriver.Crosses(translated.Module!, call, translated.Names!)).ToList();
-    var outcomes = crossing.Count == 0 ? [] : GoDriver.Outcomes(translated.Files, translated.Module!, translated.Names!, crossing);
+    var outcomes = crossing.Count == 0 ? [] : GoDriver.Outcomes(translated.Files, translated.Names!, crossing);
     var mismatches = new List<string>();
     for (var index = 0; index < crossing.Count; ++index) {
       var (oracle, reference) = (expected(crossing[index]), interpreted(crossing[index]));

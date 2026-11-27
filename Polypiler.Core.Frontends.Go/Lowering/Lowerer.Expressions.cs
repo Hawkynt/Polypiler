@@ -28,9 +28,6 @@ internal sealed partial class Lowerer {
       "SelectorExpr" => this.Selector(node),
       "CompositeLit" => this.Composite(node),
       "SliceExpr" => throw Unsupported(node, "slice expression"),
-      "StarExpr" => throw Unsupported(node, "pointer dereference"),
-      "FuncLit" => throw Unsupported(node, "function literal"),
-      "TypeAssertExpr" => throw Unsupported(node, "type assertion"),
       _ => throw Unsupported(node, node.Kind)
     };
     return value;

@@ -102,11 +102,11 @@ internal static class GoDriver {
   /// Runs calls through a generated module and returns one outcome per call.
   /// </summary>
   /// <param name="files">The files of the generated module: <c>go.mod</c>, the package and its helpers.</param>
-  /// <param name="module">The legalized module, whose signatures type the arguments.</param>
   /// <param name="names">The Go name of every function by its name in the IR.</param>
   /// <param name="calls">The calls, each of a public function.</param>
+  /// <param name="vet">Whether <c>go vet</c> and <c>gofmt -l</c> check the package first: generated code, not a source of the test's own.</param>
   /// <returns>The outcomes, in the order of the calls.</returns>
-  public static IReadOnlyList<string> Outcomes(IReadOnlyList<GeneratedFile> files, IrModule module, IReadOnlyDictionary<string, string> names, IReadOnlyList<PrototypeCall> calls) {
+  public static IReadOnlyList<string> Outcomes(IReadOnlyList<GeneratedFile> files, IReadOnlyDictionary<string, string> names, IReadOnlyList<PrototypeCall> calls, bool vet = true) {
     var directory = Path.Combine(Path.GetTempPath(), "polypiler-go-test-" + Guid.NewGuid().ToString("N"));
     var package = Path.Combine(directory, "gen");
     Directory.CreateDirectory(package);
@@ -116,12 +116,14 @@ internal static class GoDriver {
         File.WriteAllText(Path.Combine(package, file.Path), file.Content);
 
       File.WriteAllText(Path.Combine(directory, "go.mod"), $"module polytest\n\ngo {version}\n");
-      File.WriteAllText(Path.Combine(directory, "main.go"), Driver(module, names, calls));
+      File.WriteAllText(Path.Combine(directory, "main.go"), Driver(names, calls));
       File.WriteAllText(Path.Combine(directory, "calls.json"), Calls(calls));
-      var (vet, vetOutput) = Run(package, "vet", "./...");
-      Assert.That((vet, vetOutput), Is.EqualTo((0, "")), "go vet");
-      var formatted = Execute("gofmt", directory, "-l", package);
-      Assert.That(formatted.Output.Trim(), Is.Empty, "gofmt -l lists the generated files");
+      if (vet) {
+        var (vetExit, vetOutput) = Run(package, "vet", "./...");
+        Assert.That((vetExit, vetOutput), Is.EqualTo((0, "")), "go vet");
+        var formatted = Execute("gofmt", directory, "-l", package);
+        Assert.That(formatted.Output.Trim(), Is.Empty, "gofmt -l lists the generated files");
+      }
       var (exit, output) = Run(directory, "run", ".");
       Assert.That(exit, Is.Zero, output);
       var outcomes = JsonSerializer.Deserialize<string[]>(output)!;
@@ -157,32 +159,34 @@ internal static class GoDriver {
   /// <summary>
   /// The driver: it reads the calls from <c>calls.json</c>, each a function name and its arguments - an
   /// integer as its decimal digits, a floating-point number as the 64 bits of its double in
-  /// hexadecimal, a list for an array - decodes them into the types of the function and calls it.
+  /// hexadecimal, a list for an array - decodes them into the parameter types of the function, which
+  /// reflection gives it, and calls it.
   /// </summary>
-  private static string Driver(IrModule module, IReadOnlyDictionary<string, string> names, IReadOnlyList<PrototypeCall> calls) {
+  private static string Driver(IReadOnlyDictionary<string, string> names, IReadOnlyList<PrototypeCall> calls) {
     var text = new StringBuilder("package main\n\nimport (\n\t\"encoding/json\"\n\t\"fmt\"\n\t\"math\"\n\t\"os\"\n\t\"reflect\"\n\t\"strconv\"\n\t\"strings\"\n\n\tgen \"polytest/gen\"\n)\n\n");
     text.Append("func call(name string, args []json.RawMessage) string {\n\tswitch name {\n");
-    foreach (var method in calls.Select(call => call.Method).Distinct(StringComparer.Ordinal)) {
-      var function = module.Functions.Single(candidate => candidate.Name == method);
-      text.Append($"\tcase {GoPrinter.Quote(method)}:\n");
-      var shown = new List<string> { "show(r)" };
-      for (var index = 0; index < function.Parameters.Count; ++index) {
-        text.Append($"\t\ta{index} := decode[{TypeName(function.Parameters[index].Type)}](args[{index}])\n");
-        if (function.Parameters[index].Type.IsArray)
-          shown.Add($"show(a{index})");
-      }
-
-      var invocation = $"gen.{names[method]}({string.Join(", ", Enumerable.Range(0, function.Parameters.Count).Select(index => $"a{index}"))})";
-      text.Append(function.ReturnType == IrType.Void ? $"\t\t{invocation}\n\t\tvar r any\n" : $"\t\tr := {invocation}\n");
-      text.Append($"\t\treturn {string.Join(" + \" | \" + ", shown)}\n");
-    }
+    foreach (var method in calls.Select(call => call.Method).Distinct(StringComparer.Ordinal))
+      text.Append($"\tcase {GoPrinter.Quote(method)}:\n\t\treturn invoke(reflect.ValueOf(gen.{names[method]}), args)\n");
 
     text.Append("\t}\n\tpanic(\"no function \" + name)\n}\n\n");
     text.Append("""
-      func decode[T any](raw json.RawMessage) T {
-      	var value T
-      	set(reflect.ValueOf(&value).Elem(), raw)
-      	return value
+      func invoke(function reflect.Value, args []json.RawMessage) string {
+      	in := make([]reflect.Value, function.Type().NumIn())
+      	for i := range in {
+      		in[i] = reflect.New(function.Type().In(i)).Elem()
+      		set(in[i], args[i])
+      	}
+      	out := function.Call(in)
+      	parts := []string{"void"}
+      	if len(out) > 0 {
+      		parts[0] = show(out[0].Interface())
+      	}
+      	for _, value := range in {
+      		if value.Kind() == reflect.Slice {
+      			parts = append(parts, show(value.Interface()))
+      		}
+      	}
+      	return strings.Join(parts, " | ")
       }
 
       func set(target reflect.Value, raw json.RawMessage) {
@@ -252,25 +256,6 @@ internal static class GoDriver {
     double number => BitConverter.DoubleToUInt64Bits(number).ToString("x", CultureInfo.InvariantCulture),
     char unit => ((int)unit).ToString(CultureInfo.InvariantCulture),
     _ => Convert.ToString(argument, CultureInfo.InvariantCulture)!
-  };
-
-  private static string TypeName(IrType type) => type switch {
-    { IsArray: true } => "[]" + TypeName(type.Element!),
-    { Kind: IrTypeKind.Bool } => "bool",
-    { IsString: true } => "string",
-    _ => type.Kind.ToString().ToLowerInvariant() switch {
-      "i8" => "int8",
-      "u8" => "uint8",
-      "i16" => "int16",
-      "u16" => "uint16",
-      "i32" => "int32",
-      "u32" => "uint32",
-      "i64" => "int64",
-      "u64" => "uint64",
-      "f32" => "float32",
-      "f64" => "float64",
-      var other => throw new ArgumentException($"no Go type of {other}")
-    }
   };
 
   /// <summary>Whether a call can cross the boundary of the driver: every argument a number, truth value, string or array of them.</summary>

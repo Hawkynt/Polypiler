@@ -229,21 +229,21 @@ internal sealed partial class Lowerer {
       throw Unsupported(node, "an assignment of a call with several results");
 
     if (left.Count == 1) {
-      this.AssignOne(left[0], token, this.Value(right[0], this.TargetType(left[0])), output);
+      this.AssignOne(left[0], token, this.Value(right[0], this.TargetType(left[0], right[0])), output);
       return;
     }
 
     // Several new variables: no value can read one of them, which are not in scope yet.
     if (token == ":=" && left.All(target => Strip(target) is { Kind: "Ident" } name && (name.Text("Name") == "_" || Defines(name)))) {
       for (var index = 0; index < left.Count; ++index)
-        this.AssignOne(left[index], token, this.Value(right[index], this.TargetType(left[index])), output);
+        this.AssignOne(left[index], token, this.Value(right[index], this.TargetType(left[index], right[index])), output);
 
       return;
     }
 
     // Several: the places' operands first, then every value, each into a temporary, then the assignments in order.
     var places = left.Select(target => this.Place(target, output)).ToList();
-    var values = right.Select((value, index) => (IrExpr)new IrLocalRef(this.Temporary(this.Value(value, this.TargetType(left[index])), output))).ToList();
+    var values = right.Select((value, index) => (IrExpr)new IrLocalRef(this.Temporary(this.Value(value, this.TargetType(left[index], right[index])), output))).ToList();
     for (var index = 0; index < left.Count; ++index) {
       if (places[index] is { } place)
         output.Add(place(values[index]));
@@ -252,8 +252,8 @@ internal sealed partial class Lowerer {
     }
   }
 
-  /// <summary>The type the value of an assignment to a target takes.</summary>
-  private IrType TargetType(GoNode target) => Strip(target).Text("Name") == "_" ? this.TypeOf(target.Type, target) : this.TypeOf(target);
+  /// <summary>The type the value of an assignment to a target takes; the value's own for the blank identifier.</summary>
+  private IrType TargetType(GoNode target, GoNode value) => Strip(target).Text("Name") == "_" ? this.TypeOf(value) : this.TypeOf(target);
 
   /// <summary>
   /// An element or field target with its operands evaluated into temporaries now, as the store that

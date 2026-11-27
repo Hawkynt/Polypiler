@@ -285,7 +285,8 @@ public static partial class GoEmitter {
 
     /// <summary>An assignment: <c>x++</c>, <c>x += y</c> where the value is an operator on the variable itself, <c>x = value</c> otherwise.</summary>
     private IEnumerable<GoStmt> Assign(IrLocal local, IrExpr value) {
-      if (!this._read.Contains(local))
+      // A variable assigned to itself changes nothing, and go vet reports the self-assignment.
+      if (!this._read.Contains(local) || value is IrLocalRef { Local: var same } && same == local)
         return this.Effect(value);
 
       var target = Name(this.LocalName(local));
@@ -334,6 +335,14 @@ public static partial class GoEmitter {
       var condition = this.Expression(choice.Condition);
       var (whenTrue, truePrelude) = this.Capture(choice.WhenTrue);
       var (whenFalse, falsePrelude) = this.Capture(choice.WhenFalse);
+      // An arm that keeps the variable as it is has nothing to assign: go vet reports the self-assignment.
+      static bool Keeps(GoExpr target, GoExpr value, List<GoStmt> prelude) => prelude.Count == 0 && value is GoIdent name && target is GoIdent same && name.Name == same.Name;
+      if (Keeps(target, whenFalse, falsePrelude))
+        return [new GoIf(null, condition, new GoBlock([.. truePrelude, new GoAssign([target], "=", [whenTrue])]), null)];
+
+      if (Keeps(target, whenTrue, truePrelude))
+        return [new GoIf(null, Not(condition), new GoBlock([.. falsePrelude, new GoAssign([target], "=", [whenFalse])]), null)];
+
       return [new GoIf(null, condition,
         new GoBlock([.. truePrelude, new GoAssign([target], "=", [whenTrue])]),
         new GoBlockStmt(new GoBlock([.. falsePrelude, new GoAssign([target], "=", [whenFalse])])))];
