@@ -106,11 +106,27 @@ internal sealed class MsilMetadataContext {
 
   public MethodDefinitionHandle Pdep64Handle { get; set; }
 
+  public MethodDefinitionHandle BitRev32Handle { get; set; }
+
+  public MethodDefinitionHandle BitRev64Handle { get; set; }
+
+  public MethodDefinitionHandle StrLastIndexOfHandle { get; set; }
+
+  public MethodDefinitionHandle StrSplitHandle { get; set; }
+
+  public MethodDefinitionHandle StrTrimEcmaHandle { get; set; }
+
   public Dictionary<IrType, MethodDefinitionHandle> PtrLoadHandles { get; } = new();
 
   public Dictionary<IrType, MethodDefinitionHandle> PtrStoreHandles { get; } = new();
 
   public Dictionary<IrClassType, MethodDefinitionHandle> RecordEqualsHandles { get; } = new(ReferenceEqualityComparer.Instance);
+
+  public Dictionary<IrEnumType, MethodDefinitionHandle> EnumIsDefinedHandles { get; } = new(ReferenceEqualityComparer.Instance);
+
+  public Dictionary<IrEnumType, MethodDefinitionHandle> EnumToStringHandles { get; } = new(ReferenceEqualityComparer.Instance);
+
+  public Dictionary<IrEnumType, MethodDefinitionHandle> EnumParseHandles { get; } = new(ReferenceEqualityComparer.Instance);
 
   /// <summary>Gets or adds a cached <see cref="AssemblyReferenceHandle"/> for a .NET BCL assembly.</summary>
   public AssemblyReferenceHandle GetAssemblyRef(string assemblyName) {

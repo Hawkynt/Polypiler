@@ -77,11 +77,12 @@ public static partial class BatchFrontend {
   }
 
   private abstract record Instruction(int Line);
-  private sealed record Assignment(int Line, IrLocal Destination, IrExpr Value) : Instruction(Line);
+  private sealed record Assignment(int Line, IrLocal Destination, IrExpr Value, bool ReadsDelayedExpansion = false,
+    IReadOnlyList<IrLocal>? DecimalTextOperands = null) : Instruction(Line);
   private sealed record WriteLine(int Line, IrExpr Text) : Instruction(Line);
   private sealed record Jump(int Line, string Target, IrExpr? Condition) : Instruction(Line);
   private sealed record Exit(int Line, IrExpr Status) : Instruction(Line);
-  private sealed record ScopePush(int Line, int FrameId) : Instruction(Line);
+  private sealed record ScopePush(int Line, int FrameId, bool? DelayedExpansion = null) : Instruction(Line);
   private sealed record ScopePop(int Line, int FrameId) : Instruction(Line);
   private sealed record FrameUnwind(int Line, int FrameId) : Instruction(Line);
 

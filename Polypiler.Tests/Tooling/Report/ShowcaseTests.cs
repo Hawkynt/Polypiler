@@ -73,11 +73,12 @@ public sealed class ShowcaseTests {
     var byBackend = targets.ToDictionary(t => t.Backend, t => t.Profiles, StringComparer.Ordinal);
     Assert.That(byBackend.Keys, Does.Contain("csharp").And.Contain("javascript").And.Contain("rust")
       .And.Contain("python").And.Contain("perl").And.Contain("cpp")
-      .And.Contain("vbscript").And.Contain("batch").And.Contain("msil").And.Contain("jvm"));
+      .And.Contain("vbscript").And.Contain("visualbasic").And.Contain("batch").And.Contain("msil").And.Contain("jvm").And.Contain("go"));
     Assert.That(byBackend["javascript"], Does.Contain("es5").And.Contain("es2022"));
     Assert.That(byBackend["csharp"], Does.Contain("net2.0").And.Contain("net10.0"));
     Assert.That(byBackend["batch"], Does.Contain("cmd").And.Contain("dos622"));
     Assert.That(byBackend["cpp"], Does.Contain("cpp/cpp17").And.Contain("cpp/cpp23"));
+    Assert.That(byBackend["go"], Does.Contain("go1.18").And.Contain("go1.27"));
   }
 
   [Test]
@@ -248,6 +249,8 @@ public sealed class ShowcaseTests {
     Assert.That(ShowcaseGenerator.RenderOutputFile("a.pm", Encoding.UTF8.GetBytes("1")).Fence, Is.EqualTo("perl"));
     Assert.That(ShowcaseGenerator.RenderOutputFile("a.hpp", Encoding.UTF8.GetBytes("1")).Fence, Is.EqualTo("cpp"));
     Assert.That(ShowcaseGenerator.RenderOutputFile("a.vbs", Encoding.UTF8.GetBytes("1")).Fence, Is.EqualTo("vbscript"));
+    Assert.That(ShowcaseGenerator.RenderOutputFile("a.bas", Encoding.UTF8.GetBytes("1")).Fence, Is.EqualTo("vb"));
+    Assert.That(ShowcaseGenerator.RenderOutputFile("a.go", Encoding.UTF8.GetBytes("1")).Fence, Is.EqualTo("go"));
     Assert.That(ShowcaseGenerator.RenderOutputFile("a.bat", Encoding.UTF8.GetBytes("1")).Fence, Is.EqualTo("bat"));
     Assert.That(ShowcaseGenerator.RenderOutputFile("a.xyz", Encoding.UTF8.GetBytes("1")).Fence, Is.EqualTo("text"));
 
@@ -272,6 +275,7 @@ public sealed class ShowcaseTests {
     this.Write("examples/01-add.cs", "// Showcase: Add & Async\n// Category: Core\n// Summary: Simple ops.\nusing System.Threading.Tasks;\npublic static class K { public static async Task<int> AddAsync(int a, int b) => await Task.FromResult(a + b); }\n");
     this.Write("examples/02-ops.cs", "// Showcase: Bitwise\n// Category: Core\n// Summary: Rotate.\nusing System.Numerics;\npublic static class O { public static uint Rot(uint x, int n) => BitOperations.RotateLeft(x, n); }\n");
     this.Write("examples/03-boundary.cs", "// Showcase: Unsupported\n// Category: Boundary\n// Summary: Refused.\nusing System.IO;\npublic static class B { public static int N(string p) => File.ReadAllLines(p).Length; }\n");
+    this.Write("examples/04-native.cs", "// Showcase: Native\n// Category: Core\n// Summary: P/Invoke.\nusing System.Runtime.InteropServices;\npublic static class N { [DllImport(\"geom\")] private static extern int geom_norm(int x); public static int Measure(int x) => geom_norm(x); }\n");
     var marker = this.CreateFakePolypilerMarker();
     var runner = new InProcessCliRunner();
 

@@ -101,6 +101,14 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+      # The Go frontend's tests run its helper, which the pinned go builds and runs.
+      - name: go version of tooling/toolchains.lock
+        id: go
+        run: echo "version=$(awk '/^  go:$/{found=1} found && /version:/{gsub(/"/, "", $2); print $2; exit}' tooling/toolchains.lock)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ steps.go.outputs.version }}
+          cache: false
       # The unit tests carry the coverage (AGENTS.md); the acceptance tests run in the test matrix.
       - name: Test with coverage
         run: dotnet test Polypiler.Tests/Polypiler.Tests.csproj -c Debug --filter "TestCategory!=Sweep&TestCategory!=Exhaustive" --collect:"XPlat Code Coverage" --results-directory ./coverage
@@ -606,7 +614,7 @@ jobs:
         run: |
           echo "Server = $ARCHIVE/\$repo/os/\$arch" > /etc/pacman.d/mirrorlist
           pacman -Syyuu --noconfirm
-          pacman -S --noconfirm --needed git icu gcc clang compiler-rt bubblewrap
+          pacman -S --noconfirm --needed git icu gcc clang llvm lld python compiler-rt bubblewrap
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
@@ -629,10 +637,14 @@ jobs:
         run: |
           if [ "$RUNNER_OS" = macOS ]; then
             name="LLVM-$VERSION-macOS-ARM64"
-            members=("$name/bin/clang" "$name/bin/clang-${VERSION%%.*}" "$name/lib/clang")
+            members=("$name/bin/clang" "$name/bin/clang-${VERSION%%.*}" "$name/lib/clang"
+              "$name/bin/ld.lld" "$name/bin/lld" "$name/bin/llvm-config" "$name/bin/llvm-readelf"
+              "$name/bin/llvm-readobj" "$name/bin/llvm-objdump" "$name/bin/llvm-objcopy" "$name/bin/llvm-strip")
           else
             name="clang+llvm-$VERSION-x86_64-pc-windows-msvc"
-            members=("$name/bin/clang.exe" "$name/bin/lld-link.exe" "$name/lib/clang")
+            members=("$name/bin/clang.exe" "$name/bin/lld-link.exe" "$name/lib/clang"
+              "$name/bin/ld.lld.exe" "$name/bin/lld.exe" "$name/bin/llvm-config.exe" "$name/bin/llvm-readelf.exe"
+              "$name/bin/llvm-readobj.exe" "$name/bin/llvm-objdump.exe" "$name/bin/llvm-objcopy.exe" "$name/bin/llvm-strip.exe")
           fi
           temp=$(cd "$RUNNER_TEMP" && pwd)
           command -v zstd || brew install zstd
@@ -649,7 +661,7 @@ jobs:
       - name: toolchains
         run: |
           mkdir -p artifacts/layer-native
-          $TOOLING toolchains probe --only dotnet-sdk,gcc,clang,bubblewrap | tee artifacts/layer-native/probe.txt
+          $TOOLING toolchains probe --only dotnet-sdk,gcc,clang,llvm,lld,bubblewrap | tee artifacts/layer-native/probe.txt
       - name: build
         run: dotnet build Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release -warnaserror
       - name: test
@@ -743,6 +755,53 @@ jobs:
           path: artifacts/
           if-no-files-found: warn
 
+  # The Go layer (tooling/ci/layers/go.yaml): the pinned go, which builds, vets and runs the modules
+  # the Go backend writes and the helper of the Go frontend, offline (GOPROXY=off, GOTOOLCHAIN=local).
+  layer-go:
+    name: layer-go ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      POLYPILER_REQUIRE_TOOLCHAINS: '1'
+      DOTNET_NOLOGO: 'true'
+      TOOLING: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build --
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: ci env
+        id: env
+        run: |
+          dotnet build Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -warnaserror
+          $TOOLING ci env --layer go | tee -a "$GITHUB_OUTPUT"
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ steps.env.outputs.go }}
+          cache: false
+      - name: toolchains
+        run: $TOOLING toolchains probe --only go
+      - name: build
+        run: dotnet build Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release -warnaserror
+      - name: test
+        run: dotnet test Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release --no-build --filter "TestCategory=Layer.go" --logger "trx;LogFileName=layer-go.trx" --logger "console;verbosity=detailed" --results-directory artifacts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: layer-go-${{ matrix.os }}
+          path: artifacts/
+          if-no-files-found: warn
+
   # The Rust layer of PRD §7.3 (tooling/ci/layers/rust.yaml): the stable toolchain `rust` with rustfmt
   # and clippy, and the dated nightly `rust-miri`, which only runs Miri, at the versions
   # tooling/toolchains.lock pins. The Miri sysroot is prepared here, where the network is allowed; the
@@ -807,6 +866,52 @@ jobs:
           name: layer-rust-${{ matrix.os }}
           path: artifacts/
           if-no-files-found: ignore
+
+  # The classic Visual Basic layer (tooling/ci/layers/visualbasic.yaml, ADR 2600): LibreOffice at the
+  # version tooling/toolchains.lock pins, installed from the Debian packages of the Document Foundation's
+  # archive, runs the VB6 / VBA modules of the frontend and the backend headless as the oracle.
+  layer-visualbasic:
+    name: layer-visualbasic ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+      POLYPILER_REQUIRE_TOOLCHAINS: '1'
+      DOTNET_NOLOGO: 'true'
+      TOOLING: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release --no-build --
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: ci env
+        id: env
+        run: |
+          dotnet build Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -warnaserror
+          $TOOLING ci env --layer visualbasic | tee -a "$GITHUB_OUTPUT"
+      - name: install libreoffice
+        run: tooling/ci/visualbasic/install.sh "${{ steps.env.outputs.libreoffice }}"
+      - name: toolchains
+        run: $TOOLING toolchains probe --only libreoffice
+      - name: build
+        run: dotnet build Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release -warnaserror
+      - name: test
+        run: dotnet test Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release --no-build --filter "TestCategory=Layer.visualbasic" --logger "trx;LogFileName=layer-visualbasic.trx" --logger "console;verbosity=detailed" --results-directory artifacts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: layer-visualbasic-${{ matrix.os }}
+          path: artifacts/
+          if-no-files-found: warn
 
   # PRD §13.1 and §23.3: what Polypiler writes must come out byte for byte the same when it is generated
   # again. `rebuild check` runs each command twice through the sandboxed runner, each run in a fresh

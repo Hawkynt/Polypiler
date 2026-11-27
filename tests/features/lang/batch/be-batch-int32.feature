@@ -6,7 +6,7 @@ Feature: Emit Windows Batch integer kernels
     Then the native and translated results are both 42
 
   Scenario: A construct outside the profile is refused
-    Given a C# kernel returning an Int64 value
+    Given a C# kernel calling a native DLL function
     When it is translated under the cmd profile
     Then it reports PLY2850 and writes no output file
 
@@ -20,7 +20,7 @@ Feature: Emit Windows Batch integer kernels
     When it is translated under the cmd profile
     Then the native Batch script reports KeyNotFound
 
-  Scenario: A map with a wider value type is refused
+  Scenario: An Int64 dictionary still uses the general runtime
     Given a C# kernel allocating an Int64 dictionary
     When it is translated under the cmd profile
-    Then it reports PLY2850 and writes no output file
+    Then the native and translated dictionaries both return 0 without output

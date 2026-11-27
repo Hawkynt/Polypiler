@@ -36,6 +36,16 @@ public sealed class BatchFrontendTests {
     Assert.That(LiftAndRunCSharp(path), Is.EqualTo(42));
   }
 
+  [TestCase("delayed-expansion.bat", 140)]
+  [TestCase("delayed-expansion-zero.bat", 7)]
+  public void DelayedExpansionFixturesLiftAndRunAsCSharp(string fixture, int expected) {
+    var path = Path.Combine(PrototypeFixture.RepositoryRoot, "tests", "fixtures", "batch", fixture);
+    var lifted = BatchFrontend.Import(path, File.ReadAllText(path));
+    Assert.That(lifted.Diagnostics, Is.Empty);
+    Assert.That(IrInterpreter.Call(lifted.Module!, "Run", []), Is.EqualTo(expected));
+    Assert.That(LiftAndRunCSharp(path), Is.EqualTo(expected));
+  }
+
   private static int LiftAndRunCSharp(string path) {
     using var errors = new StringWriter();
     var output = Directory.CreateTempSubdirectory();
@@ -89,6 +99,7 @@ public sealed class BatchFrontendTests {
 
   [TestCase("set /a \"total=0\"\nfor /l %%I in (1,0,3) do set /a \"total=total+%%I\"\nexit /b %total%", "PLY2802", 3)]
   [TestCase("set /a \"total=0\"\nfor /l %%I in (2147483647,1,2147483647) do set /a \"total=total+1\"\nexit /b %total%", "PLY2802", 3)]
+  [TestCase("set /a \"total=0\"\nfor /l %%I in (-2147483648,1,-2147483648) do set /a \"total=total+%%I\"\nexit /b %total%", "PLY2802", 3)]
   [TestCase("set /a \"total=0\"\nfor /l %%I in (-2147483648,-1,-2147483648) do set /a \"total=total+1\"\nexit /b %total%", "PLY2802", 3)]
   [TestCase("set /a \"total=0\"\nfor /l %%I in (1,2147483647,2) do set /a \"total=total+1\"\nexit /b %total%", "PLY2802", 3)]
   [TestCase("set /a \"total=0\"\nfor /l %%I in (1,1,3) do set /a \"total=total+%%i\"\nexit /b %total%", "PLY2802", 3)]
@@ -96,7 +107,6 @@ public sealed class BatchFrontendTests {
   [TestCase("set /a \"s=1\"\nfor /l %%I in (%s%,1,3) do set /a \"s=s+%%I\"\nexit /b %s%", "PLY2802", 3)]
   [TestCase("set /a \"total=0\"\nfor /l %%I in (08,1,9) do set /a \"total=total+%%I\"\nexit /b %total%", "PLY2800", 3)]
   [TestCase("for /f %%I in (a.txt) do set /a \"x=1\"\nexit /b 0", "PLY2802", 2)]
-  [TestCase("for /l %%I in (1,1,3) do (set /a \"x=1\")\nexit /b 0", "PLY2802", 2)]
   public void RejectsInvalidOrUnsupportedForLoops(string body, string code, int line) {
     var lifted = BatchFrontend.Import("for-l.bat", _prologue + body);
     Assert.That(lifted.Module, Is.Null);
@@ -129,7 +139,6 @@ public sealed class BatchFrontendTests {
   [TestCase("call :f 1 2 3 4 5 6 7 8 9 10\nexit /b 0\n:f\ngoto :eof", "PLY2802", 2)]
   [TestCase("set \"x=1\"\ncall :f %x%\nexit /b 0\n:f\ngoto :eof", "PLY2802", 3)]
   [TestCase("call :f abc\nexit /b 0\n:f\ngoto :eof", "PLY2800", 2)]
-  [TestCase("setlocal EnableDelayedExpansion\nexit /b 0", "PLY2802", 2)]
   [TestCase("set \"x=1\" &\nexit /b 0", "PLY2800", 2)]
   [TestCase("& set \"x=1\"\nexit /b 0", "PLY2800", 2)]
   [TestCase("set \"errorlevel=5\"\nexit /b 0", "PLY2802", 1)]

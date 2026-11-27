@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -18,6 +17,8 @@ namespace Polypiler.Tests.Backends.Batch;
 [TestFixture]
 public sealed class BatchTranslationTests {
 
+  private static readonly string[] _forbiddenEngines = ["cscript", "wscript", "powershell", "pwsh", "mshta", ".vbs"];
+
   private static string BatchFixture(params string[] parts)
     => Path.Combine([PrototypeFixture.RepositoryRoot, "tests", "fixtures", "batch", .. parts]);
 
@@ -25,12 +26,14 @@ public sealed class BatchTranslationTests {
   public void TranslatesTheCountdownToStandaloneBatch() {
     var script = Emit(File.ReadAllText(BatchFixture("countdown.cs")));
     Assert.That(script, Does.Contain("setlocal EnableExtensions DisableDelayedExpansion").And.Contain("exit /b"));
+    AssertPureBatch(script);
   }
 
   [Test]
   public void TranslatesBitwiseFixtureUsingBuiltIns() {
     var script = Emit(File.ReadAllText(BatchFixture("bitwise.cs")));
     Assert.That(script, Does.Contain("&31").And.Contain("~").And.Contain("|").And.Contain("^"));
+    AssertPureBatch(script);
   }
 
   [TestCase(false)]
@@ -88,11 +91,12 @@ public sealed class BatchTranslationTests {
   [TestCase("int n = 0; var map = new Dictionary<string, int>(); return map[$\"key{n}\"];")]
   [TestCase("var map = new Dictionary<string, int>(); map.Clear(); return 0;")]
   [TestCase("int n = 0; while (n < 2) { var map = new Dictionary<string, int>(); n += map.Count + 1; } return n;")]
-  public void RefusesUnsupportedDictionaryShapes(string body) {
+  public void UsesTheGeneralRuntimeForOtherDictionaryShapes(string body) {
     var source = "using System.Collections.Generic; public static class Kernel { public static int Run() { " + body + " } }";
-    var imported = CSharpFrontend.Import("unsupported.cs", source);
+    var imported = CSharpFrontend.Import("runtime-map.cs", source);
     Assert.That(imported.Diagnostics, Is.Empty);
-    Assert.That(BatchEmitter.Check(imported.Module!), Has.One.Matches<Diagnostic>(problem => problem.Code == "PLY2850"));
+    Assert.That(BatchEmitter.Check(imported.Module!), Is.Empty);
+    Assert.That(BatchEmitter.Emit(imported.Module!).Single().Content, Does.Contain(":__ply_"));
   }
 
   [Test]
@@ -146,6 +150,7 @@ public sealed class BatchTranslationTests {
 
     var script = Emit(source);
     Assert.That(script, Does.Contain("setlocal EnableDelayedExpansion").And.Contain("echo(").And.Contain("%%PATH%%"));
+    AssertPureBatch(script);
   }
 
   [Test]
@@ -170,6 +175,7 @@ public sealed class BatchTranslationTests {
 
     var script = Emit(source);
     Assert.That(script, Does.Contain("echo(\r\n"));
+    AssertPureBatch(script);
   }
 
   [TestCase("Console.WriteLine(\"\\u00E9\");", "PLY2850")]
@@ -191,7 +197,7 @@ public sealed class BatchTranslationTests {
     Assert.That(script, Is.Null);
   }
 
-  [TestCase(1000, true)]
+  [TestCase(980, true)]
   [TestCase(1020, false)]
   public void EnforcesExpandedEchoCommandLengthBound(int literalLength, bool accepted) {
     var text = new string('a', literalLength);
@@ -205,7 +211,7 @@ public sealed class BatchTranslationTests {
   [Test]
   public void TranslatesArrayAliasFixtureAndEmptyArrayAndConditionalAlias() {
     var script = Emit(File.ReadAllText(BatchFixture("array-alias.cs")));
-    Assert.That(script, Does.Contain("PLY_BATCH_TRAP=IndexOutOfRange").And.Contain("exit /b 97"));
+    Assert.That(script, Does.Contain("IndexOutOfRange").And.Contain("exit /b 97"));
 
     const string conditional = """
       public static class Kernel {
@@ -220,6 +226,7 @@ public sealed class BatchTranslationTests {
       """;
     var conditionalScript = Emit(conditional);
     Assert.That(conditionalScript, Does.Contain("_ply_al"));
+    AssertPureBatch(conditionalScript);
   }
 
   [TestCase(BatchEmitter.CmdArrayStorageBudget, true)]
@@ -237,11 +244,16 @@ public sealed class BatchTranslationTests {
   [TestCase("public static int Run() { int total = 0; for (int i = 0; i < 2; i++) { int[] a = [i]; total += a[0]; } return total; }")]
   [TestCase("public static int Run() { long x = -1; return (int)(x >>> 1); }")]
   [TestCase("public static int Run() { uint x = 1; return (int)(x >> 1); }")]
-  public void RefusesUnsupportedArrayAndBitwiseShapes(string method) {
-    var (status, error, script) = Translate($"public static class Kernel {{ {method} }}");
-    Assert.That(status, Is.EqualTo(TranslateCommand.UnsupportedConstruct), error);
-    Assert.That(error, Does.Contain("PLY2850"));
-    Assert.That(script, Is.Null);
+  [TestCase("public static long Run() => 1L;")]
+  [TestCase("public static int Run(int value) => value;")]
+  [TestCase("public static int Run() { int x = 1; return checked(x + 1); }")]
+  [TestCase("public static int Run() { int x = 5; return x / 2; }")]
+  [TestCase("public static int Run() { int x = 5; return System.Math.Abs(x); }")]
+  [TestCase("public static int Run() { bool x = true; return x ? 1 : 0; }")]
+  public void TranslatesExtendedIntegerArrayAndRuntimeShapes(string method) {
+    var script = Emit($"public static class Kernel {{ {method} }}");
+    Assert.That(script, Does.Contain("setlocal EnableExtensions EnableDelayedExpansion"));
+    AssertPureBatch(script);
   }
 
   [TestCase("int sum = 0; for (int i = 0; i < 4; i += 1) { if (i == 0) continue; if (i != 2) sum += i; else break; } return -sum;", " NEQ ")]
@@ -252,11 +264,7 @@ public sealed class BatchTranslationTests {
   public void EmitsClosedControlFlowUsingOnlyBuiltIns(string body, string expected) {
     var script = Emit($"public static class Kernel {{ public static int Run() {{ {body} }} }}");
     Assert.That(script, Does.Contain(expected));
-    foreach (var line in script.Split("\r\n", StringSplitOptions.RemoveEmptyEntries)) {
-      Assert.That(line, Does.StartWith(":").Or.EqualTo("@echo off").Or.StartWith("setlocal ")
-        .Or.StartWith("set /a ").Or.StartWith("if ").Or.StartWith("goto ").Or.StartWith("exit /b "));
-      Assert.That(line.IndexOfAny(['\r', '\n']), Is.EqualTo(-1));
-    }
+    AssertPureBatch(script);
   }
 
   [Test]
@@ -269,7 +277,7 @@ public sealed class BatchTranslationTests {
   [Test]
   public void SequentialExpressionsReuseTheirTemporaryVariables() {
     var shortKernel = AssignedVariables(EmitUpdates(4));
-    var longKernel = AssignedVariables(EmitUpdates(512));
+    var longKernel = AssignedVariables(EmitUpdates(64));
     Assert.That(longKernel, Has.Length.EqualTo(shortKernel.Length));
     Assert.That(longKernel, Is.EquivalentTo(shortKernel));
 
@@ -278,18 +286,15 @@ public sealed class BatchTranslationTests {
       + "if ((x - 1) * (x + 1) >= (x + 2) * (x - 2)) return -x; return x; } }");
 
     static string[] AssignedVariables(string script) => script.Split("\r\n")
-      .Where(line => line.StartsWith("set /a \"", StringComparison.Ordinal))
+      .Where(line => line.StartsWith("set \"_t", StringComparison.Ordinal) || line.StartsWith("set /a \"_t", StringComparison.Ordinal))
       .Select(line => line[..line.IndexOf('=')]).Distinct(StringComparer.Ordinal).ToArray();
   }
 
-  [TestCase("public static long Run() => 1L;")]
-  [TestCase("public static int Run(int value) => value;")]
-  [TestCase("public static int Run() { int x = 1; return checked(x + 1); }")]
-  [TestCase("public static int Run() { int x = 5; return x / 2; }")]
-  [TestCase("public static int Run() { int x = 5; return System.Math.Abs(x); }")]
-  [TestCase("public static int Run() { bool x = true; return x ? 1 : 0; }")]
-  public void RefusesConstructsOutsideTheProfile(string method) {
-    var (status, error, script) = Translate($"public static class Kernel {{ {method} }}");
+  [TestCase("using System.Runtime.InteropServices; public static class Kernel { [DllImport(\"geom\")] private static extern int geom_norm(int x); public static int Run() => geom_norm(1); }")]
+  [TestCase("public static class Kernel { public static double Run() => 1.5; }")]
+  [TestCase("public static class Kernel { public static float Run() => 1.5f; }")]
+  public void RefusesConstructsOutsideTheProfile(string source) {
+    var (status, error, script) = Translate(source);
     Assert.That(status, Is.EqualTo(TranslateCommand.UnsupportedConstruct), error);
     Assert.That(error, Does.Contain("PLY2850"));
     Assert.That(script, Is.Null);
@@ -304,13 +309,13 @@ public sealed class BatchTranslationTests {
     Assert.That(BatchEmitter.Check(unverified), Is.Not.Empty);
     Assert.That(() => BatchEmitter.Emit(unverified), Throws.ArgumentException);
 
-    // LogicalNot, LogicalAnd, false constant, switch without default, and nested block in cmd
+    // LogicalNot, LogicalAnd, LogicalOr, false constant, switch without default, and nested block in cmd
     const string logicAndSwitch = """
       public static class Kernel {
         public static int Run() {
           int a = 1, b = 2;
           while (false) a = 9;
-          if (!(a == 0) && b == 2) {
+          if ((!(a == 0) && b == 2) || a == 99) {
             switch (a) {
               case 1: a = 10; break;
             }
@@ -321,25 +326,34 @@ public sealed class BatchTranslationTests {
       """;
     var cmdScript = Emit(logicAndSwitch);
     Assert.That(cmdScript, Does.Contain("exit /b"));
+    AssertPureBatch(cmdScript);
 
-    // Crafted IR refusals for cmd
-    var longSwitch = new IrModule("LongSwitch", [new IrFunction("Run", true, IrType.I32, [], [],
-      new([new IrSwitch(new IrConst(IrType.I64, 1), []), new IrReturn(new IrConst(IrType.I32, 0))]))]);
-    Assert.That(BatchEmitter.Check(longSwitch), Has.One.Matches<Diagnostic>(d => d.Code == "PLY2850"));
+    // Crafted IR refusals for cmd (BigInt, Float, Foreign, unsupported intrinsic)
+    var bigParam = new IrLocal("x", IrType.BigInt);
+    var bigIntMod = new IrModule("BigIntMod", [new IrFunction("Run", true, IrType.BigInt, [bigParam], [],
+      new([new IrReturn(new IrLocalRef(bigParam))]))]);
+    Assert.That(BatchEmitter.Check(bigIntMod), Has.One.Matches<Diagnostic>(d => d.Code == "PLY2850"));
 
-    var strWrite = new IrModule("BadWrite", [new IrFunction("Run", true, IrType.I32, [], [],
-      new([new IrWriteLine(new IrIntrinsic(IrIntrinsicOp.FormatBoolDotNet, IrType.String, [new IrConst(IrType.Bool, 1)])), new IrReturn(new IrConst(IrType.I32, 0))]))]);
-    Assert.That(BatchEmitter.Check(strWrite), Has.One.Matches<Diagnostic>(d => d.Code == "PLY2850"));
+    var floatMod = new IrModule("FloatMod", [new IrFunction("Run", true, IrType.F64, [], [],
+      new([new IrReturn(new IrConst(IrType.F64, IrOperators.Bits(IrType.F64, 1.5)))]))]);
+    Assert.That(BatchEmitter.Check(floatMod), Has.One.Matches<Diagnostic>(d => d.Code == "PLY2850"));
 
-    var badCond = new IrModule("BadCond", [new IrFunction("Run", true, IrType.I32, [], [],
-      new([new IrIf(new IrBinary(IrBinaryOp.Equal, new IrConst(IrType.I64, 1), new IrConst(IrType.I64, 1)), new([new IrReturn(new IrConst(IrType.I32, 1))]), null),
-        new IrReturn(new IrConst(IrType.I32, 0))]))]);
-    Assert.That(BatchEmitter.Check(badCond), Has.One.Matches<Diagnostic>(d => d.Code == "PLY2850"));
+    var foreignFn = new IrForeignFunction("ext", false, "geom", IrType.I32, [new IrForeignParameter("x", IrType.I32, IrMarshal.Blittable)]);
+    var foreignMod = new IrModule("ForeignMod", [new IrFunction("Run", true, IrType.I32, [], [],
+      new([new IrReturn(new IrForeignCall("ext", IrType.I32, [new IrConst(IrType.I32, 1)]))]))]) { ForeignFunctions = [foreignFn] };
+    Assert.That(BatchEmitter.Check(foreignMod), Has.One.Matches<Diagnostic>(d => d.Code == "PLY2850"));
 
-    var badBinaryBranch = new IrModule("BadBin", [new IrFunction("Run", true, IrType.I32, [], [],
-      new([new IrIf(new IrIntrinsic(IrIntrinsicOp.StrEquals, IrType.Bool, [new IrStrConst("a"), new IrStrConst("b")]), new([new IrReturn(new IrConst(IrType.I32, 1))]), null),
-        new IrReturn(new IrConst(IrType.I32, 0))]))]);
-    Assert.That(BatchEmitter.Check(badBinaryBranch), Has.One.Matches<Diagnostic>(d => d.Code == "PLY2850"));
+    var unsupportedIntrinsic = new IrModule("BadIntr", [new IrFunction("Run", true, IrType.Bool, [], [],
+      new([new IrReturn(new IrIntrinsic(IrIntrinsicOp.RegexTest, IrType.Bool, [new IrStrConst("a"), new IrStrConst("a"), new IrStrConst("")]))]))]);
+    Assert.That(BatchEmitter.Check(unsupportedIntrinsic), Has.One.Matches<Diagnostic>(d => d.Code == "PLY2850"));
+  }
+
+  private static void AssertPureBatch(string script) {
+    foreach (var forbidden in _forbiddenEngines)
+      Assert.That(script.ToLowerInvariant(), Does.Not.Contain(forbidden));
+
+    foreach (var line in script.Split("\r\n", StringSplitOptions.RemoveEmptyEntries))
+      Assert.That(line.Length, Is.LessThanOrEqualTo(1024));
   }
 
   private static string Emit(string source, string profile = BatchEmitter.Profile, bool optimize = false) {

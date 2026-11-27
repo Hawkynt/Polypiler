@@ -62,6 +62,25 @@ BitPerm already has a routing map, building blocks, a greedy solver, a bounded D
 
 The current bounded search should be described as "best found in the modeled search space under the budget", not unconditionally globally optimal.
 
+### Candidate networks (what exists)
+
+Step 3 has its data structure in `Polypiler.Permutation.Networks` (#532). A `BitOperationNetwork` is a
+straight-line program of typed bit operations from one input (value 0) to one result; `NetworkBuilder`
+makes one, sharing identical steps and leaving out those that change nothing. The core operations are
+`Const`, `And`, `Or`, `Xor`, `Not`, `ZeroExtend` and `Truncate`, with the logical shifts beside them; the
+semantics of each - evaluation, the checks of a step, lowering, the primitive it costs - is registered in
+`NetworkOpRegistry`, where the primitive issues add theirs. `NetworkEvaluator` computes a network in exact
+integers; `NetworkLowering` writes it as tree IR, one local per step at a `u32` or `u64` carrier with the
+bits above the step's width cleared, and refuses widths the IR has no integer type of (`PLY0812`). The
+interpreter of that IR shares no code with the evaluator, which makes it the second evaluation the tests
+compare against. `NetworkVerifier` checks rules N1-N6 (`PLY0810`), `NetworkText` reads and prints the
+`v1 = And(v0, 0x0F); …` form, and `NetworkStatistics` measures depth, live values, constants and the cost
+under a `spec/permutations/costs` table (`PrimitiveCostTable`, `PLY0811` for a primitive it does not
+price). Primitives plug in through `IPermutationPrimitive` and `PrimitiveRegistry`; their terms are
+combined by `CompositeNetwork.Assemble` - or of the terms, exclusive or with the inversion mask, or with
+the constant-one mask, as BitPerm assembles them - which first checks each term's contract on its own
+network.
+
 ## De-unroll before re-unrolling
 
 A set of four independent indexed stores can become an iteration-domain operation only if their address expressions and effects permit it. The target may then choose a loop for 6502, register packing on x86-64 or SIMD for a wide processor.

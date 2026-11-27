@@ -6,7 +6,7 @@ open and is cited by the issues that implement it.
 
 A record is `docs/adr/<nnnn>-<slug>.md`: a four-digit number and a lower-case hyphenated slug. The
 line after its title is `Area: <area>`. Numbers are allocated in blocks per area — 0001–0029 is the
-foundation block, the catalog block starts at 0030 — and are never reused; a superseded record keeps
+foundation block, the catalog block starts at 0030, the languages block spans 1000–2999 — and are never reused; a superseded record keeps
 its number and names its successor. The pull request that adds a record adds its row here, which is how a number is claimed.
 Probe programs and recorded output a record measured live under `docs/adr/evidence/<nnnn>/`.
 
@@ -22,5 +22,6 @@ Probe programs and recorded output a record measured live under `docs/adr/eviden
 | [0008](0008-rust-trap-policy.md) | Traps in generated Rust: a trap policy of panics or error values | accepted | [#1392](https://github.com/Hawkynt/Polypiler/issues/1392) |
 | [0009](0009-structured-tree-ir.md) | The structured typed tree IR is the IR | accepted | — |
 | [0030](0030-cipher-source-licence.md) | Cipher source licence and its lowest pin | accepted | [#588](https://github.com/Hawkynt/Polypiler/issues/588) |
+| [2600](2600-classic-visual-basic-oracle.md) | The oracle of classic Visual Basic: LibreOffice Basic in VBA mode | accepted | [#1097](https://github.com/Hawkynt/Polypiler/issues/1097) |
 
 Related: [documentation index](../README.md) · [IR and analysis contracts](../architecture/IR.md) · [compilation pipeline](../architecture/PIPELINE.md).

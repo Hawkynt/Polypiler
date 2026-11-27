@@ -22,10 +22,25 @@ namespace Polypiler.Core.BinaryFormats;
 /// <param name="Entries">The entry points.</param>
 public sealed record BinaryImage(string Container, string Isa, string Mode, ByteOrder ByteOrder, ImmutableArray<ImageSection> Sections, ImmutableArray<ImageSymbol> Symbols, ImmutableArray<ImageRelocation> Relocations, ImmutableArray<ImageImport> Imports, ImmutableArray<ulong> Entries) : IMachineCodeSource {
 
+  /// <summary>The container's object type, when provided.</summary>
+  public string? ObjectType { get; init; }
+
+  /// <summary>Ranges whose instruction set or data state differs from adjacent ranges.</summary>
+  public ImmutableArray<ImageModeRange> ModeRanges { get; init; } = [];
+
   /// <summary>The section that holds an address, or <see langword="null"/>.</summary>
   /// <param name="address">The address.</param>
   /// <returns>The section.</returns>
-  public ImageSection? SectionAt(ulong address) => this.Sections.FirstOrDefault(section => section.Contains(address));
+  public ImageSection? SectionAt(ulong address) => this.Sections.FirstOrDefault(section => section.IsMapped && section.Contains(address));
+
+  /// <summary>The mode of the mapped section at this address, including <c>data</c>.</summary>
+  /// <param name="address">The address.</param>
+  /// <returns>The specific range mode, or the image's default mode.</returns>
+  public string ModeAt(ulong address) {
+    var section = this.SectionAt(address);
+    return this.ModeRanges.FirstOrDefault(range => range.Section == section?.Name && address >= range.Address
+      && address - range.Address < range.Size)?.Mode ?? this.Mode;
+  }
 
   /// <inheritdoc/>
   public byte? ByteAt(ulong address) => this.SectionAt(address)?.ByteAt(address);
@@ -34,12 +49,20 @@ public sealed record BinaryImage(string Container, string Isa, string Mode, Byte
   public bool Equals(BinaryImage? other)
     => other is not null && this.Container == other.Container && this.Isa == other.Isa && this.Mode == other.Mode && this.ByteOrder == other.ByteOrder
       && this.Sections.SequenceEqual(other.Sections) && this.Symbols.SequenceEqual(other.Symbols) && this.Relocations.SequenceEqual(other.Relocations)
-      && this.Imports.SequenceEqual(other.Imports) && this.Entries.SequenceEqual(other.Entries);
+      && this.Imports.SequenceEqual(other.Imports) && this.Entries.SequenceEqual(other.Entries) && this.ObjectType == other.ObjectType
+      && this.ModeRanges.SequenceEqual(other.ModeRanges);
 
   /// <inheritdoc/>
   public override int GetHashCode() => HashCode.Combine(this.Container, this.Isa, this.Mode, this.ByteOrder, this.Sections.Length);
 
 }
+
+/// <summary>A section-relative instruction-set or data range.</summary>
+/// <param name="Address">The range's first address.</param>
+/// <param name="Size">The range size in bytes.</param>
+/// <param name="Mode">The mode name, or <c>data</c>.</param>
+/// <param name="Section">The containing section name.</param>
+public sealed record ImageModeRange(ulong Address, ulong Size, string Mode, string Section);
 
 /// <summary>
 /// A section of an image: its bytes at an address, and how much address space it takes, which may be
@@ -53,6 +76,15 @@ public sealed record BinaryImage(string Container, string Isa, string Mode, Byte
 /// <param name="Writable">Whether it may be written.</param>
 /// <param name="Executable">Whether code runs from it.</param>
 public sealed record ImageSection(string Name, ulong Address, ReadOnlyMemory<byte> Bytes, ulong VirtualSize, bool Readable, bool Writable, bool Executable) {
+
+  /// <summary>Whether the section occupies address space at run time.</summary>
+  public bool Allocated { get; init; } = true;
+
+  /// <summary>Whether the section belongs to thread-local storage.</summary>
+  public bool ThreadLocal { get; init; }
+
+  /// <summary>Whether the section is mapped in the ordinary process address space.</summary>
+  public bool IsMapped => this.Allocated && !this.ThreadLocal;
 
   /// <summary>The size in memory: the virtual size or the number of bytes, whichever is larger.</summary>
   public ulong Size => Math.Max(this.VirtualSize, (ulong)this.Bytes.Length);
@@ -75,7 +107,8 @@ public sealed record ImageSection(string Name, ulong Address, ReadOnlyMemory<byt
   /// <inheritdoc/>
   public bool Equals(ImageSection? other)
     => other is not null && this.Name == other.Name && this.Address == other.Address && this.Bytes.Span.SequenceEqual(other.Bytes.Span)
-      && this.VirtualSize == other.VirtualSize && this.Readable == other.Readable && this.Writable == other.Writable && this.Executable == other.Executable;
+      && this.VirtualSize == other.VirtualSize && this.Allocated == other.Allocated && this.ThreadLocal == other.ThreadLocal
+      && this.Readable == other.Readable && this.Writable == other.Writable && this.Executable == other.Executable;
 
   /// <inheritdoc/>
   public override int GetHashCode() => HashCode.Combine(this.Name, this.Address, this.Bytes.Length, this.VirtualSize);
@@ -133,7 +166,12 @@ public enum RelocationKind {
 /// <param name="Symbol">The symbol, or <see langword="null"/>.</param>
 /// <param name="Addend">The addend.</param>
 /// <param name="RawType">The container's own relocation type.</param>
-public sealed record ImageRelocation(ulong Address, RelocationKind Kind, string? Symbol, long Addend, int RawType);
+public sealed record ImageRelocation(ulong Address, RelocationKind Kind, string? Symbol, long Addend, int RawType) {
+
+  /// <summary>The target section for a section-relative relocation, when provided.</summary>
+  public string? TargetSection { get; init; }
+
+}
 
 /// <summary>A slot the loader binds to a symbol of another module.</summary>
 /// <param name="SlotAddress">The address of the slot.</param>

@@ -21,8 +21,8 @@ public sealed class BatchBackendSteps {
   [Given("^the pinned C# countdown fixture$")]
   public void Countdown() => this._source = File.ReadAllText(Path.Combine(PrototypeFixture.RepositoryRoot, "tests", "fixtures", "batch", "countdown.cs"));
 
-  [Given("^a C# kernel returning an Int64 value$")]
-  public void WideInteger() => this._source = "public static class Kernel { public static long Run() => 1L; }";
+  [Given("^a C# kernel calling a native DLL function$")]
+  public void NativeInterop() => this._source = "using System.Runtime.InteropServices; public static class Kernel { [DllImport(\"geom\")] private static extern int geom_norm(int x); public static int Run() => geom_norm(1); }";
 
   [Given("^the pinned C# map alias fixture$")]
   public void MapAlias() => this._source = File.ReadAllText(Path.Combine(PrototypeFixture.RepositoryRoot, "tests", "fixtures", "batch", "map-alias.cs"));

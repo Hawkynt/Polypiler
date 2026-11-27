@@ -25,7 +25,7 @@ public sealed record LoadedBinary(BinaryImage Image, AddressMap AddressMap, Immu
   /// <param name="address">The address.</param>
   /// <returns>Whether it may.</returns>
   public bool IsDecodable(ulong address)
-    => this.Image.SectionAt(address) is { Executable: true }
+    => this.Image.SectionAt(address) is { Executable: true } && this.Image.ModeAt(address) != "data"
       && (this.Manifest is null || this.Manifest.CodeRanges.IsEmpty || this.Manifest.CodeRanges.Any(range => range.Contains(address)));
 
   /// <inheritdoc/>
@@ -87,11 +87,12 @@ public static class ImageBuilder {
     var codec = (registry ?? BinaryCodecRegistry.CreateDefault()).Select(file, manifest?.Container, imagePath);
     if (!codec.Succeeded)
       return BinaryResult<LoadedBinary>.Failure(codec.Problems);
-    var read = codec.Value.Read(file, manifest);
+    var read = codec.Value.Read(file, manifest, imagePath);
     if (!read.Succeeded)
       return BinaryResult<LoadedBinary>.Failure(read.Problems);
 
-    return manifest is null ? Accept(read.Value, null, profile) : Merge(read.Value, manifest, profile);
+    var built = manifest is null ? Accept(read.Value, null, profile) : Merge(read.Value, manifest, profile);
+    return built.Succeeded && !read.Problems.IsEmpty ? BinaryResult<LoadedBinary>.Success(built.Value, read.Problems) : built;
   }
 
   private static BinaryResult<LoadedBinary> Merge(BinaryImage container, BinaryManifest manifest, IsaProfile? profile) {
@@ -129,7 +130,7 @@ public static class ImageBuilder {
 
     var entries = ImmutableArray.CreateBuilder<EntryContract>();
     foreach (var entry in manifest.Entries) {
-      var inCode = image.SectionAt(entry.Address) is { Executable: true }
+      var inCode = image.SectionAt(entry.Address) is { Executable: true } && image.ModeAt(entry.Address) != "data"
         && (manifest.CodeRanges.IsEmpty || manifest.CodeRanges.Any(range => range.Contains(entry.Address)));
       if (!inCode)
         problems.Add(Diagnostic.Create(BinaryDiagnostics.OutsideCode, null, entry.Name, BinaryDiagnostics.Hex(entry.Address)));
@@ -144,7 +145,7 @@ public static class ImageBuilder {
   private static BinaryResult<LoadedBinary> Accept(BinaryImage image, BinaryManifest? manifest, IsaProfile? profile, ImmutableArray<EntryContract> entries = default) {
     IEnumerable<AddressRange> ranges = manifest?.MemoryMap is { } map
       ? map
-      : image.Sections.Where(section => section.Size > 0)
+      : image.Sections.Where(section => section.IsMapped && section.Size > 0)
         .Select(section => new AddressRange(section.Name, section.Address, section.Address + (section.Size - 1), section.Writable ? AddressKind.Ram : AddressKind.Rom, section.Executable));
     try {
       var addressMap = new AddressMap(ranges, profile?.AddressBits ?? 64, image.Isa);

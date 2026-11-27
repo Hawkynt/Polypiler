@@ -23,8 +23,11 @@ internal sealed class ExceptionFixtureTests {
   private static IEnumerable<TestCaseData> Calls()
     => ExceptionFixtures.Calls().Select(entry => new TestCaseData(entry.File, entry.Class, entry.Call).SetName($"{entry.Class}.{entry.Call}"));
 
-  /// <summary>Test design 1, 2, 3 and 6: the interpreter computes what .NET computes, call by call.</summary>
-  [TestCaseSource(nameof(Calls))]
+  /// <summary>
+  /// Test design 1, 2, 3 and 6: the interpreter computes what .NET computes, call by call. The compiled
+  /// fixtures keep their trace in static fields shared by every call, so the cases run one at a time.
+  /// </summary>
+  [TestCaseSource(nameof(Calls)), NonParallelizable]
   public void Interpreter_ComputesWhatDotNetComputes(string file, string className, PrototypeCall call)
     => Assert.That(PrototypeFixture.InterpretedOutcome(ExceptionFixtures.Imported(file), call),
       Is.EqualTo(PrototypeFixture.InvokedOutcome(ExceptionFixtures.Compiled(className, call.Method), call)));

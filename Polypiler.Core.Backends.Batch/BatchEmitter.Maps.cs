@@ -77,6 +77,9 @@ public static partial class BatchEmitter {
 
     private (string Map, string Entry) MapEntry(IrCollection operation, int slot) {
       var map = this.MapReference(operation, slot);
+      if (operation.Arguments[1] is IrNull)
+        throw new KernelDiagnostic("a null dictionary key");
+
       var key = this.Value(operation.Arguments[1], slot + 1);
       return (map, $"_ply_m%{map}%_k%{key}%");
     }

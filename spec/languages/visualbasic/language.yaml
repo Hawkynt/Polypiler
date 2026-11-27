@@ -1,0 +1,17 @@
+id: LANGUAGES.visualbasic
+title: Visual Basic (VB6 / VBA)
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#1090"
+tests: []
+introducedIn: P5
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: language
+  identifier: visualbasic
+  displayName: Visual Basic (VB6 / VBA)
+  backlogCode: VB
+  diagnosticBlock: 2600

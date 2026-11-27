@@ -5,7 +5,8 @@ namespace Polypiler.Core.Frontends.Batch;
 
 public static partial class BatchFrontend {
 
-  private sealed class Arithmetic(string text, int line, Func<string, IrLocal> local, (char Letter, IrLocal Local)? forVariable = null) {
+  private sealed class Arithmetic(string text, int line, Func<string, IrLocal> local,
+    (char Letter, IrLocal Local)? forVariable = null, Func<string, IrLocal>? expand = null) {
 
     private int _position;
 
@@ -65,8 +66,8 @@ public static partial class BatchFrontend {
       var start = this._position;
       if (start == text.Length)
         throw new Refusal(line, "missing arithmetic operand", malformed: true);
-      if (text[start] == '%') {
-        if (start + 2 < text.Length && text[start + 1] == '%' && char.IsAsciiLetter(text[start + 2])
+      if (text.AsSpan(start).StartsWith("%%", StringComparison.Ordinal)) {
+        if (start + 2 < text.Length && char.IsAsciiLetter(text[start + 2])
             && (start + 3 == text.Length || (!char.IsAsciiLetterOrDigit(text[start + 3]) && text[start + 3] != '_'))) {
           var letter = text[start + 2];
           if (forVariable is { } bound && bound.Letter == letter) {
@@ -77,6 +78,13 @@ public static partial class BatchFrontend {
         }
         throw new Refusal(line, $"arithmetic syntax near {text[start..]}");
       }
+      if (expand is not null && text[start] is '%' or '!') {
+        var end = this.NameEnd(start + 1);
+        if (end == start + 1 || end == text.Length || text[end] != text[start])
+          throw new Refusal(line, $"invalid numeric expansion near {text[start..]}");
+        this._position = end + 1;
+        return Negative(new IrLocalRef(expand(text[start..this._position])), negative);
+      }
       if (char.IsAsciiDigit(text[start])) {
         while (this._position < text.Length && char.IsAsciiDigit(text[this._position]))
           ++this._position;
@@ -86,13 +94,21 @@ public static partial class BatchFrontend {
           throw new Refusal(line, "SET /A decimal magnitude exceeds 2147483647", malformed: true);
         return literal;
       }
-      if (char.IsAsciiLetter(text[start]) || text[start] == '_') {
-        ++this._position;
-        while (this._position < text.Length && (char.IsAsciiLetterOrDigit(text[this._position]) || text[this._position] == '_'))
-          ++this._position;
+      var nameEnd = this.NameEnd(start);
+      if (nameEnd > start) {
+        this._position = nameEnd;
         return Negative(new IrLocalRef(local(text[start..this._position])), negative);
       }
       throw new Refusal(line, $"arithmetic syntax near {text[start..]}");
+    }
+
+    private int NameEnd(int start) {
+      if (start == text.Length || (!char.IsAsciiLetter(text[start]) && text[start] != '_'))
+        return start;
+      var end = start + 1;
+      while (end < text.Length && (char.IsAsciiLetterOrDigit(text[end]) || text[end] == '_'))
+        ++end;
+      return end;
     }
 
     private static IrExpr Negative(IrExpr expression, bool negative) => negative ? new IrUnary(IrUnaryOp.Negate, expression) : expression;
