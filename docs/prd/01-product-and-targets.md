@@ -121,7 +121,7 @@ A frontend and backend are **different deliverables**. A file named `PythonEmitt
 | Python (3.x profile pinned) | Python AST + resolver | Python emitter/PyPI composer | typed or inferable functions, arrays/lists, comprehensions | P3 |
 | TypeScript (version pinned) | TS compiler API typed AST | TS emitter | structural object shapes, typed numerical functions | P4 |
 | Java (JDK 17/21 profiles) | Java compiler AST / parser with semantic binding | Java emitter | numerical libraries, arrays, records/classes | P4 |
-| Go (modern pinned release) | `go/parser`/`go/types` integration | Go emitter | functions, slices, structs, numerical loops | P4 |
+| Go (modern pinned release) | own scanner, parser and type checker (go/parser and go/types as the layer oracle) | Go emitter | functions, slices, structs, numerical loops | P4 |
 | Delphi / Object Pascal | language parser + binder | Delphi emitter | numeric/procedural subset | P4 |
 | FreeBASIC / generic BASIC | dialect parser and explicit semantics | Basic emitter | arrays, UDTs, numeric algorithms | P4 |
 | PHP | PHP parser + runtime/coercion model | PHP emitter | typed algorithm subset and byte processing | P4 |
