@@ -26,7 +26,9 @@ spec:
   constructs:
     - {construct: "Boolean, Byte, Integer (16 bits), Long, Single, Double, String", family: scalars, state: supported}
     - {construct: "arithmetic that raises error 6 outside the result type, banker's rounding of CInt, CLng and CByte", family: scalars, state: supported}
-    - {construct: "Variant, Currency, Date, Decimal, Object, LongPtr", family: scalars, state: diagnosed, diagnostic: PLY2646}
+    - {construct: "Variant, untyped variables, parameters and results, Empty, Null, IsEmpty, IsNull, VarType, TypeName, IsNumeric, CVar", family: scalars, state: supported}
+    - {construct: "Variant whose text or number would depend on the locale, bitwise operators on integer Variants, Variant arrays", family: scalars, state: diagnosed, diagnostic: PLY2646}
+    - {construct: "Currency, Date, Decimal, Object, LongPtr", family: scalars, state: diagnosed, diagnostic: PLY2646}
     - {construct: "If, Select Case, For with Step, Do, While, Exit", family: control, state: supported}
     - {construct: "On Error GoTo with a handler at the end, On Error Resume Next, Resume Next handlers, Err.Number, Err.Clear, Err.Raise", family: control, state: supported}
     - {construct: "GoTo, GoSub, With, For Each, Resume to a label", family: control, state: diagnosed, diagnostic: PLY2646}

@@ -61,7 +61,8 @@ public static partial class IrModuleFormat {
     Sequence,
     Await, Async,
     ForeignCall, LastError,
-    BigConst, WriteLine
+    BigConst, WriteLine,
+    VariantOf, VariantTagOf, VariantValue
   }
 
   /// <summary>The kinds of declaration, as the byte after the name of a declaration says.</summary>
@@ -793,6 +794,9 @@ public static partial class IrModuleFormat {
       IrForeignCall => Tag.ForeignCall,
       IrLastError => Tag.LastError,
       IrBigConst => Tag.BigConst,
+      IrVariantOf => Tag.VariantOf,
+      IrVariantTagOf => Tag.VariantTagOf,
+      IrVariantValue => Tag.VariantValue,
       _ => throw new ArgumentException($"The expression {expression.GetType().Name} has no form in bytes.", nameof(module))
     };
 
@@ -994,6 +998,18 @@ public static partial class IrModuleFormat {
           break;
         case IrLastError error:
           writer.Write(error.PInvoke);
+          break;
+        case IrVariantOf made:
+          this.Count((int)made.Tag);
+          this.Node(made.Value);
+          break;
+        case IrVariantTagOf tag:
+          this.Node(tag.Value);
+          break;
+        case IrVariantValue value:
+          this.Count((int)value.Tag);
+          this.Node(value.Value);
+          writer.Write(value.IsTested);
           break;
         default:
           var invocation = (IrInvoke)expression;
@@ -1401,6 +1417,7 @@ public static partial class IrModuleFormat {
         IrTypeKind.Pointer => IrType.Pointer(this.Type()),
         IrTypeKind.Async => IrType.Async(this.Type(), reader.ReadBoolean()),
         IrTypeKind.BigInt => IrType.BigInt,
+        IrTypeKind.Variant => IrType.Variant,
         < IrTypeKind.Array => _primitives[(int)kind],
         _ => throw new InvalidDataException($"{(int)kind} is no kind of type.")
       };
@@ -1483,12 +1500,12 @@ public static partial class IrModuleFormat {
         return Of(this._nodes, index, "node") as T ?? throw new InvalidDataException($"The node {index} is no {typeof(T).Name}.");
       }
 
-      if (tag > Tag.WriteLine)
+      if (tag > Tag.VariantValue)
         throw new InvalidDataException($"{(int)tag} is no kind of node.");
 
       var slot = this._nodes.Count;
       this._nodes.Add(null);
-      object node = tag >= Tag.Block && tag is not (Tag.ArraySequence or Tag.Sequence or Tag.Await or Tag.Async or Tag.ForeignCall or Tag.LastError or Tag.BigConst) ? this.Statement(tag) : this.Expression(tag);
+      object node = tag >= Tag.Block && tag is not (Tag.ArraySequence or Tag.Sequence or Tag.Await or Tag.Async or Tag.ForeignCall or Tag.LastError or Tag.BigConst or Tag.VariantOf or Tag.VariantTagOf or Tag.VariantValue) ? this.Statement(tag) : this.Expression(tag);
       if (origins is not null)
         node = node is IrExpr expression ? expression with { Origins = origins } : (IrStmt)node with { Origins = origins };
 
@@ -1546,9 +1563,17 @@ public static partial class IrModuleFormat {
         Tag.Async => new IrAsync(this.Enum<IrAsyncOp>(), type, this.Nodes<IrExpr>()),
         Tag.ForeignCall => new IrForeignCall(reader.ReadString(), type, this.Nodes<IrExpr>()),
         Tag.LastError => new IrLastError(reader.ReadBoolean()),
+        Tag.VariantOf => new IrVariantOf(this.Enum<IrVariantTag>(), this.OptionalNode<IrExpr>()),
+        Tag.VariantTagOf => new IrVariantTagOf(this.Node<IrExpr>()),
+        Tag.VariantValue => this.VariantValue(),
         _ => new IrInvoke(type, this.Node<IrExpr>(), this.Nodes<IrExpr>())
       };
       return expression.Type == type ? expression : expression with { Type = type };
+    }
+
+    private IrVariantValue VariantValue() {
+      var tag = this.Enum<IrVariantTag>();
+      return new IrVariantValue(this.Node<IrExpr>(), tag) { IsTested = reader.ReadBoolean() };
     }
 
     private Origin Origin() {

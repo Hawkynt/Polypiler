@@ -52,6 +52,9 @@ public static class IrShape {
       (IrUnwrap a, IrUnwrap b) => a.IsTested == b.IsTested && Same(a.Value, b.Value),
       (IrCoalesce a, IrCoalesce b) => Same(a.Value, b.Value) && Same(a.Fallback, b.Fallback),
       (IrIsNull a, IrIsNull b) => Same(a.Value, b.Value),
+      (IrVariantOf a, IrVariantOf b) => a.Tag == b.Tag && (a.Value is null ? b.Value is null : b.Value is not null && Same(a.Value, b.Value)),
+      (IrVariantTagOf a, IrVariantTagOf b) => Same(a.Value, b.Value),
+      (IrVariantValue a, IrVariantValue b) => a.Tag == b.Tag && a.IsTested == b.IsTested && Same(a.Value, b.Value),
       (IrBind a, IrBind b) => a.Local == b.Local && Same(a.Value, b.Value),
       (IrGenericEquals a, IrGenericEquals b) => Same(a.Left, b.Left) && Same(a.Right, b.Right),
       (IrGenericCompare a, IrGenericCompare b) => Same(a.Left, b.Left) && Same(a.Right, b.Right),
@@ -105,6 +108,9 @@ public static class IrShape {
     IrAwait awaited => [awaited.Operand],
     IrAsync operation => operation.Arguments,
     IrForeignCall call => call.Arguments,
+    IrVariantOf { Value: { } value } => [value],
+    IrVariantTagOf tag => [tag.Value],
+    IrVariantValue value => [value.Value],
     _ => []
   };
 
@@ -201,7 +207,8 @@ public static class IrShape {
       => IsSafeDivisor(divisor),
     IrBinary binary => !IrOperators.Traps(binary.Op) && !((binary.Left.Type.IsInteger || binary.Left.Type.IsBigInt) && binary.Op is IrBinaryOp.Divide or IrBinaryOp.Remainder),
     IrConvert conversion => conversion.Contract == IrConversion.Wrap && !conversion.Operand.Type.IsFloat,
-    IrConditional => true,
+    IrConditional or IrVariantOf or IrVariantTagOf => true,
+    IrVariantValue value => value.IsTested,
     IrIntrinsic { Op: IrIntrinsicOp.ToInt32 or IrIntrinsicOp.ToUint32 } => true,
     IrIntrinsic { Op: IrIntrinsicOp.TestBit or IrIntrinsicOp.SetBit or IrIntrinsicOp.ClearBit or IrIntrinsicOp.ToggleBit, Arguments: [{ Type.IsInteger: true } value, var position] }
       => IsPosition(position, value.Type.Bits),
@@ -310,6 +317,9 @@ public static class IrShape {
     IrAwait => new IrAwait(operands[0]),
     IrAsync operation => operation with { Arguments = operands },
     IrForeignCall call => call with { Arguments = operands },
+    IrVariantOf { Value: not null } made => made with { Value = operands[0] },
+    IrVariantTagOf => new IrVariantTagOf(operands[0]),
+    IrVariantValue value => value with { Value = operands[0] },
     _ => expression
   };
 

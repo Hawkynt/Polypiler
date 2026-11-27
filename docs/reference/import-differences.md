@@ -88,6 +88,27 @@ where the source has the construct:
 | `int32(x)` of a `float32`/`float64` | `go-float-to-int` | truncates, and saturates outside the type with a NaN becoming 0, where Go leaves the result to the implementation |
 | `x*y + z`, `z - x*y` of floating-point numbers | `go-fma-unfused` | rounds the product first, as Go does on amd64 and wherever the product is converted, where Go permits one fused rounding |
 
+## Classic Visual Basic: Variant
+
+The classic Visual Basic frontend ([frontend](../architecture/VISUALBASIC-FRONTEND.md#variant),
+[variants](variants.md)) gives a `Variant` local a fixed type only where every assignment has that type
+and no read can see it `Empty`; every other `Variant` is the IR's dynamic type, whose operators are
+the frontend's helpers. Where the result would depend on the kind a value has at run time, the
+decision is made by the kinds the inference found:
+
+| Place | Decision | What the imported code does |
+| --- | --- | --- |
+| integer arithmetic of a `Variant`, also of one given a fixed type | behaves like the original | promotes `Byte` → `Integer` → `Long` → `Double` (and `Single` → `Double`) where the typed operator would raise error 6 |
+| `Empty`, `Null` in operators, comparisons, conditions and conversions | behaves like the original | VBA's rules ([MS-VBAL] 5.6.9, 5.5.1.2); `Null` where a value is needed is error 94 |
+| the text of a value that may be a `Single` or a `Double` | refused (`PLY2646`) | none: Visual Basic writes it by the locale |
+| a `String` that may meet a number in arithmetic, a comparison with a typed value, a typed conversion, a condition or `IsNumeric` | refused (`PLY2646`) | none: Visual Basic reads it by the locale |
+| bitwise `And`/`Or`/`Xor`/`Not`, `Eqv`, `Imp` of a dynamic integer `Variant` | refused (`PLY2646`) | none, not modelled yet |
+
+LibreOffice Basic, the oracle, has rules of its own for `Variant`s (ADR 2600: every arithmetic
+result a `Double`, `Null & "a"` and the conversion of `Null` error 13, `Null And False` `Null`); the
+differential compares the fixture as written with the evidence file and the round trip, which writes
+VBA's rules out, with the documented values.
+
 ## Oracle differences
 
 These calls differ because the original runtime does something its own specification does not say,

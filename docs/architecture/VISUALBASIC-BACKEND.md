@@ -1,7 +1,7 @@
 # The classic Visual Basic backend
 
 **Status:** implemented for integers, floating point, control flow, procedures, arrays, records,
-strings, module state and exceptions ([#1088](https://github.com/Hawkynt/Polypiler/issues/1088),
+strings, module state, exceptions and the dynamic type ([#1556](https://github.com/Hawkynt/Polypiler/issues/1556), [#1088](https://github.com/Hawkynt/Polypiler/issues/1088),
 [#1085](https://github.com/Hawkynt/Polypiler/issues/1085), [#1086](https://github.com/Hawkynt/Polypiler/issues/1086),
 [#1087](https://github.com/Hawkynt/Polypiler/issues/1087), [#1089](https://github.com/Hawkynt/Polypiler/issues/1089),
 classic dialect), checked by LibreOffice Basic in VBA mode, the oracle of
@@ -50,6 +50,7 @@ flowchart LR
 | array | a dynamic array from 0; an empty one has no bounds, so its length is `PlyLen_<T>` |
 | struct | a `Public Type`; a parameter by reference, copied field by field where the body changes it |
 | global, table | a module variable that `PlyInit` sets on the first call of a public procedure |
+| `variant` ([variants](../reference/variants.md)) | `Variant`: `Empty`, `Null`, or the payload through its conversion function (`CInt(x)`, `CLng(x)`, `CDbl(x)`, …), which gives it its subtype also where a literal would have another; the tag `VarType(v)`; a payload the frontend tested `CInt(v)`, …, one it did not a test that raises error 13 first; `Currency` and `Date` are refused with `PLY2657` |
 
 ## The arithmetic
 

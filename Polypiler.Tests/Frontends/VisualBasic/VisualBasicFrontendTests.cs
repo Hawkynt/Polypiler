@@ -401,10 +401,10 @@ public sealed class VisualBasicFrontendTests {
   public void SyntaxErrors_ArePly2645(string source, string code)
     => Assert.That(Refused(source), Does.Contain(code));
 
-  [TestCase("Public Function F(a) As Long\nEnd Function", "Variant")]
+  [TestCase("Public Function F(a As Currency) As Long\nEnd Function", "Currency")]
   [TestCase("Public Function F() As Currency\nEnd Function", "Currency")]
-  [TestCase("Public Function F()\nEnd Function", "Variant")]
-  [TestCase("Public Function F() As Long\n    Dim x\nEnd Function", "Variant")]
+  [TestCase("Public Function F() As Date\nEnd Function", "Date")]
+  [TestCase("Public Function F() As Long\n    Dim x(2)\nEnd Function", "the Variant array")]
   [TestCase("Public Function F() As Long\n    Dim x As Object\nEnd Function", "Object")]
   [TestCase("Public Function F() As Long\n    Dim x As Date\nEnd Function", "Date")]
   [TestCase("Public Function F() As Long\n    Dim x As LongPtr\nEnd Function", "LongPtr")]
