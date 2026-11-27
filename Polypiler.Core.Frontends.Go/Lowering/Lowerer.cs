@@ -46,30 +46,13 @@ internal sealed partial class Lowerer(int languageMinor) {
   private static GoUnsupportedException UnsupportedType(GoNode? node, string type)
     => new(GoFrontend.UnsupportedTypeDescriptor, $"type '{type}' is not supported by the Go frontend", node);
 
-  /// <summary>The imports the subset knows: the exact operations of <c>math</c> and <c>math/bits</c>.</summary>
-  private static readonly HashSet<string> _imports = new(StringComparer.Ordinal) { "math", "math/bits" };
-
-  /// <summary>The module of a file: its struct types, globals and functions, the helpers the lowering needed after them.</summary>
-  public IrModule Module(GoNode file) {
-    var package = file.Node("Name")?.Text("Name") ?? "main";
+  /// <summary>The module of a file the checker accepted - whose imports are <c>math</c> and <c>math/bits</c> alone: its struct types, globals and functions, the helpers the lowering needed after them.</summary>
+  public IrModule Module(GoNode file, string package) {
     var declarations = file.Nodes("Decls");
-    foreach (var declaration in declarations.Where(declaration => declaration.Is("GenDecl"))) {
-      switch (declaration.Text("Tok")) {
-        case "import":
-          foreach (var spec in declaration.Nodes("Specs")) {
-            var imported = Strings.Unquote(spec.Node("Path")?.Text("Value") ?? "\"\"");
-            if (!_imports.Contains(imported))
-              throw Unsupported(spec, $"import \"{imported}\"");
-          }
+    foreach (var declaration in declarations.Where(declaration => declaration.Is("GenDecl") && declaration.Text("Tok") == "type"))
+      foreach (var spec in declaration.Nodes("Specs"))
+        this.TypeDeclaration(spec);
 
-          break;
-        case "type":
-          foreach (var spec in declaration.Nodes("Specs"))
-            this.TypeDeclaration(spec);
-
-          break;
-      }
-    }
 
     foreach (var structure in this._pending)
       structure.Type.Define([.. structure.Fields.Select(field => new IrField(field.Name, this.TypeOf(field.Type, field.Node), false))]);
@@ -96,24 +79,17 @@ internal sealed partial class Lowerer(int languageMinor) {
 
   /// <summary>A type declaration: a struct type becomes a struct of the IR; any other defined type stands for its underlying type.</summary>
   private void TypeDeclaration(GoNode spec) {
-    var name = spec.Node("Name")?.Text("Name") ?? "";
-    if (spec.Node("TypeParams") is not null)
-      throw Unsupported(spec, $"generic type {name}");
-
+    var name = spec.Node("Name")!.Text("Name")!;
     var type = spec.Node("Type")!;
     if (spec.Flag("alias"))
       throw Unsupported(spec, $"type alias {name}");
 
     if (type.Is("StructType")) {
       var fields = new List<(string, string, GoNode)>();
-      foreach (var field in type.Node("Fields")?.Nodes("List") ?? []) {
-        var names = field.Nodes("Names");
-        if (names.Count == 0)
-          throw Unsupported(field, "embedded field");
-
-        foreach (var fieldName in names)
+      foreach (var field in type.Node("Fields")!.Nodes("List"))
+        foreach (var fieldName in field.Nodes("Names"))
           fields.Add((fieldName.Text("Name")!, fieldName.Type, fieldName));
-      }
+
 
       var structure = new IrStructType(name);
       this._structs[name] = structure;
@@ -172,10 +148,11 @@ internal sealed partial class Lowerer(int languageMinor) {
     if (function.Node("Recv") is not null)
       throw Unsupported(function, $"method {name}");
 
-    var type = function.Node("Type")!;
-    if (type.Node("TypeParams") is not null)
-      throw Unsupported(function, $"generic function {name}");
+    // Go accepts a declaration without a body for a function implemented outside Go, in assembly.
+    if (function.Node("Body") is null)
+      throw Unsupported(function, $"function {name} without a body");
 
+    var type = function.Node("Type")!;
     var results = type.Node("Results")?.Nodes("List") ?? [];
     var resultTypes = results.SelectMany(field => field.Nodes("Names").Count == 0 ? [field.Node("Type")!] : field.Nodes("Names")).ToList();
     if (resultTypes.Count > 1)
@@ -202,15 +179,16 @@ internal sealed partial class Lowerer(int languageMinor) {
 
   /// <summary>A variable of the package: a global with its initializer, which the IR requires to be static.</summary>
   private void Global(GoNode spec) {
+    // The checker accepted the declaration: with values, as many as names, as no function has several results.
     var names = spec.Nodes("Names");
     var values = spec.Nodes("Values");
-    if (values.Count != 0 && values.Count != names.Count)
-      throw Unsupported(spec, "a variable declaration with fewer values than names");
-
     this.BeginFunction(null);
     for (var index = 0; index < names.Count; ++index) {
       var name = names[index];
       var type = this.TypeOf(name);
+      if (type.IsStruct)
+        throw Unsupported(name, $"global {name.Text("Name")} of a struct type");
+
       var initializer = values.Count == 0 ? this.ZeroOf(type, name) : this.Value(values[index], type);
       if (this._statements.Count > 0)
         throw Unsupported(spec, "a variable initializer that needs statements");

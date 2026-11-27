@@ -576,8 +576,8 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// differently from the original is written as a note, as it is for JavaScript.
   /// </summary>
   /// <summary>
-  /// Imports Go, parsed by go/parser and type-checked by go/types of the installed Go through the
-  /// frontend's helper. What the imported code is known to do differently is a note and a caveat of the manifest.
+  /// Imports Go, parsed and type-checked by the frontend's own scanner, parser and type checker,
+  /// without any Go installed. What the imported code is known to do differently is a note and a caveat of the manifest.
   /// </summary>
   private static (IrModule? Module, int ExitCode, IReadOnlyList<ManifestMessage> Caveats) ImportGo(string file, string source, IReadOnlyDictionary<string, string> options, CliContext context) {
     var imported = GoFrontend.Import(file, source);

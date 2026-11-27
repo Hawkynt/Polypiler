@@ -76,6 +76,10 @@ public static int low(byte[] b, int i) => ((uint)b.Length > (uint)i) ? b[i] : (b
 
 ## Go: conversions to integers and fused multiply-add
 
+The Go frontend parses and type-checks the source itself; where its verdict differs from Go's it
+is a defect, which the Go layer looks for on the whole Go distribution. What it does not model it
+refuses by name rather than accept unchecked.
+
 The Go frontend ([Go frontend](../architecture/GO-FRONTEND.md)) announces two differences, each
 where the source has the construct:
 

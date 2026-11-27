@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Numerics;
 using Polypiler.Core.Frontends.Go.Ast;
+using Polypiler.Core.Frontends.Go.Checking;
 using Polypiler.Core.IR;
 
 namespace Polypiler.Core.Frontends.Go.Lowering;
@@ -16,7 +17,7 @@ internal sealed partial class Lowerer {
   /// </summary>
   private IrExpr Value(GoNode node, IrType? expected = null) {
     if (node.Constant is not null)
-      return this.Constant(node, expected ?? this.TypeOf(node));
+      return Constant(node, expected ?? this.TypeOf(node));
 
     var value = node.Kind switch {
       "ParenExpr" => this.Value(node.Node("X")!, expected),
@@ -33,27 +34,26 @@ internal sealed partial class Lowerer {
     return value;
   }
 
-  /// <summary>A constant of a type, from the exact value <c>go/types</c> printed.</summary>
-  private IrExpr Constant(GoNode node, IrType type) {
-    var text = node.Constant!;
-    switch (node.ConstantKind) {
-      case "bool":
-        return new IrConst(IrType.Bool, text == "true" ? 1 : 0);
-      case "string":
-        return new IrStrConst(Strings.Unquote(text, node));
-      case "int" when type.IsInteger:
-        return new IrConst(type, Bits(type, BigInteger.Parse(text, CultureInfo.InvariantCulture)));
-      case "int" when type.IsFloat:
-        return Floating(type, (double)BigInteger.Parse(text, CultureInfo.InvariantCulture));
-      case "float" when node.Unsigned("float64") is { } bits:
-        var number = BitConverter.UInt64BitsToDouble(bits);
-        return type.IsFloat ? Floating(type, number) : type.IsInteger ? new IrConst(type, Bits(type, new BigInteger(number))) : throw UnsupportedType(node, node.Type);
+  /// <summary>
+  /// A constant of a type, from the exact value the checker computed: an integer as its bits, a number
+  /// in a floating-point type rounded once to nearest even from the exact value, as Go rounds it.
+  /// </summary>
+  private static IrExpr Constant(GoNode node, IrType type) {
+    var value = node.Value!;
+    switch (value.Kind) {
+      case GoConstantKind.Bool:
+        return new IrConst(IrType.Bool, value.Bool ? 1 : 0);
+      case GoConstantKind.String:
+        return new IrStrConst(Strings.Decode(value.Bytes, node));
+      case GoConstantKind.Int or GoConstantKind.Float when type.IsFloat:
+        return type == IrType.F32 ? new IrConst(type, IrOperators.Bits(type, value.ToFloat32())) : new IrConst(type, IrOperators.Bits(type, value.ToFloat64()));
       default:
-        throw UnsupportedType(node, $"{node.ConstantKind} constant {node.Type}");
+        // The checker gave the constant an integer type it is representable in.
+        return new IrConst(type, Bits(type, value.ToInt()!.Numerator));
     }
   }
 
-  private static IrConst Floating(IrType type, double number) => new(type, type == IrType.F32 ? IrOperators.Bits(type, (float)number) : IrOperators.Bits(type, number));
+  private static IrConst Floating(IrType type, double number) => new(type, IrOperators.Bits(type, number));
 
   /// <summary>The value an <see cref="IrConst"/> carries for an integer: the number, a <c>u64</c> as its 64 bits.</summary>
   private static long Bits(IrType type, BigInteger value) => type == IrType.U64 ? unchecked((long)(ulong)value) : (long)value;
@@ -65,11 +65,8 @@ internal sealed partial class Lowerer {
     if (this._globals.TryGetValue(node.Declaration, out var global))
       return new IrGlobalRef(global);
 
-    throw Unsupported(node, node.Object switch {
-      "func" => $"function value {node.Text("Name")}",
-      "nil" => "nil",
-      _ => $"{node.Object} {node.Text("Name")}"
-    });
+    // What is no variable is nil: constants are values, and a function as a value has a function type, which TypeOf refused.
+    throw Unsupported(node, "nil");
   }
 
   /// <summary>The 32-bit type a narrow integer type computes in: signed for a signed one; any other type is its own.</summary>
@@ -148,20 +145,16 @@ internal sealed partial class Lowerer {
   /// divided by -1 where the IR traps.
   /// </summary>
   private IrExpr Arithmetic(string op, IrExpr left, IrExpr right, IrType type, GoNode node) {
-    if (type.IsString) {
-      if (op != "+")
-        throw Unsupported(node, $"operator {op} on strings");
-
+    // The checker allows + alone on strings.
+    if (type.IsString)
       return new IrIntrinsic(IrIntrinsicOp.StrConcat, IrType.String, [left, right]);
-    }
 
     if (type.IsFloat) {
       var floatOp = op switch {
         "+" => IrBinaryOp.Add,
         "-" => IrBinaryOp.Subtract,
         "*" => IrBinaryOp.Multiply,
-        "/" => IrBinaryOp.Divide,
-        _ => throw Unsupported(node, $"operator {op} on {type}")
+        _ => IrBinaryOp.Divide
       };
       if (floatOp is IrBinaryOp.Add or IrBinaryOp.Subtract && (left is IrBinary { Op: IrBinaryOp.Multiply } || right is IrBinary { Op: IrBinaryOp.Multiply }))
         this.Caveat(GoFrontend.Fusion);
@@ -169,9 +162,7 @@ internal sealed partial class Lowerer {
       return new IrBinary(floatOp, left, right);
     }
 
-    if (!type.IsInteger)
-      throw UnsupportedType(node, type.ToString());
-
+    // The checker allows these operators on numbers alone, and the subset has no complex numbers.
     var wide = Wide(type);
     var (a, b) = (Comparable(left), Comparable(right));
     IrExpr result = op switch {
@@ -182,8 +173,7 @@ internal sealed partial class Lowerer {
       "|" => new IrBinary(IrBinaryOp.Or, a, b),
       "^" => new IrBinary(IrBinaryOp.Xor, a, b),
       "&^" => new IrBinary(IrBinaryOp.And, a, new IrUnary(IrUnaryOp.BitNot, b)),
-      "/" or "%" => this.Division(op == "/", a, b, type),
-      _ => throw Unsupported(node, $"operator {op}")
+      _ => this.Division(op == "/", a, b, type)
     };
     return Wrapped(result, type);
   }
@@ -203,15 +193,15 @@ internal sealed partial class Lowerer {
   /// count of the width or more, and traps on a negative one, as Go panics.
   /// </summary>
   private IrExpr Shift(string op, IrExpr value, GoNode countNode, IrType type, GoNode node) {
-    if (!type.IsInteger)
-      throw UnsupportedType(node, type.ToString());
-
+    // The checker gave a shift an integer type.
     var irOp = op == "<<" ? IrBinaryOp.ShiftLeft : IrBinaryOp.ShiftRight;
-    if (countNode.Constant is { } text && BigInteger.Parse(text, CultureInfo.InvariantCulture) is var constant && constant < type.Bits)
-      return Wrapped(new IrBinary(irOp, Comparable(value), new IrConst(IrType.I32, (long)constant)), type);
+    // A constant count is a non-negative integer the checker checked.
+    var constant = countNode.Value?.ToInt()!.Numerator;
+    if (constant is { } known && known < type.Bits)
+      return Wrapped(new IrBinary(irOp, Comparable(value), new IrConst(IrType.I32, (long)known)), type);
 
-    var countType = countNode.Constant is not null ? IrType.U64 : this.TypeOf(countNode);
-    var count = countNode.Constant is not null ? new IrConst(IrType.U64, Bits(IrType.U64, BigInteger.Min(BigInteger.Parse(countNode.Constant, CultureInfo.InvariantCulture), ulong.MaxValue))) : this.Value(countNode);
+    var countType = constant is not null ? IrType.U64 : this.TypeOf(countNode);
+    var count = constant is { } large ? new IrConst(IrType.U64, Bits(IrType.U64, BigInteger.Min(large, ulong.MaxValue))) : this.Value(countNode);
     return new IrCall(this.ShiftHelper(op == "<<", type, countType), type, [value, count]);
   }
 
@@ -226,19 +216,14 @@ internal sealed partial class Lowerer {
         return new IrUnary(IrUnaryOp.LogicalNot, this.Value(operand, IrType.Bool));
       case "-" when type.IsFloat:
         return new IrUnary(IrUnaryOp.Negate, this.Value(operand, type));
-      case "-" when type.IsInteger: {
+      case "-": {
         var value = Comparable(this.Value(operand, type));
         IrExpr negated = value.Type.IsSigned ? new IrUnary(IrUnaryOp.Negate, value) : new IrBinary(IrBinaryOp.Subtract, new IrConst(value.Type, 0), value);
         return Wrapped(negated, type);
       }
-      case "^" when type.IsInteger:
-        return Wrapped(new IrUnary(IrUnaryOp.BitNot, Comparable(this.Value(operand, type))), type);
-      case "&":
-        throw Unsupported(node, "address of");
-      case "<-":
-        throw Unsupported(node, "channel receive");
       default:
-        throw UnsupportedType(node, type.ToString());
+        // The checker allows ^ of integers alone; & has a pointer type, which TypeOf refused.
+        return Wrapped(new IrUnary(IrUnaryOp.BitNot, Comparable(this.Value(operand, type))), type);
     }
   }
 
@@ -257,14 +242,12 @@ internal sealed partial class Lowerer {
     if (callee.Is("SelectorExpr") && callee.Node("X") is { Object: "pkg" } package)
       return this.Library(package.Package!, callee.Node("Sel")!.Text("Name")!, arguments, node);
 
-    if (callee.Is("Ident") && callee.Object == "func" && this._signatures.TryGetValue(callee.Text("Name")!, out var function)) {
-      if (arguments.Count != function.Parameters.Count)
-        throw Unsupported(node, "a call with a call of several results as its arguments");
-
+    // A function of the file: a call of several results as its arguments would need a function of several results, which Signature refused.
+    if (callee.Is("Ident") && callee.Object == "func" && this._signatures.TryGetValue(callee.Text("Name")!, out var function))
       return new IrCall(function.Name, function.ReturnType, [.. arguments.Select((argument, index) => this.Value(argument, function.Parameters[index].Type))]);
-    }
 
-    throw Unsupported(node, callee.Is("SelectorExpr") ? "method call" : "call of a function value");
+    // A method has no signature here, Signature refused every one; what is left is a function value.
+    throw Unsupported(node, "call of a function value");
   }
 
   /// <summary>
@@ -312,8 +295,6 @@ internal sealed partial class Lowerer {
         var op = name == "min" ? IrIntrinsicOp.Min : IrIntrinsicOp.Max;
         return values.Skip(1).Aggregate(values[0], (all, next) => new IrIntrinsic(op, type, [all, next]));
       }
-      case "panic":
-        throw Unsupported(node, "panic as a value");
       default:
         throw Unsupported(node, $"built-in {name}");
     }
@@ -425,8 +406,8 @@ internal sealed partial class Lowerer {
       { IsInteger: true, Bits: < 32 } => new IrConvert(IrType.I32, index),
       { Kind: IrTypeKind.U32 } => new IrConvert(IrType.I32, new IrIntrinsic(IrIntrinsicOp.Min, IrType.U32, [index, new IrConst(IrType.U32, int.MaxValue)])),
       { Kind: IrTypeKind.I64 } => new IrConvert(IrType.I32, new IrIntrinsic(IrIntrinsicOp.Clamp, IrType.I64, [index, new IrConst(IrType.I64, -1), new IrConst(IrType.I64, int.MaxValue)])),
-      { Kind: IrTypeKind.U64 } => new IrConvert(IrType.I32, new IrIntrinsic(IrIntrinsicOp.Min, IrType.U64, [index, new IrConst(IrType.U64, int.MaxValue)])),
-      _ => throw UnsupportedType(node, node.Type)
+      // The checker gave the index an integer type: u64 is what is left.
+      _ => new IrConvert(IrType.I32, new IrIntrinsic(IrIntrinsicOp.Min, IrType.U64, [index, new IrConst(IrType.U64, int.MaxValue)]))
     };
   }
 
@@ -444,9 +425,7 @@ internal sealed partial class Lowerer {
   }
 
   private IrExpr Selector(GoNode node) {
-    if (node.Text("selection") != "field")
-      throw Unsupported(node, node.Node("X") is { Object: "pkg" } package ? $"{package.Package}.{node.Node("Sel")!.Text("Name")}" : "method value");
-
+    // A field: a constant of a package is a constant, and a function or method as a value has a function type, which TypeOf refused.
     var owner = this.Value(node.Node("X")!);
     return new IrFieldLoad(owner, this.FieldOf(owner.Type, node));
   }
@@ -468,17 +447,14 @@ internal sealed partial class Lowerer {
       return new IrStructNew(type, [.. values.Select((value, index) => value ?? this.ZeroOf(structure.Fields[index].Type, node))]);
     }
 
-    if (type.IsArray) {
-      if (elements.Any(element => element.Is("KeyValueExpr")))
-        throw Unsupported(node, "slice literal with indices");
+    // A slice: TypeOf refused maps and arrays, which have no IR type of the subset.
+    if (elements.Any(element => element.Is("KeyValueExpr")))
+      throw Unsupported(node, "slice literal with indices");
 
-      if (elements.Count == 0)
-        return new IrNewArray(type, new IrConst(IrType.I32, 0));
+    if (elements.Count == 0)
+      return new IrNewArray(type, new IrConst(IrType.I32, 0));
 
-      return new IrIntrinsic(IrIntrinsicOp.ArrayOf, type, [.. elements.Select(element => this.Value(element, type.Element))]);
-    }
-
-    throw UnsupportedType(node, node.Type);
+    return new IrIntrinsic(IrIntrinsicOp.ArrayOf, type, [.. elements.Select(element => this.Value(element, type.Element))]);
   }
 
 }

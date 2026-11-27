@@ -147,14 +147,8 @@ internal sealed partial class Lowerer {
         this._pendingLabel = null;
         return;
       default:
-        throw Unsupported(node, node.Kind switch {
-          "GoStmt" => "go statement",
-          "DeferStmt" => "defer",
-          "SelectStmt" => "select",
-          "SendStmt" => "channel send",
-          "TypeSwitchStmt" => "type switch",
-          _ => node.Kind
-        });
+        // The checker refused select, sends and type switches; go and defer are what is left.
+        throw Unsupported(node, node.Is("GoStmt") ? "go statement" : "defer");
     }
   }
 
@@ -225,9 +219,7 @@ internal sealed partial class Lowerer {
       return;
     }
 
-    if (left.Count != right.Count)
-      throw Unsupported(node, "an assignment of a call with several results");
-
+    // As many values as places: a call of several results would need a function of several results, which Signature refused.
     if (left.Count == 1) {
       this.AssignOne(left[0], token, this.Value(right[0], this.TargetType(left[0], right[0])), output);
       return;
@@ -403,9 +395,7 @@ internal sealed partial class Lowerer {
     IrLocal? array = null;
     IrType counterType;
     if (overType.IsInteger) {
-      if (value is not null)
-        throw Unsupported(node, "range over an integer with two variables");
-
+      // The checker permits one variable alone over an integer.
       counterType = overType;
       bound = new IrLocalRef(this.Temporary(this.Value(over), output, "n"));
     } else if (overType.IsArray) {

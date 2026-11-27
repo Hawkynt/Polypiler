@@ -1,0 +1,529 @@
+# Syntax errors of the Go frontend's scanner and parser, one per message. Each section is one file;
+# its first line says what the frontend must decide ("syntax" and a part of the message), and the Go
+# layer checks that go/parser refuses the same file. Written for this repository.
+-- expect_closing_paren --
+// want: syntax "expected ')', found '{'"
+package p
+
+func F( {
+}
+-- missing_comma_newline --
+// want: syntax "missing ',' before newline in argument list"
+package p
+
+func F() { G(1
+) }
+func G(int) {}
+-- expect_semicolon --
+// want: syntax "expected ';', found y"
+package p
+
+var x int y
+-- missing_comma_parameters --
+// want: syntax "missing ',' in parameter list"
+package p
+
+func F(a int b int) {}
+-- expected_type --
+// want: syntax "expected type, found newline"
+package p
+
+var x map[int]
+-- array_length_comma --
+// want: syntax "unexpected comma; expecting ]"
+package p
+
+var a [1, 2]int
+-- array_field_trailing_comma --
+// want: syntax "unexpected comma; expecting ]"
+package p
+
+const N = 1
+
+type T struct{ a [N,]int }
+-- parenthesized_embedded_pointer --
+// want: syntax "cannot parenthesize embedded type"
+package p
+
+type T struct{ *(int) }
+-- parenthesized_embedded --
+// want: syntax "cannot parenthesize embedded type"
+package p
+
+type T struct{ (int) }
+-- field_name_expected --
+// want: syntax "expected '}', found 1"
+package p
+
+type T struct{ 1 }
+-- parameter_literal --
+// want: syntax "expected ')', found 1"
+package p
+
+func F(1) {}
+-- missing_constraint --
+// want: syntax "missing type constraint"
+package p
+
+func F[T]() {}
+-- missing_type_parameter_name_one --
+// want: syntax "missing type parameter name or invalid array length"
+package p
+
+func F[*int]() {}
+-- missing_type_parameter_name --
+// want: syntax "missing type parameter name"
+package p
+
+func F[P any, *int]() {}
+-- missing_constraint_mixed --
+// want: syntax "missing type constraint"
+package p
+
+func F[P any, Q]() {}
+-- missing_parameter_type --
+// want: syntax "missing parameter type"
+package p
+
+func F(a int, b) {}
+-- missing_parameter_name --
+// want: syntax "missing parameter name"
+package p
+
+func F(a int, []int) {}
+-- dots_not_final --
+// want: syntax "can only use ... with final parameter"
+package p
+
+func F(a ...int, b int) {}
+-- dots_in_results --
+// want: syntax "invalid use of ..."
+package p
+
+func F() (...int) { return nil }
+-- empty_type_parameters --
+// want: syntax "empty type parameter list"
+package p
+
+func F[]() {}
+-- function_type_parameters --
+// want: syntax "function type must have no type parameters"
+package p
+
+var f func[T any]()
+-- interface_method_type_parameters --
+// want: syntax "interface method must have no type parameters"
+package p
+
+type I interface{ M[T any]() }
+-- term_expected --
+// want: syntax "expected ~ term or type"
+package p
+
+type I interface{ int | 1 }
+-- empty_type_arguments --
+// want: syntax "expected type argument list"
+package p
+
+type G[T any] struct{}
+
+var x G[]
+-- operand_expected --
+// want: syntax "expected operand"
+package p
+
+var x = )
+-- selector_expected --
+// want: syntax "expected selector or type assertion"
+package p
+
+var x = y.+
+-- index_expected --
+// want: syntax "expected operand"
+package p
+
+var a []int
+var x = a[]
+-- middle_index --
+// want: syntax "middle index required in 3-index slice"
+package p
+
+var a []int
+var x = a[1::3]
+-- final_index --
+// want: syntax "final index required in 3-index slice"
+package p
+
+var a []int
+var x = a[1:2:]
+-- parenthesized_literal_type --
+// want: syntax "cannot parenthesize type in composite literal"
+package p
+
+var x = ([]int){1}
+-- channel_type_expected --
+// want: syntax "expected channel type"
+package p
+
+func F() { _ = <-chan<- int }
+-- chan_expected --
+// want: syntax "expected 'chan'"
+package p
+
+func F() { _ = <-<-chan int }
+-- illegal_label --
+// want: syntax "illegal label declaration"
+package p
+
+func F() {
+1:
+}
+-- illegal_label_in_header --
+// want: syntax "illegal label declaration"
+package p
+
+func F(x bool) {
+	if x: {
+	}
+}
+-- one_expression --
+// want: syntax "expected 1 expression"
+package p
+
+func F(a, b int) { a, b++ }
+-- go_parenthesized --
+// want: syntax "expression in go must not be parenthesized"
+package p
+
+func F() { go (F()) }
+-- defer_not_call --
+// want: syntax "expression in defer must be function call"
+package p
+
+func F() { defer F }
+-- if_assignment --
+// want: syntax "expected boolean expression, found assignment"
+package p
+
+func F(x int) {
+	if x = 1 {
+	}
+}
+-- if_simple_statement --
+// want: syntax "expected boolean expression, found simple statement"
+package p
+
+func F(x int) {
+	if x++ {
+	}
+}
+-- if_without_condition --
+// want: syntax "missing condition in if statement"
+package p
+
+func F() {
+	if {
+	}
+}
+-- if_var --
+// want: syntax "var declaration not allowed in if initializer"
+package p
+
+func F() {
+	if var x = 1; x > 0 {
+	}
+}
+-- if_newline --
+// want: syntax "unexpected newline, expecting { after if clause"
+package p
+
+func F(x bool) {
+	if x
+	{
+	}
+}
+-- if_empty_condition --
+// want: syntax "missing condition in if statement"
+package p
+
+func F(x int) {
+	if x := 1; {
+	}
+}
+-- if_else_for --
+// want: syntax "expected if statement or block"
+package p
+
+func F(x bool) {
+	if x {
+	} else for {
+	}
+}
+-- type_switch_assign --
+// want: syntax "expected ':=', found '='"
+package p
+
+func F(y any) {
+	var x any
+	switch x = y.(type) {
+	}
+}
+-- switch_assignment --
+// want: syntax "expected switch expression, found assignment"
+package p
+
+func F(x int) {
+	switch x = 1 {
+	}
+}
+-- select_two_send --
+// want: syntax "expected 1 expression"
+package p
+
+func F(a, b, c chan int) {
+	select {
+	case a, b <- 1:
+	}
+}
+-- select_three_receive --
+// want: syntax "expected 1 or 2 expressions"
+package p
+
+func F(c chan int) {
+	select {
+	case a, b, d := <-c:
+	}
+}
+-- select_two_expressions --
+// want: syntax "expected 1 expression"
+package p
+
+func F(a, b chan int) {
+	select {
+	case a, b:
+	}
+}
+-- range_three --
+// want: syntax "expected at most 2 expressions"
+package p
+
+func F(s []int) {
+	for a, b, c := range s {
+	}
+}
+-- for_assignment --
+// want: syntax "expected boolean or range expression, found assignment"
+package p
+
+func F(x int) {
+	for x = 1 {
+	}
+}
+-- statement_expected --
+// want: syntax "expected statement, found ')'"
+package p
+
+func F() { ) }
+-- import_literal --
+// want: syntax "import path must be a string"
+package p
+
+import 1
+-- import_missing --
+// want: syntax "missing import path"
+package p
+
+import x
+-- declaration_expected --
+// want: syntax "expected declaration, found x"
+package p
+
+x := 1
+-- brace_on_next_line --
+// want: syntax "unexpected semicolon or newline before {"
+package p
+
+func F()
+{
+}
+-- late_import --
+// want: syntax "imports must appear before other declarations"
+package p
+
+var x int
+
+import "math"
+-- identifier_expected --
+// want: syntax "expected 'IDENT', found 1"
+package p
+
+func 1() {}
+-- comment_not_terminated --
+// want: syntax "comment not terminated"
+package p
+
+/* abc
+-- radix_point_octal --
+// want: syntax "invalid radix point in octal literal"
+package p
+
+var x = 0o1.2
+-- radix_point_binary --
+// want: syntax "invalid radix point in binary literal"
+package p
+
+var x = 0b1.0
+-- hex_no_digits --
+// want: syntax "hexadecimal literal has no digits"
+package p
+
+var x = 0x
+-- octal_no_digits --
+// want: syntax "octal literal has no digits"
+package p
+
+var x = 0o
+-- binary_no_digits --
+// want: syntax "binary literal has no digits"
+package p
+
+var x = 0b
+-- e_exponent_octal --
+// want: syntax "'e' exponent requires decimal mantissa"
+package p
+
+var x = 0o1e3
+-- p_exponent_decimal --
+// want: syntax "'p' exponent requires hexadecimal mantissa"
+package p
+
+var x = 1p3
+-- exponent_no_digits --
+// want: syntax "exponent has no digits"
+package p
+
+var x = 1e
+-- hex_mantissa_p --
+// want: syntax "hexadecimal mantissa requires a 'p' exponent"
+package p
+
+var x = 0x1.0
+-- octal_digit --
+// want: syntax "invalid digit '8' in octal literal"
+package p
+
+var x = 08
+-- binary_digit --
+// want: syntax "invalid digit '2' in binary literal"
+package p
+
+var x = 0b12
+-- double_separator --
+// want: syntax "'_' must separate successive digits"
+package p
+
+var x = 1__0
+-- trailing_separator --
+// want: syntax "'_' must separate successive digits"
+package p
+
+var x = 1_
+-- separator_after_prefix_dot --
+// want: syntax "'_' must separate successive digits"
+package p
+
+var x = 1_.5
+-- unknown_escape --
+// want: syntax "unknown escape sequence"
+package p
+
+var x = "\q"
+-- escape_illegal_character --
+// want: syntax "illegal character U+0022"
+package p
+
+var x = "\x4"
+-- escape_surrogate --
+// want: syntax "escape sequence is invalid Unicode code point"
+package p
+
+var x = "\uD800"
+-- escape_beyond_unicode --
+// want: syntax "escape sequence is invalid Unicode code point"
+package p
+
+var x = "\U00110000"
+-- rune_not_terminated --
+// want: syntax "rune literal not terminated"
+package p
+
+var x = 'a
+-- rune_two_characters --
+// want: syntax "illegal rune literal"
+package p
+
+var x = 'ab'
+-- rune_empty --
+// want: syntax "illegal rune literal"
+package p
+
+var x = ''
+-- string_not_terminated --
+// want: syntax "string literal not terminated"
+package p
+
+var x = "abc
+-- raw_string_not_terminated --
+// want: syntax "raw string literal not terminated"
+package p
+
+var x = `abc
+-- illegal_character --
+// want: syntax "illegal character U+0040 '@'"
+package p
+
+var x = @
+-- curly_quote --
+// want: syntax "curly quotation mark"
+package p
+
+var x = “x”
+-- missing_comma_literal --
+// want: syntax "missing ',' before newline in composite literal"
+package p
+
+var x = []int{1
+}
+-- tilde_without_name --
+// want: syntax "missing type parameter name or invalid array length"
+package p
+
+func F[~int]() {}
+-- assign_in_expression --
+// want: syntax "expected '==', found '='"
+package p
+
+func F(a, b int) {
+	x := a = b
+}
+-- if_without_semicolon --
+// want: syntax "expected ';', found b"
+package p
+
+func F(a, b int) {
+	if a++ b {
+	}
+}
+-- type_switch_operator --
+// want: syntax "expected switch expression, found assignment"
+package p
+
+func F(x, y any) {
+	switch x += y.(type) {
+	}
+}
+-- closing_brace_declaration --
+// want: syntax "expected declaration, found '}'"
+package p
+
+func F() }

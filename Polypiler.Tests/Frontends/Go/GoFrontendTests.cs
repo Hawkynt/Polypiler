@@ -11,9 +11,8 @@ using Polypiler.Tests.Frontends.Go.Support;
 namespace Polypiler.Tests.Frontends.Go;
 
 /// <summary>
-/// The Go frontend on the bound trees its helper printed for the fixtures of
-/// <c>tests/fixtures/go/frontend</c>, recorded next to each source (the Go layer checks that the helper
-/// still prints them): the imported module runs in the interpreter with Go's results - wrap-around at
+/// The Go frontend on the fixtures of <c>tests/fixtures/go/frontend</c>, parsed and type-checked by the
+/// frontend itself without any Go installed: the imported module runs in the interpreter with Go's results - wrap-around at
 /// the operand width, unmasked shifts, exact constants, the division that wraps the smallest value by
 /// -1 - and every construct outside the subset is refused with the code that names it.
 /// </summary>
@@ -23,11 +22,10 @@ public sealed class GoFrontendTests {
   /// <summary>The folder of the fixtures.</summary>
   public static string Folder { get; } = Path.Combine(PrototypeFixture.RepositoryRoot, "tests", "fixtures", "go", "frontend");
 
-  /// <summary>Imports a fixture from its recorded tree.</summary>
+  /// <summary>Imports a fixture.</summary>
   public static GoImportResult Imported(string relative, int minor = 27) {
     var path = Path.Combine(Folder, relative);
-    var dump = File.ReadAllText(Path.ChangeExtension(path, ".dump.json"));
-    return GoFrontend.Import(Path.GetFileName(path), File.ReadAllText(path), new GoImportOptions { Dump = dump, LanguageMinor = minor });
+    return GoFrontend.Import(Path.GetFileName(path), File.ReadAllText(path), new GoImportOptions { LanguageMinor = minor });
   }
 
   private static readonly Lazy<IrModule> _checksums = new(() => {
@@ -125,8 +123,6 @@ public sealed class GoFrontendTests {
     Assert.That(result.Module.Functions.Where(function => function.IsPublic).Select(function => function.Name), Does.Contain("Adler32").And.Contain("Fail"));
     Assert.That(result.Caveats, Does.Contain(GoFrontend.FloatToInteger));
     Assert.That(result.Module.Caveats, Does.Contain("go-float-to-int"));
-    Assert.That(result.Go, Does.StartWith("go1."));
-    Assert.That(GoFrontend.HelperSource, Does.Contain("package main").And.Contain("go/types"));
   }
 
   [Test]
@@ -134,7 +130,7 @@ public sealed class GoFrontendTests {
     static bool PerIteration(IrModule module) => module.Functions.Single(function => function.Name == "SumTo").Body.Statements
       .SelectMany(Statements).OfType<IrFor>().Single().PerIteration.Count > 0;
     Assert.That(PerIteration(Imported("checksums.go", 22).Module!), Is.True);
-    Assert.That(PerIteration(Imported("checksums.go", 21).Module!), Is.False);
+    Assert.That(Imported("checksums.go", 21).Diagnostics.Single().ToString(), Does.Contain("PLY2100").And.Contain("requires go1.22 or later"));
   }
 
   private static System.Collections.Generic.IEnumerable<IrStmt> Statements(IrStmt statement)
@@ -195,45 +191,95 @@ public sealed class GoFrontendTests {
     Assert.That(result.Diagnostics.Select(diagnostic => diagnostic.ToString()), Has.Some.Contains(code).And.Some.Contains(text));
   }
 
-  [TestCase("not json", "wrote no tree")]
-  [TestCase("{\"format\": 2}", "another wire format")]
-  [TestCase("[]", "another wire format")]
-  [TestCase("{\"format\": 1, \"go\": \"go1.27\"}", "neither a tree nor an error")]
-  public void ABrokenDump_IsAnErrorOfTheHelper(string dump, string text) {
-    var result = GoFrontend.Import("x.go", "package x\n", new GoImportOptions { Dump = dump });
-    Assert.That(result.Diagnostics.Single().ToString(), Does.Contain("PLY2100").And.Contain(text));
+  [Test]
+  public void Forms_AreGos() {
+    var result = Imported("forms.go");
+    Assert.That(result.Diagnostics, Is.Empty, () => string.Join("\n", result.Diagnostics));
+    object? Run(string function, params object[] arguments) => IrInterpreter.Call(result.Module!, function, arguments);
+    Assert.That(Run("Ignore", 5, 6), Is.EqualTo(7));
+    Assert.That(Run("Swap", [new object[] { 1, 2 }]), Is.EqualTo(new object[] { 2, 1 }));
+    Assert.That(new[] { 6, 3, 1 }.Select(x => Run("Grade", x)), Is.EqualTo(new object[] { 3, 2, 1 }));
+    Assert.That(Run("Calls", 4), Is.EqualTo(5));
+    Assert.That(Run("Floats", 2.0, 3.0, 4.0), Is.EqualTo(2.0 * 3.0 + 4.0 - 2.0 * 3.0 * 4.0));
+    Assert.That(Run("Pick", new[] { 1, 2, 3, 4 }, 0, (byte)1, (short)2, (ushort)3, 0u), Is.EqualTo(11));
+    Assert.That(result.Caveats, Does.Contain(GoFrontend.Fusion));
+  }
+
+  [TestCase("func F(s []int32) bool { return s == nil }", "PLY2102", "'nil'")]
+  [TestCase("func F(a, b []int32) []int32 { return append(a, b...) }", "PLY2102", "spread argument")]
+  [TestCase("func F() { func() {}() }", "PLY2102", "call of a function value")]
+  [TestCase("func F(s string) []byte { return []byte(s) }", "PLY2102", "conversion from string to []byte")]
+  [TestCase("func F(s string) int { return len(s) }", "PLY2102", "len of string")]
+  [TestCase("import \"math\"\n\nfunc F(x float64) float64 { return math.Gamma(x) }", "PLY2102", "math.Gamma")]
+  [TestCase("func G() {}\n\nfunc F() { _ = G }", "PLY2101", "func()")]
+  [TestCase("func F(s string) byte { return s[0] }", "PLY2102", "index of string")]
+  [TestCase("func F() []int32 { return []int32{1: 2} }", "PLY2102", "slice literal with indices")]
+  [TestCase("func F(m map[int]int) {}", "PLY2101", "map[int]int")]
+  [TestCase("type P struct{ A int32 }\n\nvar origin P", "PLY2102", "global origin of a struct type")]
+  public void WhatTheLowererRefuses_IsNamed(string declarations, string code, string text) {
+    var result = GoFrontend.Import("x.go", "package x\n\n" + declarations + "\n");
+    Assert.That(result.Diagnostics.Select(diagnostic => diagnostic.ToString()), Has.One.Contains(code).And.Contains(text));
   }
 
   [Test]
-  public void AMissingToolchain_IsReportedWithTheVariableThatNamesOne() {
-    var result = GoFrontend.Import("x.go", "package x\n", new GoImportOptions { Toolchain = Path.Combine(Path.GetTempPath(), "no-such-go-" + Guid.NewGuid().ToString("N")) });
-    Assert.That(result.Diagnostics.Single().ToString(), Does.Contain("PLY2100").And.Contain("the Go helper failed").And.Contain("POLYPILER_GO"));
+  public void AFunctionWithoutABody_IsRefused() {
+    var result = GoFrontend.Import("x.go", "package x\n\nfunc External(x int32) int32\n");
+    Assert.That(result.Diagnostics.Single().ToString(), Does.Contain("PLY2102").And.Contain("function External without a body"));
   }
 
-  /// <summary>The helper itself, where Go is installed: what it prints for every fixture is what the fixture recorded, the version of Go aside.</summary>
   [Test]
-  public void TheHelper_PrintsTheRecordedTrees() {
-    var go = GoFrontend.Import("probe.go", "package probe\n");
-    if (go.Module is null)
-      Assert.Inconclusive($"no Go is installed: {string.Join("; ", go.Diagnostics)}");
+  public void ANestingDeeperThanTheParserFollows_IsRefused() {
+    var source = "package x\n\nvar y = " + new string('(', 1200) + "1" + new string(')', 1200) + "\n";
+    var result = GoFrontend.Check("x.go", source);
+    Assert.That((result.Verdict, result.Parsed), Is.EqualTo((GoVerdict.Unsupported, false)));
+    Assert.That(result.Diagnostics.Single().ToString(), Does.Contain("PLY2102").And.Contain("nesting deeper than 1000 levels"));
+  }
 
-    // go/types writes types differently from one release to the next (interface{} or any): the trees were recorded with the pinned go.
-    var recorded = Release(File.ReadAllText(Path.Combine(Folder, "checksums.dump.json")));
-    if (Release(GoFrontend.Print("checksums.go", File.ReadAllText(Path.Combine(Folder, "checksums.go"))).Json ?? "") != recorded)
-      Assert.Inconclusive($"the installed go is not the {recorded} the trees were recorded with");
+  [Test]
+  public void AnExcessivelyLongConstant_IsAnError() {
+    var result = GoFrontend.Check("x.go", "package x\n\nconst c = 1" + new string('0', 10001) + "\n");
+    Assert.That(result.Diagnostics.Single().ToString(), Does.Contain("PLY2100").And.Contain("excessively long constant"));
+  }
 
-    foreach (var source in Directory.EnumerateFiles(Folder, "*.go", SearchOption.AllDirectories)) {
-      var printed = GoFrontend.Print(Path.GetFileName(source), File.ReadAllText(source));
-      Assert.That(Unversioned(printed.Json ?? printed.Failure!), Is.EqualTo(Unversioned(File.ReadAllText(Path.ChangeExtension(source, ".dump.json")))), source);
+  [Test]
+  public void AConstantStringBeyondTheFrontendsLimit_IsRefused() {
+    var lines = string.Join("\n", Enumerable.Range(1, 25).Select(index => $"\tc{index} = c{index - 1} + c{index - 1}"));
+    var result = GoFrontend.Check("x.go", "package x\n\nconst (\n\tc0 = \"x\"\n" + lines + "\n)\n");
+    Assert.That(result.Diagnostics.Single().ToString(), Does.Contain("PLY2102").And.Contain("longer than 16 MiB"));
+  }
+
+  [Test]
+  public void TheCheck_ReportsThePackageConstants_OfAValidSource() {
+    var result = GoFrontend.Check("x.go", "package x\n\nconst (\n\t_ = 1\n\tA = 1 << 70\n\tB float32 = 0.1\n)\n");
+    Assert.That(result.Verdict, Is.EqualTo(GoVerdict.Valid));
+    Assert.That(result.Constants, Is.EqualTo(new[] { new GoConstantValue("A", "untyped int", "1180591620717411303424"), new GoConstantValue("B", "float32", "13421773/134217728") }));
+  }
+
+  [Test]
+  public void TheArguments_AreRequired() {
+    Assert.That(() => GoFrontend.Import(null!, ""), Throws.ArgumentNullException);
+    Assert.That(() => GoFrontend.Import("x.go", null!), Throws.ArgumentNullException);
+    Assert.That(() => GoFrontend.Check(null!, ""), Throws.ArgumentNullException);
+    Assert.That(() => GoFrontend.Check("x.go", null!), Throws.ArgumentNullException);
+  }
+
+  [Test]
+  public void ABuildConstraint_SetsTheLanguageVersion() {
+    static bool PerIteration(string header) {
+      var source = header + "package x\n\nfunc S(n int32) int32 {\n\tvar s int32\n\tfor i := int32(0); i < n; i++ {\n\t\ts += i\n\t}\n\treturn s\n}\n";
+      var module = GoFrontend.Import("x.go", source, new GoImportOptions { LanguageMinor = 27 }).Module!;
+      return module.Functions.Single(function => function.Name == "S").Body.Statements.SelectMany(Statements).OfType<IrFor>().Single().PerIteration.Count > 0;
     }
 
-    var unchecked_ = GoFrontend.Import("checksums.go", File.ReadAllText(Path.Combine(Folder, "checksums.go")));
-    Assert.That(unchecked_.Module!.Functions.Select(function => function.Name), Is.EqualTo(_checksums.Value.Functions.Select(function => function.Name)));
+    Assert.That(PerIteration(""), Is.True);
+    Assert.That(PerIteration("//go:build go1.18\n\n"), Is.False, "go1.18 is raised to go1.21, before per-iteration variables");
+    Assert.That(PerIteration("//go:build go1.22 && linux\n\n"), Is.True);
   }
 
-  /// <summary>The release of go a tree names, such as <c>go1.27.4</c>, without the suffix of a distribution's build.</summary>
-  private static string Release(string json) => System.Text.RegularExpressions.Regex.Match(json, "\"go\":\"(go[0-9.]+)").Groups[1].Value;
-
-  private static string Unversioned(string json) => System.Text.RegularExpressions.Regex.Replace(json, "\"go\":\"[^\"]*\"", "\"go\":\"\"");
+  [Test]
+  public void BeforeGo121_MinMaxAndClearAreUnknown() {
+    var result = GoFrontend.Check("x.go", "package x\n\nvar y = min(1, 2)\n", new GoImportOptions { LanguageMinor = 20 });
+    Assert.That(result.Diagnostics.Single().ToString(), Does.Contain("PLY2100").And.Contain("min requires go1.21 or later"));
+  }
 
 }

@@ -1,0 +1,168 @@
+# Valid Go outside what the Go frontend's checker models: each is refused by name, with no verdict.
+# Written for this repository.
+-- import_fmt --
+// want: unsupported "import \"fmt\""
+package p
+
+import "fmt"
+
+var _ = fmt.Sprint
+-- dot_import --
+// want: unsupported "dot import"
+package p
+
+import . "math"
+
+var _ = Pi
+-- generic_function --
+// want: unsupported "generic function Id"
+package p
+
+func Id[T any](x T) T { return x }
+-- generic_type --
+// want: unsupported "generic type List"
+package p
+
+type List[T any] struct{ items []T }
+-- local_generic_type --
+// want: unsupported "generic type L"
+package p
+
+func F() {
+	type L[T any] []T
+}
+-- channel --
+// want: unsupported "channel type"
+package p
+
+var c chan int
+-- embedded --
+// want: unsupported "embedded field"
+package p
+
+type A struct{}
+type B struct{ A }
+-- embedded_interface --
+// want: unsupported "embedded interface"
+package p
+
+type I interface{ error }
+-- constraint_union --
+// want: unsupported "type constraint"
+package p
+
+type Number interface{ int | float64 }
+-- comparable --
+// want: unsupported "the type constraint comparable"
+package p
+
+type C comparable
+-- comparable_value --
+// want: unsupported "the type constraint comparable"
+package p
+
+var c = comparable(nil)
+-- type_assertion --
+// want: unsupported "type assertion"
+package p
+
+func F(x any) int { return x.(int) }
+-- type_switch --
+// want: unsupported "type switch"
+package p
+
+func F(x any) {
+	switch x.(type) {
+	}
+}
+-- select --
+// want: unsupported "select"
+package p
+
+func F() {
+	select {}
+}
+-- send --
+// want: unsupported "channel send"
+package p
+
+func F(c func()) {
+	var d [1]int
+	c <- d
+}
+-- receive --
+// want: unsupported "channel receive"
+package p
+
+func F(c func()) { <-c }
+-- close --
+// want: unsupported "built-in close"
+package p
+
+func F(c []int) { close(c) }
+-- complex_literal --
+// want: unsupported "untyped complex"
+package p
+
+const c = 2i
+-- complex_builtin --
+// want: unsupported "complex128"
+package p
+
+var c = complex(1, 2)
+-- complex_arithmetic --
+// want: unsupported "complex128"
+package p
+
+func F(a, b complex128) complex128 { return a + b }
+-- complex_negation --
+// want: unsupported "complex64"
+package p
+
+func F(a complex64) complex64 { return -a }
+-- complex_comparison --
+// want: unsupported "complex128"
+package p
+
+func F(a, b complex128) bool { return a == b }
+-- complex_conversion --
+// want: unsupported "complex128"
+package p
+
+var c = complex128(1)
+-- method_expression --
+// want: unsupported "method expression"
+package p
+
+type T int
+
+func (T) M() {}
+
+var f = T.M
+-- generic_instantiation --
+// want: unsupported "generic type instantiation"
+package p
+
+var x = int[0]
+-- range_function --
+// want: unsupported "range over a function"
+package p
+
+func F(seq func(func(int) bool)) {
+	for x := range seq {
+		_ = x
+	}
+}
+-- alias_cycle --
+// want: unsupported "a cycle through the type alias A"
+package p
+
+type (
+	A = []B
+	B A
+)
+-- huge_exponent --
+// want: unsupported "beyond the frontend's range of exponents"
+package p
+
+const c = 1e1000000

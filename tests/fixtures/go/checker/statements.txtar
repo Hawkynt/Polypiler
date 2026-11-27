@@ -1,0 +1,445 @@
+# Type errors of statements, one per message of the Go frontend's checker; the Go layer checks that
+# go/types refuses each file too. Written for this repository.
+-- missing_return --
+// want: invalid "missing return"
+package p
+
+func F(x int) int {
+	if x > 0 {
+		return 1
+	}
+}
+-- missing_return_loop_break --
+// want: invalid "missing return"
+package p
+
+func F() int {
+	for {
+		break
+	}
+}
+-- missing_return_switch_without_default --
+// want: invalid "missing return"
+package p
+
+func F(x int) int {
+	switch x {
+	case 1:
+		return 1
+	}
+}
+-- missing_return_labeled_break --
+// want: invalid "missing return"
+package p
+
+func F(x int) int {
+L:
+	for {
+		switch x {
+		default:
+			break L
+		}
+	}
+}
+-- unused_variable --
+// want: invalid "declared and not used: x"
+package p
+
+func F() {
+	x := 1
+}
+-- assigned_not_used --
+// want: invalid "declared and not used: x"
+package p
+
+func F() {
+	var x int
+	x = 1
+}
+-- unused_range_variable --
+// want: invalid "declared and not used: v"
+package p
+
+func F(s []int) {
+	for _, v := range s {
+	}
+}
+-- unused_in_closure --
+// want: invalid "declared and not used: y"
+package p
+
+var f = func() {
+	y := 1
+}
+-- inc_string --
+// want: invalid "non-numeric type string"
+package p
+
+func F(s string) { s++ }
+-- assign_to_map_field --
+// want: invalid "cannot assign to struct field m[1].a in map"
+package p
+
+type T struct{ a int }
+
+func F(m map[int]T) { m[1].a = 2 }
+-- assign_to_value --
+// want: invalid "cannot assign to f() (neither addressable nor a map index expression)"
+package p
+
+func f() int { return 1 }
+
+func F() { f() = 2 }
+-- assign_op_multiple --
+// want: invalid "assignment operation += requires single-valued expressions"
+package p
+
+func F(a, b int) { a, b += 1, 2 }
+-- assign_mismatch --
+// want: invalid "assignment mismatch: 2 variables but 3 values"
+package p
+
+func F(a, b int) { a, b = 1, 2, 3 }
+-- assign_call_mismatch --
+// want: invalid "assignment mismatch: 2 variables but f() returns 3 values"
+package p
+
+func f() (int, int, int) { return 1, 2, 3 }
+
+func F(a, b int) { a, b = f() }
+-- non_name_define --
+// want: invalid "non-name s[0] on left side of :="
+package p
+
+func F(s []int) { s[0] := 1 }
+-- repeated_define --
+// want: invalid "a repeated on left side of :="
+package p
+
+func F() {
+	a, a := 1, 2
+	_ = a
+}
+-- define_over_constant --
+// want: invalid "cannot assign to c"
+package p
+
+func F() {
+	const c = 1
+	c, d := 2, 3
+	_ = d
+}
+-- no_new_variables --
+// want: invalid "no new variables on left side of :="
+package p
+
+func F() {
+	a := 1
+	a := 2
+	_ = a
+}
+-- untyped_nil_variable --
+// want: invalid "use of untyped nil in assignment"
+package p
+
+func F() {
+	x := nil
+	_ = x
+}
+-- return_too_many_count --
+// want: invalid "too many return values"
+package p
+
+func F() (int, int) { return 1, 2, 3 }
+-- define_mismatch_values --
+// want: invalid "assignment mismatch: 2 variables but 3 values"
+package p
+
+func F() {
+	a, b := 1, 2, 3
+	_, _ = a, b
+}
+-- return_call_mismatch --
+// want: invalid "not enough return values"
+package p
+
+func f() (int, int) { return 1, 2 }
+
+func F() (int, int, int) { return f() }
+-- define_call_mismatch --
+// want: invalid "assignment mismatch: 1 variable but f() returns 2 values"
+package p
+
+func f() (int, int) { return 1, 2 }
+
+func F() {
+	a := f()
+	_ = a
+}
+-- result_shadowed --
+// want: invalid "result parameter r not in scope at return"
+package p
+
+func F() (r int) {
+	{
+		r := 2
+		_ = r
+		return
+	}
+}
+-- return_in_void --
+// want: invalid "too many return values"
+package p
+
+func F() { return 1 }
+-- return_not_enough --
+// want: invalid "not enough return values"
+package p
+
+func F() (int, int) { return }
+-- break_outside --
+// want: invalid "break is not in a loop, switch, or select"
+package p
+
+func F() { break }
+-- continue_outside --
+// want: invalid "continue is not in a loop"
+package p
+
+func F(x int) {
+	switch x {
+	case 1:
+		continue
+	}
+}
+-- fallthrough_final --
+// want: invalid "cannot fallthrough final case in switch"
+package p
+
+func F(x int) {
+	switch x {
+	case 1:
+		fallthrough
+	}
+}
+-- fallthrough_misplaced --
+// want: invalid "fallthrough statement out of place"
+package p
+
+func F() { fallthrough }
+-- local_constant_redeclared --
+// want: invalid "c redeclared in this block"
+package p
+
+func F() {
+	const c = 1
+	const c = 2
+}
+-- local_variable_redeclared --
+// want: invalid "x redeclared in this block"
+package p
+
+func F() {
+	var x = 1
+	var x = 2
+	_ = x
+}
+-- local_variable_extra_init --
+// want: invalid "extra init expr"
+package p
+
+func F() {
+	var a = 1, 2
+	_ = a
+}
+-- local_variable_missing_init --
+// want: invalid "assignment mismatch"
+package p
+
+func F() {
+	var a, b, c = 1, 2
+	_, _, _ = a, b, c
+}
+-- non_boolean_if --
+// want: invalid "non-boolean condition in if statement"
+package p
+
+func F(x int) {
+	if x {
+	}
+}
+-- non_boolean_for --
+// want: invalid "non-boolean condition in for statement"
+package p
+
+func F(x int) {
+	for x {
+	}
+}
+-- switch_incomparable --
+// want: invalid "cannot switch on"
+package p
+
+func F(f struct{ s []int }) {
+	switch f {
+	}
+}
+-- multiple_defaults --
+// want: invalid "multiple defaults in switch"
+package p
+
+func F(x int) {
+	switch x {
+	default:
+	default:
+	}
+}
+-- duplicate_case --
+// want: invalid "duplicate case 1"
+package p
+
+func F(x int) {
+	switch x {
+	case 1, 2:
+	case 1:
+	}
+}
+-- case_mismatch --
+// want: invalid "cannot convert"
+package p
+
+func F(x int) {
+	switch x {
+	case "a":
+	}
+}
+-- post_declaration --
+// want: invalid "cannot declare in post statement of for loop"
+package p
+
+func F() {
+	for i := 0; i < 3; j := 1 {
+		_ = i
+	}
+}
+-- range_over_bool --
+// want: invalid "cannot range over"
+package p
+
+func F(b bool) {
+	for range b {
+	}
+}
+-- range_int_two_variables --
+// want: invalid "permits only one iteration variable"
+package p
+
+func F() {
+	for i, j := range 3 {
+		_, _ = i, j
+	}
+}
+-- range_declare_non_name --
+// want: invalid "cannot declare"
+package p
+
+func F(s []int, t []int) {
+	for t[0] := range s {
+	}
+}
+-- range_no_new_variables --
+// want: invalid "no new variables on left side of :="
+package p
+
+func F(s []int) {
+	for _ := range s {
+	}
+}
+-- range_repeated --
+// want: invalid "repeated on left side of :="
+package p
+
+func F(m map[int]int) {
+	for k, k := range m {
+		_ = k
+	}
+}
+-- range_int_float_variable --
+// want: invalid "cannot use iteration variable of type float64"
+package p
+
+func F() {
+	var f float64
+	for f = range 3 {
+	}
+	_ = f
+}
+-- goto_into_block --
+// want: invalid "goto L jumps into block"
+package p
+
+func F() {
+	goto L
+	{
+	L:
+	}
+}
+-- label_not_declared --
+// want: invalid "label L not declared"
+package p
+
+func F() {
+	goto L
+}
+-- label_unused --
+// want: invalid "label L declared and not used"
+package p
+
+func F() {
+L:
+	for {
+	}
+}
+-- label_duplicate --
+// want: invalid "label L already declared"
+package p
+
+func F() {
+L:
+	goto L
+L:
+	goto L
+}
+-- goto_over_variable --
+// want: invalid "goto L jumps over variable declaration at line 6"
+package p
+
+func F() {
+	goto L
+	x := 1
+	_ = x
+L:
+}
+-- break_label_invalid --
+// want: invalid "invalid break label L"
+package p
+
+func F() {
+L:
+	{
+		break L
+	}
+}
+-- continue_label_invalid --
+// want: invalid "invalid continue label L"
+package p
+
+func F(x int) {
+L:
+	switch x {
+	case 1:
+		for {
+			continue L
+		}
+	}
+}
