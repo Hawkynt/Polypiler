@@ -1,229 +1,320 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Polypiler.Core.Frontends.Perl.Parsing;
+using Polypiler.Core.Frontends.Perl.Ast;
 using Polypiler.Core.IR;
 
 namespace Polypiler.Core.Frontends.Perl.Lowering;
 
 internal sealed partial class PerlLowerer {
 
-  private void LowerStatements(PerlOp[] nodes, List<IrStmt> statements, HashSet<PerlOp>? consumed, bool allowImplicitReturn) {
-    var last = nodes.LastOrDefault(n => n.Name != "nextstate" && (consumed is null || !consumed.Contains(n)));
-    string? pendingLabel = null;
+  /// <summary>
+  /// Lowers statements in a context: every statement but the last is in void context, the last in
+  /// <paramref name="want"/> - the caller's for the body of a sub, which perl decides at run time.
+  /// </summary>
+  private void LowerStatements(IReadOnlyList<PerlStatement> nodes, List<IrStmt> statements, HashSet<PerlStatement>? consumed, PerlWant want, bool allowImplicitReturn) {
+    var last = nodes.LastOrDefault(n => !IsOpless(n) && (consumed is null || !consumed.Contains(n)));
     foreach (var node in nodes) {
-      if (node.Name == "nextstate") {
-        this._line = node.Line;
-        this._integer = node.Integer != 0;
-        pendingLabel = node.Label;
+      if (IsOpless(node))
         continue;
-      }
-      if (consumed is not null && consumed.Contains(node)) {
-        pendingLabel = null;
+      this._line = node.Line;
+      this._integer = node.Integer;
+      if (consumed is not null && consumed.Contains(node))
         continue;
-      }
-
-      var label = pendingLabel;
-      pendingLabel = null;
-
-      if (this.TryLowerBlessStatement(node, statements))
-        continue;
-
-      if (this.TryLowerMooseSetterStmt(node, statements))
-        continue;
-
-      if (this.TryLowerControlStatement(node, label, statements))
-        continue;
-
-      if (node is { Name: "return", Children: var retKids }) {
-        this.LowerReturnStatement(retKids, statements);
-        continue;
-      }
-
-      if (node.Name == "die") {
-        this.LowerDieStatement(node, statements);
-        continue;
-      }
-
-      if (node.Name is "leave" && this.TryLowerTryCatchFinally(node, statements))
-        continue;
-
-      if (node.Name == "leavetrycatch") {
-        this.LowerTryCatch(node, null, statements);
-        continue;
-      }
-
-      if (node.Name == "leavetry") {
-        this.LowerEvalStatement(node, statements);
-        continue;
-      }
-
-      if (node.Name is "lineseq" or "scope" or "list" or "leave") {
-        var innerNodes = StripMarks(node.Children).Where(c => c.Name != "enter").ToArray();
-        this.LowerStatements(innerNodes, statements, null, allowImplicitReturn: allowImplicitReturn && ReferenceEquals(node, last));
-        continue;
-      }
-
-      if (this.TryLowerAssignmentStatement(node, statements))
-        continue;
-
-      if (allowImplicitReturn && ReferenceEquals(node, last) && this._currentReturnType != IrType.Void) {
-        var val = this.LiftExpr(node);
-        statements.Add(new IrReturn(this.ToType(val, this._currentReturnType)));
-        continue;
-      }
-
-      if (node.Name is "unstack" or "enter" || (node.Name == "null" && node.Children.Length == 0))
-        continue;
-
-      var expr = this.LiftExpr(node);
-      statements.Add(new IrExprStmt(expr));
+      var isLast = ReferenceEquals(node, last);
+      this.LowerStatement(node, statements, isLast ? want : PerlWant.Void, allowImplicitReturn && isLast);
     }
   }
 
-  private void LowerReturnStatement(PerlOp[] retKids, List<IrStmt> statements) {
-    var vals = retKids.Where(k => k.Name != "pushmark").ToArray();
-    if (vals.Length == 0) {
-      statements.Add(new IrReturn(this._currentReturnType == IrType.Void ? null : DefaultExpr(this._currentReturnType)));
+  private void LowerStatement(PerlStatement node, List<IrStmt> statements, PerlWant want, bool implicitReturn) {
+    switch (node) {
+      case PerlIf ifStatement:
+        statements.Add(this.LowerIf(ifStatement, want));
+        return;
+      case PerlWhile loop:
+        this.LowerWhile(loop, node.Label, statements);
+        return;
+      case PerlCFor loop:
+        this.LowerCFor(loop, node.Label, statements);
+        return;
+      case PerlForeach loop:
+        this.LowerForEachLoop(loop.Variables, loop.Declarator, loop.List, loop.Body.Statements, loop.Continue, node.Label, statements);
+        return;
+      case PerlBareBlock block:
+        this.LowerBareBlock(block, node.Label, want, implicitReturn, statements);
+        return;
+      case PerlTry tryStatement:
+        this.LowerTryCatch(tryStatement, statements);
+        return;
+      case PerlDefer:
+        throw this.Fail(PerlFrontend.ErrorHandlingUnsupported, "defer");
+      case PerlPackage { Body: { } body }:
+        this.LowerStatements(body.Statements, statements, null, want, implicitReturn);
+        return;
+      case PerlExpressionStatement expressionStatement:
+        this.LowerExpressionStatement(expressionStatement, statements, want, implicitReturn);
+        return;
+    }
+  }
+
+  private void LowerExpressionStatement(PerlExpressionStatement node, List<IrStmt> statements, PerlWant want, bool implicitReturn) {
+    switch (node.Modifier) {
+      case "if" or "unless":
+        this.LowerLogicalStatement(node.Modifier == "if" ? "and" : "or", node.ModifierExpression!, node.Expression, want, implicitReturn, statements);
+        return;
+      case "while" or "until":
+        if (node.Expression is PerlDoBlock)
+          throw this.Fail(PerlFrontend.ControlUnsupported, $"do BLOCK {node.Modifier}");
+        this.LowerWhileLoop(node.Modifier == "until", node.ModifierExpression!, [new PerlExpressionStatement(node.Expression) { Line = node.Line, Integer = node.Integer, Package = node.Package }], node.Label, statements);
+        return;
+      case "for":
+        this.LowerForEachLoop([], null, node.ModifierExpression!, [new PerlExpressionStatement(node.Expression) { Line = node.Line, Integer = node.Integer, Package = node.Package }], null, node.Label, statements);
+        return;
+    }
+    this.LowerExpressionAsStatement(node.Expression, statements, want, implicitReturn);
+  }
+
+  /// <summary>An expression as a statement: control flow (<c>return</c>, <c>last</c>, <c>die</c>, conditionals), an assignment, or a value.</summary>
+  private void LowerExpressionAsStatement(PerlExpr expression, List<IrStmt> statements, PerlWant want, bool implicitReturn) {
+    if (this.TryLowerBlessStatement(expression, statements))
+      return;
+    if (this.TryLowerMooseSetterStmt(expression, statements))
+      return;
+
+    switch (expression) {
+      case PerlJump { Keyword: "goto" or "redo" or "dump" } jump:
+        throw this.Fail(PerlFrontend.ControlUnsupported, jump.Keyword);
+      case PerlJump { Keyword: "return" } jump:
+        this.LowerReturnStatement(jump.Value, statements);
+        return;
+      case PerlJump { Keyword: "last" or "next" } jump:
+        this.LowerLoopJump(jump, statements);
+        return;
+      case PerlCall { Builtin: true, Name: "die" } die:
+        this.LowerDieStatement(die, statements);
+        return;
+      case PerlEvalBlock eval when want == PerlWant.Void:
+        this.LowerEvalStatement(eval, statements);
+        return;
+      case PerlBinary { Operator: "&&" or "and" } binary:
+        if (this.LowerLogicalStatement("and", binary.Left, binary.Right, want, implicitReturn, statements))
+          return;
+        break;
+      case PerlBinary { Operator: "||" or "or" } binary:
+        if (this.LowerLogicalStatement("or", binary.Left, binary.Right, want, implicitReturn, statements))
+          return;
+        break;
+      case PerlTernary ternary when want == PerlWant.Void || IsStatementExpression(ternary.Then) || IsStatementExpression(ternary.Else): {
+        var cond = this.Truth(this.LiftExpr(ternary.Condition, PerlWant.Scalar));
+        var yes = this.LowerSingleBody(ternary.Then, want);
+        var no = this.LowerSingleBody(ternary.Else, want);
+        statements.Add(new IrIf(cond, yes, no.Statements.Count > 0 ? no : null));
+        return;
+      }
+      case PerlList { Items.Count: 1 } list when want == PerlWant.Void && list.Items[0] is PerlBinary or PerlTernary:
+        this.LowerExpressionAsStatement(list.Items[0], statements, want, implicitReturn);
+        return;
+    }
+
+    if (this.TryLowerAssignmentStatement(expression, statements))
+      return;
+
+    if (implicitReturn && this._currentReturnType != IrType.Void) {
+      var val = this.LiftExpr(expression, want);
+      statements.Add(new IrReturn(this.ToType(val, this._currentReturnType)));
       return;
     }
 
-    // Returning an anonymous sub escapes (#436 -> PLY1732).
-    if (vals[0].Name == "anoncode" || (vals[0].Name == "padsv" && this._closureLocals.ContainsKey(vals[0].Target)))
-      throw this.Fail(PerlFrontend.EscapingClosure, vals[0].Name == "anoncode" ? "sub { ... }" : this.LexicalName(vals[0].Target), cause: "OBJ-CLOSURES");
+    if (want == PerlWant.Void && IsUselessConstant(expression))
+      return;
 
-    var expr = this.LiftExpr(vals[0]);
+    var expr = this.LiftExpr(expression, want);
+    statements.Add(new IrExprStmt(expr));
+  }
+
+  /// <summary>A constant in void context, which perl drops.</summary>
+  private bool IsUselessConstant(PerlExpr expression) => expression is PerlNumber or PerlString || this.Fold(expression) is not null && expression is not (PerlCall or PerlPattern);
+
+  /// <summary>
+  /// <c>A &amp;&amp; B</c> (and <c>B if A</c>) or <c>A || B</c> (and <c>B unless A</c>) as a statement: an
+  /// <c>if</c> in void context or when <c>B</c> is a statement; a value otherwise.
+  /// </summary>
+  private bool LowerLogicalStatement(string kind, PerlExpr condition, PerlExpr body, PerlWant want, bool implicitReturn, List<IrStmt> statements) {
+    if (this.Fold(condition) is { } folded) {
+      var taken = kind == "and" ? folded.Truth : !folded.Truth;
+      if (taken)
+        this.LowerExpressionAsStatement(body, statements, want, implicitReturn);
+      else if (implicitReturn && this._currentReturnType != IrType.Void)
+        statements.Add(new IrReturn(this.ToType(this.LiftExpr(condition, want), this._currentReturnType)));
+      return true;
+    }
+    if (want != PerlWant.Void && !IsStatementExpression(body)) {
+      if (!implicitReturn) {
+        statements.Add(new IrExprStmt(this.LowerLogical(kind, condition, body, want)));
+        return true;
+      }
+      return this.ReturnLogical(kind, condition, body, want, statements);
+    }
+    var cond = this.Truth(this.LiftExpr(condition, PerlWant.Scalar));
+    if (kind == "or")
+      cond = new IrUnary(IrUnaryOp.LogicalNot, cond);
+    var thenBlock = this.LowerSingleBody(body, want);
+    statements.Add(new IrIf(cond, thenBlock, null));
+    return true;
+  }
+
+  private bool ReturnLogical(string kind, PerlExpr condition, PerlExpr body, PerlWant want, List<IrStmt> statements) {
+    var val = this.LowerLogical(kind, condition, body, want);
+    statements.Add(new IrReturn(this.ToType(val, this._currentReturnType)));
+    return true;
+  }
+
+  /// <summary>Whether perl compiles an expression into a statement-like op: a block, a jump, a conditional, an assignment.</summary>
+  private static bool IsStatementExpression(PerlExpr expression) => expression switch {
+    PerlJump { Keyword: "return" or "last" or "next" } => true,
+    PerlCall { Builtin: true, Name: "die" } => true,
+    PerlBinary { Operator: "&&" or "and" or "||" or "or" } => true,
+    PerlTernary => true,
+    PerlAssign { Operator: "=" } => true,
+    PerlList { Parenthesized: true, Items: [var only] } => IsStatementExpression(only),
+    _ => false
+  };
+
+  private IrStmt LowerIf(PerlIf node, PerlWant want) {
+    if (node.Unless && node.Clauses.Count == 1 && node.Else is null) {
+      var cond = new IrUnary(IrUnaryOp.LogicalNot, this.Truth(this.LiftExpr(node.Clauses[0].Condition, PerlWant.Scalar)));
+      return new IrIf(cond, this.LowerBlock(node.Clauses[0].Body, want), null);
+    }
+    return this.LowerIfClauses(node, 0, want);
+  }
+
+  private IrStmt LowerIfClauses(PerlIf node, int index, PerlWant want) {
+    var (condition, body) = node.Clauses[index];
+    var cond = this.Truth(this.LiftExpr(condition, PerlWant.Scalar));
+    IrBlock? otherwise = null;
+    if (index + 1 < node.Clauses.Count)
+      otherwise = new IrBlock([this.LowerIfClauses(node, index + 1, want)]);
+    else if (node.Else is not null)
+      otherwise = this.LowerBlock(node.Else, want);
+    var then = this.LowerBlock(body, want);
+    if (index == 0 && node.Unless) {
+      var swapped = otherwise ?? new IrBlock([]);
+      return new IrIf(cond, swapped, then.Statements.Count > 0 ? then : null);
+    }
+    return new IrIf(cond, then, otherwise is { Statements.Count: > 0 } ? otherwise : null);
+  }
+
+  private IrBlock LowerBlock(PerlBlock block, PerlWant want) {
+    var items = new List<IrStmt>();
+    var saved = (this._line, this._integer);
+    this.LowerStatements(block.Statements, items, null, want, allowImplicitReturn: false);
+    (this._line, this._integer) = saved;
+    return new(items);
+  }
+
+  private IrBlock LowerSingleBody(PerlExpr expression, PerlWant want) {
+    var items = new List<IrStmt>();
+    switch (expression) {
+      case PerlDoBlock block:
+        this.LowerStatements(block.Body.Statements, items, null, want, allowImplicitReturn: false);
+        break;
+      case PerlList { Parenthesized: true, Items: [var only] }:
+        return this.LowerSingleBody(only, want);
+      default:
+        this.LowerExpressionAsStatement(expression, items, want, implicitReturn: false);
+        break;
+    }
+    return new(items);
+  }
+
+  private void LowerBareBlock(PerlBareBlock block, string? label, PerlWant want, bool implicitReturn, List<IrStmt> statements) {
+    if (block.Continue is not null)
+      throw this.Fail(PerlFrontend.ControlUnsupported, "continue block");
+    var prev = (this._line, this._integer);
+    var items = new List<IrStmt>();
+    this._loops.Push(new(label, isDoWhile: false));
+    this.LowerStatements(block.Body.Statements, items, null, want, allowImplicitReturn: false);
+    this._loops.Pop();
+    (this._line, this._integer) = prev;
+    statements.Add(new IrBlock(items));
+  }
+
+  private void LowerWhile(PerlWhile loop, string? label, List<IrStmt> statements) {
+    if (loop.Continue is not null)
+      throw this.Fail(PerlFrontend.ControlUnsupported, "continue block");
+    this.LowerWhileLoop(loop.Until, loop.Condition, loop.Body.Statements, label, statements);
+  }
+
+  private void LowerWhileLoop(bool until, PerlExpr? condition, IReadOnlyList<PerlStatement> body, string? label, List<IrStmt> statements) {
+    IrExpr cond = condition is null ? new IrConst(IrType.Bool, 1) : this.Truth(this.LiftExpr(condition, PerlWant.Scalar));
+    if (until)
+      cond = new IrUnary(IrUnaryOp.LogicalNot, cond);
+    this._loops.Push(new(label, isDoWhile: false));
+    var items = new List<IrStmt>();
+    var saved = (this._line, this._integer);
+    this.LowerStatements(body, items, null, PerlWant.Void, allowImplicitReturn: false);
+    (this._line, this._integer) = saved;
+    this._loops.Pop();
+    statements.Add(new IrWhile(cond, new(items)));
+  }
+
+  private void LowerCFor(PerlCFor loop, string? label, List<IrStmt> statements) {
+    if (loop.Init is not null)
+      this.LowerExpressionAsStatement(loop.Init, statements, PerlWant.Void, implicitReturn: false);
+    IrExpr cond = loop.Condition is null ? new IrConst(IrType.Bool, 1) : this.Truth(this.LiftExpr(loop.Condition, PerlWant.Scalar));
+    this._loops.Push(new(label, isDoWhile: false));
+    var items = new List<IrStmt>();
+    var saved = (this._line, this._integer);
+    this.LowerStatements(loop.Body.Statements, items, null, PerlWant.Void, allowImplicitReturn: false);
+    (this._line, this._integer) = saved;
+    if (loop.Step is not null)
+      this.LowerExpressionAsStatement(loop.Step, items, PerlWant.Void, implicitReturn: false);
+    this._loops.Pop();
+    statements.Add(new IrWhile(cond, new(items)));
+  }
+
+  private void LowerReturnStatement(PerlExpr? value, List<IrStmt> statements) {
+    if (value is null || value is PerlList { Items.Count: 0 }) {
+      statements.Add(new IrReturn(this._currentReturnType == IrType.Void ? null : DefaultExpr(this._currentReturnType)));
+      return;
+    }
+    var first = value is PerlList { Parenthesized: false } list ? list.Items[0] : value;
+
+    // Returning an anonymous sub escapes (#436 -> PLY1732).
+    if (first is PerlAnonSub || first is PerlVariable { Sigil: '$', Lexical: { } lex } && this._closureLocals.ContainsKey(lex))
+      throw this.Fail(PerlFrontend.EscapingClosure, first is PerlAnonSub ? "sub { ... }" : ((PerlVariable)first).Name, cause: "OBJ-CLOSURES");
+
+    var expr = this.LiftExpr(first, PerlWant.Unknown);
     if (this._currentReturnType == IrType.Void)
       statements.Add(new IrReturn(null));
     else
       statements.Add(new IrReturn(this.ToType(expr, this._currentReturnType)));
   }
 
-  private bool TryLowerControlStatement(PerlOp node, string? label, List<IrStmt> statements) {
-    // Reject unsupported control ops (#435)
-    if (node.Name is "goto" or "redo" or "given" or "when")
-      throw this.Fail(PerlFrontend.ControlUnsupported, node.Name);
+  // ---- foreach ----
 
-    // Unwrap `null` wrapping a single void-context condition (`and`, `or`, `cond_expr`).
-    if (node is { Name: "null", Children: [var wrapped] } && wrapped.Name is "and" or "or" or "cond_expr")
-      return this.TryLowerControlStatement(wrapped, label, statements);
+  private void LowerForEachLoop(IReadOnlyList<PerlVariable> variables, PerlDeclarator? declarator, PerlExpr list, IReadOnlyList<PerlStatement> body, PerlBlock? next, string? label, List<IrStmt> statements) {
+    if (next is not null)
+      throw this.Fail(PerlFrontend.ControlUnsupported, "continue block");
+    if (variables.Count > 1)
+      throw this.Fail(PerlFrontend.ControlUnsupported, "foreach over several variables");
+    var loopVariable = variables.Count == 1 ? variables[0] : null;
+    if (loopVariable is not null && loopVariable.Lexical is null)
+      throw this.Fail(PerlFrontend.ControlUnsupported, "foreach with a package loop variable");
 
-    // `if (C) { ... }` / `STMT if C;` compiled as `and` in void or statement/tail context
-    if (node is { Name: "and", Children: [var condOp, var thenOp] } && (node.Want == "void" || IsStatementOp(thenOp))) {
-      var cond = this.Truth(this.LiftExpr(condOp));
-      var thenBlock = this.LowerSingleBody(thenOp);
-      statements.Add(new IrIf(cond, thenBlock, null));
-      return true;
+    var reversed = false;
+    var items = list is PerlList { Parenthesized: true } paren ? paren.Items : list is PerlList plain ? plain.Items : [list];
+    if (items is [PerlCall { Builtin: true, Name: "reverse", Arguments: [var reversedItem] }]) {
+      reversed = true;
+      items = [reversedItem];
     }
+    if (items is [PerlList { Parenthesized: true, Items: [var single] }])
+      items = [single];
 
-    // `unless (C) { ... }` / `STMT unless C;` compiled as `or` in void or statement/tail context
-    if (node is { Name: "or", Children: [var condOp2, var elseOp] } && (node.Want == "void" || IsStatementOp(elseOp))) {
-      var cond = new IrUnary(IrUnaryOp.LogicalNot, this.Truth(this.LiftExpr(condOp2)));
-      var thenBlock = this.LowerSingleBody(elseOp);
-      statements.Add(new IrIf(cond, thenBlock, null));
-      return true;
-    }
-
-    // `if (C) { ... } elsif ... else { ... }` compiled as `cond_expr` in void or statement/tail context
-    if (node is { Name: "cond_expr", Children: [var testOp, var yesOp, var noOp] } &&
-        (node.Want == "void" || IsStatementOp(yesOp) || IsStatementOp(noOp))) {
-      var cond = this.Truth(this.LiftExpr(testOp));
-      var yesBlock = this.LowerSingleBody(yesOp);
-      var noBlock = this.LowerSingleBody(noOp);
-      statements.Add(new IrIf(cond, yesBlock, noBlock.Statements.Count > 0 ? noBlock : null));
-      return true;
-    }
-
-    // Loop constructs: `leaveloop`
-    if (node is { Name: "leaveloop", Children: [var enterOp, var bodyOp] }) {
-      this.LowerLoop(enterOp, bodyOp, label, statements);
-      return true;
-    }
-
-    // `last` / `next` (plain or labelled)
-    if (node.Name is "last" or "next") {
-      this.LowerLoopJump(node, statements);
-      return true;
-    }
-
-    return false;
-  }
-
-  private static readonly HashSet<string> _statementOps = new(StringComparer.Ordinal) {
-    "scope", "leave", "lineseq", "return", "die", "last", "next",
-    "leaveloop", "cond_expr", "and", "or", "padsv_store", "sassign", "aassign"
-  };
-
-  private static bool IsStatementOp(PerlOp op)
-    => _statementOps.Contains(UnwrapSingleNull(op).Name);
-
-  private static PerlOp UnwrapSingleNull(PerlOp op) {
-    while (op.Name == "null" && op.Children.Length == 1)
-      op = op.Children[0];
-    return op;
-  }
-
-  private void LowerLoop(PerlOp enterOp, PerlOp bodyOp, string? label, List<IrStmt> statements) {
-    // Unwrap `null` around loop body
-    var inner = bodyOp is { Name: "null", Children: [var single] } ? single : bodyOp;
-
-    // 1. Bare block `{ ... }` (no loop condition, body is `lineseq`)
-    if (enterOp.Name == "enterloop" && inner.Name == "lineseq") {
-      var prev = (this._line, this._integer);
-      var items = new List<IrStmt>();
-      this._loops.Push(new(label, isDoWhile: false));
-      this.LowerStatements(inner.Children, items, null, allowImplicitReturn: false);
-      this._loops.Pop();
-      (this._line, this._integer) = prev;
-      statements.Add(new IrBlock(items));
-      return;
-    }
-
-    // 2. `for` / `foreach` (`enteriter` + `and(iter, body)`)
-    if (enterOp.Name == "enteriter") {
-      this.LowerForEachLoop(enterOp, inner, label, statements);
-      return;
-    }
-
-    // 3. `while (C) { ... }` / `until (C) { ... }` / C-style `for`
-    if (enterOp.Name == "enterloop") {
-      var cond = this.Truth(this.LiftExpr(inner.Children[0]));
-      if (inner.Name == "or")
-        cond = new IrUnary(IrUnaryOp.LogicalNot, cond);
-      this._loops.Push(new(label, isDoWhile: false));
-      var body = this.LowerLoopBody(inner.Children[1]);
-      this._loops.Pop();
-      statements.Add(new IrWhile(cond, body));
-      return;
-    }
-
-    throw this.Fail(PerlFrontend.ControlUnsupported, $"loop shape {enterOp.Name}/{inner.Name}");
-  }
-
-  private void LowerForEachLoop(PerlOp enterIter, PerlOp inner, string? label, List<IrStmt> statements) {
-    var iterBody = inner.Children[1];
-
-    // Check if reversed (`reverse A .. B`)
-    var reversed = this._tree.IterReversed != 0 && (enterIter.Private & this._tree.IterReversed) != 0;
-
-    // Inspect the iterable list in `enterIter.Children`
-    var iterKids = enterIter.Children.Where(c => c.Name != "null" || c.Children.Length > 0).ToArray();
-    var listNode = iterKids.FirstOrDefault(c => c.Name == "null") ?? iterKids.FirstOrDefault();
-
-    // Case A: Range `A .. B` (direct `[pushmark, startOp, endOp]` or `reverse A .. B` with `flop -> flip -> range(startOp, endOp)`)
-    PerlOp? rangeStart = null;
-    PerlOp? rangeEnd = null;
-    if (listNode is { Children: [{ Name: "pushmark" }, var s1, var e1] }) {
-      rangeStart = s1;
-      rangeEnd = e1;
-    } else if (Descendants(enterIter).FirstOrDefault(o => o.Name == "range") is { Children: [var s2, var e2] }) {
-      rangeStart = s2;
-      rangeEnd = e2;
-    }
-
-    if (rangeStart is not null && rangeEnd is not null) {
-      var startExpr = this.LiftExpr(rangeStart);
-      var endExpr = this.LiftExpr(rangeEnd);
+    // Case A: a range `A .. B`, or `reverse A .. B`.
+    if (items is [PerlBinary { Operator: ".." } range]) {
+      var startExpr = this.LiftExpr(range.Left, PerlWant.Scalar);
+      var endExpr = this.LiftExpr(range.Right, PerlWant.Scalar);
       if (startExpr.Type == IrType.String || endExpr.Type == IrType.String)
         throw this.Fail(PerlFrontend.ControlUnsupported, "string range");
 
@@ -236,7 +327,6 @@ internal sealed partial class PerlLowerer {
       var startVal = boundType == IrType.I32 ? this.ToType(startExpr, IrType.I32) : this.ToSigned64(startExpr);
       var endVal = boundType == IrType.I32 ? this.ToType(endExpr, IrType.I32) : this.ToSigned64(endExpr);
 
-      // Evaluate bounds once before the loop (#435).
       var boundStart = this.TempLocal(boundType, "_start");
       var boundEnd = this.TempLocal(boundType, "_end");
       statements.Add(new IrDeclare(boundStart, startVal));
@@ -245,24 +335,20 @@ internal sealed partial class PerlLowerer {
       var counter = this.TempLocal(boundType, "_iter");
       statements.Add(new IrDeclare(counter, new IrLocalRef(reversed ? boundEnd : boundStart)));
 
-      // Loop variable: either `my $i` (`enterIter.Target > 0`) or implicit `$_` (`enterIter.Target == 0`).
       var prevTopic = this._topicVar;
       IrLocal loopVar;
       var bodyStmts = new List<IrStmt>();
-      if (enterIter.Target > 0) {
-        var vname = this.LexicalName(enterIter.Target);
-        loopVar = this.DeclareLocal(vname, iterType, enterIter.Target);
+      if (loopVariable is not null) {
+        loopVar = this.DeclareLocal(loopVariable.Name, iterType, loopVariable.Lexical);
       } else {
         loopVar = this.TempLocal(iterType, "_topic");
         this._topicVar = loopVar;
       }
-
-      // Per-iteration copy so writing to the loop variable does not alter the trip count (#435).
       bodyStmts.Add(new IrDeclare(loopVar, this.ToType(new IrLocalRef(counter), iterType)));
 
       var outerLoop = new LoopContext(label, isDoWhile: false);
       this._loops.Push(outerLoop);
-      var loweredBody = this.LowerLoopBody(iterBody);
+      var loweredBody = this.LowerLoopBody(body);
       this._loops.Pop();
       this._topicVar = prevTopic;
 
@@ -285,11 +371,11 @@ internal sealed partial class PerlLowerer {
     }
 
     // Case B: `foreach my $e (@a)` / `for (@$a)` (#437)
-    var arrayOp = listNode?.Children.FirstOrDefault(c => c.Name is "padav" or "rv2av" or "padsv");
+    var arrayOp = items.FirstOrDefault(c => c is PerlVariable { Sigil: '@' or '$' } or PerlDeref { Sigil: '@' });
     if (arrayOp is not null) {
-      var arrExpr = arrayOp is { Name: "rv2av", Children: [{ Name: "padsv" } innerSv] }
-        ? this.LiftExpr(innerSv)
-        : this.LiftExpr(arrayOp);
+      var arrExpr = arrayOp is PerlDeref { Reference: PerlVariable { Sigil: '$' } inner }
+        ? this.LiftExpr(inner, PerlWant.Scalar)
+        : this.LiftExpr(arrayOp, PerlWant.List);
       if (!arrExpr.Type.IsArray && !arrExpr.Type.IsList)
         throw this.Fail(PerlFrontend.ControlUnsupported, "foreach over non-array");
 
@@ -301,9 +387,8 @@ internal sealed partial class PerlLowerer {
 
       var prevTopic = this._topicVar;
       IrLocal elemVar;
-      if (enterIter.Target > 0) {
-        var vname = this.LexicalName(enterIter.Target);
-        elemVar = this.DeclareLocal(vname, elemType, enterIter.Target);
+      if (loopVariable is not null) {
+        elemVar = this.DeclareLocal(loopVariable.Name, elemType, loopVariable.Lexical);
       } else {
         elemVar = this.TempLocal(elemType, "_topic");
         this._topicVar = elemVar;
@@ -316,12 +401,11 @@ internal sealed partial class PerlLowerer {
       bodyStmts.Add(new IrDeclare(elemVar, readElem));
 
       this._loops.Push(new(label, isDoWhile: false));
-      var loweredBody = this.LowerLoopBody(iterBody);
+      var loweredBody = this.LowerLoopBody(body);
       this._loops.Pop();
       this._topicVar = prevTopic;
 
       bodyStmts.AddRange(loweredBody.Statements);
-      // Aliasing (#437): write back modified loop variable to array element!
       if (IsVarWritten(loweredBody, elemVar)) {
         if (arrExpr.Type.IsList)
           bodyStmts.Add(new IrExprStmt(new IrCollection(IrCollectionOp.ListSet, IrType.Void, [new IrLocalRef(arrTemp), new IrLocalRef(idx), new IrLocalRef(elemVar)])));
@@ -341,20 +425,22 @@ internal sealed partial class PerlLowerer {
     throw this.Fail(PerlFrontend.ControlUnsupported, "foreach over unsupported iterable");
   }
 
-  private void LowerLoopJump(PerlOp node, List<IrStmt> statements) {
-    var targetLabel = node.Pv;
+  private void LowerLoopJump(PerlJump node, List<IrStmt> statements) {
+    var targetLabel = node.Label;
+    if (node.Value is not null)
+      throw this.Fail(PerlFrontend.DynamicLoopControl, node.Keyword + " EXPR");
     if (this._loops.Count == 0 || this._loops.Peek().IsDoWhile)
-      throw this.Fail(PerlFrontend.DynamicLoopControl, node.Name + (targetLabel is not null ? $" {targetLabel}" : ""));
+      throw this.Fail(PerlFrontend.DynamicLoopControl, node.Keyword + (targetLabel is not null ? $" {targetLabel}" : ""));
 
     if (targetLabel is null || this._loops.Peek().Label == targetLabel) {
-      statements.Add(node.Name == "last" ? new IrBreak() : new IrContinue());
+      statements.Add(node.Keyword == "last" ? new IrBreak() : new IrContinue());
       return;
     }
 
     var target = this._loops.FirstOrDefault(l => l.Label == targetLabel)
-      ?? throw this.Fail(PerlFrontend.DynamicLoopControl, $"{node.Name} {targetLabel}");
+      ?? throw this.Fail(PerlFrontend.DynamicLoopControl, $"{node.Keyword} {targetLabel}");
 
-    if (node.Name == "last") {
+    if (node.Keyword == "last") {
       target.BreakFlag ??= this.TempLocal(IrType.Bool, "_brk");
       statements.Add(new IrAssign(target.BreakFlag, new IrConst(IrType.Bool, 1)));
       statements.Add(new IrBreak());
@@ -365,40 +451,28 @@ internal sealed partial class PerlLowerer {
     }
   }
 
-  private IrBlock LowerSingleBody(PerlOp node) {
+  private IrBlock LowerLoopBody(IReadOnlyList<PerlStatement> body) {
     var items = new List<IrStmt>();
-    if (node is { Name: "leave" or "scope" or "lineseq", Children: var kids }) {
-      var filtered = kids.Where(k => k.Name != "enter").ToArray();
-      this.LowerStatements(filtered, items, null, allowImplicitReturn: false);
-    } else if (node is { Name: "null", Children: [var inner] }) {
-      return this.LowerSingleBody(inner);
-    } else {
-      this.LowerStatements([node], items, null, allowImplicitReturn: false);
-    }
+    var saved = (this._line, this._integer);
+    this.LowerStatements(body, items, null, PerlWant.Void, allowImplicitReturn: false);
+    (this._line, this._integer) = saved;
     return new(items);
   }
 
-  private IrBlock LowerLoopBody(PerlOp node) {
-    var items = new List<IrStmt>();
-    node = UnwrapSingleNull(node);
-    var kids = node.Name == "lineseq" ? node.Children : [node];
-    var filtered = kids.Where(k => k.Name is not ("enter" or "unstack")).ToArray();
-    this.LowerStatements(filtered, items, null, allowImplicitReturn: false);
-    return new(items);
-  }
-
-  private IrExpr LowerDoBlockExpr(PerlOp leaveOp) {
+  private IrExpr LowerDoBlockExpr(PerlBlock block, PerlWant want) {
     var prev = (this._line, this._integer);
-    PerlOp? last = null;
-    foreach (var k in leaveOp.Children) {
-      if (k.Name == "nextstate") {
-        this._line = k.Line;
-        this._integer = k.Integer != 0;
-      } else if (k.Name != "enter") {
-        last = k;
-      }
+    var statements = block.Statements.Where(s => !IsOpless(s)).ToList();
+    foreach (var s in block.Statements) {
+      this._line = s.Line;
+      this._integer = s.Integer;
     }
-    var result = this.LiftExpr(last!);
+    if (statements.Count == 0 || statements[^1] is not PerlExpressionStatement { Modifier: null } last)
+      throw this.Fail(PerlFrontend.ScalarUnsupported, "do BLOCK without a value");
+    if (statements.Count > 1)
+      throw this.Fail(PerlFrontend.ScalarUnsupported, "do BLOCK with statements");
+    this._line = last.Line;
+    this._integer = last.Integer;
+    var result = this.LiftExpr(last.Expression, want);
     (this._line, this._integer) = prev;
     return result;
   }

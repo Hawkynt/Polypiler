@@ -1,164 +1,148 @@
 using System;
-using System.Buffers.Binary;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
-using Polypiler.Core.Frontends.Perl.Parsing;
+using Polypiler.Core.Frontends.Perl.Ast;
 using Polypiler.Core.IR;
 
 namespace Polypiler.Core.Frontends.Perl.Lowering;
 
 internal sealed partial class PerlLowerer {
 
-  private static readonly HashSet<string> _unaryScalarOps = new(StringComparer.Ordinal) {
-    "negate", "i_negate", "complement", "ncomplement", "int", "abs", "sqrt"
+  private static readonly Dictionary<string, IrBinaryOp> _binaryOps = new(StringComparer.Ordinal) {
+    ["+"] = IrBinaryOp.Add, ["-"] = IrBinaryOp.Subtract, ["*"] = IrBinaryOp.Multiply,
+    ["/"] = IrBinaryOp.Divide, ["%"] = IrBinaryOp.Remainder,
+    ["&"] = IrBinaryOp.And, ["|"] = IrBinaryOp.Or, ["^"] = IrBinaryOp.Xor,
+    ["<"] = IrBinaryOp.Less, ["<="] = IrBinaryOp.LessOrEqual,
+    [">"] = IrBinaryOp.Greater, [">="] = IrBinaryOp.GreaterOrEqual,
+    ["=="] = IrBinaryOp.Equal, ["!="] = IrBinaryOp.NotEqual
   };
 
-  private static readonly HashSet<string> _incDecOps = new(StringComparer.Ordinal) {
-    "preinc", "postinc", "predec", "postdec", "i_preinc", "i_postinc", "i_predec", "i_postdec"
+  /// <summary>The names of perl's ops for the operators, as diagnostics name them.</summary>
+  private static readonly Dictionary<string, string> _opNames = new(StringComparer.Ordinal) {
+    ["+"] = "add", ["-"] = "subtract", ["*"] = "multiply", ["/"] = "divide", ["%"] = "modulo", ["**"] = "pow",
+    ["<<"] = "left_shift", [">>"] = "right_shift", ["&"] = "bit_and", ["|"] = "bit_or", ["^"] = "bit_xor",
+    ["<"] = "lt", ["<="] = "le", [">"] = "gt", [">="] = "ge", ["=="] = "eq", ["!="] = "ne", ["<=>"] = "ncmp",
+    ["eq"] = "seq", ["ne"] = "sne", ["lt"] = "slt", ["gt"] = "sgt", ["le"] = "sle", ["ge"] = "sge", ["cmp"] = "scmp"
   };
 
-  private static readonly HashSet<string> _stringCmpOps = new(StringComparer.Ordinal) {
-    "seq", "sne", "slt", "sgt", "sle", "sge", "scmp"
-  };
-
-  private static readonly HashSet<string> _listMutOps = new(StringComparer.Ordinal) {
-    "push", "pop", "shift", "unshift"
+  /// <summary>The operators <c>use integer</c> compiles into an integer op of its own (<c>i_add</c>, ...).</summary>
+  private static readonly HashSet<string> _integerOps = new(StringComparer.Ordinal) {
+    "+", "-", "*", "/", "%", "<", "<=", ">", ">=", "==", "!=", "<=>"
   };
 
   private static readonly HashSet<string> _unsupportedStringOps = new(StringComparer.Ordinal) {
-    "match", "subst", "trans", "qr", "sprintf", "prtf", "split", "lc", "uc", "index", "rindex"
+    "sprintf", "printf", "split", "lc", "uc", "index", "rindex"
   };
 
   private static readonly HashSet<string> _unsupportedScalarOps = new(StringComparer.Ordinal) {
-    "pow", "sin", "cos", "atan2", "exp", "log", "hex", "oct", "rand", "srand"
+    "sin", "cos", "atan2", "exp", "log", "hex", "oct", "rand", "srand"
   };
 
-  private static readonly Dictionary<string, IrBinaryOp> _binaryOps = new(StringComparer.Ordinal) {
-    ["add"] = IrBinaryOp.Add, ["subtract"] = IrBinaryOp.Subtract, ["multiply"] = IrBinaryOp.Multiply,
-    ["divide"] = IrBinaryOp.Divide, ["modulo"] = IrBinaryOp.Remainder,
-    ["bit_and"] = IrBinaryOp.And, ["nbit_and"] = IrBinaryOp.And,
-    ["bit_or"] = IrBinaryOp.Or, ["nbit_or"] = IrBinaryOp.Or,
-    ["bit_xor"] = IrBinaryOp.Xor, ["nbit_xor"] = IrBinaryOp.Xor,
-    ["lt"] = IrBinaryOp.Less, ["le"] = IrBinaryOp.LessOrEqual,
-    ["gt"] = IrBinaryOp.Greater, ["ge"] = IrBinaryOp.GreaterOrEqual,
-    ["eq"] = IrBinaryOp.Equal, ["ne"] = IrBinaryOp.NotEqual
-  };
+  /// <summary>Lowers an expression in the context perl gives it.</summary>
+  private IrExpr LiftExpr(PerlExpr node, PerlWant want) {
+    if (node is not (PerlNumber or PerlString) && this.Fold(node) is { } folded)
+      return this.LowerFolded(folded);
 
-  private static readonly Dictionary<string, Func<PerlLowerer, PerlOp, IrExpr>> _exprHandlers = new(StringComparer.Ordinal) {
-    ["scalar"] = (l, n) => l.LowerScalarContext(n.Children[0]),
-    ["const"] = (l, n) => l.LowerConstant(n.Constant!),
-    ["undef"] = (_, _) => new IrNone(IrType.Optional(IrType.I64)),
-    ["padsv"] = (l, n) => l.LowerPadSvRead(n.Target),
-    ["padav"] = (l, n) => l.LowerPadAvRead(n.Target),
-    ["padhv"] = (l, n) => l.LowerPadHvRead(n.Target),
-    ["gvsv"] = (l, n) => l.LowerGlobalScalarRead(n.Symbol),
-    ["not"] = (l, n) => new IrUnary(IrUnaryOp.LogicalNot, l.Truth(l.LiftExpr(n.Children[0]))),
-    ["cond_expr"] = (l, n) => l.LowerConditional(n.Children[0], n.Children[1], n.Children[2]),
-    ["and"] = (l, n) => l.LowerLogical("and", n.Children[0], n.Children[1]),
-    ["or"] = (l, n) => l.LowerLogical("or", n.Children[0], n.Children[1]),
-    ["dor"] = (l, n) => l.LowerLogical("dor", n.Children[0], n.Children[1]),
-    ["xor"] = (l, n) => l.LowerLogical("xor", n.Children[0], n.Children[1]),
-    ["defined"] = (l, n) => l.LowerDefined(n),
-    ["exists"] = (l, n) => l.LowerExists(n),
-    ["delete"] = (l, n) => l.LowerDelete(n),
-    ["multideref"] = (l, n) => n.DerefOp == "exists" ? l.LowerExists(n) : n.DerefOp == "delete" ? l.LowerDelete(n) : l.LowerMultiDerefRead(n),
-    ["aelem"] = (l, n) => l.LowerArrayElemRead(n),
-    ["aelemfast"] = (l, n) => l.LowerArrayElemRead(n),
-    ["aelemfast_lex"] = (l, n) => l.LowerArrayElemRead(n),
-    ["helem"] = (l, n) => l.LowerHashElemRead(n),
-    ["anonlist"] = (l, n) => l.LowerAnonList(n),
-    ["emptyavhv"] = (_, _) => new IrIntrinsic(IrIntrinsicOp.ArrayOf, IrType.Array(IrType.I64), []),
-    ["anonhash"] = (l, n) => l.LowerAnonHash(n),
-    ["srefgen"] = (l, n) => l.LowerRefGen(n),
-    ["refgen"] = (l, n) => l.LowerRefGen(n),
-    ["rv2sv"] = (l, n) => l.LowerScalarDeref(n),
-    ["rv2av"] = (l, n) => l.LowerArrayDeref(n),
-    ["rv2hv"] = (l, n) => l.LowerPadSvRead(n.Children[0].Target),
-    ["av2arylen"] = (l, n) => l.LowerLastIndex(n),
-    ["length"] = (l, n) => l.LowerLength(n),
-    ["concat"] = (l, n) => l.LowerConcat(n),
-    ["multiconcat"] = (l, n) => l.LowerConcat(n),
-    ["repeat"] = (l, n) => l.LowerRepeat(n),
-    ["substr"] = (l, n) => l.LowerSubstr(n),
-    ["substr_left"] = (l, n) => l.LowerSubstr(n),
-    ["ord"] = (l, n) => l.LowerOrd(n),
-    ["chr"] = (l, n) => l.LowerChr(n),
-    ["vec"] = (l, n) => l.LowerVec(n),
-    ["pack"] = (l, n) => l.LowerPack(n),
-    ["unpack"] = (l, n) => l.LowerUnpack(n),
-    ["join"] = (l, n) => l.LowerJoin(n),
-    ["reverse"] = (l, n) => l.LowerReverse(n),
-    ["sort"] = (l, n) => l.LowerSort(n),
-    ["entersub"] = (l, n) => l.LowerCall(n),
-    ["wantarray"] = (l, _) => new IrConst(IrType.Bool, l._contracts.ContextOf(l._currentPackage, l._currentSubName) == "list" ? 1 : 0),
-    ["leave"] = (l, n) => l.LowerDoBlockExpr(n),
-    ["scope"] = (l, n) => l.LowerDoBlockExpr(n),
-    ["lineseq"] = (l, n) => l.LowerDoBlockExpr(n),
-    ["leavetry"] = (l, n) => l.LowerEvalExpr(n),
-    ["anoncode"] = (l, n) => l.LowerClosureExpr(n.Code!),
-    ["keys"] = (l, n) => l.LowerHashInspection(n),
-    ["values"] = (l, n) => l.LowerHashInspection(n),
-    ["each"] = (l, n) => l.LowerHashInspection(n),
-    ["bless"] = (l, _) => throw l.Fail(PerlFrontend.ObjectSystemUnsupported, "bless", cause: "OBJ-CLASSES"),
-    ["splice"] = (l, _) => throw l.Fail(PerlFrontend.ArrayUnsupported, "splice"),
-    ["ref"] = (l, _) => throw l.Fail(PerlFrontend.ReferenceUnsupported, "ref()"),
-    ["entereval"] = (l, _) => throw l.Fail(PerlFrontend.ErrorHandlingUnsupported, "eval STRING"),
-    ["warn"] = (l, _) => throw l.Fail(PerlFrontend.ErrorHandlingUnsupported, "warn"),
-    ["exit"] = (l, _) => throw l.Fail(PerlFrontend.ErrorHandlingUnsupported, "exit"),
-    ["tie"] = (l, n) => throw l.Fail(PerlFrontend.MagicUnsupported, n.Name),
-    ["untie"] = (l, n) => throw l.Fail(PerlFrontend.MagicUnsupported, n.Name),
-    ["tied"] = (l, n) => throw l.Fail(PerlFrontend.MagicUnsupported, n.Name)
-  };
-
-  private IrExpr LiftExpr(PerlOp node) {
-    if (node.Name == "null" && StripMarks(node.Children) is [var singleInner])
-      return this.LiftExpr(singleInner);
-
-    if (_exprHandlers.TryGetValue(node.Name, out var handler))
-      return handler(this, node);
-    if (_unaryScalarOps.Contains(node.Name))
-      return this.LowerUnaryScalar(node.Name, node.Children[0]);
-    if (_incDecOps.Contains(node.Name))
-      return this.LowerIncDec(node.Name, node.Children[0]);
-    if (_stringCmpOps.Contains(node.Name))
-      return this.LowerStringCompare(node.Name, node.Children[0], node.Children[1]);
-    if (_listMutOps.Contains(node.Name))
-      return this.LowerListMutation(node);
-    if (_unsupportedStringOps.Contains(node.Name))
-      throw this.Fail(PerlFrontend.StringUnsupported, node.Name);
-    if (_unsupportedScalarOps.Contains(node.Name))
-      throw this.Fail(PerlFrontend.ScalarUnsupported, node.Name);
-    if (IsNumericBinaryOp(node.Name))
-      return this.LowerNumericBinary(node.Name, node.Children[0], node.Children[1]);
-
-    throw this.Fail(PerlFrontend.ScalarUnsupported, $"expression op {node.Name}");
+    switch (node) {
+      case PerlNumber number:
+        return LowerNumber(number.Value);
+      case PerlString s:
+        return this.LowerString(s.Value);
+      case PerlInterpolation interpolation:
+        return this.LowerConcatParts(this.ConcatParts(interpolation));
+      case PerlList { Parenthesized: true, Items: [var only] }:
+        return this.LiftExpr(only, want);
+      case PerlVariable variable:
+        return this.LowerVariable(variable, want);
+      case PerlElement element:
+        return this.LowerElementRead(element);
+      case PerlDeref deref:
+        return this.LowerDeref(deref, want);
+      case PerlLastIndex last:
+        return this.LowerLastIndex(last);
+      case PerlUnary unary:
+        return this.LowerUnary(unary, want);
+      case PerlStep step:
+        return this.LowerIncDec(step, want);
+      case PerlBinary binary:
+        return this.LowerBinary(binary, want);
+      case PerlTernary ternary:
+        return this.LowerConditional(ternary, want);
+      case PerlAnonArray array:
+        return this.LowerAnonList(array);
+      case PerlAnonHash hash:
+        return this.LowerAnonHash(hash);
+      case PerlAnonSub sub:
+        return this.LowerClosureExpr(sub.Sub);
+      case PerlCall call:
+        return this.LowerCallExpr(call, want);
+      case PerlCallReference reference:
+        return this.LowerCallReference(reference);
+      case PerlMethodCall method:
+        return this.LowerMethodCall(method);
+      case PerlDoBlock block:
+        return this.LowerDoBlockExpr(block.Body, want);
+      case PerlEvalBlock eval:
+        return this.LowerEvalExpr(eval);
+      case PerlPattern pattern:
+        throw this.Fail(PerlFrontend.StringUnsupported, pattern.Kind switch { "m" => "match", "qr" => "qr", "s" => "subst", _ => "trans" });
+      case PerlBinary or PerlAssign:
+        throw this.Fail(PerlFrontend.ScalarUnsupported, "assignment as an expression");
+    }
+    throw this.Fail(PerlFrontend.ScalarUnsupported, $"expression {Describe(node)}");
   }
 
-  private IrExpr LowerConstant(PerlLiteral lit) {
-    if (lit.Kind == "integer") {
-      if (long.TryParse(lit.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var s))
-        return new IrConst(s is >= int.MinValue and <= int.MaxValue ? IrType.I32 : IrType.I64, s);
-      if (ulong.TryParse(lit.Value, NumberStyles.None, CultureInfo.InvariantCulture, out var u))
-        return new IrConst(IrType.U64, unchecked((long)u));
-    }
-    if (lit.Kind == "float" && lit.Value.Length == 16)
-      return new IrConst(IrType.F64, BinaryPrimitives.ReadInt64LittleEndian(Convert.FromHexString(lit.Value)));
-    if (lit.Kind == "string") {
-      if (lit.Wide != 0 || lit.Value.Any(c => c > 0xFF))
-        throw this.Fail(PerlFrontend.StringUnsupported, "wide character string literal");
-      return new IrStrConst(lit.Value);
-    }
-    if (lit.Kind == "undef")
-      return new IrNone(IrType.Optional(IrType.I64));
+  private static string Describe(PerlExpr node) => node switch {
+    PerlAssign a => $"assignment {a.Operator}",
+    PerlList => "list",
+    PerlWords => "qw list",
+    PerlSlice => "slice",
+    PerlLocal => "local",
+    PerlReadLine => "readline",
+    PerlCommand => "backticks",
+    PerlJump j => j.Keyword,
+    PerlDeclaration => "declaration",
+    _ => node.GetType().Name
+  };
 
-    throw this.Fail(PerlFrontend.ScalarUnsupported, $"literal kind {lit.Kind}");
+  private static IrExpr LowerNumber(PerlNumeric value) => value.Kind switch {
+    PerlNumericKind.Integer => new IrConst(value.Integer is >= int.MinValue and <= int.MaxValue ? IrType.I32 : IrType.I64, value.Integer),
+    PerlNumericKind.Unsigned => new IrConst(IrType.U64, value.Bits),
+    _ => new IrConst(IrType.F64, value.Bits)
+  };
+
+  private IrExpr LowerString(string value) {
+    if (value.Any(c => c > 0xFF))
+      throw this.Fail(PerlFrontend.StringUnsupported, "wide character string literal");
+    return new IrStrConst(value);
   }
 
-  private IrExpr LowerPadSvRead(int slot) {
-    if (this._variables.TryGetValue(slot, out var local))
-      return new IrLocalRef(local);
-    throw this.Fail(PerlFrontend.ScalarUnsupported, $"uninitialized scalar lexical slot {slot}");
+  private IrExpr LowerVariable(PerlVariable variable, PerlWant want) {
+    switch (variable.Sigil) {
+      case '$':
+        if (variable.Lexical is { Kind: not PerlDeclarator.Our } lex) {
+          if (this.TryLocal(lex, out var local))
+            return new IrLocalRef(local);
+          throw this.Fail(PerlFrontend.ScalarUnsupported, $"the lexical ${variable.Name} of an enclosing scope");
+        }
+        return this.LowerGlobalScalarRead(variable.Name);
+      case '@':
+        if (variable.Lexical is { Kind: not PerlDeclarator.Our } arrayLex)
+          return this.LowerPadAvRead(arrayLex, variable.Name);
+        if (variable.Name == "_")
+          throw this.Fail(PerlFrontend.SubUnsupported, "@_ outside parameter unpacking");
+        if (_magicGlobals.Contains(variable.Name))
+          throw this.Fail(PerlFrontend.MagicUnsupported, $"@{variable.Name}");
+        throw this.Fail(PerlFrontend.ReferenceUnsupported, "array dereference");
+      case '%':
+        if (variable.Lexical is { Kind: not PerlDeclarator.Our } hashLex)
+          return this.LowerPadHvRead(hashLex, variable.Name);
+        if (_magicGlobals.Contains(variable.Name))
+          throw this.Fail(PerlFrontend.MagicUnsupported, $"%{variable.Name}/@{variable.Name}");
+        throw this.Fail(PerlFrontend.MagicUnsupported, $"global hash %{variable.Name}");
+      default:
+        throw this.Fail(PerlFrontend.MagicUnsupported, $"{variable.Sigil}{variable.Name}");
+    }
   }
 
   private IrExpr LowerGlobalScalarRead(string? symbol) {
@@ -170,15 +154,18 @@ internal sealed partial class PerlLowerer {
       return this._evalErrorVar is not null
         ? new IrLocalRef(this._evalErrorVar)
         : new IrStrConst("");
-    if (symbol is not null && _magicGlobals.Contains(symbol))
-      throw this.Fail(PerlFrontend.MagicUnsupported, $"${symbol}");
-    throw this.Fail(PerlFrontend.MagicUnsupported, $"global scalar ${symbol}");
+    var shortName = symbol is null ? "" : ShortName(symbol);
+    if (_magicGlobals.Contains(shortName))
+      throw this.Fail(PerlFrontend.MagicUnsupported, $"${shortName}");
+    throw this.Fail(PerlFrontend.MagicUnsupported, $"global scalar ${shortName}");
   }
 
-  private IrExpr LowerConditional(PerlOp test, PerlOp yes, PerlOp no) {
-    var cond = this.Truth(this.LiftExpr(test));
-    var t = this.LiftExpr(yes);
-    var f = this.LiftExpr(no);
+  private IrExpr LowerConditional(PerlTernary ternary, PerlWant want) {
+    if (this.Fold(ternary.Condition) is { } folded)
+      return this.LiftExpr(folded.Truth ? ternary.Then : ternary.Else, want);
+    var cond = this.Truth(this.LiftExpr(ternary.Condition, PerlWant.Scalar));
+    var t = this.LiftExpr(ternary.Then, want);
+    var f = this.LiftExpr(ternary.Else, want);
     if (t.Type == f.Type)
       return new IrConditional(cond, t, f);
     if (t is IrNone && f.Type.IsOptionalValue)
@@ -189,9 +176,13 @@ internal sealed partial class PerlLowerer {
     return new IrConditional(cond, PerlBounds.Promote(t, common), PerlBounds.Promote(f, common));
   }
 
-  private IrExpr LowerLogical(string name, PerlOp leftOp, PerlOp rightOp) {
-    var left = this.LiftExpr(leftOp);
-    var right = this.LiftExpr(rightOp);
+  private IrExpr LowerLogical(string name, PerlExpr leftOp, PerlExpr rightOp, PerlWant want) {
+    if (name is "and" or "or" or "dor" && this.Fold(leftOp) is { } folded) {
+      var takeRight = name == "and" ? folded.Truth : name == "or" ? !folded.Truth : folded.Undefined;
+      return takeRight ? this.LiftExpr(rightOp, want) : this.LiftExpr(leftOp, want);
+    }
+    var left = this.LiftExpr(leftOp, PerlWant.Scalar);
+    var right = this.LiftExpr(rightOp, want);
     if (name == "xor")
       return new IrBinary(IrBinaryOp.NotEqual, this.Truth(left), this.Truth(right));
     if (name == "dor") {
@@ -207,9 +198,28 @@ internal sealed partial class PerlLowerer {
       : new IrConditional(this.Truth(left), a, b);
   }
 
-  private IrExpr LowerUnaryScalar(string name, PerlOp operandOp) {
-    var val = this.LiftExpr(operandOp);
-    if (name is "complement" or "ncomplement") {
+  private IrExpr LowerUnary(PerlUnary unary, PerlWant want) {
+    switch (unary.Operator) {
+      case "!" or "not":
+        if (unary.Operand is null)
+          return new IrConst(IrType.Bool, 1);
+        return new IrUnary(IrUnaryOp.LogicalNot, this.Truth(this.LiftExpr(unary.Operand, PerlWant.Scalar)));
+      case "+":
+        return this.LiftExpr(unary.Operand!, want);
+      case "\\":
+        return this.LowerRefGen(unary.Operand!);
+      case "-":
+        return this.LowerUnaryScalar(this._integer ? "i_negate" : "negate", unary.Operand!);
+      case "~" or "~.":
+        return this.LowerUnaryScalar(unary.Operator == "~" ? "complement" : "scomplement", unary.Operand!);
+      default:
+        throw this.Fail(PerlFrontend.ScalarUnsupported, $"file test {unary.Operator}");
+    }
+  }
+
+  private IrExpr LowerUnaryScalar(string name, PerlExpr operandOp) {
+    var val = this.LiftExpr(operandOp, PerlWant.Scalar);
+    if (name is "complement" or "scomplement") {
       if (!val.Type.IsInteger)
         throw this.Fail(PerlFrontend.ScalarUnsupported, "complement of non-integer");
       var target = this._integer ? IrType.I64 : IrType.U64;
@@ -243,18 +253,59 @@ internal sealed partial class PerlLowerer {
     return new IrConditional(cond, trap, new IrIntrinsic(IrIntrinsicOp.Sqrt, IrType.F64, [f]));
   }
 
-  private IrExpr LowerIncDec(string name, PerlOp targetOp) {
-    var target = this.LiftExpr(targetOp);
+  private IrExpr LowerIncDec(PerlStep step, PerlWant want) {
+    var target = this.LiftExpr(step.Target, PerlWant.Scalar);
+    // In void context perl turns a postfix increment into the prefix one.
+    var post = !step.Prefix && want != PerlWant.Void;
+    var name = (this._integer ? "i_" : "") + (post ? "post" : "pre") + (step.Increment ? "inc" : "dec");
     if (!target.Type.IsNumeric)
       throw this.Fail(PerlFrontend.ScalarUnsupported, $"string {name}");
-    var inc = name.EndsWith("inc", StringComparison.Ordinal);
-    var post = name.Contains("post", StringComparison.Ordinal);
-    return new IrStep(target, inc, post, Trap: false);
+    return new IrStep(target, step.Increment, post, Trap: false);
   }
 
-  private IrExpr LowerNumericBinary(string name, PerlOp leftOp, PerlOp rightOp) {
-    var left = this.LiftExpr(leftOp);
-    var right = this.LiftExpr(rightOp);
+  private IrExpr LowerBinary(PerlBinary binary, PerlWant want) {
+    switch (binary.Operator) {
+      case "&&" or "and":
+        return this.LowerLogical("and", binary.Left, binary.Right, want);
+      case "||" or "or":
+        return this.LowerLogical("or", binary.Left, binary.Right, want);
+      case "//":
+        return this.LowerLogical("dor", binary.Left, binary.Right, want);
+      case "xor" or "^^":
+        return this.LowerLogical("xor", binary.Left, binary.Right, want);
+      case ".":
+        return this.LowerConcatParts(this.ConcatParts(binary));
+      case "x":
+        return this.LowerRepeat(binary);
+      case "eq" or "ne" or "lt" or "gt" or "le" or "ge" or "cmp":
+        return this.LowerStringCompare(_opNames[binary.Operator], binary.Left, binary.Right);
+      case "**":
+        throw this.Fail(PerlFrontend.ScalarUnsupported, "pow");
+      case "=~" or "!~":
+        throw this.Fail(PerlFrontend.StringUnsupported, "match");
+      case ".." or "...":
+        throw this.Fail(PerlFrontend.ScalarUnsupported, "flip-flop range");
+      case "<=>" or "<<" or ">>" or "+" or "-" or "*" or "/" or "%" or "&" or "|" or "^" or "<" or "<=" or ">" or ">=" or "==" or "!=":
+        return this.LowerNumericBinary(this.OpName(binary.Operator), binary.Left, binary.Right);
+    }
+    throw this.Fail(PerlFrontend.ScalarUnsupported, $"operator {binary.Operator}");
+  }
+
+  private string OpName(string op) => (this._integer && _integerOps.Contains(op) ? "i_" : "") + _opNames[op];
+
+  private IrExpr LowerNumericBinary(string name, PerlExpr leftOp, PerlExpr rightOp)
+    => this.LowerNumericBinary(name, this.LiftExpr(leftOp, PerlWant.Scalar), this.LiftExpr(rightOp, PerlWant.Scalar));
+
+  private static readonly Dictionary<string, IrBinaryOp> _opByName = new(StringComparer.Ordinal) {
+    ["add"] = IrBinaryOp.Add, ["subtract"] = IrBinaryOp.Subtract, ["multiply"] = IrBinaryOp.Multiply,
+    ["divide"] = IrBinaryOp.Divide, ["modulo"] = IrBinaryOp.Remainder,
+    ["bit_and"] = IrBinaryOp.And, ["bit_or"] = IrBinaryOp.Or, ["bit_xor"] = IrBinaryOp.Xor,
+    ["lt"] = IrBinaryOp.Less, ["le"] = IrBinaryOp.LessOrEqual,
+    ["gt"] = IrBinaryOp.Greater, ["ge"] = IrBinaryOp.GreaterOrEqual,
+    ["eq"] = IrBinaryOp.Equal, ["ne"] = IrBinaryOp.NotEqual
+  };
+
+  private IrExpr LowerNumericBinary(string name, IrExpr left, IrExpr right) {
     if (left.Type.IsOptional)
       left = new IrCoalesce(left, DefaultExpr(left.Type.Underlying!));
     if (right.Type.IsOptional)
@@ -267,7 +318,7 @@ internal sealed partial class PerlLowerer {
     if (spelling == "ncmp")
       return this.LowerThreeWay(left, right, isIntOp);
 
-    var op = _binaryOps[spelling];
+    var op = _opByName[spelling];
 
     // Reference identity comparison `$r1 == $r2` (#437, #439)
     if (op is IrBinaryOp.Equal or IrBinaryOp.NotEqual && (left.Type.IsObject || right.Type.IsObject)) {
@@ -288,7 +339,6 @@ internal sealed partial class PerlLowerer {
     }
 
     if (op == IrBinaryOp.Divide) {
-      // Outside `use integer`, Perl `/` is binary64 division trapping on zero divisor.
       var a = this.ToType(left, IrType.F64);
       var b = this.ToType(right, IrType.F64);
       var zeroCheck = new IrBinary(IrBinaryOp.Equal, b, new IrConst(IrType.F64, 0));
@@ -298,7 +348,6 @@ internal sealed partial class PerlLowerer {
     }
 
     if (op == IrBinaryOp.Remainder) {
-      // Outside `use integer`, Perl `%` uses floor-modulus semantics (sign of right operand).
       var a = this.ToSigned64(left);
       var b = this.ToSigned64(right);
       return new IrIntrinsic(IrIntrinsicOp.ModFloor, IrType.I64, [a, b]);
@@ -368,11 +417,6 @@ internal sealed partial class PerlLowerer {
     var isNegOne = new IrBinary(IrBinaryOp.Equal, right, new IrConst(IrType.I64, -1));
     return new IrConditional(new IrBinary(IrBinaryOp.LogicalAnd, isMin, isNegOne),
       op == IrBinaryOp.Divide ? min : new IrConst(IrType.I64, 0), new IrBinary(op, left, right));
-  }
-
-  private static bool IsNumericBinaryOp(string name) {
-    var spelling = name.StartsWith("i_", StringComparison.Ordinal) ? name[2..] : name;
-    return spelling is "left_shift" or "right_shift" or "ncmp" || _binaryOps.ContainsKey(spelling);
   }
 
 }
