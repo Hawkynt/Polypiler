@@ -1,0 +1,3 @@
+*.BAT -text whitespace=cr-at-eol
+*.EXE binary
+TRACE.TXT -text whitespace=cr-at-eol
