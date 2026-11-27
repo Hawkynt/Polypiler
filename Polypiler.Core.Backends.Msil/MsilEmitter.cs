@@ -106,7 +106,8 @@ public static class MsilEmitter {
 
   /// <summary>Whether the MSIL backend emits a floating-point intrinsic natively rather than lowering it.</summary>
   internal static bool WritesFloat(IrIntrinsic intrinsic) => intrinsic.Op switch {
-    IrIntrinsicOp.CopySign or IrIntrinsicOp.IsNaN or IrIntrinsicOp.IsInfinity
+    IrIntrinsicOp.CopySign or IrIntrinsicOp.Clamp or IrIntrinsicOp.FusedMultiplyAdd
+      or IrIntrinsicOp.IsNaN or IrIntrinsicOp.IsInfinity
       or IrIntrinsicOp.IsFinite or IrIntrinsicOp.IsNormal or IrIntrinsicOp.IsSubnormal
       or IrIntrinsicOp.IsNegative => true,
     _ => !FloatLegalization.IsReplaceable(intrinsic)
@@ -122,7 +123,9 @@ public static class MsilEmitter {
       return false;
 
     return intrinsic.Op switch {
-      IrIntrinsicOp.Min or IrIntrinsicOp.Max or IrIntrinsicOp.Abs or IrIntrinsicOp.Sign => false,
+      IrIntrinsicOp.Min or IrIntrinsicOp.Max or IrIntrinsicOp.Abs or IrIntrinsicOp.Sign or IrIntrinsicOp.Clamp => false,
+      IrIntrinsicOp.ByteSwap or IrIntrinsicOp.BitReverse or IrIntrinsicOp.IsPow2 or IrIntrinsicOp.RoundUpPow2
+        or IrIntrinsicOp.HighWord or IrIntrinsicOp.JoinWords or IrIntrinsicOp.BigMul or IrIntrinsicOp.Log2 => false,
       IrIntrinsicOp.LoadLittle or IrIntrinsicOp.LoadBig or IrIntrinsicOp.StoreLittle or IrIntrinsicOp.StoreBig => false,
       IrIntrinsicOp.ParallelBitExtract or IrIntrinsicOp.ParallelBitDeposit => false,
       IrIntrinsicOp.RotateLeft or IrIntrinsicOp.RotateRight or IrIntrinsicOp.LeadingZeroCount

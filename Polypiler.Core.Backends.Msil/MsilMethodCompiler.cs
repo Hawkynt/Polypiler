@@ -1529,7 +1529,7 @@ internal sealed partial class MsilMethodCompiler {
   }
 
   private void EmitIntrinsic(IrIntrinsic intrinsic) {
-    if (this.TryEmitViewOrPointerIntrinsic(intrinsic))
+    if (this.TryEmitViewOrPointerIntrinsic(intrinsic) || this.TryEmitExtendedIntrinsic(intrinsic))
       return;
 
     var args = intrinsic.Arguments;

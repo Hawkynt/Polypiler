@@ -10,7 +10,7 @@ public static partial class BatchFrontend {
 
   private sealed class Script(IReadOnlyList<Instruction> instructions, IReadOnlyDictionary<string, int> labels,
     IReadOnlyDictionary<string, IrLocal> locals, Action<int[][], int[]>? validate = null,
-    IReadOnlySet<IrLocal>? preassigned = null, IReadOnlySet<IrLocal>? scopedLocals = null) {
+    IReadOnlySet<IrLocal>? preassigned = null, IReadOnlySet<IrLocal>? scopedLocals = null, bool initialDelayedExpansion = false) {
 
     public IrModule Lift(string name) {
       var edges = Enumerable.Range(0, instructions.Count).Select(this.Successors).ToArray();
@@ -29,6 +29,7 @@ public static partial class BatchFrontend {
       var backups = this.BuildScopeBackups(reachable, entryDepths, entryAssigned, used);
       var storage = locals.Values.Where(used.Contains).Concat(backups.Values).Distinct().ToArray();
       var sections = reachable.Select(index => this.Section(index, edges[index], pc, result, used, entryDepths, entryAssigned, backups)).ToArray();
+      CheckDecimalTextOperands(instructions, edges, reachable, sections, storage, pc);
       var drive = new IrWhile(new IrBinary(IrBinaryOp.NotEqual, new IrLocalRef(pc), Number(-1)),
         new([new IrSwitch(new IrLocalRef(pc), sections)]));
 
@@ -62,32 +63,39 @@ public static partial class BatchFrontend {
       return [.. visited.Order()];
     }
 
-    private sealed class ScopeState(List<(int FrameId, HashSet<IrLocal> Assigned)> frames) {
-      public List<(int FrameId, HashSet<IrLocal> Assigned)> Frames { get; } = frames;
-      public int Depth => this.Frames.Count - 1;
-      public HashSet<IrLocal> Current => this.Frames[^1].Assigned;
+    private sealed class ScopeFrame(int frameId, HashSet<IrLocal> assigned, bool? delayedExpansion) {
+      public int FrameId { get; } = frameId;
+      public HashSet<IrLocal> Assigned { get; } = assigned;
+      public bool? DelayedExpansion { get; set; } = delayedExpansion;
+      public ScopeFrame Clone() => new(this.FrameId, new(this.Assigned), this.DelayedExpansion);
+    }
 
-      public ScopeState Clone() => new([.. this.Frames.Select(frame => (frame.FrameId, new HashSet<IrLocal>(frame.Assigned)))]);
+    private sealed class ScopeState(List<ScopeFrame> frames) {
+      public List<ScopeFrame> Frames { get; } = frames;
+      public int Depth => this.Frames.Count - 1;
+      public ScopeFrame Current => this.Frames[^1];
+
+      public ScopeState Clone() => new([.. this.Frames.Select(frame => frame.Clone())]);
     }
 
     private (Dictionary<int, int> Depths, Dictionary<int, List<(int FrameId, HashSet<IrLocal> Assigned)>> Assigned)
       CheckAssignments(int[][] edges, int[] reachable) {
       var scoped = scopedLocals ?? locals.Values.ToHashSet();
       var initial = preassigned is null ? new HashSet<IrLocal>() : new HashSet<IrLocal>(preassigned);
-      var entry = new Dictionary<int, ScopeState> { [0] = new([(-1, initial)]) };
+      var entry = new Dictionary<int, ScopeState> { [0] = new([new(-1, initial, initialDelayedExpansion)]) };
       var pending = new Queue<int>([0]);
 
       while (pending.TryDequeue(out var index)) {
         var state = entry[index].Clone();
         switch (instructions[index]) {
           case Assignment assignment:
-            state.Current.Add(assignment.Destination);
+            state.Current.Assigned.Add(assignment.Destination);
             if (!scoped.Contains(assignment.Destination))
               foreach (var frame in state.Frames)
                 frame.Assigned.Add(assignment.Destination);
             break;
           case ScopePush push:
-            state.Frames.Add((push.FrameId, new HashSet<IrLocal>(state.Current)));
+            state.Frames.Add(new(push.FrameId, new(state.Current.Assigned), push.DelayedExpansion ?? state.Current.DelayedExpansion));
             break;
           case ScopePop pop:
             if (state.Frames.Count <= 1 || state.Frames[^1].FrameId != pop.FrameId)
@@ -109,11 +117,18 @@ public static partial class BatchFrontend {
                 || !Enumerable.Range(0, existing.Frames.Count).All(level => existing.Frames[level].FrameId == state.Frames[level].FrameId))
               throw new Refusal(instructions[target].Line, "unbalanced SETLOCAL/ENDLOCAL scope");
             var changed = false;
-            for (var level = 0; level < existing.Frames.Count; ++level)
-              if (!existing.Frames[level].Assigned.IsSubsetOf(state.Frames[level].Assigned)) {
-                existing.Frames[level].Assigned.IntersectWith(state.Frames[level].Assigned);
+            for (var level = 0; level < existing.Frames.Count; ++level) {
+              var incoming = state.Frames[level];
+              var merged = existing.Frames[level];
+              if (!merged.Assigned.IsSubsetOf(incoming.Assigned)) {
+                merged.Assigned.IntersectWith(incoming.Assigned);
                 changed = true;
               }
+              if (merged.DelayedExpansion is not null && merged.DelayedExpansion != incoming.DelayedExpansion) {
+                merged.DelayedExpansion = null;
+                changed = true;
+              }
+            }
             if (changed)
               pending.Enqueue(target);
           }
@@ -121,13 +136,18 @@ public static partial class BatchFrontend {
       }
 
       var names = locals.ToDictionary(pair => pair.Value, pair => pair.Key);
-      foreach (var index in reachable)
-        foreach (var local in References(instructions[index]))
-          if (!entry[index].Current.Contains(local))
-            throw new Refusal(instructions[index].Line, $"read of {names.GetValueOrDefault(local, local.Name)} before assignment");
+      foreach (var index in reachable) {
+        var current = entry[index].Current;
+        var instruction = instructions[index];
+        if (instruction is Assignment { ReadsDelayedExpansion: true } && current.DelayedExpansion is not true)
+          throw new Refusal(instruction.Line, "delayed expansion must be enabled on every path to this read");
+        foreach (var local in References(instruction))
+          if (!current.Assigned.Contains(local))
+            throw new Refusal(instruction.Line, $"read of {names.GetValueOrDefault(local, local.Name)} before assignment");
+      }
 
       return (entry.ToDictionary(pair => pair.Key, pair => pair.Value.Depth),
-        entry.ToDictionary(pair => pair.Key, pair => pair.Value.Frames));
+        entry.ToDictionary(pair => pair.Key, pair => pair.Value.Frames.Select(frame => (frame.FrameId, frame.Assigned)).ToList()));
     }
 
     private Dictionary<(int Depth, IrLocal Local), IrLocal> BuildScopeBackups(

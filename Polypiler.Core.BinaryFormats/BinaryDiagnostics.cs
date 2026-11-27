@@ -73,7 +73,7 @@ public sealed class BinaryResult<T> where T : class {
     this.Problems = problems;
   }
 
-  /// <summary>The diagnostics; empty on success.</summary>
+  /// <summary>The errors and any warnings. A successful result may carry warnings.</summary>
   public ImmutableArray<Diagnostic> Problems { get; }
 
   /// <summary>Whether there is a value.</summary>
@@ -87,6 +87,13 @@ public sealed class BinaryResult<T> where T : class {
   /// <param name="value">The value.</param>
   /// <returns>The result.</returns>
   public static BinaryResult<T> Success(T value) => new(value ?? throw new ArgumentNullException(nameof(value)), []);
+
+  /// <summary>A success with warnings.</summary>
+  /// <param name="value">The value.</param>
+  /// <param name="warnings">The warnings, if any.</param>
+  /// <returns>The result.</returns>
+  public static BinaryResult<T> Success(T value, ImmutableArray<Diagnostic> warnings)
+    => new(value ?? throw new ArgumentNullException(nameof(value)), warnings.IsDefault ? [] : warnings);
 
   /// <summary>A failure.</summary>
   /// <param name="problems">The diagnostics, at least one.</param>

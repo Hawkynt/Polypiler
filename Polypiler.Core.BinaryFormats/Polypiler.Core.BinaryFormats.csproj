@@ -8,6 +8,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Polypiler.Core\Polypiler.Core.csproj" />
     <ProjectReference Include="..\Polypiler.Core.MachineSemantics\Polypiler.Core.MachineSemantics.csproj" />
+    <PackageReference Include="LibObjectFile" Version="2.3.1" />
   </ItemGroup>
 
 </Project>

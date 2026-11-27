@@ -7,6 +7,7 @@ using Polypiler.Cli.Fuzzing;
 using Polypiler.Core.Verification.Fuzzing;
 using Polypiler.Prototype.Testing;
 using Polypiler.Tests.Verification.Fuzzing;
+using Polypiler.Tooling.Fuzz;
 
 namespace Polypiler.Tests.Fuzzing;
 
@@ -21,9 +22,11 @@ public sealed class FuzzRegressionTests {
 
   private static readonly string _fixtures = Path.Combine(PrototypeFixture.RepositoryRoot, "tests", "fixtures", "fuzz");
 
-  /// <summary>The targets of the test assembly and of the CLI.</summary>
+  /// <summary>The targets of the test assembly, the CLI and the tooling executable.</summary>
   private static IReadOnlyDictionary<string, IFuzzTarget> Targets()
-    => FuzzTargets.Discover(typeof(DemoMarkerTarget).Assembly).Concat(FuzzTargets.Discover(typeof(CliArgsFuzzTarget).Assembly))
+    => FuzzTargets.Discover(typeof(DemoMarkerTarget).Assembly)
+      .Concat(FuzzTargets.Discover(typeof(CliArgsFuzzTarget).Assembly))
+      .Concat(FuzzTargets.Discover(typeof(ElfCodecFuzzTarget).Assembly))
       .ToDictionary(target => target.Id, StringComparer.Ordinal);
 
   [Test]
@@ -36,7 +39,7 @@ public sealed class FuzzRegressionTests {
   public void EveryTargetDirectory_BelongsToATargetAndHasASeedCorpus() {
     var targets = Targets();
     var directories = Directory.GetDirectories(_fixtures).Select(directory => Path.GetFileName(directory)!).ToList();
-    Assert.That(directories, Is.EquivalentTo(new[] { "cli-args", "demo-alloc", "demo-hang", "demo-marker", "demo-zero" }));
+    Assert.That(directories, Is.EquivalentTo(new[] { "cli-args", "demo-alloc", "demo-hang", "demo-marker", "demo-zero", "elf-codec" }));
     foreach (var directory in directories) {
       Assert.That(targets, Does.ContainKey(directory));
       Assert.That(FuzzCorpus.Load(Path.Combine(_fixtures, directory)), Is.Not.Empty);

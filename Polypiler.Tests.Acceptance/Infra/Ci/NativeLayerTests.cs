@@ -74,9 +74,10 @@ public sealed class NativeLayerTests {
     var (layers, problems) = CiLayer.LoadAll(PrototypeFixture.RepositoryRoot);
     Assert.That(problems, Is.Empty);
     var native = layers.Single(layer => layer.Name == "native");
-    Assert.That((native.Toolchains, native.Os, native.Always), Is.EqualTo((new[] { "dotnet-sdk", "gcc", "clang", "bubblewrap" }, new[] { "ubuntu-latest", "macos-latest", "windows-latest" }, false)));
+    Assert.That((native.Toolchains, native.Os, native.Always), Is.EqualTo((new[] { "dotnet-sdk", "gcc", "clang", "llvm", "lld", "bubblewrap" }, new[] { "ubuntu-latest", "macos-latest", "windows-latest" }, false)));
     Assert.That(native.Selects("tests/fixtures/infra/ci/native/adler32.c"), Is.True);
     Assert.That(native.Selects("Polypiler.Core.Backends.C/Emitter.cs"), Is.True);
+    Assert.That(native.Selects("Polypiler.Core.BinaryFormats/Elf/ElfCodec.cs"), Is.True);
     Assert.That(native.Selects("README.md"), Is.False);
   }
 
