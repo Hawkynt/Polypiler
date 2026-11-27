@@ -88,6 +88,9 @@ notices:
   - path: Polypiler.Core.Verification/Proofs/THIRD-PARTY-NOTICE.Z3.txt
     components:
       - { name: 'Z3 (Microsoft.Z3 4.11.2, Z3Prover/z3 8e6f17ebd011a352b3e67fcec03dcd4378a1472c)', licence: MIT }
+  - path: Polypiler.Permutation/Networks/THIRD-PARTY-NOTICE.BitPerm.txt
+    components:
+      - { name: 'BitPerm (Hawkynt/Hawkynt.github.io b3a8a8e92cbca83475986391c3cac56f0b185d29)', licence: LGPL-3.0-or-later }
   - path: tests/fixtures/bench/cipher/THIRD-PARTY-NOTICE.Cipher.txt
     components:
       - { name: 'Cipher checksums (Hawkynt/Hawkynt.github.io b3a8a8e92cbca83475986391c3cac56f0b185d29)', licence: LGPL-3.0-or-later }

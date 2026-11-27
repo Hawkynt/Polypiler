@@ -973,6 +973,33 @@ codes:
     area: permutation
     owner: PERM-HIERARCHY
     surfaces: "the DiagnosticBag given to BitBooleanTransform.TryGetTruthTable when the transform has more than 16 inputs, and PermutationModelException from MappingEvaluator.TruthTable for a mapping of more than 16 input bits; the structural cross-check of TryAsRouting is skipped silently above that limit instead"
+  - code: PLY0810
+    severity: error
+    exit: UnsupportedConstruct
+    title: ill-formed candidate network
+    message: "network step <n> (<op>): <problem>"
+    rule: permutation.network.well-formed
+    area: permutation
+    owner: PERM-NETWORK
+    surfaces: "the diagnostics NetworkVerifier.Check returns for a network that breaks rule N1 (an operand defined after its use), N2 (operand widths), N3 (an immediate of the wrong kind or range, a constant that does not fit), N4 (the result, a width that is not positive; step 0), N5 ('is unused') or N6 (an operation without semantics); PermutationModelException from NetworkText.Parse for a step that cannot be read, from NetworkEvaluator and NetworkLowering for an operand defined after its use or an unregistered operation, and from CompositeNetwork.Assemble (step 0, Assemble) for a term that breaks the term contract, two terms that route one bit, or a source bit no term routes"
+  - code: PLY0811
+    severity: error
+    exit: InvalidSource
+    title: primitive not available in the cost table
+    message: "primitive '<primitive>' is not available in cost table '<table>'"
+    rule: permutation.network.primitive-available
+    area: permutation
+    owner: PERM-NETWORK
+    surfaces: "PermutationModelException from PrimitiveCostTable.Cycles, NetworkStatistics.Cost and PrimitiveRegistry.Require for a primitive the cost table has no entry for, or that is not registered"
+  - code: PLY0812
+    severity: error
+    exit: InvalidSource
+    title: primitive does not support the width
+    message: "primitive '<primitive>' does not support width <width>"
+    rule: permutation.network.primitive-width
+    area: permutation
+    owner: PERM-NETWORK
+    surfaces: "PermutationModelException from PrimitiveRegistry.Require for a primitive asked for a width it does not support, and from NetworkLowering for an input, output or step width the IR has no integer type of (8, 16, 32 and 64 bits); the primitive is then 'input', 'output' or the step's operation"
   - code: PLY0950
     severity: error
     exit: LicenseBlocker
