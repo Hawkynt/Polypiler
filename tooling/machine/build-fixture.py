@@ -3,6 +3,7 @@
 
 import argparse
 from pathlib import Path
+import shutil
 import subprocess
 from tempfile import TemporaryDirectory
 
@@ -32,7 +33,9 @@ def main() -> None:
         object_path = Path(scratch) / "input.o"
         subprocess.run([*compile_command, str(object_path)], check=True)
         link = ["-shared"] if options.shared else ["-static"]
-        subprocess.run([options.linker, *link, "-nostdlib", "-e", options.entry,
+        # Windows only completes a bare name with .exe, so ld.lld would never find ld.lld.exe.
+        linker = shutil.which(options.linker) or options.linker
+        subprocess.run([linker, *link, "-nostdlib", "-e", options.entry,
                         str(object_path), "-o", str(options.output)], check=True)
 
 
