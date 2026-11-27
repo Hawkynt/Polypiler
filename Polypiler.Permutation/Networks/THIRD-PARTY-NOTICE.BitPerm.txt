@@ -1,0 +1,14 @@
+Origin: https://github.com/Hawkynt/Hawkynt.github.io/blob/b3a8a8e92cbca83475986391c3cac56f0b185d29/BitPerm/index.html
+Licence: LGPL-3.0-or-later
+
+CompositeNetwork.cs and the primitive extension point in Primitives.cs are converted from BitPerm, part
+of Hawkynt/Hawkynt.github.io (https://github.com/Hawkynt/Hawkynt.github.io), commit
+b3a8a8e92cbca83475986391c3cac56f0b185d29:
+
+  BitPerm/index.html  lines 142-151 (the BUILDING_BLOCKS interface comment)
+                      lines 2393-2408 (the composite assembly with logicXor, logicOr and logicAnd)
+
+BitPerm combines the terms of its building blocks with an or, then applies the inversion mask with an
+exclusive or and the constant-one mask with an or; the conversion carries that order across and adds
+the term contract its terms must keep. BitPerm is licensed under the GNU Lesser General Public License,
+version 3 or later (the LICENSE of the repository root at that commit).
