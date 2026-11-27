@@ -136,9 +136,15 @@ public sealed class ToolchainLocator {
 
   /// <summary>Finds an executable in the <c>home</c> folder, when its variable is set, or on <c>PATH</c>.</summary>
   private string? Resolve(string name, string? homeVariable, out string where) {
-    var names = this._platform == "windows" && Path.GetExtension(name).Length == 0
-      ? [.. (this._environment("PATHEXT") ?? ".COM;.EXE;.BAT;.CMD").Split(';', StringSplitOptions.RemoveEmptyEntries).Select(extension => name + extension.ToLowerInvariant()), name]
-      : new[] { name };
+    string[] names;
+    if (this._platform != "windows")
+      names = [name];
+    else {
+      // A dotted name such as ld.lld is not necessarily complete: Windows tries it as typed and
+      // then with each executable extension, so ld.lld finds ld.lld.exe.
+      var extended = (this._environment("PATHEXT") ?? ".COM;.EXE;.BAT;.CMD").Split(';', StringSplitOptions.RemoveEmptyEntries).Select(extension => name + extension.ToLowerInvariant());
+      names = Path.GetExtension(name).Length == 0 ? [.. extended, name] : [name, .. extended];
+    }
 
     string[] directories;
     if (name.IndexOfAny(['/', '\\']) >= 0) {
