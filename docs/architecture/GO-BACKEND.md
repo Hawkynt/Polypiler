@@ -8,6 +8,15 @@
 O0501, unused helper removal) and prints the tree (`Printing/GoPrinter.cs`). `GoSyntaxReader` reads
 the printed subset back for the parse-back sweep and reads the Go text of the helpers into the tree.
 
+```mermaid
+flowchart LR
+  IR["Legalized IR"] --> Writer["Writer: Go tree<br/>(capability table, helpers)"]
+  Writer --> Pass["O0501: unused helpers"]
+  Pass --> Split["package file + polyrt.go"]
+  Split --> Print["GoPrinter: gofmt layout"]
+  Print --> Module["go.mod, &lt;module&gt;.go, polyrt.go"]
+```
+
 ```text
 polypiler translate Adler32.cs --from csharp --to go --profile go1.22 --go-module example.test/adler32 --output out
 ```

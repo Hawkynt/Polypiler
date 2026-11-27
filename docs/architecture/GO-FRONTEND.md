@@ -4,6 +4,14 @@
 
 `Polypiler.Core.Frontends.Go` imports one Go package file into the IR.
 
+```mermaid
+flowchart LR
+  Source["Go source"] --> Helper["helper: go/parser + go/types<br/>(built with the installed go)"]
+  Helper --> Json["bound tree as JSON<br/>types, constants, objects"]
+  Json --> Lowerer["Lowerer: IR with Go's meaning"]
+  Lowerer --> Verify["IrVerifier"] --> Module["IR module"]
+```
+
 ```text
 polypiler translate checksums.go --from go --to csharp --output out
 ```
