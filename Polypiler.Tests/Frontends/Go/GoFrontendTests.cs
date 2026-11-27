@@ -217,6 +217,11 @@ public sealed class GoFrontendTests {
     if (go.Module is null)
       Assert.Inconclusive($"no Go is installed: {string.Join("; ", go.Diagnostics)}");
 
+    // go/types writes types differently from one release to the next (interface{} or any): the trees were recorded with the pinned go.
+    var recorded = Release(File.ReadAllText(Path.Combine(Folder, "checksums.dump.json")));
+    if (Release(GoFrontend.Print("checksums.go", File.ReadAllText(Path.Combine(Folder, "checksums.go"))).Json ?? "") != recorded)
+      Assert.Inconclusive($"the installed go is not the {recorded} the trees were recorded with");
+
     foreach (var source in Directory.EnumerateFiles(Folder, "*.go", SearchOption.AllDirectories)) {
       var printed = GoFrontend.Print(Path.GetFileName(source), File.ReadAllText(source));
       Assert.That(Unversioned(printed.Json ?? printed.Failure!), Is.EqualTo(Unversioned(File.ReadAllText(Path.ChangeExtension(source, ".dump.json")))), source);
@@ -225,6 +230,9 @@ public sealed class GoFrontendTests {
     var unchecked_ = GoFrontend.Import("checksums.go", File.ReadAllText(Path.Combine(Folder, "checksums.go")));
     Assert.That(unchecked_.Module!.Functions.Select(function => function.Name), Is.EqualTo(_checksums.Value.Functions.Select(function => function.Name)));
   }
+
+  /// <summary>The release of go a tree names, such as <c>go1.27.4</c>, without the suffix of a distribution's build.</summary>
+  private static string Release(string json) => System.Text.RegularExpressions.Regex.Match(json, "\"go\":\"(go[0-9.]+)").Groups[1].Value;
 
   private static string Unversioned(string json) => System.Text.RegularExpressions.Regex.Replace(json, "\"go\":\"[^\"]*\"", "\"go\":\"\"");
 
