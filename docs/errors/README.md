@@ -282,6 +282,20 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY1858](PLY1858.md) | error | 3 (UnsupportedConstruct) | `control construct '<construct>' has no Python form (function '<function>')` | BE-PY-CONTROL |
 | [PLY1874](PLY1874.md) | error | 3 (UnsupportedConstruct) | `exports '<a>' and '<b>' both map to the Python name '<name>'; or: export '<a>' has no valid Python name` | BE-PY-FUNCTIONS |
 
+## PLY2100–PLY2199 · go
+
+| Code | Severity | Exit code | Message | Owner |
+| --- | --- | --- | --- | --- |
+| [PLY2100](PLY2100.md) | error | 4 (InvalidSource) | `Go <kind> error: <message>` | #697 |
+| [PLY2101](PLY2101.md) | error | 3 (UnsupportedConstruct) | `type '<type>' is not supported by the Go frontend` | #697 |
+| [PLY2102](PLY2102.md) | error | 3 (UnsupportedConstruct) | `'<construct>' is not supported by the Go frontend` | #697 |
+| [PLY2150](PLY2150.md) | error | 3 (UnsupportedConstruct) | `type '<type>' has no Go representation in profile '<profile>' (function '<function>')` | #692 |
+| [PLY2151](PLY2151.md) | error | 3 (UnsupportedConstruct) | `operation '<operation>' cannot be emitted as Go in profile '<profile>' (function '<function>')` | #692 |
+| [PLY2160](PLY2160.md) | error | 3 (UnsupportedConstruct) | `control-flow construct '<construct>' cannot be emitted as Go (function '<function>')` | #689 |
+| [PLY2170](PLY2170.md) | error | 3 (UnsupportedConstruct) | `function feature '<feature>' cannot be emitted as Go` | #690 |
+| [PLY2172](PLY2172.md) | error | 3 (UnsupportedConstruct) | `functions '<first>' and '<second>' collide as '<name>'` | #690 |
+| [PLY2173](PLY2173.md) | error | 3 (UnsupportedConstruct) | `profile setting '<setting>' is missing or invalid: <reason>` | #690 |
+
 ## PLY2600–PLY2699 · visualbasic
 
 | Code | Severity | Exit code | Message | Owner |

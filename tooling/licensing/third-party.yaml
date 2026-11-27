@@ -31,6 +31,9 @@ notices:
   - path: Polypiler.Core.Backends.Rust/Helpers/THIRD-PARTY-NOTICE.num-bigint.txt
     components:
       - { name: 'num-bigint 0.5.1 (rust-num/num-bigint 33c59ba44b7bdb09975b38a321b1b88c6a444005)', licence: MIT }
+  - path: Polypiler.Core.Backends.Go/Printing/THIRD-PARTY-NOTICE.go.txt
+    components:
+      - { name: 'Go go/printer (golang/go go1.27.4)', licence: BSD-3-Clause }
   - path: Polypiler.Core.BinaryFormats/THIRD_PARTY_NOTICES.md
     components:
       - { name: 'LibObjectFile 2.3.1', licence: BSD-2-Clause }

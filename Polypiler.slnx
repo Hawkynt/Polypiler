@@ -8,6 +8,7 @@
   <Project Path="Polypiler.Core.Backends.Batch/Polypiler.Core.Backends.Batch.csproj" />
   <Project Path="Polypiler.Core.Backends.Cpp/Polypiler.Core.Backends.Cpp.csproj" />
   <Project Path="Polypiler.Core.Backends.CSharp/Polypiler.Core.Backends.CSharp.csproj" />
+  <Project Path="Polypiler.Core.Backends.Go/Polypiler.Core.Backends.Go.csproj" />
   <Project Path="Polypiler.Core.Backends.JavaScript/Polypiler.Core.Backends.JavaScript.csproj" />
   <Project Path="Polypiler.Core.Backends.Jvm/Polypiler.Core.Backends.Jvm.csproj" />
   <Project Path="Polypiler.Core.Backends.Msil/Polypiler.Core.Backends.Msil.csproj" />
@@ -19,6 +20,7 @@
   <Project Path="Polypiler.Core.Frontends.Batch/Polypiler.Core.Frontends.Batch.csproj" />
   <Project Path="Polypiler.Core.Frontends.Cpp/Polypiler.Core.Frontends.Cpp.csproj" />
   <Project Path="Polypiler.Core.Frontends.CSharp/Polypiler.Core.Frontends.CSharp.csproj" />
+  <Project Path="Polypiler.Core.Frontends.Go/Polypiler.Core.Frontends.Go.csproj" />
   <Project Path="Polypiler.Core.Frontends.JavaScript/Polypiler.Core.Frontends.JavaScript.csproj" />
   <Project Path="Polypiler.Core.Frontends.Jvm/Polypiler.Core.Frontends.Jvm.csproj" />
   <Project Path="Polypiler.Core.Frontends.Msil/Polypiler.Core.Frontends.Msil.csproj" />
