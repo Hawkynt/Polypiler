@@ -74,6 +74,16 @@ public static int low(byte[] b, int i) => ((uint)b.Length > (uint)i) ? b[i] : (b
 | `BigInt` `/` and `%` | announced: `js-div-zero` | traps where JavaScript throws a `RangeError`, and the quotient that does not fit traps where `asIntN` wraps |
 | a division of doubles | behaves like the original | IEEE 754 |
 
+## Go: conversions to integers and fused multiply-add
+
+The Go frontend ([Go frontend](../architecture/GO-FRONTEND.md)) announces two differences, each
+where the source has the construct:
+
+| Source | Announced | What the imported code does |
+| --- | --- | --- |
+| `int32(x)` of a `float32`/`float64` | `go-float-to-int` | truncates, and saturates outside the type with a NaN becoming 0, where Go leaves the result to the implementation |
+| `x*y + z`, `z - x*y` of floating-point numbers | `go-fma-unfused` | rounds the product first, as Go does on amd64 and wherever the product is converted, where Go permits one fused rounding |
+
 ## Oracle differences
 
 These calls differ because the original runtime does something its own specification does not say,

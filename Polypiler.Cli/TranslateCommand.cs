@@ -13,6 +13,7 @@ using Polypiler.Core.Backends.JavaScript;
 using Polypiler.Core.Backends.Jvm;
 using Polypiler.Core.Backends.Msil;
 using Polypiler.Core.Backends.Perl;
+using Polypiler.Core.Backends.Go;
 using Polypiler.Core.Backends.Kotlin;
 using Polypiler.Core.Backends.Python;
 using Polypiler.Core.Backends.Rust;
@@ -24,6 +25,7 @@ using Polypiler.Core.Frontends.JavaScript;
 using Polypiler.Core.Frontends.Jvm;
 using Polypiler.Core.Frontends.Msil;
 using Polypiler.Core.Frontends.Perl;
+using Polypiler.Core.Frontends.Go;
 using Polypiler.Core.Frontends.Kotlin;
 using Polypiler.Core.Frontends.Python;
 using Polypiler.Core.Frontends.Rust;
@@ -108,6 +110,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   private const string OutputTypeOption = "--output-type";
   private const string PackageFormatOption = "--package-format";
   private const string VBScriptContractOption = "--vbscript-contract";
+  private const string GoModuleOption = "--go-module";
 
   /// <summary>The caveat that records the overflow mode of a Rust import and where it came from.</summary>
   public const string RustOverflowCaveat = "rs-overflow-checks";
@@ -128,7 +131,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     [Export] = "JavaScript, MSIL and JVM: the functions or methods to translate",
     [ExplainTypes] = "JavaScript: write why every value has its type to standard output",
     [BatchDialectOption] = "Batch source: cmd.exe (the default) or MS-DOS 6.22 COMMAND.COM",
-    [Profile] = "the target profile: a target framework of C#, a language level of JavaScript, a version of Python, an edition of Rust, a Perl version, a C++ standard, a VBScript version, an MSIL framework, a JVM classfile version or a Kotlin language version with its JVM target",
+    [Profile] = "the target profile: a target framework of C#, a language level of JavaScript, a version of Python, an edition of Rust, a Perl version, a C++ standard, a VBScript version, an MSIL framework, a JVM classfile version, a Go language version or a Kotlin language version with its JVM target",
     [Module] = "JavaScript: how the file is packaged",
     [Global] = "JavaScript: the global object a script declares",
     [TypedArrays] = "JavaScript: an ECMAScript 5 engine with typed arrays",
@@ -148,7 +151,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     [ObjectModelOption] = "Perl: object representation for classes and interfaces (blessed, moose or inside-out)",
     [OutputTypeOption] = "MSIL: whether to emit a class library (library) or a runnable console executable (exe)",
     [PackageFormatOption] = "JVM: whether to emit a JAR archive (jar) or standalone class files (class)",
-    [VBScriptContractOption] = "VBScript: file or inline contract line specifying parameter, return or field types"
+    [VBScriptContractOption] = "VBScript: file or inline contract line specifying parameter, return or field types",
+    [GoModuleOption] = "Go: the module path go.mod declares, whose last element names the package"
   };
 
   private readonly Backend[] _backendsOfThis;
@@ -180,6 +184,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     new("jvm", [new(Export, "<name>[,<name>...]")], ExportMisuse, null, ImportJvm),
     new("cpp", [], _ => null, ImportCpp),
     new("vbscript", [new(VBScriptContractOption, "<file-or-line>")], _ => null, ImportVBScript),
+    new("go", [], _ => null, ImportGo),
     new("kotlin", [], _ => null, ImportKotlin)
   ];
 
@@ -195,6 +200,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     Jvm(Implementations),
     Cpp(Implementations),
     VBScript(Implementations),
+    Go(GoCapabilities.Standard, Implementations),
     Kotlin(Implementations)
   ];
 
@@ -246,7 +252,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// <param name="capabilities">The table the JavaScript backend chooses its constructs from.</param>
   /// <returns>The process exit code.</returns>
   public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, JavaScriptCapabilities capabilities)
-    => Run(arguments, output, error, [JavaScript(capabilities, Implementations), CSharp(CSharpCapabilities.Default, Implementations), Python(PythonCapabilities.Standard, Implementations), Rust(RustCapabilities.Default, Implementations), Perl(Implementations), Batch(), Msil(Implementations), Jvm(Implementations), Cpp(Implementations), VBScript(Implementations), Kotlin(Implementations)]);
+    => Run(arguments, output, error, [JavaScript(capabilities, Implementations), CSharp(CSharpCapabilities.Default, Implementations), Python(PythonCapabilities.Standard, Implementations), Rust(RustCapabilities.Default, Implementations), Perl(Implementations), Batch(), Msil(Implementations), Jvm(Implementations), Cpp(Implementations), VBScript(Implementations), Go(GoCapabilities.Standard, Implementations), Kotlin(Implementations)]);
 
   /// <summary>Runs the command with portable floating-point implementations of the caller's in place of the precomputed ones.</summary>
   /// <param name="arguments">The arguments after the word <c>translate</c>.</param>
@@ -258,7 +264,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// </param>
   /// <returns>The process exit code.</returns>
   public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Func<IrModule> implementations)
-    => Run(arguments, output, error, [JavaScript(JavaScriptCapabilities.Standard, implementations), CSharp(CSharpCapabilities.Default, implementations), Python(PythonCapabilities.Standard, implementations), Rust(RustCapabilities.Default, implementations), Perl(implementations), Batch(), Msil(implementations), Jvm(implementations), Cpp(implementations), VBScript(implementations), Kotlin(implementations)]);
+    => Run(arguments, output, error, [JavaScript(JavaScriptCapabilities.Standard, implementations), CSharp(CSharpCapabilities.Default, implementations), Python(PythonCapabilities.Standard, implementations), Rust(RustCapabilities.Default, implementations), Perl(implementations), Batch(), Msil(implementations), Jvm(implementations), Cpp(implementations), VBScript(implementations), Go(GoCapabilities.Standard, implementations), Kotlin(implementations)]);
 
   /// <summary>Runs <c>polypiler translate</c> with the arguments, the command made with the given backends.</summary>
   private static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Backend[] backends) {
@@ -569,6 +575,22 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// Imports Python, parsed by the installed CPython. What the imported code is known to do
   /// differently from the original is written as a note, as it is for JavaScript.
   /// </summary>
+  /// <summary>
+  /// Imports Go, parsed by go/parser and type-checked by go/types of the installed Go through the
+  /// frontend's helper. What the imported code is known to do differently is a note and a caveat of the manifest.
+  /// </summary>
+  private static (IrModule? Module, int ExitCode, IReadOnlyList<ManifestMessage> Caveats) ImportGo(string file, string source, IReadOnlyDictionary<string, string> options, CliContext context) {
+    var imported = GoFrontend.Import(file, source);
+    foreach (var diagnostic in imported.Diagnostics)
+      context.Report(diagnostic);
+
+    foreach (var caveat in imported.Caveats)
+      context.Note($"{file}: note {caveat.Id}: {caveat.Description}");
+
+    var failure = imported.Diagnostics.Any(diagnostic => diagnostic.Code == GoFrontend.CheckError) ? InvalidSource : UnsupportedConstruct;
+    return (imported.Module, failure, [.. imported.Caveats.Select(caveat => new ManifestMessage(caveat.Id, caveat.Description))]);
+  }
+
   private static (IrModule? Module, int ExitCode, IReadOnlyList<ManifestMessage> Caveats) ImportPython(string file, string source, IReadOnlyDictionary<string, string> options, CliContext context) {
     var imported = PythonFrontend.Import(file, source);
     foreach (var diagnostic in imported.Diagnostics)
@@ -890,6 +912,27 @@ public sealed partial class TranslateCommand : ICliCommand {
     PerlProfile.TryParse(options.GetValueOrDefault(Profile), options.GetValueOrDefault(ByteStorageOption), options.GetValueOrDefault(ObjectModelOption), out var profile, out var error);
     return (profile, error);
   }
+
+  /// <summary>The Go backend with a capability table; <c>--profile</c> names the language version of Go, <c>--go-module</c> the module path.</summary>
+  private static Backend Go(GoCapabilities capabilities, Func<IrModule> implementations) => new("go",
+    GoEmitter.Runtime,
+    options => GoProfileOf(options).Profile!.Name,
+    RuleTarget.Neutral,
+    [new(Profile, "<name>"), new(GoModuleOption, "<path>"), new(Float, FloatChoice)],
+    options => FloatMisuse(options) ?? GoProfileOf(options).Error,
+    (module, options) => GoEmitter.Legalize(module, implementations, GoProfileOf(options).Profile!, FloatModeOf(options), capabilities),
+    (module, options) => GoEmitter.Check(module, GoProfileOf(options).Profile!, capabilities, GoOptionsOf(options)),
+    (module, options, passes, _) => GoEmitter.Emit(module, GoProfileOf(options).Profile!, FloatModeOf(options), capabilities, passes, GoOptionsOf(options)),
+    GoProfile.Names);
+
+  /// <summary>The Go profile <c>--profile</c> names, the default one without it, or what is wrong with the name.</summary>
+  private static (GoProfile? Profile, string? Error) GoProfileOf(IReadOnlyDictionary<string, string> options) {
+    GoProfile.TryParse(options.GetValueOrDefault(Profile), out var profile, out var error);
+    return (profile, error);
+  }
+
+  /// <summary>The layout of a Go module the options name.</summary>
+  private static GoEmitOptions GoOptionsOf(IReadOnlyDictionary<string, string> options) => new() { ModulePath = options.GetValueOrDefault(GoModuleOption) };
 
   /// <summary>The Python backend with a capability table; <c>--profile</c> names the version of Python.</summary>
   private static Backend Python(PythonCapabilities capabilities, Func<IrModule> implementations) => new("python",

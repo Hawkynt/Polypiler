@@ -2161,6 +2161,87 @@ codes:
     area: python
     owner: BE-PY-FUNCTIONS
     surfaces: standard error of polypiler translate --to python; stops emission, no file is written
+  - code: PLY2100
+    severity: error
+    exit: InvalidSource
+    title: Go parser or type checker error
+    message: "Go <kind> error: <message>"
+    rule: go.check
+    area: go
+    owner: "#697"
+    surfaces: "standard error of polypiler translate --from go, for what go/parser or go/types refuses (an unused variable or import, a mismatched type, a constant that overflows), and for a helper that cannot be built or run; stops import"
+  - code: PLY2101
+    severity: error
+    exit: UnsupportedConstruct
+    title: type outside the Go frontend's subset
+    message: "type '<type>' is not supported by the Go frontend"
+    rule: go.frontend.type
+    area: go
+    owner: "#697"
+    surfaces: standard error of polypiler translate --from go; stops import
+  - code: PLY2102
+    severity: error
+    exit: UnsupportedConstruct
+    title: construct outside the Go frontend's subset
+    message: "'<construct>' is not supported by the Go frontend"
+    rule: go.frontend.construct
+    area: go
+    owner: "#697"
+    surfaces: standard error of polypiler translate --from go; stops import
+  - code: PLY2150
+    severity: error
+    exit: UnsupportedConstruct
+    title: type without a Go representation
+    message: "type '<type>' has no Go representation in profile '<profile>' (function '<function>')"
+    rule: go.backend.type
+    area: go
+    owner: "#692"
+    surfaces: standard error of polypiler translate --to go; stops emission, no file is written
+  - code: PLY2151
+    severity: error
+    exit: UnsupportedConstruct
+    title: operation that cannot be emitted as Go
+    message: "operation '<operation>' cannot be emitted as Go in profile '<profile>' (function '<function>')"
+    rule: go.backend.operation
+    area: go
+    owner: "#692"
+    surfaces: standard error of polypiler translate --to go; stops emission, no file is written
+  - code: PLY2160
+    severity: error
+    exit: UnsupportedConstruct
+    title: control construct without a Go form
+    message: "control-flow construct '<construct>' cannot be emitted as Go (function '<function>')"
+    rule: go.backend.control
+    area: go
+    owner: "#689"
+    surfaces: standard error of polypiler translate --to go; stops emission, no file is written
+  - code: PLY2170
+    severity: error
+    exit: UnsupportedConstruct
+    title: function feature without a Go form
+    message: "function feature '<feature>' cannot be emitted as Go"
+    rule: go.backend.function
+    area: go
+    owner: "#690"
+    surfaces: standard error of polypiler translate --to go; stops emission, no file is written
+  - code: PLY2172
+    severity: error
+    exit: UnsupportedConstruct
+    title: functions whose Go names collide
+    message: "functions '<first>' and '<second>' collide as '<name>'"
+    rule: go.backend.names
+    area: go
+    owner: "#690"
+    surfaces: standard error of polypiler translate --to go; Go has no overloading; stops emission, no file is written
+  - code: PLY2173
+    severity: error
+    exit: UnsupportedConstruct
+    title: missing or invalid Go layout setting
+    message: "profile setting '<setting>' is missing or invalid: <reason>"
+    rule: go.backend.settings
+    area: go
+    owner: "#690"
+    surfaces: standard error of polypiler translate --to go --go-module <path>; stops emission, no file is written
   - code: PLY2600
     severity: error
     exit: InvalidSource

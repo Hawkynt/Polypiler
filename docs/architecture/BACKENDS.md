@@ -1,6 +1,6 @@
 # Backends: tree, passes, printer
 
-**Status:** implemented for the C# and the JavaScript backend of the prototype ([#1336](https://github.com/Hawkynt/Polypiler/issues/1336)), for the Python backend ([Python backend](PYTHON-BACKEND.md)), for the Rust backend ([Rust backend](RUST-BACKEND.md)) and for the Kotlin backend ([Kotlin backend](KOTLIN-BACKEND.md)); stage 8 of the [pipeline](PIPELINE.md). The helpers are one IR library since [#1353](https://github.com/Hawkynt/Polypiler/issues/1353).
+**Status:** implemented for the C# and the JavaScript backend of the prototype ([#1336](https://github.com/Hawkynt/Polypiler/issues/1336)), for the Python backend ([Python backend](PYTHON-BACKEND.md)), for the Rust backend ([Rust backend](RUST-BACKEND.md)), for the Go backend ([Go backend](GO-BACKEND.md)) and for the Kotlin backend ([Kotlin backend](KOTLIN-BACKEND.md)); stage 8 of the [pipeline](PIPELINE.md). The helpers are one IR library since [#1353](https://github.com/Hawkynt/Polypiler/issues/1353).
 
 A backend does not write text. It builds a syntax tree of its target language from the IR, runs the
 target passes over that tree and hands the result to its printer, the only place where generated code
@@ -14,17 +14,17 @@ flowchart LR
   Print --> File["Generated file"]
 ```
 
-| | C# | JavaScript | Python | Rust | Kotlin |
-| --- | --- | --- | --- | --- | --- |
-| Tree | `Polypiler.Core.Backends.CSharp/Syntax/CSharpSyntax.cs`: compilation unit, namespaces, types, members, statements, expressions | `Polypiler.Core.Backends.JavaScript/Syntax/JavaScriptSyntax.cs`: ESTree-shaped program, statements, expressions | `Polypiler.Core.Backends.Python/Syntax/PythonSyntax.cs`: module, statements, expressions after CPython's `ast` | `Polypiler.Core.Backends.Rust/Syntax/RustSyntax.cs`: files, items, statements, expressions; a crate is `RustCrate` | `Polypiler.Core.Backends.Kotlin/Syntax/KotlinSyntax.cs`: file, declarations, statements, expressions after the grammar of the Kotlin specification |
-| Printer | `CSharpPrinter.Print(CsCompilationUnit, CSharpProfile)` | `JavaScriptPrinter.Print(JsProgram, JavaScriptProfile)` | `PythonPrinter.Print(PyModule)` | `RustPrinter.Print(RsFile)`, rustfmt's default layout | `KotlinPrinter.Print(KtFile)`, the Kotlin coding conventions |
-| Reader | `CSharpSyntaxReader` (Roslyn) | `JavaScriptSyntaxReader` (Acornima) | `PythonSyntaxReader` (its own, for the subset it prints) | `RustSyntaxReader` (recursive descent over the printed subset) | `KotlinSyntaxReader` (recursive descent over the printed subset) |
-| Passes | `CSharpTargetPasses.Pipeline` | `JavaScriptTargetPasses.Pipeline` | `PythonTargetPasses.Pipeline` | `RustTargetPasses.Pipeline` | `KotlinTargetPasses.Pipeline` |
-| Tree after the passes | `CSharpEmitter.Build(…)` | `JavaScriptEmitter.Build(…)` | `PythonEmitter.Build(…)` | `RustEmitter.Build(…)` | `KotlinEmitter.Build(…)` |
+| | C# | JavaScript | Python | Rust | Go | Kotlin |
+| --- | --- | --- | --- | --- | --- | --- |
+| Tree | `Polypiler.Core.Backends.CSharp/Syntax/CSharpSyntax.cs`: compilation unit, namespaces, types, members, statements, expressions | `Polypiler.Core.Backends.JavaScript/Syntax/JavaScriptSyntax.cs`: ESTree-shaped program, statements, expressions | `Polypiler.Core.Backends.Python/Syntax/PythonSyntax.cs`: module, statements, expressions after CPython's `ast` | `Polypiler.Core.Backends.Rust/Syntax/RustSyntax.cs`: files, items, statements, expressions; a crate is `RustCrate` | `Polypiler.Core.Backends.Go/Syntax/GoSyntax.cs`: file, declarations, statements, expressions after `go/ast` | `Polypiler.Core.Backends.Kotlin/Syntax/KotlinSyntax.cs`: file, declarations, statements, expressions after the grammar of the Kotlin specification |
+| Printer | `CSharpPrinter.Print(CsCompilationUnit, CSharpProfile)` | `JavaScriptPrinter.Print(JsProgram, JavaScriptProfile)` | `PythonPrinter.Print(PyModule)` | `RustPrinter.Print(RsFile)`, rustfmt's default layout | `GoPrinter.Print(GoFile)`, gofmt's layout | `KotlinPrinter.Print(KtFile)`, the Kotlin coding conventions |
+| Reader | `CSharpSyntaxReader` (Roslyn) | `JavaScriptSyntaxReader` (Acornima) | `PythonSyntaxReader` (its own, for the subset it prints) | `RustSyntaxReader` (recursive descent over the printed subset) | `GoSyntaxReader` (recursive descent over the printed subset) | `KotlinSyntaxReader` (recursive descent over the printed subset) |
+| Passes | `CSharpTargetPasses.Pipeline` | `JavaScriptTargetPasses.Pipeline` | `PythonTargetPasses.Pipeline` | `RustTargetPasses.Pipeline` | `GoTargetPasses.Pipeline` | `KotlinTargetPasses.Pipeline` |
+| Tree after the passes | `CSharpEmitter.Build(…)` | `JavaScriptEmitter.Build(…)` | `PythonEmitter.Build(…)` | `RustEmitter.Build(…)` | `GoEmitter.Build(…)` | `KotlinEmitter.Build(…)` |
 
 The language-specific guides describe the profiles and lowering contracts of the
-[C#](CSHARP-BACKEND.md), [JavaScript](JAVASCRIPT-BACKEND.md), [Python](PYTHON-BACKEND.md) and
-[Rust](RUST-BACKEND.md) and [Kotlin](KOTLIN-BACKEND.md) backends.
+[C#](CSHARP-BACKEND.md), [JavaScript](JAVASCRIPT-BACKEND.md), [Python](PYTHON-BACKEND.md),
+[Rust](RUST-BACKEND.md), [Go](GO-BACKEND.md) and [Kotlin](KOTLIN-BACKEND.md) backends.
 
 ## The tree
 
@@ -129,6 +129,7 @@ and why:
 | `Polypiler.Core.Backends.Rust/Helpers/BigInts.cs` | The arbitrary-precision integer has no type in Rust's standard library: `PlyBigInt`, a sign and 32-bit digits, is the representation of the IR's `bigint`, and its functions (`ply_big`, `ply_big_parse`, `ply_big_add`, `ply_big_sub`, `ply_big_mul`, `ply_big_div`, `ply_big_rem`, `ply_big_and`, `ply_big_or`, `ply_big_xor`, `ply_big_neg`, `ply_big_not`, `ply_big_shift`, `ply_big_low`, `ply_big_fit`, `ply_big_to_f64`, `ply_big_of_f64` and the magnitude functions they call) are the operations themselves on it, converted from num-bigint (MIT, `THIRD-PARTY-NOTICE.num-bigint.txt`); the IR has no type the library could write them in. |
 | `Polypiler.Core.Backends.Rust/Helpers/Strings.cs` | A string of Rust is its UTF-16 code units, `Vec<u16>` or `&[u16]`, since `str` is UTF-8 and holds no lone surrogate: the searches, the split, the trim with the IR's white-space tables, the padding and the replacements work on that representation, which the IR has no type for (`ply_utf16`, `ply_position`, `ply_index_of`, `ply_last_index_of`, `ply_replace`, `ply_replace_first`, `ply_split`, `ply_trim`, `ply_pad`). The same file holds the other forms of Rust's own the backend writes once: `ply_non_null` and `ply_value` read an `Option` that a test before has to hold a value, `ply_with` holds the `Mutex` of a global for one access, the `ply_list_*`, `ply_map_*`, `ply_set_*` and `ply_slot_*` functions keep a list's checked indices and the order of the slots of .NET's `Dictionary` and `HashSet` on a vector. |
 | `Polypiler.Core.Backends.Rust/Helpers/Strings.Results.cs` | The same helpers of `Strings.cs` that trap, in the form the trap policy `result` takes (#1415): the trap as the value, an `Option`, or a `Result` of the error each trap is given, since a panic is no value a caller can turn into an error. The same representation, not another algorithm. |
+| `Polypiler.Core.Backends.Go/Helpers/GoHelpers.cs` | The operations of the IR Go has no expression for, written with what Go has: Go's arithmetic never reports an overflow, so the checked sum, difference, product and negation test the result (through `math/bits` on 64 bits); Go's signed division wraps the smallest value divided by -1, which the IR traps on; Go leaves the conversion of a floating-point number outside an integer type to the implementation, so the saturating and checked conversions test the range first; Go has no checked conversion between integers, no `min`/`max` before 1.21, no sign of a float that traps on a NaN and no rounding of halves upwards. Each is the operation itself, for which the IR has no weaker operation to write it with. The emitter also generates `plyEqual<T>`, the equality of a struct with a float field that lets a NaN equal a NaN. |
 
 Outside the folders the emitters keep a few more of the same kind: the C# `Throw<T>` of a throw
 expression before C# 7, the C# `SinglePass<T>` that makes the one cursor of an iterator a sequence

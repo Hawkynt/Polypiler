@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!-- The helper that parses a source with go/parser, type-checks it with go/types of the installed Go
+       and prints the bound tree as JSON; the frontend builds it with the go command once into the
+       cache and runs it, so its source travels in the assembly. -->
+  <ItemGroup>
+    <EmbeddedResource Include="AstDump\main.go" LogicalName="Polypiler.Core.Frontends.Go.main.go" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Polypiler.Core\Polypiler.Core.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.IR\Polypiler.Core.IR.csproj" />
+  </ItemGroup>
+
+</Project>

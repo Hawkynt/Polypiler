@@ -171,6 +171,29 @@ it, with CPython's message:
 | `OverflowError` | `OverflowException` | `int.to_bytes` of a value that does not fit, `struct.pack('f', …)` of a float a binary32 cannot hold |
 | a `complex` result | `ArithmeticException` | a negative float to a fractional power (`py-complex-power`) |
 
+### Go
+
+Go has no exception classes: a failure is a run-time panic, recovered by nothing in the generated
+code, or an `error` value. The **backend** writes every trap as a panic and leaves the ones Go raises
+itself to Go; a panic is compared by its message, without the `runtime error: ` of Go's own:
+
+| IR class (trap) | Go panics with |
+| --- | --- |
+| `DivideByZeroException` (`DivideByZero`) | Go's own `integer divide by zero` of `/` and `%` |
+| `OverflowException` (`IntegerOverflow`) | `"integer overflow"`: the checked arithmetic, negation and conversions and the signed division of `MinInt` by -1 (`polyrt.go`), and Go's own `makeslice: len out of range` of a negative length |
+| `IndexOutOfRangeException` (`IndexOutOfRange`) | Go's own `index out of range [i] with length n` |
+| `ArithmeticException` (`InvalidOperation`) | `"invalid operation"`: the sign of a NaN (`plySign`) |
+| `NullReferenceException` (`NullReference`) | Go's own `invalid memory address or nil pointer dereference` |
+| a thrown library exception | its message, `panic("…")` |
+
+Handlers (`IrTry`) are not written yet (`PLY2160`); error results are #693.
+
+The **frontend** imports `panic(s)` of a string as the throw of an `Exception` with the message `s`,
+Go's `integer divide by zero` as `DivideByZero`, an index outside a slice as `IndexOutOfRange`, the
+panic `negative shift amount` of a shift by a negative count as an `ArithmeticException` with that
+message, and `make` of a length outside 32 bits as `IntegerOverflow`. Go's `MinInt / -1`, which wraps,
+traps nowhere.
+
 ## Handling
 
 The IR has `IrTry(Body, Catches, Finally)` with clauses `IrCatch(Class, Local?, Filter?, Body)`,

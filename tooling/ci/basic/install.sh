@@ -89,9 +89,11 @@ done
 # standard output whenever that is no terminal: with no log file, as on a runner, every message
 # then passes NULL to strlen and the emulator dies at its first log line (SIGSEGV in log_archdep).
 # The build strips them always; <build> names that change, so a cache of an unpatched build is not
-# used.
+# used. The build is also pinned to the x86-64-v2 baseline: GitHub's runners differ in CPU, and a
+# cache built where the compiler picked newer instructions died with SIGILL ("Illegal instruction")
+# on an older runner that restored it.
 vice=$(version vice)
-build_id=logfix1
+build_id=logfix1-x86-64-v2
 vice_root="$cache/vice-$vice-$build_id"
 if [ ! -x "$vice_root/usr/local/bin/x64sc" ]; then
   build="$prefix/vice-src"
@@ -102,7 +104,7 @@ if [ ! -x "$vice_root/usr/local/bin/x64sc" ]; then
   sed -i 's/^    if ((log_to_file) || (!log_colorize)) {$/    if (1) {/' "$build/src/log.c"
   grep -q '^    if (1) {$' "$build/src/log.c"
   (cd "$build" \
-    && ./configure --prefix=/usr/local --enable-headlessui --disable-pdf-docs --disable-html-docs --without-pulse --without-alsa --without-oss --without-libcurl > configure.log \
+    && CFLAGS="-O2 -march=x86-64-v2 -mtune=generic" CXXFLAGS="-O2 -march=x86-64-v2 -mtune=generic" ./configure --prefix=/usr/local --enable-headlessui --disable-pdf-docs --disable-html-docs --without-pulse --without-alsa --without-oss --without-libcurl > configure.log \
     && make -j"$(nproc)" > make.log \
     && make install DESTDIR="$vice_root" > install.log)
   rm -rf "$build"
