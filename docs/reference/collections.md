@@ -133,6 +133,24 @@ Rows: `Map`, `Set`, `.entries`, `.keys`, `.values`, `.next` (2015, `$Keyed`), `.
 `.delete`, `.clear`, `.add`, `.push`, `.pop`, `.splice`, `.slice`, `.map` (5), `.includes of an
 array` (2016, `$lincludes`).
 
+## Windows Batch backend
+
+The `cmd` target emits `Dictionary<string, int>` in a closed Int32 kernel. It assigns numeric IDs to
+non-null keys from a finite set of literals using ordinal UTF-16 equality. An empty key, differently
+cased keys, and distinct Unicode code-unit sequences can each have their own ID. A conditional or
+local can select a key from that set.
+
+Map references carry a map ID, so an alias updates the same entries. A slot stores the integer value
+and its presence follows the environment variable's existence, including for zero. A new map clears
+its owned slots under `SETLOCAL` and initializes its count. The generated commands use numeric IDs
+when addressing an entry, make no external calls, and restore the caller's environment on return.
+
+The supported operations are allocation, assignment, `Add`, indexer reads, `ContainsKey`, and
+`Count`. A missing read or duplicate `Add` exits with status 97 and a `PLY_BATCH_TRAP` marker on
+standard error. The shared 512-slot budget counts array elements, one slot per potential key per map
+allocation, and each map's count. Repeated allocation sites, map enumeration, other value types and
+keys outside the finite pool report `PLY2850`.
+
 ## Known differences
 
 - A JavaScript read or write outside a list traps where JavaScript reads `undefined` or leaves a

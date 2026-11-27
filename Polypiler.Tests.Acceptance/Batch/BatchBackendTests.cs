@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -70,6 +71,104 @@ public sealed class BatchBackendTests {
     }
   }
 
+  [TestCase(false)]
+  [TestCase(true)]
+  [RequiresToolchain("cmd")]
+  public void MapAliasFixtureMatchesCompiledCSharpOnNativeWindows(bool optimize) {
+    var source = File.ReadAllText(Fixture("map-alias.cs"));
+    var original = GeneratedCSharp.CompileSource(source);
+    var expected = (int)original.Method("Run").Invoke(null, null)!;
+    var output = Directory.CreateTempSubdirectory();
+    try {
+      var script = TranslateToCmd(source, output.FullName, optimize);
+      var run = NativeRun(output.FullName, Path.GetFileName(script));
+      Assert.That(run.ExitCode, Is.EqualTo(expected).And.EqualTo(42));
+      Assert.That(run.StandardOutput, Is.Empty);
+      Assert.That(run.StandardError, Is.Empty);
+    } finally {
+      output.Delete(recursive: true);
+    }
+  }
+
+  [TestCase(0)]
+  [TestCase(1)]
+  [RequiresToolchain("cmd")]
+  public void OrdinalUnicodeKeysMatchCompiledCSharpOnNativeWindows(int selector) {
+    var source = $$"""
+      using System.Collections.Generic;
+      public static class Kernel {
+        public static int Run() {
+          var map = new Dictionary<string, int> { ["\u00e9"] = 0, ["e\u0301"] = 2, ["\0"] = 3 };
+          int selector = {{selector}};
+          string key = selector > 0 ? "\u00e9" : "e\u0301";
+          if (!map.ContainsKey(key) || map[key] != (selector > 0 ? 0 : 2)) return 99;
+          map[key] = 40;
+          return map[key] + map.Count - 1;
+        }
+      }
+      """;
+    Verify(source, 42);
+  }
+
+  [Test, RequiresToolchain("cmd")]
+  public void MapSlotsIgnoreAmbientValuesAndRestoreTheCaller() {
+    const string source = """
+      using System.Collections.Generic;
+      public static class Kernel {
+        public static int Run() {
+          var map = new Dictionary<string, int>();
+          if (map.ContainsKey("missing")) return 99;
+          map.Add("present", 0);
+          return map.ContainsKey("present") ? 42 : 98;
+        }
+      }
+      """;
+    var output = Directory.CreateTempSubdirectory();
+    try {
+      var script = TranslateToCmd(source, output.FullName);
+      const string driver = "driver.bat";
+      File.WriteAllText(Path.Combine(output.FullName, driver), "@echo off\r\n"
+        + "set \"_ply_m1_k0=ambient\"\r\nset \"_ply_m1_k1=ambient\"\r\n"
+        + $"call {Path.GetFileName(script)}\r\n"
+        + "set \"status=%errorlevel%\"\r\n"
+        + "if not \"%_ply_m1_k0%\"==\"ambient\" exit /b 100\r\n"
+        + "if not \"%_ply_m1_k1%\"==\"ambient\" exit /b 101\r\nexit /b %status%\r\n");
+      var run = NativeRun(output.FullName, driver);
+      Assert.That(run.ExitCode, Is.EqualTo(42));
+      Assert.That(run.StandardOutput, Is.Empty);
+      Assert.That(run.StandardError, Is.Empty);
+    } finally {
+      output.Delete(recursive: true);
+    }
+  }
+
+  [TestCase("1", "DuplicateKey")]
+  [TestCase("map[\"missing\"]", "KeyNotFound")]
+  [RequiresToolchain("cmd")]
+  public void MapAddChecksItsValueBeforeDuplicateDetection(string value, string trap) {
+    var source = $$"""
+      using System.Collections.Generic;
+      public static class Kernel {
+        public static int Run() {
+          var map = new Dictionary<string, int>();
+          map.Add("same", 0);
+          map.Add("same", {{value}});
+          return 0;
+        }
+      }
+      """;
+    var output = Directory.CreateTempSubdirectory();
+    try {
+      var script = TranslateToCmd(source, output.FullName);
+      var run = NativeRun(output.FullName, Path.GetFileName(script));
+      Assert.That(run.ExitCode, Is.EqualTo(97));
+      Assert.That(run.StandardOutput, Is.Empty);
+      Assert.That(run.StandardError, Does.Contain($"PLY_BATCH_TRAP={trap}"));
+    } finally {
+      output.Delete(recursive: true);
+    }
+  }
+
   [TestCase(-2147483648)]
   [TestCase(-1)]
   [TestCase(3)]
@@ -126,12 +225,14 @@ public sealed class BatchBackendTests {
   public void SignedStatusAndControlFlowMatchCSharp(string body, int expected)
     => Verify($"public static class Kernel {{ public static int Run() {{ {body} }} }}", expected);
 
-  private static string TranslateToCmd(string source, string outputDirectory) {
+  private static string TranslateToCmd(string source, string outputDirectory, bool optimize = false) {
     var fixture = Path.Combine(outputDirectory, "Kernel.cs");
     File.WriteAllText(fixture, source);
     using var errors = new StringWriter();
-    var status = Program.Run(["translate", fixture, "--from", "csharp", "--to", "batch", "--profile", "cmd",
-      "--opt", "none", "--output", outputDirectory], TextWriter.Null, errors);
+    List<string> arguments = ["translate", fixture, "--from", "csharp", "--to", "batch", "--profile", "cmd", "--output", outputDirectory];
+    if (!optimize)
+      arguments.AddRange(["--opt", "none"]);
+    var status = Program.Run([.. arguments], TextWriter.Null, errors);
     Assert.That(status, Is.Zero, errors.ToString());
     return Directory.EnumerateFiles(outputDirectory, "*.bat").Single();
   }
