@@ -200,6 +200,20 @@ public sealed class ToolchainLocatorTests {
   }
 
   [Test]
+  public void OnWindows_ADottedNameWithoutItsExecutableExtension_FindsTheExecutable() {
+    var executable = this._folder.File(Path.Combine("path", "ld.lld.exe"));
+    var probe = this.Locator(Parse(Entry("fake", probe: "[ld.lld]")), new ScriptedRunner("fake 1.2.3"), "windows").Probe("fake");
+    Assert.That(probe.Path, Is.EqualTo(executable));
+  }
+
+  [Test]
+  public void OnLinux_ADottedName_IsNotExtended() {
+    this._folder.File(Path.Combine("path", "ld.lld.exe"));
+    var probe = this.Locator(Parse(Entry("fake", probe: "[ld.lld]")), new ScriptedRunner("fake 1.2.3"), "linux").Probe("fake");
+    Assert.That(probe.Cause, Is.EqualTo("'ld.lld' was not found on PATH"));
+  }
+
+  [Test]
   public void Package_IsProbedThroughItsHostsCommand() {
     var host = this._folder.File(Path.Combine("path", "fake"));
     var runner = new ScriptedRunner(argv => argv.Count == 2 ? new(0, "fake 1.0.0\n", "", false) : new(0, "fake 4.5.6\n", "", false));

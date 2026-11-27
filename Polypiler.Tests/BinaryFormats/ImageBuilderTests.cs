@@ -49,7 +49,8 @@ public sealed class ImageBuilderTests {
       [0x00401000]);
 
   private static BinaryCodecRegistry Registry(BinaryImage image) {
-    var registry = BinaryCodecRegistry.CreateDefault();
+    var registry = new BinaryCodecRegistry();
+    registry.Register(new RawBinaryCodec());
     registry.Register(new FakeElf(image));
     return registry;
   }
@@ -260,7 +261,6 @@ public sealed class ImageBuilderTests {
   [TestCase(new byte[] { 0xFE, 0xED, 0xFA, 0xCF }, "Mach-O")]
   [TestCase(new byte[] { 0xFE, 0xED, 0xFA, 0xCE }, "Mach-O")]
   [TestCase(new byte[] { 0xCA, 0xFE, 0xBA, 0xBE }, "Mach-O universal")]
-  [TestCase(new byte[] { 0x7F, 0x45, 0x4C, 0x46 }, "ELF")]
   [TestCase(new byte[] { 0x4D, 0x5A, 0x90, 0x00 }, "MZ")]
   public void UnrecognizedContainer_IsRefused(byte[] magic, string? format) {
     var file = this._scratch.Write("image.bin", magic);

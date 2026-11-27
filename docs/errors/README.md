@@ -374,3 +374,7 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY4057](PLY4057.md) | error | 1 (EnvironmentError) | `manifest states <field> '<value>' but <other> states '<other value>'` | MACH-BIN-MANIFEST |
 | [PLY4058](PLY4058.md) | error | 1 (EnvironmentError) | `entry '<name>' at <address> is not inside executable code; or: range <start>..<end> lies outside the image` | MACH-BIN-MANIFEST |
 | [PLY4059](PLY4059.md) | error | 1 (EnvironmentError) | `'<file>' is not a recognized container; give the manifest field 'container' or use a raw profile` | MACH-BIN-MANIFEST |
+| [PLY4060](PLY4060.md) | error | 1 (EnvironmentError) | `'<file>' is not a complete ELF file: <detail>` | MACH-BIN-ELF |
+| [PLY4061](PLY4061.md) | error | 3 (UnsupportedConstruct) | `ELF <field> '<value>' is not supported` | MACH-BIN-ELF |
+| [PLY4062](PLY4062.md) | error | 1 (EnvironmentError) | `ELF structure is corrupt: <detail>` | MACH-BIN-ELF |
+| [PLY4063](PLY4063.md) | warning | — | `relocation type <type> at <address> is not supported; code that depends on it cannot be translated standalone` | MACH-BIN-ELF |

@@ -2,6 +2,7 @@ using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Linq;
+using Polypiler.Core.BinaryFormats.Elf;
 
 namespace Polypiler.Core.BinaryFormats;
 
@@ -26,11 +27,12 @@ public sealed class BinaryCodecRegistry {
 
   private readonly List<IBinaryCodec> _codecs = [];
 
-  /// <summary>A registry with the codecs that need no container library: <see cref="RawBinaryCodec"/>.</summary>
+  /// <summary>A registry with the raw and ELF codecs.</summary>
   /// <returns>The registry.</returns>
   public static BinaryCodecRegistry CreateDefault() {
     var registry = new BinaryCodecRegistry();
     registry.Register(new RawBinaryCodec());
+    registry.Register(new ElfCodec());
     return registry;
   }
 
