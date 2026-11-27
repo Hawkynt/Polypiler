@@ -1,0 +1,26 @@
+id: LANGUAGES.visualbasic.vba7-64
+title: Visual Basic, VBA 7, 64-bit host
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#1090"
+tests: []
+introducedIn: P5
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: profile
+  language: LANGUAGES.visualbasic
+  languageVersion: VBA 7, 64-bit host
+  toolchain: libreoffice
+  evaluationOrder: left-to-right
+  integerOverflow: {signed: trap, unsigned: trap}
+  divisionRounding: truncate
+  remainderSign: dividend
+  shiftAmount: masked
+  stringEncoding: utf-16
+  exceptions: on-error-goto
+  memoryModel: managed
+  defaultRuntime: libreoffice
+  constructs: []

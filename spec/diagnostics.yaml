@@ -2287,6 +2287,33 @@ codes:
     area: visualbasic
     owner: "#1133"
     surfaces: standard error of polypiler translate --from vbscript; stops import
+  - code: PLY2645
+    severity: error
+    exit: InvalidSource
+    title: classic Visual Basic syntax error
+    message: "the classic Visual Basic parser reports: line <n>: <detail>"
+    rule: visualbasic.frontend.syntax
+    area: visualbasic
+    owner: "#1090"
+    surfaces: standard error of polypiler translate --from visualbasic; stops import
+  - code: PLY2646
+    severity: error
+    exit: UnsupportedConstruct
+    title: construct outside the classic Visual Basic profile
+    message: "'<construct>' is not supported by the classic Visual Basic profile"
+    rule: visualbasic.frontend.construct
+    area: visualbasic
+    owner: "#1090"
+    surfaces: standard error of polypiler translate --from visualbasic; stops import
+  - code: PLY2648
+    severity: error
+    exit: InvalidSource
+    title: unresolved name or type mismatch in classic Visual Basic
+    message: "<what is not declared, or the operation and the type that do not fit>"
+    rule: visualbasic.frontend.symbol
+    area: visualbasic
+    owner: "#1090"
+    surfaces: standard error of polypiler translate --from visualbasic; stops import
   - code: PLY2650
     severity: error
     exit: UnsupportedConstruct
@@ -2314,6 +2341,69 @@ codes:
     area: visualbasic
     owner: "#1133"
     surfaces: standard error of polypiler translate --to vbscript; stops emission, no file is written
+  - code: PLY2655
+    severity: error
+    exit: UnsupportedConstruct
+    title: control construct has no Visual Basic form
+    message: "'<construct>' has no form in Visual Basic profile '<profile>'"
+    rule: visualbasic.backend.control
+    area: visualbasic
+    owner: "#1085"
+    surfaces: standard error of polypiler translate --to visualbasic; stops emission, no file is written
+  - code: PLY2656
+    severity: error
+    exit: UnsupportedConstruct
+    title: type has no Visual Basic representation
+    message: "type '<type>' has no Visual Basic representation in profile '<profile>'"
+    rule: visualbasic.backend.type
+    area: visualbasic
+    owner: "#1088"
+    surfaces: standard error of polypiler translate --to visualbasic; stops emission, no file is written
+  - code: PLY2657
+    severity: error
+    exit: UnsupportedConstruct
+    title: operation cannot be expressed in Visual Basic
+    message: "'<operation>' cannot be expressed in Visual Basic profile '<profile>'"
+    rule: visualbasic.backend.profile
+    area: visualbasic
+    owner: "#1088"
+    surfaces: standard error of polypiler translate --to visualbasic; stops emission, no file is written
+  - code: PLY2658
+    severity: error
+    exit: UnsupportedConstruct
+    title: Visual Basic names collide
+    message: "exports '<first>' and '<second>' both map to the Visual Basic name '<name>'"
+    rule: visualbasic.backend.names
+    area: visualbasic
+    owner: "#1086"
+    surfaces: standard error of polypiler translate --to visualbasic; stops emission, no file is written
+  - code: PLY2691
+    severity: error
+    exit: TargetBuildFailure
+    title: LibreOffice Basic gave no answer
+    message: "LibreOffice Basic did not answer (<outcome>): a module it cannot compile or an uncaught run-time error stops it at a dialog"
+    rule: visualbasic.runner.compile
+    area: visualbasic
+    owner: "#1096"
+    surfaces: the diagnostics of VisualBasicRunner
+  - code: PLY2692
+    severity: error
+    exit: OracleFailure
+    title: LibreOffice Basic driver ended without its answer
+    message: "the LibreOffice Basic driver exited with code <code>: <standard error>"
+    rule: visualbasic.runner.crash
+    area: visualbasic
+    owner: "#1096"
+    surfaces: the diagnostics of VisualBasicRunner
+  - code: PLY2695
+    severity: error
+    exit: OracleFailure
+    title: LibreOffice Basic driver protocol error
+    message: "<the driver answered another number of calls, or a line that is no answer>"
+    rule: visualbasic.runner.protocol
+    area: visualbasic
+    owner: "#1096"
+    surfaces: the diagnostics of VisualBasicRunner
   - code: PLY2800
     severity: error
     exit: InvalidSource

@@ -54,6 +54,8 @@ Original chapter numbers and section links are retained. The pages here are a re
 - [Python backend](architecture/PYTHON-BACKEND.md) — profile-specific syntax, fixed-width numeric contracts, helpers and verification under CPython.
 - [Rust frontend](architecture/RUST-FRONTEND.md) — parsing, typing, borrowing, overflow modes and the supported crate subset.
 - [Rust backend](architecture/RUST-BACKEND.md) — Cargo output, editions/MSRV, value representation, traps and verification.
+- [Classic Visual Basic frontend](architecture/VISUALBASIC-FRONTEND.md) — VB6 / VBA standard modules parsed from [MS-VBAL]: 16-bit `Integer`, traps by error number, lower bounds of arrays and the `On Error` forms.
+- [Classic Visual Basic backend](architecture/VISUALBASIC-BACKEND.md) — the four dialect profiles, exact 32-bit helpers, `On Error GoTo` for try/catch and verification on LibreOffice Basic.
 - [Kotlin frontend](architecture/KOTLIN-FRONTEND.md) — Kotlin/JVM parsed by Polypiler's own parser, Kotlin's numeric semantics in the IR, the imported subset and its refusals.
 - [Kotlin backend](architecture/KOTLIN-BACKEND.md) — language versions and JVM targets, the lowering table, the helpers, refusals and verification under `kotlinc`.
 - [Benchmarks](benchmarks/README.md) — how to add a benchmark, run it, read its result and compare two result sets against the budgets.

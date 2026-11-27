@@ -326,9 +326,19 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY2602](PLY2602.md) | error | 3 (UnsupportedConstruct) | `VBScript call '<call>' is not supported` | #1133 |
 | [PLY2603](PLY2603.md) | error | 4 (InvalidSource) | `unresolved VBScript symbol '<symbol>'` | #1133 |
 | [PLY2604](PLY2604.md) | error | 4 (InvalidSource) | `invalid VBScript contract: <detail>` | #1133 |
+| [PLY2645](PLY2645.md) | error | 4 (InvalidSource) | `the classic Visual Basic parser reports: line <n>: <detail>` | #1090 |
+| [PLY2646](PLY2646.md) | error | 3 (UnsupportedConstruct) | `'<construct>' is not supported by the classic Visual Basic profile` | #1090 |
+| [PLY2648](PLY2648.md) | error | 4 (InvalidSource) | `<what is not declared, or the operation and the type that do not fit>` | #1090 |
 | [PLY2650](PLY2650.md) | error | 3 (UnsupportedConstruct) | `construct '<construct>' cannot be emitted as VBScript` | #1133 |
 | [PLY2651](PLY2651.md) | error | 3 (UnsupportedConstruct) | `type '<type>' has no VBScript representation in profile '<profile>'` | #1133 |
 | [PLY2652](PLY2652.md) | error | 3 (UnsupportedConstruct) | `intrinsic '<intrinsic>' cannot be emitted as VBScript` | #1133 |
+| [PLY2655](PLY2655.md) | error | 3 (UnsupportedConstruct) | `'<construct>' has no form in Visual Basic profile '<profile>'` | #1085 |
+| [PLY2656](PLY2656.md) | error | 3 (UnsupportedConstruct) | `type '<type>' has no Visual Basic representation in profile '<profile>'` | #1088 |
+| [PLY2657](PLY2657.md) | error | 3 (UnsupportedConstruct) | `'<operation>' cannot be expressed in Visual Basic profile '<profile>'` | #1088 |
+| [PLY2658](PLY2658.md) | error | 3 (UnsupportedConstruct) | `exports '<first>' and '<second>' both map to the Visual Basic name '<name>'` | #1086 |
+| [PLY2691](PLY2691.md) | error | 6 (TargetBuildFailure) | `LibreOffice Basic did not answer (<outcome>): a module it cannot compile or an uncaught run-time error stops it at a dialog` | #1096 |
+| [PLY2692](PLY2692.md) | error | 7 (OracleFailure) | `the LibreOffice Basic driver exited with code <code>: <standard error>` | #1096 |
+| [PLY2695](PLY2695.md) | error | 7 (OracleFailure) | `<the driver answered another number of calls, or a line that is no answer>` | #1096 |
 
 ## PLY2800–PLY2899 · batch
 
