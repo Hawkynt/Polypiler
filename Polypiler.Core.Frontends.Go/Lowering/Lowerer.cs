@@ -225,8 +225,7 @@ internal sealed partial class Lowerer(int languageMinor) {
   private IrExpr ZeroOf(IrType type, GoNode node) => type switch {
     { IsStruct: true } => new IrStructDefault(type),
     { IsArray: true } => new IrNewArray(type, new IrConst(IrType.I32, 0)),
-    { IsString: true } => new IrStrConst(""),
-    { IsNumeric: true } or { Kind: IrTypeKind.Bool } => new IrConst(type, 0),
+    { IsString: true } => new IrStrConst(""), { IsNumeric: true } or { Kind: IrTypeKind.Bool } => new IrConst(type, 0),
     _ => throw UnsupportedType(node, type.ToString())
   };
 
