@@ -440,17 +440,24 @@ internal sealed partial class VbaLowerer {
     var source = this.Temporary(value.Type.Ir, value.Expr);
     var length = new IrArrayLength(new IrLocalRef(source));
     var copy = this.Temporary(value.Type.Ir, new IrNewArray(value.Type.Ir, length));
-    if (value.Type.Element!.Kind == VbaKind.Record) {
-      var index = this.Temporary(IrType.I32, new IrConst(IrType.I32, 0));
-      this._pending.Add(new IrWhile(new IrBinary(IrBinaryOp.Less, new IrLocalRef(index), length), new IrBlock([
-        new IrStore(new IrLocalRef(copy), new IrLocalRef(index), new IrArrayLoad(new IrLocalRef(source), new IrLocalRef(index))),
-        new IrAssign(index, new IrBinary(IrBinaryOp.Add, new IrLocalRef(index), new IrConst(IrType.I32, 1)))
-      ])));
-    } else {
-      this._pending.Add(new IrExprStmt(new IrIntrinsic(IrIntrinsicOp.ArrayCopy, IrType.Void, [new IrLocalRef(source), new IrConst(IrType.I32, 0), new IrLocalRef(copy), new IrConst(IrType.I32, 0), length])));
-    }
-
+    this._pending.Add(this.CopyElements(value.Type, new IrLocalRef(source), new IrLocalRef(copy), length));
     return new(new IrLocalRef(copy), value.Type);
+  }
+
+  /// <summary>
+  /// The copy of the first elements of an array into another: <c>ArrayCopy</c> of numbers, a loop of
+  /// records and of <c>Variant</c>s, which the IR's copy does not take.
+  /// </summary>
+  private IrStmt CopyElements(VbaType array, IrExpr source, IrExpr target, IrExpr count) {
+    if (array.Element!.Kind is not (VbaKind.Record or VbaKind.Variant))
+      return new IrExprStmt(new IrIntrinsic(IrIntrinsicOp.ArrayCopy, IrType.Void, [source, new IrConst(IrType.I32, 0), target, new IrConst(IrType.I32, 0), count]));
+
+    var index = this.Temporary(IrType.I32, new IrConst(IrType.I32, 0));
+    var limit = this.Temporary(IrType.I32, count);
+    return new IrWhile(new IrBinary(IrBinaryOp.Less, new IrLocalRef(index), new IrLocalRef(limit)), new IrBlock([
+      new IrStore(target, new IrLocalRef(index), new IrArrayLoad(source, new IrLocalRef(index))),
+      new IrAssign(index, new IrBinary(IrBinaryOp.Add, new IrLocalRef(index), new IrConst(IrType.I32, 1)))
+    ]));
   }
 
   private IEnumerable<IrStmt> CallStatement(VbaCallStatement call) {
@@ -551,6 +558,9 @@ internal sealed partial class VbaLowerer {
       return this.VariantFor(loop, dynamic);
     if (this.Lookup(loop.Variable) is not { Local: { } counter, Type: var type } || !type.IsNumeric || type.Kind == VbaKind.Boolean)
       throw this.Unresolved(loop.Line, $"the counter '{loop.Variable}' is no numeric variable of the procedure");
+
+    if (type.IsScaled)
+      throw this.Unsupported(loop.Line, $"a For loop over the {type} counter '{loop.Variable}'");
 
     var startValue = this.Expression(loop.Start);
     var start = this.Temporary(type.Ir, this.Coerce(startValue, type, loop.Line));
@@ -660,7 +670,7 @@ internal sealed partial class VbaLowerer {
       if (variable.Type.Element!.Kind == VbaKind.Record)
         throw this.Unsupported(line, "ReDim Preserve of an array of records");
       var kept = new IrConditional(new IrBinary(IrBinaryOp.Less, new IrArrayLength(Old()), new IrLocalRef(length)), new IrArrayLength(Old()), new IrLocalRef(length));
-      statements.Add(new IrExprStmt(new IrIntrinsic(IrIntrinsicOp.ArrayCopy, IrType.Void, [Old(), new IrConst(IrType.I32, 0), new IrLocalRef(fresh), new IrConst(IrType.I32, 0), kept])));
+      statements.Add(this.CopyElements(variable.Type, Old(), new IrLocalRef(fresh), kept));
       created = new IrLocalRef(fresh);
     }
 

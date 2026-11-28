@@ -401,12 +401,7 @@ public sealed class VisualBasicFrontendTests {
   public void SyntaxErrors_ArePly2645(string source, string code)
     => Assert.That(Refused(source), Does.Contain(code));
 
-  [TestCase("Public Function F(a As Currency) As Long\nEnd Function", "Currency")]
-  [TestCase("Public Function F() As Currency\nEnd Function", "Currency")]
-  [TestCase("Public Function F() As Date\nEnd Function", "Date")]
-  [TestCase("Public Function F() As Long\n    Dim x(2)\nEnd Function", "the Variant array")]
   [TestCase("Public Function F() As Long\n    Dim x As Object\nEnd Function", "Object")]
-  [TestCase("Public Function F() As Long\n    Dim x As Date\nEnd Function", "Date")]
   [TestCase("Public Function F() As Long\n    Dim x As LongPtr\nEnd Function", "LongPtr")]
   [TestCase("Public Function F() As Long\n    GoSub L\nEnd Function", "GoSub")]
   [TestCase("Public Function F() As Long\n    With X\n    End With\nEnd Function", "With")]
@@ -415,7 +410,6 @@ public sealed class VisualBasicFrontendTests {
   [TestCase("Public Function F() As Long\n    Set x = Nothing\nEnd Function", "Set")]
   [TestCase("Public Function F() As Long\n    GoTo L\nL:\nEnd Function", "GoTo")]
   [TestCase("Public Function F() As Long\n    F = UCase(\"a\")\nEnd Function", "UCase")]
-  [TestCase("Public Function F() As Long\n    F = 1.5@\nEnd Function", "Currency")]
   [TestCase("Public Function F() As Long\n    F = 1 Like 2\nEnd Function", "Like")]
   [TestCase("Public Function F() As Long\n    Err.Raise 1234\nEnd Function", "Err.Raise")]
   [TestCase("Public Function F() As Long\n    Dim a(1, 2) As Long\nEnd Function", "multidimensional")]
@@ -424,7 +418,6 @@ public sealed class VisualBasicFrontendTests {
   [TestCase("Public Property Get P() As Long\nEnd Property", "Property")]
   [TestCase("Declare Function GetTickCount Lib \"kernel32\" () As Long", "Declare")]
   [TestCase("Option Compare Text", "Option Compare Text")]
-  [TestCase("Public Function F() As Long\n    Dim d As Double\n    F = Len(\"\" & d)\nEnd Function", "text of a Double")]
   [TestCase("Public Function F() As Long\n    On Error GoTo H\n    F = 1\nEnd Function", "without the label")]
   [TestCase("Public Function F() As Long\n    On Error Resume Next\n    For F = 1 To 2\n    Next\nEnd Function", "under On Error Resume Next")]
   [TestCase("Public Function F() As Long\n    Do\n        For F = 1 To 2\n            Exit Do\n        Next\n    Loop\nEnd Function", "Exit Do out of a For loop")]
@@ -441,8 +434,6 @@ public sealed class VisualBasicFrontendTests {
   }
 
   [TestCase("Public Function F() As Long\n    F = x\nEnd Function", "'x' is not declared")]
-  [TestCase("Public Function F() As Long\n    F = \"a\" * 2\nEnd Function", "Type mismatch")]
-  [TestCase("Public Function F() As Long\n    F = \"a\"\nEnd Function", "Type mismatch")]
   [TestCase("Public Function F() As Long\n    Dim p As Missing\nEnd Function", "not declared")]
   [TestCase("Public Function F() As Long\n    Undefined 1\nEnd Function", "no procedure")]
   [TestCase("Public Function F() As Long\n    F = G(1)\nEnd Function", "no array, function")]

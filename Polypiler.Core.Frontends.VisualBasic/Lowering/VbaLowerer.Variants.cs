@@ -301,11 +301,15 @@ internal sealed partial class VbaLowerer {
     VbaKind.Single => VbaTags.Single,
     VbaKind.Double => VbaTags.Double,
     VbaKind.String => VbaTags.String,
+    VbaKind.Currency => VbaTags.Currency,
+    VbaKind.Date => VbaTags.Date,
     _ => VbaTags.None
   };
 
-  /// <summary>The kinds a value may hold: those of a value of a <c>Variant</c>, the one of a typed value.</summary>
-  private static VbaTags TagsOf(VbaValue value) => value.IsVariant ? value.Tags : TagOf(value.Type.Kind);
+  /// <summary>The kinds a value may hold: those of a value of a <c>Variant</c>, the one of a typed value, an array of <c>Variant</c>s from 0 or 1 as one.</summary>
+  private static VbaTags TagsOf(VbaValue value) => value.IsVariant ? value.Tags
+    : value.Type is { IsArray: true, Element.IsVariant: true, LowerBound: 0 or 1 } array ? (array.LowerBound == 0 ? VbaTags.ArrayFrom0 : VbaTags.ArrayFrom1)
+    : TagOf(value.Type.Kind);
 
   /// <summary>The scalar type of a single kind, or <see langword="null"/> for several, none, <c>Empty</c> or <c>Null</c>.</summary>
   private static VbaType? TypeOf(VbaTags tags) => tags switch {
@@ -317,6 +321,10 @@ internal sealed partial class VbaLowerer {
     VbaTags.Single => VbaType.Single,
     VbaTags.Double => VbaType.Double,
     VbaTags.String => VbaType.String,
+    VbaTags.Currency => VbaType.Currency,
+    VbaTags.Date => VbaType.Date,
+    VbaTags.ArrayFrom0 => VbaType.ArrayOf(VbaType.Variant, 0),
+    VbaTags.ArrayFrom1 => VbaType.ArrayOf(VbaType.Variant, 1),
     _ => null
   };
 
@@ -331,6 +339,8 @@ internal sealed partial class VbaLowerer {
     VbaKind.Boolean or VbaKind.Integer => VbaTags.Integer | VbaTags.Long,
     VbaKind.Long => VbaTags.Long | VbaTags.Double,
     VbaKind.Single => VbaTags.Single | VbaTags.Double,
+    VbaKind.Currency => VbaTags.Currency,
+    VbaKind.Date => VbaTags.Date | VbaTags.Double,
     _ => VbaTags.Double
   };
 
@@ -346,8 +356,10 @@ internal sealed partial class VbaLowerer {
           result |= VbaTags.String;
         else if (op == "+" && (a == VbaTags.Empty) != (b == VbaTags.Empty))
           result |= a == VbaTags.Empty ? b : a;
-        else if (a != VbaTags.String && b != VbaTags.String)
-          result |= Chain(Promote(new(Numeric(a)), new(Numeric(b))).Kind);
+        else if (a == VbaTags.String || b == VbaTags.String)
+          result |= VbaTags.Double;
+        else
+          result |= Chain(ArithmeticType(op, new(Numeric(a)), new(Numeric(b))).Kind);
       }
 
     return result;
@@ -355,10 +367,10 @@ internal sealed partial class VbaLowerer {
 
   /// <summary>The kinds <c>\</c> or <c>Mod</c> of values of two sets of kinds may give: the operands as integers, a floating-point one as a <c>Long</c>.</summary>
   private static VbaTags IntegerDivisionTags(VbaTags left, VbaTags right) {
-    static VbaKind Whole(VbaTags tag) => tag is VbaTags.Single or VbaTags.Double ? VbaKind.Long : Numeric(tag);
+    static VbaKind Whole(VbaTags tag) => tag is VbaTags.Single or VbaTags.Double or VbaTags.String or VbaTags.Currency or VbaTags.Date ? VbaKind.Long : Numeric(tag);
     var result = ((left | right) & VbaTags.Null) != VbaTags.None ? VbaTags.Null : VbaTags.None;
-    foreach (var a in Each(left & ~(VbaTags.Null | VbaTags.String)))
-      foreach (var b in Each(right & ~(VbaTags.Null | VbaTags.String)))
+    foreach (var a in Each(left & ~VbaTags.Null))
+      foreach (var b in Each(right & ~VbaTags.Null))
         result |= Chain(Promote(new(Whole(a)), new(Whole(b))).Kind);
     return result;
   }
@@ -366,8 +378,8 @@ internal sealed partial class VbaLowerer {
   /// <summary>The kinds a negation of a value of a set of kinds may give: of a <c>Byte</c>, a <c>Boolean</c> or <c>Empty</c> an <c>Integer</c>.</summary>
   private static VbaTags NegationTags(VbaTags operand) {
     var result = operand & VbaTags.Null;
-    foreach (var tag in Each(operand & ~(VbaTags.Null | VbaTags.String)))
-      result |= Chain(tag is VbaTags.Byte or VbaTags.Boolean or VbaTags.Empty ? VbaKind.Integer : TypeOf(tag)!.Kind);
+    foreach (var tag in Each(operand & ~VbaTags.Null))
+      result |= Chain(tag is VbaTags.Byte or VbaTags.Boolean or VbaTags.Empty ? VbaKind.Integer : tag == VbaTags.String ? VbaKind.Double : TypeOf(tag)!.Kind);
     return result;
   }
 
@@ -406,6 +418,9 @@ internal sealed partial class VbaLowerer {
       VbaKind.Single => IrVariantTag.F32,
       VbaKind.Double => IrVariantTag.F64,
       VbaKind.String => IrVariantTag.String,
+      VbaKind.Currency => IrVariantTag.Currency,
+      VbaKind.Date => IrVariantTag.Date,
+      VbaKind.Array => throw this.Unsupported(line, $"a Variant that holds an array ({value.Type}) and may hold another kind, which the IR's dynamic type does not carry"),
       _ => throw this.Unsupported(line, $"a {value.Type} in a Variant")
     };
     return new IrVariantOf(tag, value.Expr);
@@ -416,27 +431,22 @@ internal sealed partial class VbaLowerer {
   /// <summary>A <c>Variant</c> converted to a type as an assignment converts it: <c>Empty</c> to 0, <c>""</c> or <c>False</c>, <c>Null</c> error 94.</summary>
   private IrExpr Unbox(VbaValue value, VbaType target, int line) {
     var tags = value.Tags;
-    if (target.Kind == VbaKind.String) {
-      this.RefuseFloatText(tags, line);
-      return this.HelperCall("PlyVarCStr", value.Expr);
-    }
+    var currency = (tags & VbaTags.Currency) != VbaTags.None;
+    if (target.Kind == VbaKind.String)
+      return this.HelperCall(currency ? "PlyVarCStrC" : "PlyVarCStr", value.Expr);
 
     if (!target.IsNumeric)
       throw this.Unresolved(line, $"Type mismatch: 'Variant' where '{target}' is expected");
-    if ((tags & VbaTags.String) != VbaTags.None)
-      throw this.VariantRefusal(line, $"the conversion to {target} of a Variant that may hold a String, which Visual Basic reads by the locale");
 
     return target.Kind switch {
       VbaKind.Boolean => this.HelperCall("PlyVarCBool", value.Expr),
-      VbaKind.Byte => this.HelperCall("PlyVarCByte", value.Expr),
-      _ => this.Coerce(new(this.HelperCall("PlyVarDbl", value.Expr), VbaType.Double), target, line)
+      VbaKind.Byte when !currency => this.HelperCall("PlyVarCByte", value.Expr),
+      VbaKind.Currency => this.HelperCall("PlyVarCur", value.Expr),
+      VbaKind.Date => this.HelperCall("PlyVarDate", value.Expr),
+      _ => this.Coerce(new(this.HelperCall(currency ? "PlyVarDblC" : "PlyVarDbl", value.Expr), VbaType.Double), target, line)
     };
   }
 
-  private void RefuseFloatText(VbaTags tags, int line) {
-    if ((tags & VbaTags.Float) != VbaTags.None)
-      throw this.VariantRefusal(line, $"the text of a Variant that may hold a {Names(tags & VbaTags.Float)}, which Visual Basic writes by the locale");
-  }
 
   /// <summary>The value of a call of a procedure of the module: a <c>Variant</c> result may hold anything.</summary>
   private static VbaValue Returned(IrExpr call, VbaType type) => new(call, type) { Tags = type.IsVariant ? VbaTags.Any : VbaTags.None };
@@ -459,16 +469,21 @@ internal sealed partial class VbaLowerer {
 
     if (((a | b) & VbaTags.LongLong) != VbaTags.None)
       throw this.VariantRefusal(line, "the arithmetic of a Variant that holds a LongLong");
-    if (op == "+" ? ((a & VbaTags.String) != VbaTags.None && (b & VbaTags.Numeric) != VbaTags.None) || ((b & VbaTags.String) != VbaTags.None && (a & VbaTags.Numeric) != VbaTags.None)
-        : ((a | b) & VbaTags.String) != VbaTags.None)
-      throw this.VariantRefusal(line, $"'{op}' of a Variant that may hold a String with a number, which Visual Basic converts by the locale");
+    var currency = ((a | b) & VbaTags.Currency) != VbaTags.None;
+    if (currency && !typed && op is "^" or "\\" or "Mod")
+      throw this.VariantRefusal(line, $"'{op}' of a Variant that may hold a Currency");
 
     switch (op) {
       case "+" or "-" or "*":
         if (typed && IsSingle(a) && IsSingle(b) && ((a | b) & ~(VbaTags.Integral | VbaTags.Double)) == VbaTags.None)
           return this.Exact(op, left, right);
+        if (typed && IsSingle(a) && IsSingle(b)) {
+          var scaled = this.Arithmetic(op, ArithmeticType(op, left.Type, right.Type), left, right);
+          return scaled with { Tags = TagOf(scaled.Type.Kind) };
+        }
+
         var code = op == "+" ? 0 : op == "-" ? 1 : 2;
-        return new(this.HelperCall("PlyVarArith", I16(code), this.Box(left, line), this.Box(right, line)), VbaType.Variant) { Tags = ArithmeticTags(op, a, b) };
+        return new(this.HelperCall(currency ? "PlyVarArithC" : "PlyVarArith", I16(code), this.Box(left, line), this.Box(right, line)), VbaType.Variant) { Tags = ArithmeticTags(op, a, b) };
       case "/":
         if (typed) {
           var quotient = this.Divide(left, right);
@@ -476,7 +491,7 @@ internal sealed partial class VbaLowerer {
         }
 
         var floats = VbaTags.Double | (((a | b) & VbaTags.Single) != VbaTags.None ? VbaTags.Single : VbaTags.None);
-        return new(this.HelperCall("PlyVarDiv", this.Box(left, line), this.Box(right, line)), VbaType.Variant) { Tags = floats | ((a | b) & VbaTags.Null) };
+        return new(this.HelperCall(currency ? "PlyVarDivC" : "PlyVarDiv", this.Box(left, line), this.Box(right, line)), VbaType.Variant) { Tags = floats | ((a | b) & VbaTags.Null) };
       case "^":
         if (typed)
           return new(this.Pow(this.ToFloat(left, IrType.F64), this.ToFloat(right, IrType.F64)), VbaType.Double) { Tags = VbaTags.Double };
@@ -515,20 +530,17 @@ internal sealed partial class VbaLowerer {
 
   /// <summary>
   /// How a <c>Variant</c> compares with another value, as <c>PlyVarCmp</c> gives it: -1, 0 or 1, or 2
-  /// when either is <c>Null</c>. A number compared with a typed <c>String</c>, or a string with a typed
-  /// number, is read by the locale, which the frontend does not model.
+  /// when either is <c>Null</c>. Of two <c>Variant</c>s a number is below a string; a number compared
+  /// with a value declared <c>String</c>, or a string with one declared a number, is compared as a
+  /// number, the string read by the locale (<c>PlyVarCmpT</c>).
   /// </summary>
   private IrExpr VariantOrder(VbaValue left, VbaValue right, int line) {
-    void Check(VbaValue typed, VbaTags other) {
-      if (typed.IsVariant)
-        return;
-      if ((typed.Type.Kind == VbaKind.String && (other & VbaTags.Numeric) != VbaTags.None) || (typed.Type.IsNumeric && (other & VbaTags.String) != VbaTags.None))
-        throw this.VariantRefusal(line, $"the comparison of a {typed.Type} with a Variant that may hold a {Names(typed.Type.Kind == VbaKind.String ? other & VbaTags.Numeric : VbaTags.String)}, which Visual Basic converts by the locale");
-    }
+    static bool Mixed(VbaValue typed, VbaTags other) => !typed.IsVariant
+      && ((typed.Type.Kind == VbaKind.String && (other & VbaTags.Numeric) != VbaTags.None) || (typed.Type.IsNumeric && (other & VbaTags.String) != VbaTags.None));
 
-    Check(left, TagsOf(right));
-    Check(right, TagsOf(left));
-    return this.HelperCall("PlyVarCmp", this.Box(left, line), this.Box(right, line));
+    var helper = ((TagsOf(left) | TagsOf(right)) & VbaTags.Currency) != VbaTags.None ? "PlyVarCmpC"
+      : Mixed(left, TagsOf(right)) || Mixed(right, TagsOf(left)) ? "PlyVarCmpT" : "PlyVarCmp";
+    return this.HelperCall(helper, this.Box(left, line), this.Box(right, line));
   }
 
   /// <summary>A comparison of a <c>Variant</c> as a test: one with <c>Null</c> is not true.</summary>
@@ -552,16 +564,16 @@ internal sealed partial class VbaLowerer {
   private VbaValue VariantConcatenation(VbaValue left, VbaValue right, int line) {
     var a = TagsOf(left);
     var b = TagsOf(right);
+    if (((a | b) & VbaTags.Currency) != VbaTags.None && (a & b & VbaTags.Null) != VbaTags.None)
+      throw this.VariantRefusal(line, "'&' of two Variants that may be Null and may hold a Currency");
     if ((a & b & VbaTags.Null) != VbaTags.None) {
-      this.RefuseFloatText(a | b, line);
       return new(this.HelperCall("PlyVarConcat", this.Box(left, line), this.Box(right, line)), VbaType.Variant) { Tags = VbaTags.String | VbaTags.Null };
     }
 
     IrExpr Part(VbaValue value) {
       if (!value.Type.IsVariant)
         return this.Text(value, line);
-      this.RefuseFloatText(value.Tags, line);
-      return this.HelperCall("PlyVarText", value.Expr);
+      return this.HelperCall((value.Tags & VbaTags.Currency) != VbaTags.None ? "PlyVarTextC" : "PlyVarText", value.Expr);
     }
 
     return new(new IrIntrinsic(IrIntrinsicOp.StrConcat, IrType.String, [Part(left), Part(right)]), VbaType.String) { Tags = VbaTags.String };
@@ -571,13 +583,17 @@ internal sealed partial class VbaLowerer {
   private VbaValue VariantUnary(string op, VbaValue operand, int line) {
     var tags = TagsOf(operand);
     if (op == "Not") {
-      if ((tags & ~(VbaTags.Boolean | VbaTags.Null)) != VbaTags.None)
-        throw this.VariantRefusal(line, $"Not of a Variant that may hold a {Names(tags & ~(VbaTags.Boolean | VbaTags.Null))}");
-      return new(this.HelperCall("PlyVarNot", operand.Expr), VbaType.Variant) { Tags = tags };
+      if ((tags & VbaTags.LongLong) != VbaTags.None)
+        throw this.VariantRefusal(line, "Not of a Variant that may hold a LongLong");
+      if ((tags & VbaTags.Currency) != VbaTags.None)
+        throw this.VariantRefusal(line, "Not of a Variant that may hold a Currency");
+      if ((tags & ~(VbaTags.Boolean | VbaTags.Null)) == VbaTags.None)
+        return new(this.HelperCall("PlyVarNot", this.Box(operand, line)), VbaType.Variant) { Tags = tags };
+      return new(this.HelperCall("PlyVarBitNot", this.Box(operand, line)), VbaType.Variant) { Tags = Each(tags).Aggregate(VbaTags.None, (kinds, tag) => kinds | BitwiseKind(tag)) };
     }
 
-    if ((tags & (VbaTags.String | VbaTags.LongLong)) != VbaTags.None)
-      throw this.VariantRefusal(line, $"the negation of a Variant that may hold a {Names(tags & (VbaTags.String | VbaTags.LongLong))}");
+    if ((tags & VbaTags.LongLong) != VbaTags.None)
+      throw this.VariantRefusal(line, "the negation of a Variant that may hold a LongLong");
     if (!operand.Type.IsVariant && IsSingle(tags) && (tags & ~(VbaTags.Integral | VbaTags.Double)) == VbaTags.None) {
       var negated = new IrUnary(IrUnaryOp.Negate, this.ToFloat(operand, IrType.F64));
       return operand.Type.Kind == VbaKind.Double
@@ -585,25 +601,61 @@ internal sealed partial class VbaLowerer {
         : new(negated, VbaType.Double) { Tags = NegationTags(tags), Promoted = operand.Type.Kind is VbaKind.Long ? VbaType.Long : VbaType.Integer };
     }
 
-    return new(this.HelperCall("PlyVarNeg", this.Box(operand, line)), VbaType.Variant) { Tags = NegationTags(tags) };
+    if (!operand.Type.IsVariant && operand.Promoted is null && operand.Type.IsScaled) {
+      var negated = this.Unary(new VbaUnary("-", new VbaEmpty(line), line), operand with { Tags = VbaTags.None });
+      return negated with { Tags = TagOf(negated.Type.Kind) };
+    }
+
+    var helper = (tags & VbaTags.Currency) != VbaTags.None ? "PlyVarNegC" : "PlyVarNeg";
+    return new(this.HelperCall(helper, this.Box(operand, line)), VbaType.Variant) { Tags = NegationTags(tags) };
   }
 
-  /// <summary><c>And</c>, <c>Or</c>, <c>Xor</c> of a <c>Variant</c>: on <c>Boolean</c>s and <c>Null</c>, three-valued.</summary>
+  /// <summary>
+  /// <c>And</c>, <c>Or</c>, <c>Xor</c>, <c>Eqv</c>, <c>Imp</c> of a <c>Variant</c> ([MS-VBAL] §5.6.9.8):
+  /// three-valued on <c>Boolean</c>s and <c>Null</c>, otherwise bitwise in the effective type the kinds
+  /// give - <c>Byte</c>, <c>Boolean</c>, <c>Integer</c> or <c>Long</c> - with the <c>Null</c> rules of
+  /// the operators: <c>0 And Null</c> is 0, <c>x Or Null</c> is x where x is not 0.
+  /// </summary>
   private VbaValue VariantLogical(string op, VbaValue left, VbaValue right, int line) {
     var tags = TagsOf(left) | TagsOf(right);
-    if ((tags & ~(VbaTags.Boolean | VbaTags.Null)) != VbaTags.None)
-      throw this.VariantRefusal(line, $"{op} of a Variant that may hold a {Names(tags & ~(VbaTags.Boolean | VbaTags.Null))}");
-    if (op is "Eqv" or "Imp")
-      throw this.VariantRefusal(line, $"{op} of a Variant");
+    if ((tags & VbaTags.LongLong) != VbaTags.None)
+      throw this.VariantRefusal(line, $"{op} of a Variant that may hold a LongLong");
+    if ((tags & VbaTags.Currency) != VbaTags.None)
+      throw this.VariantRefusal(line, $"{op} of a Variant that may hold a Currency");
 
-    var code = op == "And" ? 0 : op == "Or" ? 1 : 2;
-    return new(this.HelperCall("PlyVarLogic", I16(code), this.Box(left, line), this.Box(right, line)), VbaType.Variant) { Tags = VbaTags.Boolean | (tags & VbaTags.Null) };
+    if ((tags & ~(VbaTags.Boolean | VbaTags.Null)) == VbaTags.None && op is "And" or "Or" or "Xor") {
+      var code = op == "And" ? 0 : op == "Or" ? 1 : 2;
+      return new(this.HelperCall("PlyVarLogic", I16(code), this.Box(left, line), this.Box(right, line)), VbaType.Variant) { Tags = VbaTags.Boolean | (tags & VbaTags.Null) };
+    }
+
+    var number = Array.IndexOf<string>(["And", "Or", "Xor", "Eqv", "Imp"], op);
+    return new(this.HelperCall("PlyVarBits", I16(number), this.Box(left, line), this.Box(right, line)), VbaType.Variant) { Tags = BitwiseTags(TagsOf(left), TagsOf(right)) };
   }
 
-  /// <summary>A <c>Variant</c> as a condition: <c>Null</c> and <c>Empty</c> are false, a number is true when it is not zero.</summary>
+  /// <summary>The kinds a bitwise operator of values of two sets of kinds may give: the effective types of [MS-VBAL] §5.6.9.8, and <c>Null</c>.</summary>
+  private static VbaTags BitwiseTags(VbaTags left, VbaTags right) {
+    var result = ((left | right) & VbaTags.Null) != VbaTags.None ? VbaTags.Null : VbaTags.None;
+    foreach (var a in Each(left))
+      foreach (var b in Each(right))
+        result |= a == VbaTags.Null ? BitwiseKind(b) : b == VbaTags.Null ? BitwiseKind(a)
+          : a == b && a is VbaTags.Byte or VbaTags.Boolean ? a
+          : BitwiseKind(a) == VbaTags.Long || BitwiseKind(b) == VbaTags.Long ? VbaTags.Long : VbaTags.Integer;
+    return result;
+  }
+
+  /// <summary>The effective type of one kind in a bitwise operator: a <c>Byte</c> and a <c>Boolean</c> their own, an <c>Integer</c> and <c>Empty</c> an <c>Integer</c>, every other a <c>Long</c>, <c>Null</c> nothing.</summary>
+  private static VbaTags BitwiseKind(VbaTags tag) => tag switch {
+    VbaTags.Null => VbaTags.Null,
+    VbaTags.Byte or VbaTags.Boolean => tag,
+    VbaTags.Integer or VbaTags.Empty => VbaTags.Integer,
+    _ => VbaTags.Long
+  };
+
+
+  /// <summary>A <c>Variant</c> as a condition: <c>Null</c> and <c>Empty</c> are false, a number is true when it is not zero, a string by <c>CBool</c>.</summary>
   private IrExpr VariantCondition(VbaValue value, int line) {
-    if ((value.Tags & VbaTags.String) != VbaTags.None)
-      throw this.VariantRefusal(line, "a condition of a Variant that may hold a String, which Visual Basic reads by the locale");
+    if ((value.Tags & VbaTags.Currency) != VbaTags.None)
+      throw this.VariantRefusal(line, "a condition of a Variant that may hold a Currency");
     return this.HelperCall("PlyVarIsTrue", value.Expr);
   }
 
@@ -643,10 +695,10 @@ internal sealed partial class VbaLowerer {
           return new(Answer(new IrStrConst(VarTypeOf(value.Type, line) == IrVariantTag.Bool ? "Boolean" : value.Type.ToString())), VbaType.String);
         return new(this.HelperCall("PlyVarTypeName", this.Box(value, line)), VbaType.String);
       case "isnumeric":
-        if ((TagsOf(value) & VbaTags.String) != VbaTags.None)
-          throw this.VariantRefusal(line, "IsNumeric of a String, which Visual Basic reads by the locale");
+        if (value.Type.Kind == VbaKind.String)
+          return new(this.HelperCall("PlyIsNumText", value.Expr), VbaType.Boolean);
         if (!value.Type.IsVariant)
-          return new(Answer(new IrConst(IrType.Bool, 1)), VbaType.Boolean);
+          return new(Answer(new IrConst(IrType.Bool, value.Type.IsNumeric && value.Type.Kind != VbaKind.Date ? 1 : 0)), VbaType.Boolean);
         return new(this.HelperCall("PlyVarIsNumeric", value.Expr), VbaType.Boolean);
       default:
         return this.Boxed(value, line);
@@ -663,6 +715,8 @@ internal sealed partial class VbaLowerer {
     VbaKind.Single => IrVariantTag.F32,
     VbaKind.Double => IrVariantTag.F64,
     VbaKind.String => IrVariantTag.String,
+    VbaKind.Currency => IrVariantTag.Currency,
+    VbaKind.Date => IrVariantTag.Date,
     _ => throw this.Unsupported(line, $"VarType of a {type}")
   };
 
@@ -678,6 +732,10 @@ internal sealed partial class VbaLowerer {
       "plyirvarf32" => Payload(IrVariantTag.F32, VbaType.Single),
       "plyirvarf64" => Payload(IrVariantTag.F64, VbaType.Double),
       "plyirvarstr" => Payload(IrVariantTag.String, VbaType.String),
+      "plyirvarcur" => Payload(IrVariantTag.Currency, VbaType.LongLong),
+      "plyirvardate" => Payload(IrVariantTag.Date, VbaType.Double),
+      "plyirmkcur" => new(new IrVariantOf(IrVariantTag.Currency, value), VbaType.Variant) { Tags = VbaTags.Currency },
+      "plyirmkdate" => new(new IrVariantOf(IrVariantTag.Date, value), VbaType.Variant) { Tags = VbaTags.Date },
       _ => null
     };
   }

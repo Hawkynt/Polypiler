@@ -29,6 +29,10 @@ internal sealed partial class VbaLowerer {
             PlyVarDbl = PlyIrVarU8(v)
         ElseIf t = 11 Then
             If PlyIrVarBool(v) Then PlyVarDbl = -1
+        ElseIf t = 8 Then
+            PlyVarDbl = PlyCDbl(PlyIrVarStr(v))
+        ElseIf t = 7 Then
+            PlyVarDbl = PlyIrVarDate(v)
         ElseIf t = 1 Then
             Error 94
         ElseIf t <> 0 Then
@@ -45,8 +49,10 @@ internal sealed partial class VbaLowerer {
             PlyVarRank = 3
         ElseIf t = 4 Then
             PlyVarRank = 5
-        ElseIf t = 5 Then
+        ElseIf t = 5 Or t = 8 Then
             PlyVarRank = 6
+        ElseIf t = 7 Then
+            PlyVarRank = 8
         End If
     End Function
 
@@ -65,7 +71,7 @@ internal sealed partial class VbaLowerer {
     End Function
 
     Private Function PlyVarArith(ByVal op As Integer, ByVal a As Variant, ByVal b As Variant) As Variant
-        Dim ta As Integer, tb As Integer, r As Integer, rb As Integer, x As Double, y As Double
+        Dim ta As Integer, tb As Integer, r As Integer, rb As Integer, x As Double, y As Double, z As Double
         ta = PlyIrVarType(a)
         tb = PlyIrVarType(b)
         If ta = 1 Or tb = 1 Then
@@ -93,6 +99,23 @@ internal sealed partial class VbaLowerer {
         If r = 5 And (ta = 3 Or tb = 3) Then r = 6
         x = PlyVarDbl(a)
         y = PlyVarDbl(b)
+        If r = 8 Then
+            If op = 2 Or (op = 1 And ta = 7 And tb = 7) Then
+                r = 6
+            Else
+                If op = 0 Then
+                    z = PlyCheckD(x + y)
+                Else
+                    z = PlyCheckD(x - y)
+                End If
+                If z < -657434 Or z >= 2958466 Then
+                    PlyVarArith = z
+                Else
+                    PlyVarArith = PlyIrMkDate(z)
+                End If
+                Exit Function
+            End If
+        End If
         If op = 0 Then
             PlyVarArith = PlyVarFromWide(x + y, r)
         ElseIf op = 1 Then
@@ -111,7 +134,12 @@ internal sealed partial class VbaLowerer {
         r = PlyVarRank(PlyIrVarType(a))
         If r = 0 Then Error 13
         If r < 2 Then r = 2
-        PlyVarNeg = PlyVarFromWide(-PlyVarDbl(a), r)
+        If r = 8 Then
+            PlyVarNeg = -PlyVarDbl(a)
+            If PlyVarDbl(a) <= 657434 Then PlyVarNeg = PlyIrMkDate(-PlyVarDbl(a))
+        Else
+            PlyVarNeg = PlyVarFromWide(-PlyVarDbl(a), r)
+        End If
     End Function
 
     Private Function PlyVarDiv(ByVal a As Variant, ByVal b As Variant) As Variant
@@ -125,7 +153,7 @@ internal sealed partial class VbaLowerer {
         ra = PlyVarRank(ta)
         rb = PlyVarRank(tb)
         If ra = 0 Or rb = 0 Then Error 13
-        If (ta = 4 Or tb = 4) And ra <> 3 And ra <> 6 And rb <> 3 And rb <> 6 Then
+        If (ta = 4 Or tb = 4) And ra <> 3 And ra < 6 And rb <> 3 And rb < 6 Then
             PlyVarDiv = PlyDivS(PlyVarDbl(a), PlyVarDbl(b))
         Else
             PlyVarDiv = PlyDivD(PlyVarDbl(a), PlyVarDbl(b))
@@ -143,7 +171,7 @@ internal sealed partial class VbaLowerer {
     Private Function PlyVarWhole(ByVal v As Variant) As Double
         Dim t As Integer
         t = PlyIrVarType(v)
-        If t = 4 Or t = 5 Then
+        If t = 4 Or t = 5 Or t = 7 Or t = 8 Then
             PlyVarWhole = CLng(PlyVarDbl(v))
         Else
             PlyVarWhole = PlyVarDbl(v)
@@ -192,6 +220,10 @@ internal sealed partial class VbaLowerer {
             PlyVarText = CStr(PlyIrVarI32(v))
         ElseIf t = 17 Then
             PlyVarText = CStr(PlyIrVarU8(v))
+        ElseIf t = 5 Then
+            PlyVarText = PlyIrFormat(PlyIrVarF64(v))
+        ElseIf t = 4 Then
+            PlyVarText = PlyIrFormat(PlyIrVarF32(v))
         ElseIf t > 1 Then
             Error 13
         End If
@@ -239,6 +271,15 @@ internal sealed partial class VbaLowerer {
                 PlyVarCmp = 1
             End If
         End If
+    End Function
+
+    Private Function PlyVarCmpT(ByVal a As Variant, ByVal b As Variant) As Long
+        Dim ta As Integer, tb As Integer
+        ta = PlyIrVarType(a)
+        tb = PlyIrVarType(b)
+        If ta = 8 And tb <> 8 And tb > 1 Then a = PlyCDbl(PlyIrVarStr(a))
+        If tb = 8 And ta <> 8 And ta > 1 Then b = PlyCDbl(PlyIrVarStr(b))
+        PlyVarCmpT = PlyVarCmp(a, b)
     End Function
 
     Private Function PlyVarCmpOp(ByVal c As Long, ByVal op As Integer) As Variant
@@ -301,11 +342,111 @@ internal sealed partial class VbaLowerer {
         End If
     End Function
 
+    Private Function PlyVarLong(ByVal v As Variant) As Long
+        Dim t As Integer
+        t = PlyIrVarType(v)
+        If t = 11 Then
+            If PlyIrVarBool(v) Then PlyVarLong = -1
+        ElseIf t <> 0 Then
+            PlyVarLong = PlyVarDbl(v)
+        End If
+    End Function
+
+    Private Function PlyVarBitKind(ByVal t As Integer) As Integer
+        If t = 17 Then
+            PlyVarBitKind = 1
+        ElseIf t = 11 Then
+            PlyVarBitKind = 2
+        ElseIf t = 0 Or t = 2 Then
+            PlyVarBitKind = 3
+        ElseIf t <> 1 Then
+            PlyVarBitKind = 4
+        End If
+    End Function
+
+    Private Function PlyVarBitOf(ByVal r As Long, ByVal k As Integer) As Variant
+        If k = 1 Then
+            PlyVarBitOf = CByte(r And 255)
+        ElseIf k = 2 Then
+            PlyVarBitOf = r <> 0
+        ElseIf k = 3 Then
+            PlyVarBitOf = CInt(r)
+        Else
+            PlyVarBitOf = r
+        End If
+    End Function
+
+    Private Function PlyVarBits(ByVal op As Integer, ByVal a As Variant, ByVal b As Variant) As Variant
+        Dim ka As Integer, kb As Integer, k As Integer, x As Long, y As Long, r As Long
+        ka = PlyVarBitKind(PlyIrVarType(a))
+        kb = PlyVarBitKind(PlyIrVarType(b))
+        If ka = 0 And kb = 0 Then
+            PlyVarBits = Null
+            Exit Function
+        End If
+        If ka = 0 Or kb = 0 Then
+            If ka = 0 Then
+                k = kb
+                y = PlyVarLong(b)
+            Else
+                k = ka
+                x = PlyVarLong(a)
+            End If
+            PlyVarBits = Null
+            If op = 0 Then
+                If x + y = 0 Then PlyVarBits = PlyVarBitOf(0, k)
+            ElseIf op = 1 Then
+                If x + y <> 0 Then PlyVarBits = PlyVarBitOf(x + y, k)
+            ElseIf op = 4 Then
+                If ka = 0 Then
+                    If y <> 0 Then PlyVarBits = PlyVarBitOf(y, k)
+                ElseIf x <> -1 Then
+                    PlyVarBits = PlyVarBitOf(Not x, k)
+                End If
+            End If
+            Exit Function
+        End If
+        k = ka
+        If kb <> ka Then
+            If ka = 4 Or kb = 4 Then
+                k = 4
+            Else
+                k = 3
+            End If
+        End If
+        x = PlyVarLong(a)
+        y = PlyVarLong(b)
+        If op = 0 Then
+            r = x And y
+        ElseIf op = 1 Then
+            r = x Or y
+        ElseIf op = 2 Then
+            r = x Xor y
+        ElseIf op = 3 Then
+            r = Not (x Xor y)
+        Else
+            r = (Not x) Or y
+        End If
+        PlyVarBits = PlyVarBitOf(r, k)
+    End Function
+
+    Private Function PlyVarBitNot(ByVal a As Variant) As Variant
+        Dim k As Integer
+        k = PlyVarBitKind(PlyIrVarType(a))
+        If k = 0 Then
+            PlyVarBitNot = Null
+        Else
+            PlyVarBitNot = PlyVarBitOf(Not PlyVarLong(a), k)
+        End If
+    End Function
+
     Private Function PlyVarIsTrue(ByVal v As Variant) As Boolean
         Dim t As Integer
         t = PlyIrVarType(v)
         If t = 11 Then
             PlyVarIsTrue = PlyIrVarBool(v)
+        ElseIf t = 8 Then
+            PlyVarIsTrue = PlyTextBool(PlyIrVarStr(v))
         ElseIf t <> 0 And t <> 1 Then
             PlyVarIsTrue = PlyVarDbl(v) <> 0
         End If
@@ -348,13 +489,21 @@ internal sealed partial class VbaLowerer {
         Else
             PlyVarTypeName = "LongLong"
         End If
+        If t = 6 Then
+            PlyVarTypeName = "Currency"
+        ElseIf t = 7 Then
+            PlyVarTypeName = "Date"
+        End If
     End Function
 
     Private Function PlyVarIsNumeric(ByVal v As Variant) As Boolean
         Dim t As Integer
         t = PlyIrVarType(v)
-        If t = 8 Then Error 13
-        PlyVarIsNumeric = t <> 1
+        If t = 8 Then
+            PlyVarIsNumeric = PlyIsNumText(PlyIrVarStr(v))
+        Else
+            PlyVarIsNumeric = t <> 1 And t <> 7
+        End If
     End Function
 
     Private Function PlyVarForTest(ByVal v As Variant, ByVal e As Variant, ByVal s As Variant) As Boolean

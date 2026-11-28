@@ -17,7 +17,10 @@ internal sealed class VbaRefusal(DiagnosticDescriptor descriptor, int line, stri
 }
 
 /// <summary>Lowers a parsed standard module into the IR: the declarations first, then every procedure.</summary>
-internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnostics) {
+internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnostics, VisualBasicLocale locale) {
+
+  /// <summary>The regional settings the module runs under.</summary>
+  private readonly VisualBasicLocale _locale = locale;
 
   /// <summary>A procedure's signature, which calls are checked against.</summary>
   private sealed record Signature(string Name, bool IsPublic, IReadOnlyList<(string Name, VbaType Type, bool ByVal, bool Optional, VbaExpr? Default)> Parameters, VbaType? Returns, VbaProcedure? Source);
@@ -192,7 +195,7 @@ internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnosti
   }
 
   private static bool IsConstant(VbaExpr expression) => expression switch {
-    VbaInteger or VbaFloat or VbaString or VbaBoolean or VbaName => true,
+    VbaInteger or VbaFloat or VbaString or VbaBoolean or VbaName or VbaDate => true,
     VbaUnary unary => IsConstant(unary.Operand),
     VbaBinary binary => IsConstant(binary.Left) && IsConstant(binary.Right),
     VbaParenthesized parenthesized => IsConstant(parenthesized.Inner),
@@ -220,6 +223,10 @@ internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnosti
         return VbaType.String;
       case "variant":
         return VbaType.Variant;
+      case "currency":
+        return VbaType.Currency;
+      case "date":
+        return VbaType.Date;
     }
 
     if (this._enumTypes.Contains(type.Name))
@@ -228,8 +235,6 @@ internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnosti
       return record;
 
     var name = type.Name.ToLowerInvariant() switch {
-      "currency" => "Currency",
-      "date" => "Date",
       "object" => "Object",
       "decimal" => "Decimal",
       "longptr" => "LongPtr",
@@ -245,8 +250,8 @@ internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnosti
   /// <summary>The type of a declared variable: an array of its element type with its lower bound, or a scalar. A field of a record holds no array.</summary>
   private VbaType VariableType(VbaVariable variable, bool field, IEnumerable<VbaStatement>? resized = null) {
     var element = variable.Type is null ? VbaType.Variant : this.TypeOf(variable.Type, field);
-    if (element.IsVariant && (field || variable.IsArray))
-      throw this.Unsupported(variable.Line, $"the Variant {(field ? "field" : "array")} '{variable.Name}'{(field ? " of a Type" : "")}");
+    if (element.IsVariant && field)
+      throw this.Unsupported(variable.Line, $"the Variant field '{variable.Name}' of a Type");
     if (field && element.Kind == VbaKind.String)
       throw this.Unsupported(variable.Line, $"the String field '{variable.Name}' of a Type, which the IR's records do not hold");
     if (!variable.IsArray)

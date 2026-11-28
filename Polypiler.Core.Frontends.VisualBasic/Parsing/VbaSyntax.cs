@@ -108,6 +108,9 @@ internal sealed record VbaFloat(double Value, string Suffix, int Line) : VbaExpr
 
 internal sealed record VbaString(string Value, int Line) : VbaExpr(Line);
 
+/// <summary>A date literal, <c>#1/2/2000#</c>: its value, days since 1899-12-30.</summary>
+internal sealed record VbaDate(double Value, int Line) : VbaExpr(Line);
+
 internal sealed record VbaBoolean(bool Value, int Line) : VbaExpr(Line);
 
 /// <summary>The literal <c>Empty</c>: the value of a <c>Variant</c> that holds nothing yet.</summary>

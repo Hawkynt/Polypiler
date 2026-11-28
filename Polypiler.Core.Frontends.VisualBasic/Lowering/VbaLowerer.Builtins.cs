@@ -124,7 +124,7 @@ internal sealed partial class VbaLowerer {
     if (this._helperProcedures is not null)
       return;
 
-    var parsed = VbaParser.Parse(HelperSource + "\n" + VariantHelperSource);
+    var parsed = VbaParser.Parse(HelperSource + "\n" + VariantHelperSource + "\n" + LocaleHelperSource + "\n" + CurrencyDateHelperSource);
     this._helperProcedures = parsed.Declarations.Cast<VbaProcedure>().ToDictionary(procedure => procedure.Name, StringComparer.Ordinal);
     foreach (var procedure in this._helperProcedures.Values)
       this._helperSignatures[procedure.Name] = this.SignatureOf(procedure) with { IsPublic = false };
@@ -175,6 +175,7 @@ internal sealed partial class VbaLowerer {
     var key = name.TrimEnd('$').ToLowerInvariant();
     // A Variant takes part only in the built-in functions that convert or look at one.
     var aware = key is "cbool" or "cbyte" or "cint" or "clng" or "clnglng" or "csng" or "cdbl" or "cstr" or "iif" or "isempty" or "isnull" or "vartype" or "typename" or "isnumeric" or "cvar"
+        or "ccur" or "cdate" or "dateserial" or "timeserial" or "year" or "month" or "day" or "weekday" or "hour" or "minute" or "second"
       || key.StartsWith("plyir", StringComparison.Ordinal);
     VbaValue Argument(int index) {
       var value = index < arguments.Count ? this.Expression(arguments[index]) : throw this.Unresolved(line, $"{name} needs {index + 1} arguments");
@@ -188,8 +189,6 @@ internal sealed partial class VbaLowerer {
     VbaValue Convert(VbaType type) {
       Arity(1);
       var value = Argument(0);
-      if (value.Type.Kind == VbaKind.String)
-        throw this.Unsupported(line, $"{name} of a String, which Visual Basic reads by the locale");
       return new(this.Coerce(value, type, line), type);
     }
 
@@ -230,6 +229,21 @@ internal sealed partial class VbaLowerer {
         return Convert(VbaType.LongLong);
       case "csng":
         return Convert(VbaType.Single);
+      case "ccur":
+        return Convert(VbaType.Currency);
+      case "cdate":
+        return Convert(VbaType.Date);
+      case "dateserial" or "timeserial":
+        Arity(3);
+        return new(this.HelperCall(key == "dateserial" ? "PlyDateSerial" : "PlyTimeSerial", Long(0).Expr, Long(1).Expr, Long(2).Expr), VbaType.Date);
+      case "year" or "month" or "day" or "hour" or "minute" or "second":
+        Arity(1);
+        var part = Array.IndexOf<string>(["year", "month", "day", "hour", "minute", "second"], key) + 1;
+        return new(this.HelperCall("PlyDatePart", this.Coerce(Argument(0), VbaType.Date, line), I16(part)), VbaType.Integer);
+      case "weekday":
+        Arity(1, 2);
+        var dated = this.Coerce(Argument(0), VbaType.Date, line);
+        return new(this.HelperCall("PlyWeekday", dated, arguments.Count == 2 ? this.Coerce(Argument(1), VbaType.Integer, line) : I16(1)), VbaType.Integer);
       case "cdbl":
         return Convert(VbaType.Double);
       case "cstr":
@@ -353,8 +367,21 @@ internal sealed partial class VbaLowerer {
         var digits = number.Type.Kind switch { VbaKind.Byte or VbaKind.Integer => number.Type.Kind == VbaKind.Byte ? IrType.U8 : IrType.I16, _ => number.Expr.Type };
         var bits = digits == IrType.I16 ? new IrConvert(IrType.U16, number.Expr) : number.Expr;
         return new(new IrIntrinsic(IrIntrinsicOp.FormatRadix, IrType.String, [bits, I32(16), I32(1), new IrConst(IrType.Bool, 1), I32((int)RadixMode.TwoComplement)]), VbaType.String);
-      case "isarray" or "ismissing" or "isobject" or "val" or "format" or "ucase" or "lcase"
-        or "trim" or "ltrim" or "rtrim" or "replace" or "split" or "join" or "array" or "now" or "date" or "time" or "timer" or "rnd" or "ccur" or "cdec" or "cdate"
+      case "val":
+        Arity(1);
+        return this.Helper("PlyVal", Text(0));
+      case "array":
+        var items = arguments.Select(item => this.Box(this.Expression(item), line)).ToList();
+        var listed = VbaType.ArrayOf(VbaType.Variant, this._optionBase);
+        return new(items.Count == 0 ? new IrNewArray(listed.Ir, I32(0)) : new IrIntrinsic(IrIntrinsicOp.ArrayOf, listed.Ir, items), listed);
+      case "isarray":
+        Arity(1);
+        var probed = this.Expression(arguments[0]);
+        if (!Pure(probed.Expr))
+          this.Temporary(probed.Expr.Type, probed.Expr);
+        return new(new IrConst(IrType.Bool, probed.Type.IsArray ? 1 : 0), VbaType.Boolean);
+      case "ismissing" or "isobject" or "format" or "ucase" or "lcase"
+        or "trim" or "ltrim" or "rtrim" or "replace" or "split" or "join" or "now" or "date" or "time" or "timer" or "rnd" or "cdec"
         or "strconv" or "strreverse" or "instrrev" or "doevents" or "environ" or "shell" or "createobject" or "getobject" or "msgbox" or "inputbox" or "error":
         throw this.Unsupported(line, name);
       default:
@@ -365,6 +392,19 @@ internal sealed partial class VbaLowerer {
   /// <summary>An operation of the IR as a helper names it: <c>PlyIrSubstring</c>, <c>PlyIrIndexOf</c>, <c>PlyIrCodeUnit</c>, <c>PlyIrFromCodeUnit</c>, <c>PlyIrRepeat</c>, <c>PlyIrPow</c>, <c>PlyIrSqrt</c>, <c>PlyIrLog</c>, <c>PlyIrExp</c>.</summary>
   private VbaValue Primitive(string key, IReadOnlyList<VbaExpr> arguments, int line) {
     var values = arguments.Select(this.Expression).ToList();
+    switch (key) {
+      case "plyirdec":
+        return new(I32(this._locale.Decimal), VbaType.Long);
+      case "plyirgrp":
+        return new(I32(this._locale.Group), VbaType.Long);
+      case "plyirformat":
+        return new(NumberTextOperations.VisualBasic(values[0].Expr, this._locale.Decimal), VbaType.String);
+      case "plyirparse":
+        return new(new IrIntrinsic(IrIntrinsicOp.ParseDotNet, IrType.F64, [values[0].Expr]), VbaType.Double);
+      case "plyirparses":
+        return new(new IrIntrinsic(IrIntrinsicOp.ParseDotNet, IrType.F32, [values[0].Expr]), VbaType.Single);
+    }
+
     if (VariantPrimitive(key, values[0].Expr) is { } variant)
       return variant;
     IrExpr Long(int index) => this.Coerce(values[index], VbaType.Long, line);

@@ -111,6 +111,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   private const string PackageFormatOption = "--package-format";
   private const string VBScriptContractOption = "--vbscript-contract";
   private const string GoModuleOption = "--go-module";
+  private const string VbLocaleOption = "--vb-locale";
 
   /// <summary>The caveat that records the overflow mode of a Rust import and where it came from.</summary>
   public const string RustOverflowCaveat = "rs-overflow-checks";
@@ -152,7 +153,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     [OutputTypeOption] = "MSIL: whether to emit a class library (library) or a runnable console executable (exe)",
     [PackageFormatOption] = "JVM: whether to emit a JAR archive (jar) or standalone class files (class)",
     [VBScriptContractOption] = "VBScript: file or inline contract line specifying parameter, return or field types",
-    [GoModuleOption] = "Go: the module path go.mod declares, whose last element names the package"
+    [GoModuleOption] = "Go: the module path go.mod declares, whose last element names the package",
+    [VbLocaleOption] = "classic Visual Basic source: the regional settings it runs under, whose separators CStr writes and CDbl reads (default en-US)"
   };
 
   private readonly Backend[] _backendsOfThis;
@@ -184,7 +186,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     new("jvm", [new(Export, "<name>[,<name>...]")], ExportMisuse, null, ImportJvm),
     new("cpp", [], _ => null, ImportCpp),
     new("vbscript", [new(VBScriptContractOption, "<file-or-line>")], _ => null, ImportVBScript),
-    new("visualbasic", [], _ => null, ImportVisualBasic),
+    new("visualbasic", [new(VbLocaleOption, "<" + string.Join('|', VisualBasicLocale.All.Select(locale => locale.Name)) + ">")], VbLocaleMisuse, ImportVisualBasic),
     new("go", [], _ => null, ImportGo)
   ];
 
@@ -674,13 +676,18 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// <summary>Imports a classic Visual Basic (VB6 / VBA) standard module.</summary>
   private static (IrModule? Module, int ExitCode, IReadOnlyList<ManifestMessage> Caveats) ImportVisualBasic(
     string file, string source, IReadOnlyDictionary<string, string> options, CliContext context) {
-    var imported = VisualBasicFrontend.Import(file, source);
+    VisualBasicLocale.TryParse(options.GetValueOrDefault(VbLocaleOption, VisualBasicLocale.Default.Name), out var locale);
+    var imported = VisualBasicFrontend.Import(file, source, new VisualBasicImportOptions { Locale = locale! });
     foreach (var diagnostic in imported.Diagnostics)
       context.Report(diagnostic);
 
     var failure = imported.Diagnostics.Any(diagnostic => diagnostic.ExitCode == ExitCode.InvalidSource) ? InvalidSource : UnsupportedConstruct;
     return (imported.Module, failure, []);
   }
+
+  private static string? VbLocaleMisuse(IReadOnlyDictionary<string, string> options)
+    => options.TryGetValue(VbLocaleOption, out var name) && !VisualBasicLocale.TryParse(name, out _)
+      ? $"unknown Visual Basic locale '{name}'; expected {string.Join(", ", VisualBasicLocale.All.Select(locale => locale.Name))}" : null;
 
   /// <summary>The text of a file a JavaScript module requires, or <see langword="null"/> when there is none.</summary>
   private static string? Required(string file) => File.Exists(file) ? File.ReadAllText(file) : null;
