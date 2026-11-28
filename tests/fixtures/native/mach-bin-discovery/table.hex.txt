@@ -1,0 +1,10 @@
+# A validated inline jump table: its targets join the function, its bytes are data.
+# 0x1000  07 02   jmp table[2]  the table is 0x1002..0x1003, its targets relative to 0x1004
+# 0x1002  02      entry 0: 0x1004 + 2 = 0x1006
+# 0x1003  03      entry 1: 0x1004 + 3 = 0x1007
+# 0x1004  00 01                 not reached
+# 0x1006  01      ret
+# 0x1007  01      ret
+@entries 0x1000
+@resolver toy
+07 02 02 03 00 01 01 01

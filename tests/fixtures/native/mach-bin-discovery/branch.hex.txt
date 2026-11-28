@@ -1,0 +1,7 @@
+# Both arms of a conditional jump.
+# 0x1000  03 01   jcc 0x1003   (0x1002 + 1), falls through to 0x1002
+# 0x1002  01      ret
+# 0x1003  00      nop
+# 0x1004  01      ret
+@entries 0x1000
+03 01 01 00 01

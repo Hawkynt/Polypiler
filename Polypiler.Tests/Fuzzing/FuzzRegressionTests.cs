@@ -39,7 +39,7 @@ public sealed class FuzzRegressionTests {
   public void EveryTargetDirectory_BelongsToATargetAndHasASeedCorpus() {
     var targets = Targets();
     var directories = Directory.GetDirectories(_fixtures).Select(directory => Path.GetFileName(directory)!).ToList();
-    Assert.That(directories, Is.EquivalentTo(new[] { "cli-args", "demo-alloc", "demo-hang", "demo-marker", "demo-zero", "elf-codec" }));
+    Assert.That(directories, Is.EquivalentTo(new[] { "cli-args", "demo-alloc", "demo-hang", "demo-marker", "demo-zero", "discovery-toy", "elf-codec" }));
     foreach (var directory in directories) {
       Assert.That(targets, Does.ContainKey(directory));
       Assert.That(FuzzCorpus.Load(Path.Combine(_fixtures, directory)), Is.Not.Empty);

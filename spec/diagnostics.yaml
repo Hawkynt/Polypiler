@@ -2903,3 +2903,44 @@ codes:
     area: machine
     owner: MACH-BIN-ELF
     surfaces: ElfCodec.Read when a relocation is preserved as unsupported
+  - code: PLY4070
+    severity: warning
+    title: indirect jump not resolved
+    message: "indirect <jump> at <address> could not be resolved; code reachable only through it stays undecoded"
+    rule: machine.discovery.unresolved
+    area: machine
+    owner: "#942"
+    surfaces: Discovery.Run for an indirect jump no jump-table resolver proved targets for
+  - code: PLY4071
+    severity: warning
+    title: reached bytes do not decode
+    message: "bytes at <address> reached from <address> do not decode as <isa> <mode>; '<function>' is incomplete"
+    rule: machine.discovery.undecodable
+    area: machine
+    owner: "#942"
+    surfaces: Discovery.Run when control flow reaches an invalid or truncated instruction
+  - code: PLY4072
+    severity: warning
+    title: overlapping instructions
+    message: "byte <address> belongs to instructions starting at <address> and at <address>"
+    rule: machine.discovery.overlap
+    area: machine
+    owner: "#942"
+    surfaces: Discovery.Run when two traversed instructions share a byte; both functions are incomplete
+  - code: PLY4073
+    severity: warning
+    title: control flow leaves the code
+    message: "control flow from <address> leaves the code at <address>"
+    rule: machine.discovery.external
+    area: machine
+    owner: "#942"
+    surfaces: Discovery.Run for a jump, call or fall-through to an address outside every executable section or code range that is no import slot
+  - code: PLY4074
+    severity: error
+    exit: BudgetExceeded
+    title: discovery budget exhausted
+    message: "discovery stopped after <n> instructions"
+    rule: machine.discovery.budget
+    area: machine
+    owner: "#942"
+    surfaces: Discovery.Run when the instruction budget of DiscoveryOptions is spent; every function is incomplete

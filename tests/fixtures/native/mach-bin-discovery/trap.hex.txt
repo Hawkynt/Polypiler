@@ -1,0 +1,5 @@
+# A trap ends its path.
+# 0x1000  06      trap
+# 0x1001  00 01                 not reached
+@entries 0x1000
+06 00 01
