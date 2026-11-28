@@ -55,6 +55,7 @@ public sealed class ParserEmitter {
   private readonly string _kindType;
   private readonly (string Method, string Type)? _softKeyword;
   private readonly bool _generateGuards;
+  private readonly (string Expression, string Type) _dummy = ("Dummy", "object");
   private int _counter;
   private int _variables;
 
@@ -84,6 +85,14 @@ public sealed class ParserEmitter {
     }
 
     this._generateGuards = grammar.Meta("guards") == "generate";
+    if (grammar.Meta("dummy") is { } dummy) {
+      var words = dummy.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+      if (words.Length != 2)
+        throw new GrammarException($"@dummy: '{dummy}' is not 'Expression Type'");
+
+      this._dummy = (words[0], words[1]);
+    }
+
     if (this._generateGuards && options.Profile is null)
       throw new GrammarException("the grammar's guards are evaluated at generation (@guards generate): give a profile");
 
@@ -412,9 +421,18 @@ public sealed class ParserEmitter {
 
   private static string Indent(string lines, int spaces) => lines.Length == 0 ? "" : string.Concat(lines.Split('\n').Where(line => line.Length > 0).Select(line => new string(' ', spaces) + line + "\n"));
 
+  /// <summary>Whether a rule can only fail or throw: every alternative's action is a <c>throw</c>.</summary>
+  private static bool NeverSucceeds(GrammarRule rule) => rule.Rhs.Alts.All(alt => alt.Action?.StartsWith("throw ", StringComparison.Ordinal) == true);
+
   /// <summary>Emits one alternative; whether it jumps to the end of the rule, which an alternative that only throws does not.</summary>
   private bool EmitAlt(StringBuilder text, Alt alt, Method method, string cleanup) {
     var invalid = alt.IsInvalid;
+    if (invalid && alt.Items[0].Item is NameLeaf { Value: var name } && this._grammar.Rules.TryGet(name, out var called) && NeverSucceeds(called)) {
+      // A rule whose every alternative throws gives nothing but its error: it is called for that alone.
+      text.Append(CultureInfo.InvariantCulture, $"    if (this.CallInvalidRules) // {alt}\n      this.{RuleMethod(name)}();\n\n");
+      return false;
+    }
+
     const string pad = "      ";
     text.Append(CultureInfo.InvariantCulture, $"    {(invalid ? "if (this.CallInvalidRules) " : "")}{{ // {alt.ToString().Replace('\n', ' ')}\n");
     var hasCut = alt.Items.Any(item => item.Item is Cut);
@@ -477,8 +495,13 @@ public sealed class ParserEmitter {
     var values = ValueItems(alt).ToList();
     var needsDefault = alt.Action is null;
     var names = new List<string>();
+    var used = new HashSet<string>(StringComparer.Ordinal);
     foreach (var item in alt.Items) {
       string? bind = item.Name;
+      // pegen's dedupe: a name an alternative gives twice reads as name_1 the second time; the action reads the first.
+      for (var n = 1; bind is not null && !used.Add(bind); n++)
+        bind = $"{item.Name}_{n}";
+
       if (bind is null && needsDefault && values.Count == 1 && values.Contains(item) && item.Item is not Cut)
         bind = $"_v{++this._variables}";
 
@@ -500,7 +523,10 @@ public sealed class ParserEmitter {
       if (type == "object" && target != "object")
         value = $"({target}?){value}";
     } else {
-      value = "Dummy";
+      value = this._dummy.Expression;
+      var target = method.Kind is ArtificialKind.Loop0 or ArtificialKind.Loop1 ? method.Type[5..^1] : method.Type;
+      if (target != "object" && target != this._dummy.Type)
+        value = $"({target}?)(object){value}";
     }
 
     return (string.Join("\n        && ", parts), value, post);

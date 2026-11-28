@@ -96,6 +96,7 @@ internal static class GrammarHarness {
       private string? Word() => this.Expect(Kind.Name)?.Text;
       private Token<Kind>? Word2() => this.Expect(Kind.Name);
       private string? SoftWord(string text) => this.ExpectSoftKeyword(text)?.Text;
+      private static string DummyText => "dum";
     }
     """;
 

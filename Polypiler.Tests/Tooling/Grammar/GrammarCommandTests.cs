@@ -131,6 +131,7 @@ public sealed class GrammarCommandTests {
   [TestCase("@class C\n@token_type T\nstart: 'a'\n", "the grammar names no token kind: @token_kind")]
   [TestCase("@class C\n@token_type T\n@token_kind K\n@literals 'a b c'\nstart: 'a'\n", "@literals: 'a b c' is not 'spelling Kind'")]
   [TestCase("@class C\n@token_type T\n@token_kind K\n@soft_keyword 'Only'\nstart: 'a'\n", "@soft_keyword: 'Only' is not 'Method Type'")]
+  [TestCase("@class C\n@token_type T\n@token_kind K\n@dummy 'Only'\nstart: 'a'\n", "@dummy: 'Only' is not 'Expression Type'")]
   [TestCase("@class C\n@token_type T\n@token_kind K\n@axis version\n@guards generate\nstart: 'a'\n", "the grammar's guards are evaluated at generation (@guards generate): give a profile")]
   [TestCase("@token_type T\n@token_kind K\nstart: 'a'\n", "the grammar names no class: @class or --class")]
   [TestCase("@token_type T\n@token_kind K\n@class C\nstart: 'a'\n", "the grammar names no namespace: @namespace or --namespace")]

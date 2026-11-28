@@ -397,7 +397,9 @@ dotnet run --project Polypiler.Tooling -c Release -- grammar check     # every g
 
 The CI job `grammar drift` runs `grammar check` and fails on a generated file that differs from its
 grammar's output, is missing or has no grammar; it compares with LF line endings, so a CRLF checkout
-passes.
+passes. `polypiler-tooling` builds the frontends its parser benchmark runs: when a change of a
+frontend's hand-written half needs the regenerated file, build the tool before making the change,
+or regenerate in two steps.
 
 ## Commit conventions
 

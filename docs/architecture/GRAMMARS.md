@@ -6,6 +6,18 @@ the grammar into the other half, which runs on `Polypiler.Core.Syntax`; the gene
 committed beside its grammar, and the CI job `grammar drift` fails when it is not the grammar's
 output. Related: [pipeline](PIPELINE.md) · [Python frontend](PYTHON-FRONTEND.md).
 
+```mermaid
+flowchart LR
+  Grammar["python.pgram<br/>(pegen's format, C# actions)"] --> Generate["polypiler-tooling<br/>grammar generate"]
+  Generate --> Generated["PyParser.g.cs<br/>(committed)"]
+  Hand["PyParser.cs<br/>(token source, hooks, helpers)"] --> Class["partial class PyParser"]
+  Generated --> Class
+  Class --> Runtime["Polypiler.Core.Syntax<br/>ParserBase"]
+  Lexer["PyLexer<br/>(ITokenSource)"] --> Runtime
+  Grammar --> Drift["grammar check<br/>(CI: grammar drift)"]
+  Generated --> Drift
+```
+
 ## The format
 
 The format is pegen's ([PEP 617](https://peps.python.org/pep-0617/), `Tools/peg_generator/pegen/metagrammar.gram`),
@@ -55,8 +67,11 @@ token class (an `IToken<TKind>`) and the kind enum; `@start "a b"` names the sta
 generated as a public `ParseA()` (default: the rule `start`). `@tokens` lists the token names, one
 per line, as `NAME Kind`, or `NAME - Method Type` where a method of the hand-written half reads the
 token. `@literals` maps a literal's spelling to a kind (Go), `@soft_keyword "Method Type"` names the
-method that reads a soft keyword (Python), `@unexplained "…{token}…"` is the message of an error no
-rule explains, `@using` adds namespaces and `@output` names another output file.
+method that reads a soft keyword (Python), `@dummy "Expression Type"` is the value of an alternative
+of several items without action (pegen's dummy name; `Dummy` by default), `@unexplained "…{token}…"`
+is the message of an error no rule explains, `@using` adds namespaces and `@output` names another
+output file. A name an alternative gives twice reads as `name_1` the second time, as pegen dedupes
+it: the action sees the first.
 
 Only a grammar that declares `@class` generates; the output goes beside it as `<class>.g.cs`.
 

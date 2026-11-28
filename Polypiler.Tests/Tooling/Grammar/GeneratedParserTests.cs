@@ -81,11 +81,20 @@ public sealed class GeneratedParserTests {
 
       """,
     ["Invalid"] = """
-      start: a=assignment $ { a } | invalid_assignment | !('a' 'b' 'c' 'd') NAME NUMBER $ { "pair" } | x=inner_without_invalid $ { x }
+      start: a=assignment $ { a } | invalid_assignment | invalid_quiet | !('a' 'b' 'c' 'd') NAME NUMBER $ { "pair" } | x=inner_without_invalid $ { x }
       assignment[string]: n=NAME '=' v=NUMBER { n.Text + "=" + v.Text }
       invalid_assignment: a=NUMBER '=' NAME { throw RaiseSyntaxErrorKnownLocation(a, "cannot assign to literal") }
       inner_without_invalid: invalid_inner | 'w' NAME { "inner" }
+      invalid_quiet: 'q' NAME { "quiet" }
       invalid_inner: 'w' NUMBER { throw RaiseSyntaxError("never: the rule turns the invalid rules off") }
+
+      """,
+    ["Dedupe"] = """
+      @dummy "DummyText string"
+      start: x=thing $ { x }
+      thing: 'd' a=NAME a=NAME { a.Text + a_1.Text } | 'm' NAME NAME | 'n' n=typed { n } | 'l' l=listed { l }
+      typed[string]: 'x' NAME
+      listed[List<string>]: 'y' NAME
 
       """,
     ["Soft"] = """
@@ -201,6 +210,16 @@ public sealed class GeneratedParserTests {
   [TestCase("GenNest", "nest new 1 2 x z", "error: expected 'y' @15")]
   public void SoftKeywordsAndNestedGuards_Work(string grammar, string text, string expected) => Assert.That(Run(grammar, text), Is.EqualTo(expected));
 
+  /// <summary>A name given twice reads as name_1 the second time; the dummy of several items is @dummy's, cast to a rule of another type.</summary>
+  [TestCase("d a b", "ab")]
+  [TestCase("m a b", "dum")]
+  [TestCase("n x y", "dum")]
+  public void DedupeAndDummy_AreTheGrammars(string text, string expected) => Assert.That(Run("Dedupe", text), Is.EqualTo(expected));
+
+  /// <summary>The dummy cannot be the value of a rule of another type: the cast fails as the alternative matches.</summary>
+  [Test]
+  public void TheDummy_OfAnotherType_FailsItsCast() => Assert.Throws<System.InvalidCastException>(() => Run("Dedupe", "l y z"));
+
   /// <summary>After a cut, the rule's later alternatives are not tried.</summary>
   [TestCase("c x", "cut")]
   [TestCase("c 1", "error: invalid syntax @2")]
@@ -222,6 +241,7 @@ public sealed class GeneratedParserTests {
   [TestCase("w 1 2", "error: invalid syntax @4", 1)]
   [TestCase("+", "error: invalid syntax @0", 1)]
   [TestCase("x 1 +", "error: invalid syntax @4", 1)]
+  [TestCase("q x", "error: invalid syntax @2", 1)]
   public void TheSecondPass_GivesTheInvalidRulesMessages(string text, string expected, int passes) {
     Assert.That(_parsers["Invalid"](text, null, out var secondPasses), Is.EqualTo(expected));
     Assert.That(secondPasses, Is.EqualTo(passes));

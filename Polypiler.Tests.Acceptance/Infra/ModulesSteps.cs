@@ -55,6 +55,9 @@ public sealed class ModulesSteps {
     "Polypiler.Core.Frontends.VisualBasic"
   ];
 
+  /// <summary>The projects added after the module issue that the frontends share: the runtime of the generated parsers (ADR 1000).</summary>
+  private static readonly string[] _shared = ["Polypiler.Core.Syntax"];
+
   private static readonly string[] _tests = ["Polypiler.Benchmarks", "Polypiler.Tests", "Polypiler.Tests.Acceptance", "Polypiler.Tests.Generator", "Polypiler.Tests.Probe"];
 
   private static readonly string _root = PrototypeFixture.RepositoryRoot;
@@ -93,7 +96,7 @@ public sealed class ModulesSteps {
   [Then(@"^the solution " + StepText.Quoted + @" lists each of the (\d+) projects named in this issue$")]
   public void SolutionListsTheProjects(string solution, int count) {
     Assert.That(_named, Has.Length.EqualTo(count));
-    string[] all = [.. _named.Concat(_languages).Concat(_tests).Order(System.StringComparer.Ordinal)];
+    string[] all = [.. _named.Concat(_languages).Concat(_shared).Concat(_tests).Order(System.StringComparer.Ordinal)];
     Assert.That(this._projects.Select(project => project.Name), Is.EqualTo(all));
     var listed = XDocument.Load(Path.Combine(_root, solution)).Descendants("Project").Select(project => Path.GetFileNameWithoutExtension((string)project.Attribute("Path")!));
     Assert.That(listed, Is.EquivalentTo(all));

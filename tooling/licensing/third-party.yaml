@@ -106,12 +106,18 @@ notices:
   - path: Polypiler.Permutation/Networks/THIRD-PARTY-NOTICE.BitPerm.txt
     components:
       - { name: 'BitPerm (Hawkynt/Hawkynt.github.io b3a8a8e92cbca83475986391c3cac56f0b185d29)', licence: LGPL-3.0-or-later }
+  - path: Polypiler.Tooling/Grammar/THIRD-PARTY-NOTICE.CPython.txt
+    components:
+      - { name: 'CPython pegen grammar format, checks, left-recursion analysis and parser shape (python/cpython v3.14.8)', licence: PSF-2.0 }
   - path: tests/fixtures/bench/cipher/THIRD-PARTY-NOTICE.Cipher.txt
     components:
       - { name: 'Cipher checksums (Hawkynt/Hawkynt.github.io b3a8a8e92cbca83475986391c3cac56f0b185d29)', licence: LGPL-3.0-or-later }
   - path: tests/fixtures/bitperm/THIRD-PARTY-NOTICE.BitPerm.txt
     components:
       - { name: 'BitPerm (Hawkynt/Hawkynt.github.io b3a8a8e92cbca83475986391c3cac56f0b185d29)', licence: LGPL-3.0-or-later }
+  - path: tests/fixtures/grammar/cpython/THIRD-PARTY-NOTICE.CPython.txt
+    components:
+      - { name: 'CPython Grammar/python.gram and Grammar/Tokens (python/cpython v3.14.8)', licence: PSF-2.0 }
   - path: tests/fixtures/ir/sourcemap/THIRD-PARTY-NOTICE.PB-Compiler.txt
     components:
       - { name: 'PB-Compiler FIXBCD.BAS (Hawkynt/PB-Compiler 0d73acbea185a2597357d53f7ce9acb44758ba76)', licence: LGPL-3.0-or-later }
