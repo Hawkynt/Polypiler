@@ -256,6 +256,9 @@ public static partial class IrInterpreter {
     if (type.IsVariant)
       return AcceptedVariant(value);
 
+    if (type.IsUnion)
+      return AcceptedUnion(type, value);
+
     if (type.Element is { IsVariant: true } && type.IsArray)
       return AcceptedVariants(value);
 
@@ -329,7 +332,7 @@ public static partial class IrInterpreter {
 
   /// <summary>A .NET value as the interpreter carries it: every integer as a <see cref="long"/>.</summary>
   private static object Internal(object value) => value switch {
-    Array or bool or float or double or BigInteger or Record or string or Instance or Closure or FunctionReference or BoundMethod or NullReference or Tagged => value,
+    Array or bool or float or double or BigInteger or Record or string or Instance or Closure or FunctionReference or BoundMethod or NullReference or Tagged or Held => value,
     ulong large => (long)large,
     char unit => (long)unit,
     _ => Convert.ToInt64(value, CultureInfo.InvariantCulture)
@@ -352,6 +355,7 @@ public static partial class IrInterpreter {
     Settled settled => Settle(type, settled),
     not null when type.IsOptional => OptionalToHost(type, value),
     Tagged variant => VariantToHost(variant),
+    Held union => UnionToHost(type, union),
     object[] elements when type.Element is { IsVariant: true } => VariantsToHost(elements),
     View view => ToArray(view),
     Record record => record.Fields.Select((field, index) => ToHost(type.StructType!.Fields[index].Type, field)).ToArray(),
@@ -627,6 +631,8 @@ public static partial class IrInterpreter {
           return this.Optional(expression, frame);
         case IrVariantOf or IrVariantTagOf or IrVariantValue:
           return this.Variant(expression, frame);
+        case IrUnionOf or IrUnionTagOf or IrUnionValue:
+          return this.Union(expression, frame);
         case IrCollection operation:
           return this.Collection(operation, frame);
         case IrLambda or IrFunctionRef or IrBoundMethod or IrInvoke:
@@ -801,6 +807,9 @@ public static partial class IrInterpreter {
       }
 
       var second = this.Evaluate(binary.Right, frame);
+      if (first is Held union)
+        return UnionEquals(binary.Left.Type, union, (Held)second) == (binary.Op == IrBinaryOp.Equal);
+
       if (first is bool)
         return binary.Op == IrBinaryOp.Equal ? first.Equals(second) : !first.Equals(second);
 

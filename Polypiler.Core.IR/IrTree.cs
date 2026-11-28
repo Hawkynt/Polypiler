@@ -50,6 +50,9 @@ public static class IrTree {
     IrVariantOf { Value: { } value } => [value],
     IrVariantTagOf tag => [tag.Value],
     IrVariantValue value => [value.Value],
+    IrUnionOf made => [made.Value],
+    IrUnionTagOf tag => [tag.Value],
+    IrUnionValue value => [value.Value],
     _ => []
   };
 
@@ -149,6 +152,9 @@ public static class IrTree {
     IrVariantOf { Value: not null } made => made with { Value = operands[0] },
     IrVariantTagOf => new IrVariantTagOf(operands[0]),
     IrVariantValue value => value with { Value = operands[0] },
+    IrUnionOf made => made with { Value = operands[0] },
+    IrUnionTagOf => new IrUnionTagOf(operands[0]),
+    IrUnionValue value => new IrUnionValue(operands[0], value.Member) { IsTested = value.IsTested },
     _ => expression
   };
 

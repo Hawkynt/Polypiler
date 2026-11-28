@@ -348,6 +348,12 @@ public static class LibraryLegalization {
           return new IrVariantTagOf(this.Expression(tag.Value));
         case IrVariantValue value:
           return value with { Value = this.Expression(value.Value) };
+        case IrUnionOf made:
+          return made with { Value = this.Expression(made.Value) };
+        case IrUnionTagOf tag:
+          return new IrUnionTagOf(this.Expression(tag.Value));
+        case IrUnionValue value:
+          return new IrUnionValue(this.Expression(value.Value), value.Member) { IsTested = value.IsTested };
         case IrBind bind:
           return bind with { Value = this.Expression(bind.Value) };
         case IrThrowExpression thrown:
