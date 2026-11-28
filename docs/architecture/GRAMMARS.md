@@ -1,5 +1,8 @@
 # Grammars and generated parsers
 
+**Status:** implemented: the runtime, the generator, the drift check and the Python frontend
+([ADR 1000](../adr/1000-grammar-described-frontends.md), epic [#1580](https://github.com/Hawkynt/Polypiler/issues/1580)).
+
 A frontend's parser is a grammar, a token source and a hand-written half of a partial class
 ([ADR 1000](../adr/1000-grammar-described-frontends.md)). `polypiler-tooling grammar generate` turns
 the grammar into the other half, which runs on `Polypiler.Core.Syntax`; the generated file is
