@@ -226,7 +226,8 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 
 | Code | Severity | Exit code | Message | Owner |
 | --- | --- | --- | --- | --- |
-| [PLY1700](PLY1700.md) | error | 4 (InvalidSource) | `Perl compilation failed: <detail>` | #438 |
+| [PLY1700](PLY1700.md) | error | 4 (InvalidSource) | `Perl <detail>` | #1561 |
+| [PLY1701](PLY1701.md) | error | 3 (UnsupportedConstruct) | `Perl construct outside the parser: <construct>` | #1561 |
 | [PLY1702](PLY1702.md) | error | 3 (UnsupportedConstruct) | `'<construct>' is not supported by the Perl frontend` | #438 |
 | [PLY1710](PLY1710.md) | error | 3 (UnsupportedConstruct) | `'<construct>' is not supported by the Perl frontend` | #435 |
 | [PLY1711](PLY1711.md) | error | 3 (UnsupportedConstruct) | `'<construct>' does not target a loop that lexically encloses it in the same sub; dynamic loop control is not imported` | #435 |

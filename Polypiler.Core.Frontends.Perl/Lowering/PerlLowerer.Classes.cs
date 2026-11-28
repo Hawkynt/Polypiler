@@ -1,12 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Polypiler.Core.Frontends.Perl.Parsing;
+using Polypiler.Core.Frontends.Perl.Ast;
 using Polypiler.Core.IR;
 
 namespace Polypiler.Core.Frontends.Perl.Lowering;
 
 internal sealed partial class PerlLowerer {
+
+  private sealed record MooseAttribute(string Name, string Is, string Isa, string Writer, string Reader, string DefaultKind);
 
   private sealed class PerlClassInfo(string package, IrClassType irClass, PerlClassKind kind) {
     public string Package { get; } = package;
@@ -16,8 +18,9 @@ internal sealed partial class PerlLowerer {
     public Dictionary<string, IrField> InsideOutHashes { get; } = new(StringComparer.Ordinal);
     public Dictionary<string, IrField> MooseWriters { get; } = new(StringComparer.Ordinal);
     public Dictionary<string, IrField> MooseReaders { get; } = new(StringComparer.Ordinal);
-    public Dictionary<string, IrMethod> MethodsByName { get; } = new(StringComparer.Ordinal);
-    public PerlMoosePackage? MooseSpec { get; init; }
+    public List<string> MooseExtends { get; } = [];
+    public List<string> MooseWith { get; } = [];
+    public List<MooseAttribute> MooseAttributes { get; } = [];
   }
 
   private enum PerlClassKind { BlessedHash, InsideOut, Moose }
@@ -28,7 +31,6 @@ internal sealed partial class PerlLowerer {
   private readonly HashSet<string> _classSubKeys = new(StringComparer.Ordinal);
   private readonly Dictionary<string, (IrType ReturnType, List<IrType> ParamTypes)> _classMemberSigs = new(StringComparer.Ordinal);
 
-  // Per-class-member lowering state
   private PerlClassInfo? _currentClassInfo;
   private bool _loweringConstructor;
   private IrLocal? _currentSelf;
@@ -39,99 +41,98 @@ internal sealed partial class PerlLowerer {
     public Dictionary<string, List<string>> Extends { get; } = new(StringComparer.Ordinal);
     public Dictionary<string, List<string>> With { get; } = new(StringComparer.Ordinal);
     public Dictionary<string, List<string>> Requires { get; } = new(StringComparer.Ordinal);
-    public Dictionary<string, List<PerlMooseAttribute>> Attributes { get; } = new(StringComparer.Ordinal);
+    public Dictionary<string, List<MooseAttribute>> Attributes { get; } = new(StringComparer.Ordinal);
   }
 
-  private static string? StringConst(PerlOp op)
-    => op.Constant?.Kind == "string" ? op.Constant.Value : null;
-
-  private static PerlOp[] BodyNodes(PerlSubroutine sub) {
-    var ch = sub.Body!.Children;
-    return ch[0].Name == "lineseq" ? ch[0].Children : ch;
-  }
-
-  private static void AppendStringArgs(Dictionary<string, List<string>> map, string pkg, List<PerlOp> args) {
+  private static void AppendStrings(Dictionary<string, List<string>> map, string pkg, IEnumerable<PerlExpr> args) {
     if (!map.TryGetValue(pkg, out var list))
       map[pkg] = list = [];
-    foreach (var a in args)
-      if (StringConst(a) is { } s)
-        list.Add(s);
+    list.AddRange(args.SelectMany(a => ConstantStrings(a)));
   }
 
-  private static TopLevelDirectives CollectTopLevelClassDirectives(PerlTree tree) {
-    var d = new TopLevelDirectives();
-    var currentPkg = "main";
-    var nodes = tree.Program!.Children;
-    foreach (var node in nodes) {
-      if (node.Name == "nextstate") {
-        if (!string.IsNullOrEmpty(node.Package))
-          currentPkg = node.Package;
-        continue;
-      }
-      if (node.Name == "aassign" && node.Children.Length == 2) {
-        var isaGv = Descendants(node.Children[1]).FirstOrDefault(o => o.Name == "gv" && o.Symbol == "ISA");
-        if (isaGv is not null) {
-          var targetPkg = isaGv.Stash!;
-          if (!d.Isa.TryGetValue(targetPkg, out var list))
-            d.Isa[targetPkg] = list = [];
-          foreach (var o in Descendants(node.Children[0]))
-            if (StringConst(o) is { } s)
-              list.Add(s);
-        }
-        continue;
-      }
-      if (node.Name == "entersub" && TryExtractCallTarget(node, out var fn, out var args)) {
-        var idx = fn.LastIndexOf("::", StringComparison.Ordinal);
-        var shortFn = idx >= 0 ? fn[(idx + 2)..] : fn;
-        if (shortFn is not ("extends" or "with" or "requires" or "has"))
+  private static IEnumerable<PerlStatement> TopLevelOf(PerlDocument document) {
+    IEnumerable<PerlStatement> Flatten(IEnumerable<PerlStatement> statements) {
+      foreach (var statement in statements) {
+        if (statement is PerlPackage { Body: { } body }) {
+          foreach (var inner in Flatten(body.Statements))
+            yield return inner;
           continue;
-        var flatArgs = FlattenDirectiveArgs(args);
-        switch (shortFn) {
-          case "extends": AppendStringArgs(d.Extends, currentPkg, flatArgs); break;
-          case "with": AppendStringArgs(d.With, currentPkg, flatArgs); break;
-          case "requires": AppendStringArgs(d.Requires, currentPkg, flatArgs); break;
-          case "has":
-            if (StringConst(flatArgs[0]) is { } attrName) {
-              if (!d.Attributes.TryGetValue(currentPkg, out var list))
-                d.Attributes[currentPkg] = list = [];
-              list.Add(ParseMooseAttribute(attrName, flatArgs));
-            }
-            break;
         }
+        yield return statement;
+      }
+    }
+    return Flatten(document.Statements);
+  }
+
+  /// <summary>The class directives of the program's top level: <c>our @ISA = ...</c>, and Moose's <c>extends</c>, <c>with</c>, <c>requires</c>, <c>has</c>.</summary>
+  private static TopLevelDirectives CollectTopLevelClassDirectives(PerlDocument document) {
+    var d = new TopLevelDirectives();
+    foreach (var statement in TopLevelOf(document)) {
+      if (statement is not PerlExpressionStatement { Modifier: null, Expression: var expression })
+        continue;
+      var currentPkg = statement.Package;
+      if (expression is PerlAssign { Operator: "=", Target: var target, Value: var value }) {
+        var isa = Unparen(target) switch {
+          PerlDeclaration { Variables: [{ Sigil: '@', Name: "ISA" }] } => currentPkg,
+          PerlVariable { Sigil: '@' } v when ShortName(v.Name) == "ISA" => v.Name.Contains("::", StringComparison.Ordinal) ? v.Name[..v.Name.LastIndexOf("::", StringComparison.Ordinal)] : currentPkg,
+          _ => null
+        };
+        if (isa is not null)
+          AppendStrings(d.Isa, isa, [value]);
+        continue;
+      }
+      if (expression is not PerlCall { Builtin: false } call)
+        continue;
+      var shortFn = ShortName(call.Name);
+      var args = FlattenDirectiveArgs(call.Arguments ?? []);
+      switch (shortFn) {
+        case "extends": AppendStrings(d.Extends, currentPkg, args); break;
+        case "with": AppendStrings(d.With, currentPkg, args); break;
+        case "requires": AppendStrings(d.Requires, currentPkg, args); break;
+        case "has" when args.Count > 0 && ConstantStrings(args[0]).FirstOrDefault() is { } attrName:
+          if (!d.Attributes.TryGetValue(currentPkg, out var attributes))
+            d.Attributes[currentPkg] = attributes = [];
+          attributes.Add(ParseMooseAttribute(attrName, args));
+          break;
       }
     }
     return d;
   }
 
-  private static PerlMooseAttribute ParseMooseAttribute(string attrName, List<PerlOp> flatArgs) {
-    string isMode = "rw", isa = "", writer = "", reader = "", defKind = "none", defVal = "";
+  private static MooseAttribute ParseMooseAttribute(string attrName, List<PerlExpr> flatArgs) {
+    string isMode = "rw", isa = "", writer = "", reader = "", defKind = "none";
     for (var i = 1; i + 1 < flatArgs.Count; i += 2) {
-      var key = StringConst(flatArgs[i]);
+      var key = ConstantStrings(flatArgs[i]).FirstOrDefault();
       var valOp = flatArgs[i + 1];
+      var text = ConstantStrings(valOp).FirstOrDefault();
       switch (key) {
-        case "is": isMode = StringConst(valOp)!; break;
-        case "isa": isa = StringConst(valOp)!; break;
-        case "writer": writer = StringConst(valOp)!; break;
-        case "reader": reader = StringConst(valOp)!; break;
+        case "is": isMode = text!; break;
+        case "isa": isa = text!; break;
+        case "writer": writer = text!; break;
+        case "reader": reader = text!; break;
         case "default":
-          if (valOp.Constant is { } defC) {
-            defKind = defC.Kind;
-            defVal = defC.Value;
-          }
+          defKind = valOp switch {
+            PerlNumber { Value.IsIntegral: true } => "integer",
+            PerlNumber => "float",
+            PerlString => "string",
+            _ => defKind
+          };
           break;
       }
     }
-    return new PerlMooseAttribute {
-      Name = attrName, Is = isMode, Isa = isa, Writer = writer, Reader = reader, DefaultKind = defKind, DefaultValue = defVal
-    };
+    return new MooseAttribute(attrName, isMode, isa, writer, reader, defKind);
   }
 
-  private static List<PerlOp> FlattenDirectiveArgs(PerlOp[] args) {
-    var result = new List<PerlOp>();
-    void Walk(PerlOp op) {
-      if (op.Name is "list" or "null") {
-        foreach (var c in op.Children)
+  private static List<PerlExpr> FlattenDirectiveArgs(IEnumerable<PerlExpr> args) {
+    var result = new List<PerlExpr>();
+    void Walk(PerlExpr op) {
+      if (op is PerlList list) {
+        foreach (var c in list.Items)
           Walk(c);
+        return;
+      }
+      if (op is PerlWords words) {
+        result.AddRange(words.Words.Select(w => new PerlString(w) { Line = op.Line }));
         return;
       }
       result.Add(op);
@@ -141,15 +142,24 @@ internal sealed partial class PerlLowerer {
     return result;
   }
 
-  private static Dictionary<string, IrTypeDeclaration> PreScanClassShells(PerlTree tree) {
-    var directives = CollectTopLevelClassDirectives(tree);
+  /// <summary>The packages that <c>use Moose</c> (classes) or <c>use Moose::Role</c> (roles), in the order they first do.</summary>
+  private static Dictionary<string, string> MoosePackages(PerlDocument document) {
+    var result = new Dictionary<string, string>(StringComparer.Ordinal);
+    foreach (var use in PerlWalk.Descendants(document).OfType<PerlUse>())
+      if (use is { No: false, Module: "Moose" or "Moose::Role", EmptyImports: false } && !result.ContainsKey(use.Package))
+        result[use.Package] = use.Module == "Moose" ? "class" : "role";
+    return result;
+  }
+
+  private static Dictionary<string, IrTypeDeclaration> PreScanClassShells(PerlDocument document, Dictionary<string, PerlPackageInfo> packages) {
+    var directives = CollectTopLevelClassDirectives(document);
     var shells = new Dictionary<string, IrTypeDeclaration>(StringComparer.Ordinal);
-    foreach (var (pkg, moose) in tree.Moose) {
+    foreach (var (pkg, kind) in MoosePackages(document)) {
       var name = CleanTypeName(pkg);
-      shells[pkg] = moose.Kind == "role" ? new IrInterfaceType(name) : new IrClassType(name);
+      shells[pkg] = kind == "role" ? new IrInterfaceType(name) : new IrClassType(name);
     }
 
-    foreach (var (pkg, p) in tree.Packages) {
+    foreach (var (pkg, p) in packages) {
       if (pkg == "main" || shells.ContainsKey(pkg))
         continue;
       if (DetectNonMooseClassKind(p, directives.Isa.GetValueOrDefault(pkg)) is not null)
@@ -162,42 +172,39 @@ internal sealed partial class PerlLowerer {
   private static string CleanTypeName(string pkg)
     => pkg.Replace("::", "_", StringComparison.Ordinal);
 
-  private static PerlClassKind? DetectNonMooseClassKind(PerlPackage pkg, List<string>? runtimeIsa = null) {
+  private static PerlClassKind? DetectNonMooseClassKind(PerlPackageInfo pkg, List<string>? runtimeIsa = null) {
     if (pkg.Functions.TryGetValue("new", out var ctor)) {
-      foreach (var op in Descendants(ctor.Body!)) {
-        if (op.Name != "bless")
+      foreach (var node in PerlWalk.Descendants(ctor.Body!, intoSubs: false)) {
+        if (node is not PerlCall { Builtin: true, Name: "bless" } bless)
           continue;
-        var target = UnwrapSingleNull(StripMarks(op.Children)[0]);
-        if (target.Name is "srefgen" or "refgen" && Descendants(target).Any(c => c.Name == "padsv"))
+        var target = bless.Arguments is [var first, ..] ? first : null;
+        if (target is PerlUnary { Operator: "\\" } reference && PerlWalk.Descendants(reference).Any(c => c is PerlVariable { Sigil: '$', Lexical: not null }))
           return PerlClassKind.InsideOut;
         return PerlClassKind.BlessedHash;
       }
     }
-    // Derived blessed-hash / inside-out subclass that inherits `new` from a parent in the same file
     if (pkg.Isa.Any(i => i != "Exporter") || (runtimeIsa?.Any(i => i != "Exporter") ?? false))
       return PerlClassKind.BlessedHash;
     return null;
   }
 
-  private void InitializeClassesAndInterfaces(Dictionary<string, IrTypeDeclaration> shells, Dictionary<string, PerlPackage> packages, List<IrFunction> functions) {
-    this._directives = CollectTopLevelClassDirectives(this._tree);
+  private void InitializeClassesAndInterfaces(Dictionary<string, IrTypeDeclaration> shells, Dictionary<string, PerlPackageInfo> packages, List<IrFunction> functions) {
+    this._directives = CollectTopLevelClassDirectives(this._document);
+    var moose = MoosePackages(this._document);
     foreach (var (pkg, decl) in shells) {
       if (decl is IrInterfaceType iface) {
         this._interfacesByPkg[pkg] = iface;
         this._types.Add(iface);
       } else {
         var cls = (IrClassType)decl;
-        var isMoose = this._tree.Moose.TryGetValue(pkg, out var mooseSpec);
-        if (isMoose) {
-          mooseSpec = mooseSpec! with {
-            Extends = [.. mooseSpec.Extends, .. this._directives.Extends.GetValueOrDefault(pkg) ?? []],
-            With = [.. mooseSpec.With, .. this._directives.With.GetValueOrDefault(pkg) ?? []],
-            Requires = [.. mooseSpec.Requires, .. this._directives.Requires.GetValueOrDefault(pkg) ?? []],
-            Attributes = [.. mooseSpec.Attributes, .. this._directives.Attributes.GetValueOrDefault(pkg) ?? []]
-          };
-        }
+        var isMoose = moose.ContainsKey(pkg);
         var kind = isMoose ? PerlClassKind.Moose : DetectNonMooseClassKind(packages[pkg], this._directives.Isa.GetValueOrDefault(pkg))!.Value;
-        var info = new PerlClassInfo(pkg, cls, kind) { MooseSpec = mooseSpec };
+        var info = new PerlClassInfo(pkg, cls, kind);
+        if (isMoose) {
+          info.MooseExtends.AddRange(this._directives.Extends.GetValueOrDefault(pkg) ?? []);
+          info.MooseWith.AddRange(this._directives.With.GetValueOrDefault(pkg) ?? []);
+          info.MooseAttributes.AddRange(this._directives.Attributes.GetValueOrDefault(pkg) ?? []);
+        }
         this._classesByPkg[pkg] = info;
         this._classesByIr[cls] = info;
         this._types.Add(cls);
@@ -206,9 +213,8 @@ internal sealed partial class PerlLowerer {
 
     // Define Moose roles (interfaces)
     foreach (var (pkg, iface) in this._interfacesByPkg) {
-      var moose = this._tree.Moose[pkg];
-      var allWith = moose.With.Concat(this._directives.With.GetValueOrDefault(pkg) ?? []).ToList();
-      var allReqs = moose.Requires.Concat(this._directives.Requires.GetValueOrDefault(pkg) ?? []).ToList();
+      var allWith = this._directives.With.GetValueOrDefault(pkg) ?? [];
+      var allReqs = this._directives.Requires.GetValueOrDefault(pkg) ?? [];
       var baseIfaces = new List<IrInterfaceType>();
       foreach (var w in allWith) {
         if (!this._interfacesByPkg.TryGetValue(w, out var baseIface))
@@ -229,8 +235,8 @@ internal sealed partial class PerlLowerer {
     // Validate & wire class inheritance + roles
     foreach (var (pkg, info) in this._classesByPkg) {
       var bases = new List<string>();
-      if (info.MooseSpec is not null)
-        bases.AddRange(info.MooseSpec.Extends);
+      if (info.Kind == PerlClassKind.Moose)
+        bases.AddRange(info.MooseExtends);
       if (packages.TryGetValue(pkg, out var p))
         bases.AddRange(p.Isa.Where(i => i != "Exporter"));
       if (this._directives.Isa.TryGetValue(pkg, out var rIsa))
@@ -247,12 +253,10 @@ internal sealed partial class PerlLowerer {
       }
 
       var ifaces = new List<IrInterfaceType>();
-      if (info.MooseSpec is not null) {
-        foreach (var w in info.MooseSpec.With) {
-          if (!this._interfacesByPkg.TryGetValue(w, out var iface))
-            throw new Refusal(PerlFrontend.ObjectSystemUnsupported, $"with '{w}'", 1, cause: "OBJ-INTERFACES");
-          ifaces.Add(iface);
-        }
+      foreach (var w in info.MooseWith) {
+        if (!this._interfacesByPkg.TryGetValue(w, out var iface))
+          throw new Refusal(PerlFrontend.ObjectSystemUnsupported, $"with '{w}'", 1, cause: "OBJ-INTERFACES");
+        ifaces.Add(iface);
       }
       info.IrClass.Inherit(baseCls, ifaces);
     }
@@ -270,15 +274,13 @@ internal sealed partial class PerlLowerer {
     foreach (var info in this._classesByPkg.Values)
       Visit(info);
 
-    // Pass 1: define fields, constructors, and methods on every class
-    var pendingCtors = new List<(PerlClassInfo Info, IrConstructor Ctor, PerlSubroutine? Sub)>();
-    var pendingMethods = new List<(PerlClassInfo Info, IrMethod Method, string Name, PerlSubroutine Sub)>();
+    var pendingCtors = new List<(PerlClassInfo Info, IrConstructor Ctor, PerlSub? Sub)>();
+    var pendingMethods = new List<(PerlClassInfo Info, IrMethod Method, string Name, PerlSub Sub)>();
     foreach (var info in ordered) {
       packages.TryGetValue(info.Package, out var pkg);
       this.DeclareClassMembers(info, pkg, pendingCtors, pendingMethods);
     }
 
-    // Pass 2: pre-compute constructor & method signatures so cross-calls resolve in any order
     foreach (var (info, ctor, sub) in pendingCtors)
       this._classMemberSigs[ctor.Function] = (IrType.Void, this.PredictCtorParamTypes(info, sub));
     foreach (var (info, method, subName, sub) in pendingMethods)
@@ -291,7 +293,6 @@ internal sealed partial class PerlLowerer {
           this._contracts.TryGetType(pkg, m.Name, "return", out var r) ? r : IrType.I64,
           [IrType.Object(iface)]);
 
-    // Pass 3: lower every constructor and method body
     foreach (var (info, ctor, sub) in pendingCtors) {
       var fn = sub is not null
         ? this.LowerClassConstructor(info, ctor, sub)
@@ -306,7 +307,7 @@ internal sealed partial class PerlLowerer {
     }
   }
 
-  private List<IrType> PredictCtorParamTypes(PerlClassInfo info, PerlSubroutine? sub) {
+  private List<IrType> PredictCtorParamTypes(PerlClassInfo info, PerlSub? sub) {
     var list = new List<IrType> { IrType.Object(info.IrClass) };
     if (sub is null) {
       if (info.IrClass.Base is { Constructors: [var bc, ..] })
@@ -319,40 +320,28 @@ internal sealed partial class PerlLowerer {
     return list;
   }
 
-  private List<IrType> PredictMethodParamTypes(PerlClassInfo info, string subName, PerlSubroutine sub) {
+  private List<IrType> PredictMethodParamTypes(PerlClassInfo info, string subName, PerlSub sub) {
     var list = new List<IrType> { IrType.Object(info.IrClass) };
     this.CollectPredictedParams(info.Package, subName, sub, list);
     return list;
   }
 
-  private static PerlOp[]? MatchParamUnpack(PerlOp[] nodes, out PerlOp assignOp) {
-    assignOp = null!;
-    var first = nodes.FirstOrDefault(o => o.Name != "nextstate");
-    if (first?.Name != "aassign")
-      return null;
-    var rhs = first.Children[0].Children;
-    if (rhs.Length != 2 || rhs[0].Name != "padrange" || rhs[1].Children[0].Symbol != "_")
-      return null;
-    assignOp = first;
-    return first.Children[1].Children;
-  }
-
-  private void CollectPredictedParams(string pkg, string subName, PerlSubroutine sub, List<IrType> list) {
-    var targets = MatchParamUnpack(BodyNodes(sub), out _);
+  private void CollectPredictedParams(string pkg, string subName, PerlSub sub, List<IrType> list) {
+    var targets = MatchParamUnpack(sub.Body!.Statements, out _);
     if (targets is null)
       return;
-    foreach (var target in targets.Skip(2))
-      list.Add(this.ResolveParamType(pkg, subName, sub.Lexicals[target.Target]![1..], target.Name == "padav"));
+    foreach (var target in targets.Variables.Skip(1))
+      list.Add(this.ResolveParamType(pkg, subName, target.Name, target.Sigil == '@'));
   }
 
   private void DeclareClassMembers(
     PerlClassInfo info,
-    PerlPackage? pkg,
-    List<(PerlClassInfo, IrConstructor, PerlSubroutine?)> pendingCtors,
-    List<(PerlClassInfo, IrMethod, string, PerlSubroutine)> pendingMethods) {
+    PerlPackageInfo? pkg,
+    List<(PerlClassInfo, IrConstructor, PerlSub?)> pendingCtors,
+    List<(PerlClassInfo, IrMethod, string, PerlSub)> pendingMethods) {
     var fields = new List<IrField>();
     if (info.Kind == PerlClassKind.Moose) {
-      foreach (var attr in info.MooseSpec!.Attributes) {
+      foreach (var attr in info.MooseAttributes) {
         var ftype = this.ResolveMooseAttrType(info.Package, attr);
         var isReadOnly = attr.Is == "ro" && string.IsNullOrEmpty(attr.Writer);
         var visibility = attr.Name.StartsWith('_') || attr.Is == "bare" ? IrVisibility.Private : IrVisibility.Public;
@@ -403,7 +392,7 @@ internal sealed partial class PerlLowerer {
       }
 
     if (pkg is not null) {
-      foreach (var (subName, sub) in pkg.Functions.OrderBy(e => e.Key, StringComparer.Ordinal)) {
+      foreach (var (subName, sub) in pkg.Functions) {
         this._classSubKeys.Add($"{info.Package}::{subName}");
         if (subName is "new" or "DESTROY")
           continue;
@@ -412,7 +401,7 @@ internal sealed partial class PerlLowerer {
         var impls = ifaceMethods.GetValueOrDefault(subName) ?? [];
         var dispatch = overrides is not null
           ? IrDispatch.Override
-          : (impls.Count > 0 || this.IsOverriddenInDerived(info.IrClass, subName, this._tree.Packages))
+          : (impls.Count > 0 || this.IsOverriddenInDerived(info.IrClass, subName))
             ? IrDispatch.Virtual
             : IrDispatch.Instance;
         var vis = subName.StartsWith('_') ? IrVisibility.Private : IrVisibility.Public;
@@ -423,7 +412,6 @@ internal sealed partial class PerlLowerer {
           Implements = impls
         };
         methods.Add(method);
-        info.MethodsByName[subName] = method;
         pendingMethods.Add((info, method, subName, sub));
       }
     }
@@ -431,15 +419,15 @@ internal sealed partial class PerlLowerer {
     info.IrClass.DefineMembers(ctors, methods, [], []);
   }
 
-  private bool IsOverriddenInDerived(IrClassType baseCls, string methodName, Dictionary<string, PerlPackage> packages) {
+  private bool IsOverriddenInDerived(IrClassType baseCls, string methodName) {
     foreach (var other in this._classesByPkg.Values)
       if (!ReferenceEquals(other.IrClass, baseCls) && other.IrClass.DerivesFrom(baseCls)
-          && packages.TryGetValue(other.Package, out var p) && p.Functions.ContainsKey(methodName))
+          && this._packages.TryGetValue(other.Package, out var p) && p.Functions.ContainsKey(methodName))
         return true;
     return false;
   }
 
-  private IrType ResolveMooseAttrType(string pkg, PerlMooseAttribute attr) {
+  private IrType ResolveMooseAttrType(string pkg, MooseAttribute attr) {
     if (this._contracts.TryGetType(pkg, "field", attr.Name, out var ct))
       return ct;
     return attr.Isa switch {
@@ -460,19 +448,13 @@ internal sealed partial class PerlLowerer {
       : this._contracts.TryGetType(pkg, "new", name.TrimStart('_'), out var pt) ? pt
       : IrType.I64;
 
-  private void DiscoverInsideOutFields(PerlClassInfo info, PerlPackage pkg, List<IrField> fields) {
+  private void DiscoverInsideOutFields(PerlClassInfo info, PerlPackageInfo pkg, List<IrField> fields) {
     var seen = new HashSet<string>(StringComparer.Ordinal);
     foreach (var (_, sub) in pkg.Functions) {
-      foreach (var op in Descendants(sub.Body!)) {
-        string? hashLex = null;
-        if (op.Name == "padhv")
-          hashLex = sub.Lexicals[op.Target];
-        else if (op.Name == "multideref" && op.Deref is [var step] && step.Source == "padhv")
-          hashLex = sub.Lexicals[step.Target];
-
-        if (hashLex is null)
+      foreach (var node in PerlWalk.Descendants(sub.Body!, intoSubs: false)) {
+        if (node is not PerlVariable { Sigil: '%', Lexical: { Kind: not PerlDeclarator.Our } } hash)
           continue;
-        var rawName = hashLex[1..];
+        var rawName = hash.Name;
         if (!seen.Add(rawName))
           continue;
         var cleanName = rawName.StartsWith("_f_", StringComparison.Ordinal) ? rawName[3..] : rawName;
@@ -488,7 +470,10 @@ internal sealed partial class PerlLowerer {
     }
   }
 
-  private void DiscoverBlessedHashFields(PerlClassInfo info, PerlPackage pkg, List<IrField> fields) {
+  /// <summary>Whether an element is one link of perl's multideref op (a constant or plain-variable key on a variable or a reference held in one).</summary>
+  private static bool IsSingleDeref(PerlElement element) => element.Aggregate is PerlVariable or PerlDeref { Reference: PerlVariable { Sigil: '$' } };
+
+  private void DiscoverBlessedHashFields(PerlClassInfo info, PerlPackageInfo pkg, List<IrField> fields) {
     var seen = new HashSet<string>(StringComparer.Ordinal);
     foreach (var baseField in info.IrClass.Base?.AllFields ?? [])
       seen.Add(baseField.Name);
@@ -504,14 +489,16 @@ internal sealed partial class PerlLowerer {
     }
 
     foreach (var (_, sub) in pkg.Functions) {
-      foreach (var op in Descendants(sub.Body!)) {
-        if (op.Name == "anonhash") {
-          var pairs = StripMarks(op.Children);
-          for (var i = 0; i + 1 < pairs.Length; i += 2)
-            if (StringConst(pairs[i]) is { } key)
-              AddKey(key);
-        } else if (op.Name == "multideref" && op.Deref is [var step] && step.Kind == "hash" && step.IndexValue is { } k) {
-          AddKey(k);
+      var chained = new HashSet<PerlNode>(ReferenceEqualityComparer.Instance);
+      foreach (var node in PerlWalk.Descendants(sub.Body!, intoSubs: false)) {
+        if (node is PerlElement { Aggregate: PerlDeref { Reference: PerlElement inner } })
+          chained.Add(inner);
+        if (node is PerlAnonHash anon) {
+          for (var i = 0; i + 1 < anon.Items.Count; i += 2)
+            if (anon.Items[i] is PerlString key)
+              AddKey(key.Value);
+        } else if (node is PerlElement { Hash: true } element && !chained.Contains(element) && IsSingleDeref(element) && element.Index is PerlString or PerlNumber) {
+          AddKey(element.Index is PerlString s ? s.Value : ((PerlNumber)element.Index).Value.ToString());
         }
       }
     }
@@ -540,21 +527,22 @@ internal sealed partial class PerlLowerer {
     return new(ctor.Function, false, IrType.Void, parameters, [], new(stmts));
   }
 
-  private IrFunction LowerClassConstructor(PerlClassInfo info, IrConstructor ctor, PerlSubroutine sub) {
+  private IrFunction LowerClassConstructor(PerlClassInfo info, IrConstructor ctor, PerlSub sub) {
     this.ResetSubState(info.Package, "new", sub, IrType.Void);
+    this._line = 1;
     this._currentClassInfo = info;
     this._loweringConstructor = true;
     var selfLocal = new IrLocal("self", IrType.Object(info.IrClass));
     this._currentSelf = selfLocal;
 
-    var nodes = BodyNodes(sub);
+    var nodes = sub.Body!.Statements;
     var parameters = new List<IrLocal> { selfLocal };
-    var consumed = new HashSet<PerlOp>(ReferenceEqualityComparer.Instance);
+    var consumed = new HashSet<PerlStatement>(ReferenceEqualityComparer.Instance);
     var statements = new List<IrStmt>();
 
     this.ExtractClassParameters(nodes, info.Package, "new", skipFirstAsClass: true, selfLocal, parameters, consumed);
-    this.LowerStatements(nodes, statements, consumed, allowImplicitReturn: false);
-    if (statements[^1] is not IrReturn)
+    this.LowerStatements(nodes, statements, consumed, PerlWant.Unknown, allowImplicitReturn: false);
+    if (statements.Count == 0 || statements[^1] is not IrReturn)
       statements.Add(new IrReturn(null));
 
     this._currentClassInfo = null;
@@ -563,21 +551,22 @@ internal sealed partial class PerlLowerer {
     return new(ctor.Function, false, IrType.Void, parameters, [.. this._locals], new(statements));
   }
 
-  private IrFunction LowerClassMethod(PerlClassInfo info, IrMethod method, string subName, PerlSubroutine sub) {
+  private IrFunction LowerClassMethod(PerlClassInfo info, IrMethod method, string subName, PerlSub sub) {
     var retType = this._contracts.TryGetType(info.Package, subName, "return", out var r) ? r : IrType.I64;
     this.ResetSubState(info.Package, subName, sub, retType);
+    this._line = 1;
     this._currentClassInfo = info;
     var selfLocal = new IrLocal("self", IrType.Object(info.IrClass));
     this._currentSelf = selfLocal;
 
-    var nodes = BodyNodes(sub);
+    var nodes = sub.Body!.Statements;
     var parameters = new List<IrLocal> { selfLocal };
-    var consumed = new HashSet<PerlOp>(ReferenceEqualityComparer.Instance);
+    var consumed = new HashSet<PerlStatement>(ReferenceEqualityComparer.Instance);
     var statements = new List<IrStmt>();
 
     this.ExtractClassParameters(nodes, info.Package, subName, skipFirstAsClass: false, selfLocal, parameters, consumed);
-    this.LowerStatements(nodes, statements, consumed, allowImplicitReturn: true);
-    if (statements[^1] is not IrReturn)
+    this.LowerStatements(nodes, statements, consumed, PerlWant.Unknown, allowImplicitReturn: true);
+    if (statements.Count == 0 || statements[^1] is not IrReturn)
       statements.Add(new IrReturn(retType == IrType.Void ? null : DefaultExpr(retType)));
 
     this._currentClassInfo = null;
@@ -585,52 +574,34 @@ internal sealed partial class PerlLowerer {
     return new(method.Function, false, retType, parameters, [.. this._locals], new(statements));
   }
 
-  private void ResetSubState(string package, string name, PerlSubroutine sub, IrType retType) {
-    this._currentSub = sub;
-    this._currentPackage = package;
-    this._currentSubName = name;
-    this._currentReturnType = retType;
-    this._variables.Clear();
-    this._locals.Clear();
-    this._argParams.Clear();
-    this._closureLocals.Clear();
-    this._loops.Clear();
-    this._topicVar = null;
-    this._evalErrorVar = null;
-    this._line = 1;
-    this._integer = false;
-    this._tempCounter = 0;
-  }
-
-  private void ExtractClassParameters(PerlOp[] nodes, string package, string name, bool skipFirstAsClass, IrLocal selfLocal, List<IrLocal> parameters, HashSet<PerlOp> consumed) {
+  private void ExtractClassParameters(IReadOnlyList<PerlStatement> nodes, string package, string name, bool skipFirstAsClass, IrLocal selfLocal, List<IrLocal> parameters, HashSet<PerlStatement> consumed) {
     var targets = MatchParamUnpack(nodes, out var assignOp);
     if (targets is null)
       return;
     consumed.Add(assignOp);
     if (!skipFirstAsClass)
-      this._variables[targets[1].Target] = selfLocal;
-    foreach (var target in targets.Skip(2)) {
-      var lex = this.LexicalName(target.Target);
-      var ptype = this.ResolveParamType(package, name, lex, target.Name == "padav");
-      var param = new IrLocal(lex, ptype);
-      this._variables[target.Target] = param;
+      this._variables[targets.Variables[0].Lexical!] = selfLocal;
+    foreach (var target in targets.Variables.Skip(1)) {
+      var ptype = this.ResolveParamType(package, name, target.Name, target.Sigil == '@');
+      var param = new IrLocal(target.Name, ptype);
+      this._variables[target.Lexical!] = param;
       parameters.Add(param);
     }
   }
 
-  private bool TryLowerBlessStatement(PerlOp node, List<IrStmt> statements) {
+  private bool TryLowerBlessStatement(PerlExpr node, List<IrStmt> statements) {
     if (!this._loweringConstructor)
       return false;
 
-    if (node.Name == "padsv_store" && node.Children[0].Name == "bless") {
-      this._variables[node.Target] = this._currentSelf!;
-      this.LowerBlessInit(node.Children[0], statements);
+    if (node is PerlAssign { Operator: "=", Target: PerlDeclaration { Parenthesized: false, Variables: [{ Lexical: { } slot }] }, Value: PerlCall { Builtin: true, Name: "bless" } bless }) {
+      this._variables[slot] = this._currentSelf!;
+      this.LowerBlessInit(bless, statements);
       return true;
     }
-    if (node.Name == "return") {
-      var vals = StripMarks(node.Children);
-      if (vals.Length == 1 && vals[0].Name == "bless") {
-        this.LowerBlessInit(vals[0], statements);
+    if (node is PerlJump { Keyword: "return", Value: var value }) {
+      var vals = value is PerlList { Parenthesized: false } list ? list.Items : value is null ? [] : [value];
+      if (vals is [PerlCall { Builtin: true, Name: "bless" } returned]) {
+        this.LowerBlessInit(returned, statements);
         statements.Add(new IrReturn(null));
         return true;
       }
@@ -638,42 +609,37 @@ internal sealed partial class PerlLowerer {
     return false;
   }
 
-  private void LowerBlessInit(PerlOp blessOp, List<IrStmt> statements) {
-    var target = UnwrapSingleNull(StripMarks(blessOp.Children)[0]);
-    if (target.Name != "anonhash")
+  private void LowerBlessInit(PerlCall blessOp, List<IrStmt> statements) {
+    if (blessOp.Arguments is not [PerlAnonHash target, ..])
       return;
-    var pairs = StripMarks(target.Children);
-    for (var i = 0; i + 1 < pairs.Length; i += 2) {
-      if (StringConst(pairs[i]) is { } key) {
-        var field = this._currentClassInfo!.IrClass.AllFields.First(f => f.Name == key);
-        var val = this.ToType(this.LiftExpr(pairs[i + 1]), field.Type);
+    var pairs = target.Items;
+    for (var i = 0; i + 1 < pairs.Count; i += 2) {
+      if (pairs[i] is PerlString key) {
+        var field = this._currentClassInfo!.IrClass.AllFields.First(f => f.Name == key.Value);
+        var val = this.ToType(this.LiftExpr(pairs[i + 1], PerlWant.List), field.Type);
         statements.Add(new IrFieldStore(new IrLocalRef(this._currentSelf!), field, val));
       }
     }
   }
 
-  private bool TryResolveInsideOutAccess(PerlOp op, out IrExpr objExpr, out IrField field) {
+  private bool TryResolveInsideOutAccess(PerlElement op, out IrExpr objExpr, out IrField field) {
     objExpr = null!;
     field = null!;
     if (this._currentClassInfo?.Kind != PerlClassKind.InsideOut)
       return false;
-    var info = this._currentClassInfo;
-
-    if (op.Name == "helem" && op.Children[0].Name == "padhv"
-        && this.ResolveInsideOutHashField(info, op.Children[0].Target, out field)
-        && this.TryUnwrapInsideOutKey(op.Children[1], out objExpr))
-      return true;
-
-    if (op.Name == "multideref" && op.Deref is [var step]
-        && step.Source == "padhv"
-        && this.ResolveInsideOutHashField(info, step.Target, out field)) {
-      objExpr = new IrLocalRef(this._variables[step.IndexTarget]);
-      return true;
-    }
-    return false;
+    if (op is not { Hash: true, Aggregate: PerlVariable { Sigil: '%', Lexical: not null } hash } || !this._currentClassInfo.InsideOutHashes.TryGetValue(hash.Name, out field!))
+      return false;
+    var key = op.Index;
+    var inner = key switch {
+      PerlInterpolation { Parts: [var only] } => only,
+      PerlCall { Arguments: [var argument, ..] } => argument,
+      _ => key
+    };
+    objExpr = this.LiftExpr(inner, PerlWant.Scalar);
+    return objExpr.Type.IsObject;
   }
 
-  private bool TryLowerInsideOutRead(PerlOp op, out IrExpr expr) {
+  private bool TryLowerInsideOutRead(PerlElement op, out IrExpr expr) {
     if (this.TryResolveInsideOutAccess(op, out var objExpr, out var field)) {
       expr = new IrFieldLoad(objExpr, field);
       return true;
@@ -682,61 +648,45 @@ internal sealed partial class PerlLowerer {
     return false;
   }
 
-  private bool TryLowerInsideOutStore(PerlOp lhsOp, IrExpr value, List<IrStmt> statements) {
+  private bool TryLowerInsideOutStore(PerlElement lhsOp, IrExpr value, List<IrStmt> statements) {
     if (!this.TryResolveInsideOutAccess(lhsOp, out var objExpr, out var field))
       return false;
     statements.Add(new IrFieldStore(objExpr, field, this.ToType(value, field.Type)));
     return true;
   }
 
-  private bool ResolveInsideOutHashField(PerlClassInfo info, int padSlot, out IrField field) {
-    var lex = this._currentSub.Lexicals[padSlot]!;
-    return info.InsideOutHashes.TryGetValue(lex[1..], out field!);
-  }
-
-  private bool TryUnwrapInsideOutKey(PerlOp keyOp, out IrExpr objExpr) {
-    keyOp = UnwrapSingleNull(keyOp);
-    var inner = keyOp.Name == "stringify"
-      ? StripMarks(keyOp.Children)[0]
-      : keyOp.Name == "refaddr"
-        ? keyOp.Children[0]
-        : TryExtractCallTarget(keyOp, out _, out var args) ? args[0] : keyOp;
-    objExpr = this.LiftExpr(inner);
-    return objExpr.Type.IsObject;
-  }
-
-  private IrExpr LowerMethodCall(PerlOp[] children, PerlOp methodOp) {
-    var methodName = methodOp.Symbol;
-    if (methodOp.Name == "method" || string.IsNullOrEmpty(methodName))
+  private IrExpr LowerMethodCall(PerlMethodCall call) {
+    var methodName = call.Name;
+    if (call.DynamicName is not null || string.IsNullOrEmpty(methodName))
       throw this.Fail(PerlFrontend.ObjectSystemUnsupported, "->method", cause: "OBJ-CLASSES");
-
-    var argsAndRecv = StripMarks(children[..^1]);
-    var recvOp = argsAndRecv[0];
-    var argOps = argsAndRecv[1..];
+    var isSuper = methodName.StartsWith("SUPER::", StringComparison.Ordinal);
+    if (isSuper)
+      methodName = methodName[7..];
+    var argOps = call.Arguments;
 
     // 1. Constructor call: `ClassName->new(args...)`
-    if (methodName == "new" && StringConst(recvOp) is { } pkgName && this._classesByPkg.TryGetValue(pkgName, out var newInfo)) {
+    if (methodName == "new" && call.Invocant is PerlString { } recvName && this._classesByPkg.TryGetValue(recvName.Value, out var newInfo)) {
       var ctor = newInfo.IrClass.Constructors[0];
       var ctorParamTypes = this._classMemberSigs[ctor.Function].ParamTypes;
       var ctorArgs = this.BindConstructorArgs(newInfo, argOps, ctorParamTypes);
       return new IrNew(IrType.Object(newInfo.IrClass), ctor, ctorArgs);
     }
 
-    var receiver = this.LiftExpr(recvOp);
+    var receiver = this.LiftExpr(call.Invocant, PerlWant.Scalar);
 
     // 2. `$obj->isa('ClassName')` / `$obj->does('RoleName')`
-    if (methodName == "isa" && argOps.Length == 1 && StringConst(argOps[0]) is { } isaPkg && this._classesByPkg.TryGetValue(isaPkg, out var isaInfo))
+    if (methodName == "isa" && argOps.Count == 1 && this.Fold(argOps[0])?.Text is { } isaPkg && this._classesByPkg.TryGetValue(isaPkg, out var isaInfo))
       return new IrTypeTest(receiver, IrType.Object(isaInfo.IrClass));
 
-    if (methodName == "does" && argOps.Length == 1 && StringConst(argOps[0]) is { } rolePkg && this._interfacesByPkg.TryGetValue(rolePkg, out var roleIface))
+    if (methodName == "does" && argOps.Count == 1 && this.Fold(argOps[0])?.Text is { } rolePkg && this._interfacesByPkg.TryGetValue(rolePkg, out var roleIface))
       return new IrTypeTest(receiver, IrType.Object(roleIface));
 
-    // 3. `$self->SUPER::method(...)` (`method_super`)
-    if (methodOp.Name == "method_super" && receiver.Type.ClassType is { Base: { } baseCls }) {
+    // 3. `$self->SUPER::method(...)`
+    if (isSuper && receiver.Type.ClassType is { Base: { } baseCls }) {
       var baseMethod = FindMethodInLineage(baseCls, methodName)
         ?? throw this.Fail(PerlFrontend.ObjectSystemUnsupported, $"->SUPER::{methodName}", cause: "OBJ-VIRTUAL");
       var (baseRet, baseParams) = this._classMemberSigs[baseMethod.Function];
-      var baseArgs = argOps.Select((a, idx) => this.ToType(this.LiftExpr(a), baseParams[idx + 1])).ToArray();
+      var baseArgs = argOps.Select((a, idx) => this.ToType(this.LiftExpr(a, PerlWant.List), baseParams[idx + 1])).ToArray();
       return new IrMethodCall(baseRet, baseMethod, receiver, baseArgs) { Kind = IrMethodCallKind.Base };
     }
 
@@ -745,54 +695,47 @@ internal sealed partial class PerlLowerer {
       var im = iface.AllMethods.FirstOrDefault(m => m.Name == methodName)
         ?? throw this.Fail(PerlFrontend.ObjectSystemUnsupported, $"->{methodName}", cause: "OBJ-INTERFACES");
       var (imRet, imParams) = this._classMemberSigs[im.Function];
-      var imArgs = argOps.Select((a, idx) => this.ToType(this.LiftExpr(a), imParams[idx + 1])).ToArray();
+      var imArgs = argOps.Select((a, idx) => this.ToType(this.LiftExpr(a, PerlWant.List), imParams[idx + 1])).ToArray();
       return new IrMethodCall(imRet, im, receiver, imArgs) { Kind = IrMethodCallKind.Interface };
     }
 
     // 5. Class method or Moose attribute reader
     if (receiver.Type.ClassType is { } recvCls) {
-      if (argOps.Length == 0 && this.FindMooseReader(recvCls, methodName) is { } readField)
+      if (argOps.Count == 0 && this.FindMooseReader(recvCls, methodName) is { } readField)
         return new IrFieldLoad(receiver, readField);
 
       if (FindMethodInLineage(recvCls, methodName) is { } m) {
         var (mRet, mParams) = this._classMemberSigs[m.Function];
-        var mArgs = argOps.Select((a, idx) => this.ToType(this.LiftExpr(a), mParams[idx + 1])).ToArray();
+        var mArgs = argOps.Select((a, idx) => this.ToType(this.LiftExpr(a, PerlWant.List), mParams[idx + 1])).ToArray();
         var kind = m.IsVirtual ? IrMethodCallKind.Virtual : IrMethodCallKind.Direct;
         return new IrMethodCall(mRet, m, receiver, mArgs) { Kind = kind };
       }
     }
 
-    throw this.Fail(PerlFrontend.ObjectSystemUnsupported, $"->{methodName}", cause: "OBJ-CLASSES");
+    throw this.Fail(PerlFrontend.ObjectSystemUnsupported, isSuper ? $"->SUPER::{methodName}" : $"->{methodName}", cause: "OBJ-CLASSES");
   }
 
-  private bool TryLowerMooseSetterStmt(PerlOp node, List<IrStmt> statements) {
-    if (node.Name != "entersub")
+  private bool TryLowerMooseSetterStmt(PerlExpr node, List<IrStmt> statements) {
+    if (node is not PerlMethodCall { Name: { } methodName, DynamicName: null, Arguments: [var argument] } call)
       return false;
-    var children = UnwrapList(node.Children);
-    if (children.Length < 3 || children[^1].Name != "method_named")
-      return false;
-    var methodName = children[^1].Symbol!;
-    var argsAndRecv = StripMarks(children[..^1]);
-    if (argsAndRecv.Length != 2)
-      return false;
-    var receiver = this.LiftExpr(argsAndRecv[0]);
+    var receiver = this.LiftExpr(call.Invocant, PerlWant.Scalar);
     if (receiver.Type.ClassType is { } recvCls && this.FindMooseWriter(recvCls, methodName) is { } field) {
-      var val = this.ToType(this.LiftExpr(argsAndRecv[1]), field.Type);
+      var val = this.ToType(this.LiftExpr(argument, PerlWant.List), field.Type);
       statements.Add(new IrFieldStore(receiver, field, val));
       return true;
     }
     return false;
   }
 
-  private IrExpr[] BindConstructorArgs(PerlClassInfo info, PerlOp[] argOps, List<IrType> ctorParamTypes) {
+  private IrExpr[] BindConstructorArgs(PerlClassInfo info, IReadOnlyList<PerlExpr> argOps, List<IrType> ctorParamTypes) {
     var expectedArgs = ctorParamTypes.Count - 1;
     // Support Moose `Class->new(field => val, ...)` named arguments as well as positional arguments
-    if (info.Kind == PerlClassKind.Moose && argOps.Length > 0 && argOps.Length % 2 == 0
-        && StringConst(argOps[0]) is { } firstKey
+    if (info.Kind == PerlClassKind.Moose && argOps.Count > 0 && argOps.Count % 2 == 0
+        && argOps[0] is PerlString { Value: var firstKey }
         && info.IrClass.AllFields.Any(f => f.Name.TrimStart('_') == firstKey || f.Name == firstKey)) {
-      var named = new Dictionary<string, PerlOp>(StringComparer.Ordinal);
-      for (var i = 0; i + 1 < argOps.Length; i += 2)
-        if (StringConst(argOps[i]) is { } k)
+      var named = new Dictionary<string, PerlExpr>(StringComparer.Ordinal);
+      for (var i = 0; i + 1 < argOps.Count; i += 2)
+        if (argOps[i] is PerlString { Value: var k })
           named[k] = argOps[i + 1];
 
       var allFields = info.IrClass.AllFields;
@@ -801,7 +744,7 @@ internal sealed partial class PerlLowerer {
         var f = allFields[i];
         var clean = f.Name.TrimStart('_');
         result[i] = named.TryGetValue(f.Name, out var op) || named.TryGetValue(clean, out op)
-          ? this.ToType(this.LiftExpr(op), ctorParamTypes[i + 1])
+          ? this.ToType(this.LiftExpr(op, PerlWant.List), ctorParamTypes[i + 1])
           : DefaultExpr(ctorParamTypes[i + 1]);
       }
       return result;
@@ -809,8 +752,8 @@ internal sealed partial class PerlLowerer {
 
     var positional = new IrExpr[expectedArgs];
     for (var i = 0; i < expectedArgs; ++i)
-      positional[i] = i < argOps.Length
-        ? this.ToType(this.LiftExpr(argOps[i]), ctorParamTypes[i + 1])
+      positional[i] = i < argOps.Count
+        ? this.ToType(this.LiftExpr(argOps[i], PerlWant.List), ctorParamTypes[i + 1])
         : DefaultExpr(ctorParamTypes[i + 1]);
     return positional;
   }

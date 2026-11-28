@@ -266,6 +266,8 @@ public static partial class VisualBasicEmitter {
           return new("Double");
         case { IsString: true }:
           return new("String");
+        case { IsVariant: true }:
+          return new("Variant");
         case { IsStruct: true, Declaration: { } declaration } when this._typeNames.TryGetValue(declaration, out var name):
           return new(name);
         case { IsArray: true, Element: { } element }:

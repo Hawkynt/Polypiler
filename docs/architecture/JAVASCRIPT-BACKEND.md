@@ -103,6 +103,12 @@ implementation. Strict output carries the bitwise contract; a missing older `Mat
 approximated by a similarly named expression. See
 [floating-point operations](../reference/floating-point-operations.md).
 
+A value of the dynamic type `variant` ([variants](../reference/variants.md)) is a pair
+`[tag, payload]` - `[0]` for `Empty`, `[1]` for `Null` - since a JavaScript number cannot tell an
+`i16` from an `f64`: the tag is `v[0]`, a payload the frontend tested `v[1]`, one it did not
+`$variant(v, tag)`, which throws the `InvalidCastError`. A payload of 64 bits, `Currency` and `Date`
+are refused.
+
 ## Objects, control flow and runtime contracts
 
 Struct values, classes and interfaces have different representations: value records are copied

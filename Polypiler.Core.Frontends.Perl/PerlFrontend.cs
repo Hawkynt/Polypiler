@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
+using Polypiler.Core.Frontends.Perl.Ast;
 using Polypiler.Core.Frontends.Perl.Lowering;
-using Polypiler.Core.Frontends.Perl.Parsing;
+using Polypiler.Core.Frontends.Perl.Syntax;
 using Polypiler.Core.IR;
 
 namespace Polypiler.Core.Frontends.Perl;
@@ -20,9 +20,6 @@ public sealed record PerlImportOptions {
   /// <c>main::add.a: i32</c>, <c>main::add.b: i32</c>, <c>main::add.return: i32</c>.
   /// </summary>
   public string Contracts { get; init; } = "";
-
-  /// <summary>An explicit Perl interpreter path tried before <c>POLYPILER_PERL</c> and <c>perl</c>.</summary>
-  public string? Interpreter { get; init; }
 
   /// <summary>Optional export filter narrowing which functions are marked public.</summary>
   public IReadOnlySet<string>? ExportFilter { get; init; }
@@ -42,20 +39,34 @@ public sealed record PerlImportResult(
   IReadOnlyList<string> Exports,
   IReadOnlyList<string> TestFunctions);
 
+/// <summary>What the parser decides of a Perl file.</summary>
+public enum PerlVerdict {
+  /// <summary>The file is valid Perl.</summary>
+  Valid,
+  /// <summary>The file is not valid Perl.</summary>
+  Invalid,
+  /// <summary>The file uses a construct the parser does not decide.</summary>
+  Unsupported
+}
+
+/// <summary>The result of parsing a Perl file.</summary>
+/// <param name="Verdict">Whether the file is valid Perl, invalid, or outside the parser.</param>
+/// <param name="Diagnostics">The syntax error or the refused construct.</param>
+/// <param name="Outline">The subs the file defines and the lexicals of each pad, one unit per line; empty unless valid.</param>
+public sealed record PerlParseResult(PerlVerdict Verdict, IReadOnlyList<Diagnostic> Diagnostics, string Outline);
+
 /// <summary>
-/// Imports verified Perl 5 subroutines and modules into Polypiler's structured typed IR using
-/// Perl's own compiler via the embedded <c>B::PolypilerDump</c> backend.
+/// Imports verified Perl 5 subroutines and modules into Polypiler's structured typed IR. The
+/// frontend lexes and parses Perl itself (<see cref="Syntax.PerlParser"/>) and starts no process;
+/// perl is only the oracle its layer test compares it with.
 /// </summary>
 public static class PerlFrontend {
 
-  /// <summary>The relative path of the embedded <c>B::PolypilerDump</c> compiler backend.</summary>
-  public const string ParserPath = PerlOpTreeHelper.ParserRelativePath;
-
-  /// <summary>Returns the UTF-8 source bytes of the embedded <c>B::PolypilerDump</c> module.</summary>
-  public static byte[] ParserSource() => [.. PerlOpTreeHelper.ParserSource];
-
-  /// <summary>Perl compilation or op-tree helper failed.</summary>
+  /// <summary>The source is not valid Perl, or its contracts are malformed.</summary>
   public const string CompileFailedCode = "PLY1700";
+
+  /// <summary>A construct the parser does not decide.</summary>
+  public const string ParseUnsupportedCode = "PLY1701";
 
   /// <summary>Unsupported scalar construct.</summary>
   public const string ScalarUnsupportedCode = "PLY1702";
@@ -102,7 +113,12 @@ public static class PerlFrontend {
   /// <summary>Registered diagnostic descriptor for <see cref="CompileFailedCode"/>.</summary>
   [Diagnostic]
   public static readonly DiagnosticDescriptor CompileFailed = new(CompileFailedCode, DiagnosticSeverity.Error, ExitCode.InvalidSource,
-    "Perl compilation failed: {0}", "perl.frontend.compile");
+    "Perl {0}", "perl.frontend.compile");
+
+  /// <summary>Registered diagnostic descriptor for <see cref="ParseUnsupportedCode"/>.</summary>
+  [Diagnostic]
+  public static readonly DiagnosticDescriptor ParseUnsupported = new(ParseUnsupportedCode, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct,
+    "Perl construct outside the parser: {0}", "perl.frontend.parse");
 
   /// <summary>Registered diagnostic descriptor for <see cref="ScalarUnsupportedCode"/>.</summary>
   [Diagnostic]
@@ -174,40 +190,63 @@ public static class PerlFrontend {
   public static readonly DiagnosticDescriptor MagicUnsupported = new(MagicUnsupportedCode, DiagnosticSeverity.Error, ExitCode.UnsupportedConstruct,
     "'{0}' relies on tie, typeglob or special-variable behaviour that is not imported", "perl.frontend.magic");
 
-  /// <summary>Compiles a Perl 5 source string using the installed Perl interpreter and imports it into PolyIR.</summary>
+  /// <summary>Parses a Perl file and gives the verdict, the diagnostic and the outline of what it defines.</summary>
+  /// <param name="file">The logical file path used in diagnostics.</param>
+  /// <param name="source">The Perl source.</param>
+  /// <returns>The verdict: valid, invalid with the syntax error, or outside the parser with the construct it does not decide.</returns>
+  public static PerlParseResult Parse(string file, string source) {
+    ArgumentNullException.ThrowIfNull(file);
+    ArgumentNullException.ThrowIfNull(source);
+    var (document, _, diagnostic) = ParseDocument(file, source);
+    if (document is null)
+      return new(diagnostic!.Code == CompileFailedCode ? PerlVerdict.Invalid : PerlVerdict.Unsupported, [diagnostic], "");
+    return new(PerlVerdict.Valid, [], PerlOutline.Of(document));
+  }
+
+  private static (PerlDocument? Document, IReadOnlyDictionary<string, PerlExpr?> Constants, Diagnostic? Diagnostic) ParseDocument(string file, string source) {
+    try {
+      var (document, constants) = PerlParser.ParseWithConstants(file, source);
+      return (document, constants, null);
+    } catch (PerlSyntaxException error) {
+      return (null, new Dictionary<string, PerlExpr?>(), Diagnostic.Create(CompileFailed, new(file, error.Line, 1, error.Line, 1), "syntax error: " + StripPrefix(error.Message)));
+    } catch (PerlUnsupportedException error) {
+      return (null, new Dictionary<string, PerlExpr?>(), Diagnostic.Create(ParseUnsupported, new(file, error.Line, 1, error.Line, 1), error.Construct));
+    }
+  }
+
+  private static string StripPrefix(string message) => message.StartsWith("syntax error: ", StringComparison.Ordinal) ? message[14..] : message;
+
+  /// <summary>
+  /// The shape of the op tree perl builds for one expression, as the parser sees the expression:
+  /// every operator as <c>(name operand ...)</c> under the name of perl's op, package variables as
+  /// <c>$name</c>, constants as their value; <c>error: ...</c> if it is not valid Perl. The layer test
+  /// compares it with perl's own op tree, which checks precedence, associativity and how much named
+  /// unary and list operators take.
+  /// </summary>
+  /// <param name="expression">One Perl expression.</param>
+  /// <returns>The shape.</returns>
+  public static string ExpressionShape(string expression) {
+    ArgumentNullException.ThrowIfNull(expression);
+    var (document, _, diagnostic) = ParseDocument("expression.pl", "$Polypiler::Oracle::result = (" + expression + "\n);");
+    if (document is null)
+      return "error: " + diagnostic!.Message;
+    var value = ((PerlAssign)((PerlExpressionStatement)document.Statements[0]).Expression).Value;
+    return PerlOpShape.Of(value);
+  }
+
+  /// <summary>Parses a Perl 5 source string and imports it into PolyIR.</summary>
   /// <param name="file">The logical file path used in diagnostics and module naming.</param>
   /// <param name="source">The Perl 5 source code.</param>
-  /// <param name="options">Import options including contracts and interpreter override.</param>
+  /// <param name="options">Import options including contracts.</param>
   /// <returns>The imported module or diagnostics.</returns>
   public static PerlImportResult Import(string file, string source, PerlImportOptions? options = null) {
     ArgumentNullException.ThrowIfNull(file);
     ArgumentNullException.ThrowIfNull(source);
     var effective = options ?? PerlImportOptions.Default;
-    var (dump, error, line) = PerlOpTreeHelper.Compile(file, source, effective.Interpreter);
-    if (dump is null)
-      return new(null, [Diagnostic.Create(CompileFailed, new(file, line, 1, line, 1), error!)], [], [], []);
-
-    return ImportDump(file, dump, effective);
-  }
-
-  /// <summary>Imports a pre-dumped <c>B::PolypilerDump</c> JSON op tree into PolyIR.</summary>
-  /// <param name="file">The logical file path used in diagnostics and module naming.</param>
-  /// <param name="dump">The UTF-8 JSON bytes emitted by <c>B::PolypilerDump</c>.</param>
-  /// <param name="options">Import options including contracts.</param>
-  /// <returns>The imported module or diagnostics.</returns>
-  public static PerlImportResult ImportDump(string file, ReadOnlySpan<byte> dump, PerlImportOptions? options = null) {
-    ArgumentNullException.ThrowIfNull(file);
-    var effective = options ?? PerlImportOptions.Default;
-    PerlTree? tree;
-    try {
-      tree = JsonSerializer.Deserialize<PerlTree>(dump, PerlTreeJson.Options);
-    } catch (JsonException ex) {
-      return new(null, [Diagnostic.Create(CompileFailed, new(file, 1, 1, 1, 1), ex.Message)], [], [], []);
-    }
-    if (tree is not { Wire: 1 })
-      return new(null, [Diagnostic.Create(CompileFailed, new(file, 1, 1, 1, 1), "expected op-tree wire version 1")], [], [], []);
-
-    return PerlLowerer.LowerTree(file, tree, effective);
+    var (document, constants, diagnostic) = ParseDocument(file, source);
+    if (document is null)
+      return new(null, [diagnostic!], [], [], []);
+    return PerlLowerer.LowerTree(file, document, constants, effective);
   }
 
 }

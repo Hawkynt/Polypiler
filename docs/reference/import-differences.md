@@ -97,6 +97,47 @@ for on CPython's whole library and on every string of its tests. A source given 
 declared encoding the frontend has no decoder for (only UTF-8, Latin-1, ASCII, cp1252, KOI8-R,
 KOI8-U and ISO 8859-2, -5 and -15 are decoded) is refused by name rather than decoded otherwise.
 
+## Perl: what perl decides only while it runs
+
+The Perl frontend ([Perl frontend](../architecture/PERL-FRONTEND.md)) parses the source itself;
+where its verdict differs from perl's it is a defect, which the Perl layer looks for on the tests
+and modules of the perl distribution. perl's grammar depends on what its BEGIN-time code defines:
+a sub a module imports changes how a call of it parses. The frontend knows the exports of the
+modules its table names and the subs of explicit import lists; where the parse of a bareword would
+depend on a sub it cannot see, it refuses the file with `PLY1701` rather than guess.
+
+The lowering makes perl's compile-time decisions itself, so the imported module no longer depends on
+the perl that would have compiled it:
+
+| Source | What the imported code does |
+| --- | --- |
+| several packages, classes or exports | in the order of the file and of their names, where perl's randomised hash order gave a different order on every run |
+| `!1`, `1 == 1` and other folded comparisons | a boolean constant, where perl 5.42's own constants were refused |
+| `$a->[0] += 1`, `$h{k} -= 1` (a compound assignment to an element) | stores the result, which the import of perl's op tree dropped |
+| `$s .= 'x'` | appends, where the import of perl's op tree assigned |
+| `do { STATEMENTS; VALUE }` with statements before the value | refused (`PLY1702`), where the import of perl's op tree dropped the statements |
+
+## Classic Visual Basic: Variant
+
+The classic Visual Basic frontend ([frontend](../architecture/VISUALBASIC-FRONTEND.md#variant),
+[variants](variants.md)) gives a `Variant` local a fixed type only where every assignment has that type
+and no read can see it `Empty`; every other `Variant` is the IR's dynamic type, whose operators are
+the frontend's helpers. Where the result would depend on the kind a value has at run time, the
+decision is made by the kinds the inference found:
+
+| Place | Decision | What the imported code does |
+| --- | --- | --- |
+| integer arithmetic of a `Variant`, also of one given a fixed type | behaves like the original | promotes `Byte` → `Integer` → `Long` → `Double` (and `Single` → `Double`) where the typed operator would raise error 6 |
+| `Empty`, `Null` in operators, comparisons, conditions and conversions | behaves like the original | VBA's rules ([MS-VBAL] 5.6.9, 5.5.1.2); `Null` where a value is needed is error 94 |
+| the text of a value that may be a `Single` or a `Double` | refused (`PLY2646`) | none: Visual Basic writes it by the locale |
+| a `String` that may meet a number in arithmetic, a comparison with a typed value, a typed conversion, a condition or `IsNumeric` | refused (`PLY2646`) | none: Visual Basic reads it by the locale |
+| bitwise `And`/`Or`/`Xor`/`Not`, `Eqv`, `Imp` of a dynamic integer `Variant` | refused (`PLY2646`) | none, not modelled yet |
+
+LibreOffice Basic, the oracle, has rules of its own for `Variant`s (ADR 2600: every arithmetic
+result a `Double`, `Null & "a"` and the conversion of `Null` error 13, `Null And False` `Null`); the
+differential compares the fixture as written with the evidence file and the round trip, which writes
+VBA's rules out, with the documented values.
+
 ## Oracle differences
 
 These calls differ because the original runtime does something its own specification does not say,

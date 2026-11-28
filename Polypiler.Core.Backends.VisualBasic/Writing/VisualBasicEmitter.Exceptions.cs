@@ -30,6 +30,9 @@ public static partial class VisualBasicEmitter {
         return 91;
       if (type == IrExceptionClass.ArgumentException || type == IrExceptionClass.ArgumentOutOfRangeException)
         return 5;
+      // "Invalid use of Null", which a Variant that holds Null raises where a value is needed.
+      if (type == IrExceptionClass.InvalidOperationException)
+        return 94;
       return null;
     }
 

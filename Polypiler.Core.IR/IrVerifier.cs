@@ -429,6 +429,9 @@ public static partial class IrVerifier {
         case IrNone or IrSome or IrIsNone or IrUnwrap or IrCoalesce or IrIsNull or IrBind:
           this.Optional(expression);
           break;
+        case IrVariantOf or IrVariantTagOf or IrVariantValue:
+          this.Variant(expression);
+          break;
         case IrGenericEquals or IrGenericCompare:
           this.Generic(expression);
           break;
@@ -560,7 +563,7 @@ public static partial class IrVerifier {
     internal static bool InRange(IrConst constant) => constant.Type.Kind switch {
       IrTypeKind.Bool => constant.Value is 0 or 1,
       // An arbitrary-precision integer is a constant of its own node, IrBigConst.
-      IrTypeKind.BigInt or IrTypeKind.Void or IrTypeKind.Array or IrTypeKind.Struct or IrTypeKind.Span or IrTypeKind.ReadOnlySpan or IrTypeKind.Object or IrTypeKind.Optional or IrTypeKind.Function or IrTypeKind.Memory or IrTypeKind.ReadOnlyMemory => false,
+      IrTypeKind.BigInt or IrTypeKind.Variant or IrTypeKind.Void or IrTypeKind.Array or IrTypeKind.Struct or IrTypeKind.Span or IrTypeKind.ReadOnlySpan or IrTypeKind.Object or IrTypeKind.Optional or IrTypeKind.Function or IrTypeKind.Memory or IrTypeKind.ReadOnlyMemory => false,
       IrTypeKind.F32 => constant.Value is >= int.MinValue and <= int.MaxValue,
       IrTypeKind.F64 => true,
       _ => constant.Type.IsLong || (constant.Value >= IrOperators.Minimum(constant.Type) && constant.Value <= IrOperators.Maximum(constant.Type))

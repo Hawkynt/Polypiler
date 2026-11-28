@@ -88,7 +88,8 @@ public static partial class CSharpEmitter {
     [IrTypeKind.F32] = "float",
     [IrTypeKind.F64] = "double",
     [IrTypeKind.String] = "string",
-    [IrTypeKind.BigInt] = BigIntegerType
+    [IrTypeKind.BigInt] = BigIntegerType,
+    [IrTypeKind.Variant] = "object"
   };
 
   private static readonly Dictionary<IrUnaryOp, string> _unary = new() {
@@ -492,6 +493,7 @@ public static partial class CSharpEmitter {
     IrArraySequence => IrTree.Operands(expression),
     IrAwait or IrAsync => IrTree.Operands(expression),
     IrForeignCall or IrLastError => IrTree.Operands(expression),
+    IrVariantOf { Tag: not (IrVariantTag.Currency or IrVariantTag.Date) } or IrVariantTagOf or IrVariantValue { Tag: not (IrVariantTag.Currency or IrVariantTag.Date) } => IrTree.Operands(expression),
     _ => null
   };
 
@@ -795,8 +797,9 @@ public static partial class CSharpEmitter {
       // A portable implementation the legalization copied in is a helper: code of Polypiler's own the class carries.
       var emitted = this._module.Implementations.Select(pair => ImplementationSources.Helper(this._members[pair.Function].TrimStart('@'), pair.Implementation, "")).ToList();
 
-      // The table's order is the order of the helpers, whatever order the class calls them in.
-      foreach (var helper in this._table.Rows.Select(row => row.Helper).OfType<CSharpHelper>().Distinct().Where(this._used.Contains)) {
+      // The table's order is the order of the helpers, whatever order the class calls them in; those of
+      // the dynamic type, which every profile has, follow.
+      foreach (var helper in this._table.Rows.Select(row => row.Helper).OfType<CSharpHelper>().Distinct().Concat([CSharpVariantHelpers.Tag, CSharpVariantHelpers.Payload]).Where(this._used.Contains)) {
         var called = this._helpers.GetValueOrDefault(helper.Name, helper.Name);
         members.Add(this.Nesting(helper) with { Name = called, Leading = CsTrivia.Blank, IsHelper = true });
         emitted.Add(new(helper.Symbol(called), called, helper.Licence, helper.Origin, ""));
@@ -1294,6 +1297,8 @@ public static partial class CSharpEmitter {
           return this.Optional(expression);
         case IrThrowExpression thrown:
           return this.ThrowExpression(thrown);
+        case IrVariantOf or IrVariantTagOf or IrVariantValue:
+          return this.Variant(expression);
         case IrLambda or IrFunctionRef or IrBoundMethod or IrInvoke or IrConditional { Type.IsFunction: true } or IrReferenceEquals { Left.Type.IsFunction: true }:
           return this.FunctionNode(expression);
         case IrNew or IrNull or IrMethodCall or IrReferenceEquals or IrFieldLoad { Target.Type.IsObject: true } or IrStructEquals { Left.Type.IsObject: true }:
@@ -1362,6 +1367,12 @@ public static partial class CSharpEmitter {
       if (binary is { Left: IrIntrinsic { Op: IrIntrinsicOp.StrCompareOrdinal } ordinal, Right: IrConst { Value: 0 } }) {
         var compared = new CsInvocation(CSharpFragments.Expression("string.CompareOrdinal"), [this.Text(ordinal.Arguments[0]), this.Text(ordinal.Arguments[1])]) { Type = IrType.I32 };
         return (new CsBinary(compared, _binary[binary.Op], new CsIntegerLiteral(0) { Type = IrType.I32 }), Loose);
+      }
+
+      // A floating-point variable compared with itself is the test for a NaN, which C# warns about (CS1718) when written so.
+      if (binary is { Op: IrBinaryOp.Equal or IrBinaryOp.NotEqual, Left: IrLocalRef { Type.IsFloat: true } self, Right: IrLocalRef other } && self.Local == other.Local) {
+        var test = new CsInvocation(CSharpFragments.Expression(self.Type == IrType.F32 ? "float.IsNaN" : "double.IsNaN"), [this.Text(self)]) { Type = IrType.Bool };
+        return binary.Op == IrBinaryOp.NotEqual ? (test, Primary) : (new CsPrefixUnary("!", test) { Type = IrType.Bool }, Unary);
       }
 
       var type = binary.Left.Type;

@@ -5,6 +5,9 @@ internal static partial class PythonHelpers {
   /// <summary>A reference converted to a class: itself, or the cast trap.</summary>
   public const string Cast = "_ply_cast";
 
+  /// <summary>The payload of a value of the dynamic type, a tuple <c>(tag, payload)</c>, of a tag: the cast trap on another tag.</summary>
+  public const string Variant = "_ply_variant";
+
   /// <summary>An exception with its inner exception as its cause.</summary>
   public const string Caused = "_ply_caused";
 
@@ -65,6 +68,12 @@ internal static partial class PythonHelpers {
         if value is not None and not isinstance(value, kind):
             raise InvalidCastError("invalid cast")
         return value
+
+
+    def _ply_variant(value: tuple, tag: int) -> object:
+        if value[0] != tag:
+            raise InvalidCastError("invalid cast")
+        return value[1]
 
 
     def _ply_caused(error: BaseException, cause: object) -> BaseException:

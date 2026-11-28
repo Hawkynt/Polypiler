@@ -76,6 +76,7 @@ use supported syntax or helpers; they do not receive calls to APIs their framewo
 | Collections and sequences | BCL containers or helpers preserving the IR contract; iterators or lowered sequence operations |
 | Views and pointers | Profile-specific native forms or bounded emulation |
 | Arbitrary-precision integers | `System.Numerics.BigInteger` where the profile admits it |
+| The dynamic type `variant` ([variants](../reference/variants.md)) | `object`: `null` for `Empty`, `System.DBNull.Value` for `Null`, the payload boxed as its own type; the tag by `VariantTag`, the type of the box; a payload by the unboxing cast, through `VariantPayload` where the frontend has not tested the tag; every profile |
 
 The detailed per-family forms are in [records](../reference/records.md),
 [classes](../reference/classes.md), [optional values](../reference/optional-values.md),

@@ -1570,12 +1570,21 @@ codes:
   - code: PLY1700
     severity: error
     exit: InvalidSource
-    title: Perl compilation or op-tree helper failed
-    message: "Perl compilation failed: <detail>"
+    title: Perl syntax error or malformed contract
+    message: "Perl <detail>"
     rule: perl.frontend.compile
     area: perl
-    owner: "#438"
-    surfaces: "standard error of polypiler translate --from perl: syntax errors reported by perl, missing or 32-bit interpreter, or wire-format mismatch"
+    owner: "#1561"
+    surfaces: "standard error of polypiler translate --from perl, for a source that is no valid Perl as the frontend's own lexer and parser find it (Perl syntax error: ...) - an unbalanced bracket, an unterminated string or heredoc, a term where an operator belongs - or for a malformed --perl-contract (Perl compilation failed: ...); stops import"
+  - code: PLY1701
+    severity: error
+    exit: UnsupportedConstruct
+    title: Perl construct outside the parser
+    message: "Perl construct outside the parser: <construct>"
+    rule: perl.frontend.parse
+    area: perl
+    owner: "#1561"
+    surfaces: "standard error of polypiler translate --from perl, for a construct the parser does not decide without running the file - a source filter or keyword plugin, format, the class feature, a regex code block, a call whose parse depends on a sub a module or BEGIN code may define; stops import"
   - code: PLY1702
     severity: error
     exit: UnsupportedConstruct
