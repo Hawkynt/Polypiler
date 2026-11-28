@@ -113,6 +113,9 @@ public sealed partial class TranslateCommand : ICliCommand {
   private const string GoModuleOption = "--go-module";
   private const string VbLocaleOption = "--vb-locale";
 
+  /// <summary>The version of Python 3 a Python source is parsed for, such as <c>3.10</c>.</summary>
+  private const string PythonVersionOption = "--python-version";
+
   /// <summary>The caveat that records the overflow mode of a Rust import and where it came from.</summary>
   public const string RustOverflowCaveat = "rs-overflow-checks";
 
@@ -154,7 +157,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     [PackageFormatOption] = "JVM: whether to emit a JAR archive (jar) or standalone class files (class)",
     [VBScriptContractOption] = "VBScript: file or inline contract line specifying parameter, return or field types",
     [GoModuleOption] = "Go: the module path go.mod declares, whose last element names the package",
-    [VbLocaleOption] = "classic Visual Basic source: the regional settings it runs under, whose separators CStr writes and CDbl reads (default en-US)"
+    [VbLocaleOption] = "classic Visual Basic source: the regional settings it runs under, whose separators CStr writes and CDbl reads (default en-US)",
+    [PythonVersionOption] = "Python source: the version of Python 3 the source is written for, 3.8 to 3.14 (the default); later constructs are syntax errors"
   };
 
   private readonly Backend[] _backendsOfThis;
@@ -178,7 +182,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   private static readonly Frontend[] _frontends = [
     new("csharp", [new(Instantiate, "<method[type,...]>")], InstantiateMisuse, ImportCSharp),
     new("javascript", [new(Export, "<name>[,<name>...]"), new(ExplainTypes, null)], ExportMisuse, ImportJavaScript),
-    new("python", [], _ => null, ImportPython),
+    new("python", [new(PythonVersionOption, "<3.8..3.14>")], PythonVersionMisuse, ImportPython),
     new("rust", [new(OverflowChecksOption, "<panic|wrap>"), new(CargoProfileOption, "<name>"), new(DebugAssertionsOption, "<on|off>")], OverflowChecksMisuse, ImportRust),
     new("perl", [new(PerlContractOption, "<file-or-line>")], _ => null, ImportPerl),
     new("batch", [new(BatchDialectOption, "<cmd|dos622>")], BatchDialectMisuse, ImportBatch),
@@ -574,10 +578,6 @@ public sealed partial class TranslateCommand : ICliCommand {
   }
 
   /// <summary>
-  /// Imports Python, parsed by the installed CPython. What the imported code is known to do
-  /// differently from the original is written as a note, as it is for JavaScript.
-  /// </summary>
-  /// <summary>
   /// Imports Go, parsed and type-checked by the frontend's own scanner, parser and type checker,
   /// without any Go installed. What the imported code is known to do differently is a note and a caveat of the manifest.
   /// </summary>
@@ -593,8 +593,13 @@ public sealed partial class TranslateCommand : ICliCommand {
     return (imported.Module, failure, [.. imported.Caveats.Select(caveat => new ManifestMessage(caveat.Id, caveat.Description))]);
   }
 
+  /// <summary>
+  /// Imports Python, tokenized, parsed and checked by the frontend itself as CPython does it, for the
+  /// version <c>--python-version</c> names, without any Python installed. What the imported code is
+  /// known to do differently from the original is written as a note, as it is for JavaScript.
+  /// </summary>
   private static (IrModule? Module, int ExitCode, IReadOnlyList<ManifestMessage> Caveats) ImportPython(string file, string source, IReadOnlyDictionary<string, string> options, CliContext context) {
-    var imported = PythonFrontend.Import(file, source);
+    var imported = PythonFrontend.Import(file, source, new PythonImportOptions { Version = PythonVersionOf(options) ?? PythonFrontend.LatestVersion });
     foreach (var diagnostic in imported.Diagnostics)
       context.Report(diagnostic);
 
@@ -613,6 +618,19 @@ public sealed partial class TranslateCommand : ICliCommand {
       context.Report(diagnostic);
     return (imported.Module, imported.Diagnostics.FirstOrDefault()?.ExitCode is { } code ? (int)code : InvalidSource, []);
   }
+
+  /// <summary>The minor version <c>--python-version 3.N</c> names, or <see langword="null"/> where the option is missing or names no version of the frontend.</summary>
+  private static int? PythonVersionOf(IReadOnlyDictionary<string, string> options)
+    => options.TryGetValue(PythonVersionOption, out var text) && text.StartsWith("3.", StringComparison.Ordinal)
+      && int.TryParse(text.AsSpan(2), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var minor)
+      && minor is >= PythonFrontend.MinimumVersion and <= PythonFrontend.LatestVersion
+      ? minor
+      : null;
+
+  private static string? PythonVersionMisuse(IReadOnlyDictionary<string, string> options)
+    => options.TryGetValue(PythonVersionOption, out var version) && PythonVersionOf(options) is null
+      ? $"unknown Python version '{version}'; the versions are 3.{PythonFrontend.MinimumVersion} to 3.{PythonFrontend.LatestVersion}"
+      : null;
 
   private static string? BatchDialectMisuse(IReadOnlyDictionary<string, string> options)
     => options.TryGetValue(BatchDialectOption, out var name) && name is not ("cmd" or "dos622")

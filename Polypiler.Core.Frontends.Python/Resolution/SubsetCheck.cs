@@ -80,7 +80,7 @@ internal sealed class SubsetCheck(ModuleModel module, IReadOnlyDictionary<PyNode
         if (this._finally > 0)
           this.Refuse(statement, PythonFrontend.UnsupportedExceptionDescriptor, "exception construct 'return in finally' is not supported by the Python frontend");
 
-        if (statement.Node("value") is { } returned && !(returned.Is("Constant") && returned.Text("kind") == "none"))
+        if (statement.Node("value") is { } returned && !(returned.Is("Constant") && returned.ConstantKind == "none"))
           this.Expression(returned);
 
         break;
@@ -117,7 +117,7 @@ internal sealed class SubsetCheck(ModuleModel module, IReadOnlyDictionary<PyNode
         break;
       case "Assert":
         this.Expression(statement.Node("test")!);
-        if (statement.Node("msg") is { } message && !(message.Is("Constant") && message.Text("kind") == "str"))
+        if (statement.Node("msg") is { } message && !(message.Is("Constant") && message.ConstantKind == "str"))
           this.Refuse(message, PythonFrontend.UnsupportedStatementDescriptor, "statement 'assert' with a message other than a string literal is not supported by the Python frontend");
 
         break;
@@ -181,7 +181,6 @@ internal sealed class SubsetCheck(ModuleModel module, IReadOnlyDictionary<PyNode
 
   private static string Keyword(PyNode statement) => statement.Kind switch {
     "TypeAlias" => "type",
-    "AsyncFor" => "async for",
     _ => statement.Kind.ToLowerInvariant()
   };
 
@@ -356,7 +355,7 @@ internal sealed class SubsetCheck(ModuleModel module, IReadOnlyDictionary<PyNode
     if (value.Is("UnaryOp") && value.Operator() == "USub")
       value = value.Node("operand")!;
 
-    return value.Is("Constant") && value.Text("kind") is "int" or "float" or "str";
+    return value.Is("Constant") && value.ConstantKind is "int" or "float" or "str";
   }
 
   /// <summary>Whether a value pattern is a member of an enum of the module: <c>E.A</c>.</summary>
@@ -374,10 +373,10 @@ internal sealed class SubsetCheck(ModuleModel module, IReadOnlyDictionary<PyNode
   private void Expression(PyNode expression) {
     switch (expression.Kind) {
       case "Constant":
-        var kind = expression.Text("kind");
+        var kind = expression.ConstantKind;
         if (kind is not ("int" or "float" or "bool" or "none" or "str" or "bytes"))
           this.Refuse(expression, PythonFrontend.UnsupportedDescriptor, $"'{this.Quote(expression)}' is not supported by the Python frontend");
-        else if (expression.Flag("surrogatePair"))
+        else if (expression.SurrogatePair)
           this.Refuse(expression, PythonFrontend.UnsupportedStringDescriptor,
             "string operation 'a str of a lone high surrogate before a lone low one, which the UTF-16 of the IR holds as one code point,' is not supported by the Python frontend");
 
@@ -440,9 +439,6 @@ internal sealed class SubsetCheck(ModuleModel module, IReadOnlyDictionary<PyNode
       case "Yield" or "YieldFrom":
         this.Refuse(expression, PythonFrontend.EscapingFunctionDescriptor, Escaping(this._function!.Name) + " (a yield used as a value: #760)");
         break;
-      case "Await":
-        this.Refuse(expression, PythonFrontend.EscapingFunctionDescriptor, Escaping(this._function!.Name) + " (coroutines: #752)");
-        break;
       case "JoinedStr" or "TemplateStr":
         this.Refuse(expression, PythonFrontend.UnsupportedStringDescriptor, "string operation 'f-string' is not supported by the Python frontend");
         break;
@@ -482,10 +478,8 @@ internal sealed class SubsetCheck(ModuleModel module, IReadOnlyDictionary<PyNode
   }
 
   private void Comprehension(PyNode comprehension) {
+    // await and async comprehensions compile only inside a coroutine, which is refused as a whole.
     foreach (var generator in comprehension.Nodes("generators")) {
-      if (generator.Number("is_async") == 1)
-        this.Refuse(generator, PythonFrontend.EscapingFunctionDescriptor, Escaping(this._function!.Name) + " (coroutines: #752)");
-
       this.Target(generator.Node("target")!, true);
       this.Expression(generator.Node("iter")!);
       foreach (var condition in generator.Nodes("ifs"))

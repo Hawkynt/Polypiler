@@ -22,9 +22,9 @@ internal static class TypeHints {
     switch (hint.Kind) {
       case "Name":
         return Named(hint.Text("id")!, module);
-      case "Constant" when hint.Text("kind") == "none":
+      case "Constant" when hint.ConstantKind == "none":
         return PyType.None;
-      case "Constant" when hint.Text("kind") == "str":
+      case "Constant" when hint.ConstantKind == "str":
         return new HintText(hint.Text("value")!, module).Read();
       case "Attribute" when hint.Node("value") is { Kind: "Name" } owner && module.Imports.TryGetValue(owner.Text("id")!, out var binding)
           && binding.User is { } user && binding.Name is null:
@@ -135,7 +135,7 @@ internal static class TypeHints {
     var index = hint.Node("slice")!;
     var arguments = index.Is("Tuple") ? index.Nodes("elts") : [index];
     var name = head.Is("Name") && !module.Imports.ContainsKey(head.Text("id")!) ? head.Text("id") : new ClassCollector(module, []).Library(head, "typing") ?? new ClassCollector(module, []).Library(head, "collections.abc");
-    var types = arguments.Select(argument => argument.Is("Constant") && argument.Text("kind") == "ellipsis" ? null : Of(argument, module)).ToList();
+    var types = arguments.Select(argument => argument.Is("Constant") && argument.ConstantKind == "ellipsis" ? null : Of(argument, module)).ToList();
     return Generic(name, types);
   }
 

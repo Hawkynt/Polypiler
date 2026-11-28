@@ -10,9 +10,9 @@ namespace Polypiler.Tests.Frontends.Python;
 [TestFixture]
 public sealed class SubsetCheckTests {
 
-  /// <summary>Imports a snippet beside a module <c>helper</c> it imports, both from their recorded trees.</summary>
+  /// <summary>Imports a snippet beside a module <c>helper</c> it imports.</summary>
   private static PythonImportResult WithHelper(string source, string helper)
-    => PythonSnippet.Import(source, new PythonImportOptions { Modules = name => name == "helper" ? ("helper.py", helper, PythonFixture.Dump("helper.py", helper)) : null });
+    => PythonSnippet.Import(source, new PythonImportOptions { Modules = name => name == "helper" ? ("helper.py", helper) : null });
 
   /// <summary>What the interpreter does for a call of a function of a snippet imported beside <c>helper</c>.</summary>
   private static string RunWithHelper(string source, string helper, string function, object[] arguments) {
@@ -34,9 +34,9 @@ public sealed class SubsetCheckTests {
   /// <summary>A loop variable that is no name - a parenthesized tuple holds names, an attribute does not - is refused. Each is refused with exactly these diagnostics.</summary>
   [TestCase("def f(n: int) -> int:\n    xs = [1]\n    for xs[0] in [1]:\n        pass\n    return 0\n", "snippet.py(3,9): error PLY1810: statement 'a loop variable other than names' is not supported by the Python frontend")]
   [TestCase("def f(n: int) -> int:\n    t = [x for x[0] in [[1]]]\n    return 0\n", "snippet.py(2,10): error PLY1833: 'x' is neither part of this import nor in the Python call map\nsnippet.py(2,16): error PLY1810: statement 'a loop variable other than names' is not supported by the Python frontend")]
-  [TestCase("def f(n: int) -> int:\n    *a = [1]\n    return 0\n", "snippet.py(2,5): error PLY1810: statement 'starred assignment target' is not supported by the Python frontend")]
-  [TestCase("def f(n: int) -> int:\n    for *a in [[1]]:\n        pass\n    return 0\n", "snippet.py(2,9): error PLY1810: statement 'starred assignment target' is not supported by the Python frontend")]
-  [TestCase("def f(n: int) -> int:\n    return len([1 for *a in [[1]]])\n", "snippet.py(2,23): error PLY1810: statement 'starred assignment target' is not supported by the Python frontend")]
+  [TestCase("def f(n: int) -> int:\n    *a = [1]\n    return 0\n", "snippet.py(2,5): error PLY1800: SyntaxError: starred assignment target must be in a list or tuple")]
+  [TestCase("def f(n: int) -> int:\n    for *a in [[1]]:\n        pass\n    return 0\n", "snippet.py(2,9): error PLY1800: SyntaxError: starred assignment target must be in a list or tuple")]
+  [TestCase("def f(n: int) -> int:\n    return len([1 for *a in [[1]]])\n", "snippet.py(2,23): error PLY1800: SyntaxError: starred assignment target must be in a list or tuple")]
   [TestCase("def f(n: int) -> int:\n    for (a, b) in [(1, 2)]:\n        pass\n    for x.y in [1]:\n        pass\n    return 0\n", "snippet.py(4,9): error PLY1810: statement 'a loop variable other than names' is not supported by the Python frontend")]
   public void Targets_AreRefused(string source, string expected)
     => Assert.That(string.Join("\n", PythonSnippet.Refusals(source)), Is.EqualTo(expected));
@@ -58,12 +58,12 @@ public sealed class SubsetCheckTests {
   [TestCase("def f(n: int) -> int:\n    x = 1j\n    return 0\n", "snippet.py(2,9): error PLY1802: '1j' is not supported by the Python frontend")]
   [TestCase("def f(n: int) -> int:\n    x = ...\n    return 0\n", "snippet.py(2,9): error PLY1802: '...' is not supported by the Python frontend")]
   [TestCase("def f(n: int) -> int:\n    x = lambda: 1\n    return 0\n", "snippet.py(2,9): error PLY1832: the function value 'lambda: 1' escapes, or 'lambda: 1' is a generator or coroutine; only direct calls, nested functions called by name and lambdas passed to the listed built-ins are imported (escaping function values: #753)")]
-  [TestCase("def f(n: int) -> int:\n    return [x async for x in n]\n", "snippet.py(1,1): error PLY1832: the function value 'f' escapes, or 'f' is a generator or coroutine; only direct calls, nested functions called by name and lambdas passed to the listed built-ins are imported (coroutines: #752)")]
+  [TestCase("def f(n: int) -> int:\n    return [x async for x in n]\n", "snippet.py(2,12): error PLY1800: SyntaxError: asynchronous comprehension outside of an asynchronous function")]
   [TestCase("def f(n: int) -> str:\n    return f\"{n}\"\n", "snippet.py(2,12): error PLY1822: string operation 'f-string' is not supported by the Python frontend")]
   [TestCase("def f(n: int) -> int:\n    return n @ n\n", "snippet.py(2,12): error PLY1802: '@' is not supported by the Python frontend")]
   [TestCase("def f(n: int) -> int:\n    n @= n\n    return n\n", "snippet.py(2,5): error PLY1802: '@' is not supported by the Python frontend")]
   [TestCase("def f(n: int) -> int:\n    x = (yield n)\n    return 0\n", "snippet.py(2,10): error PLY1832: the function value 'f' escapes, or 'f' is a generator or coroutine; only direct calls, nested functions called by name and lambdas passed to the listed built-ins are imported (a yield used as a value: #760)")]
-  [TestCase("def f(n: int) -> int:\n    x = await n\n    return 0\n", "snippet.py(2,9): error PLY1832: the function value 'f' escapes, or 'f' is a generator or coroutine; only direct calls, nested functions called by name and lambdas passed to the listed built-ins are imported (coroutines: #752)")]
+  [TestCase("def f(n: int) -> int:\n    x = await n\n    return 0\n", "snippet.py(2,9): error PLY1800: SyntaxError: 'await' outside async function")]
   public void Expressions_AreRefused(string source, string expected)
     => Assert.That(string.Join("\n", PythonSnippet.Refusals(source)), Is.EqualTo(expected));
 
@@ -78,14 +78,14 @@ public sealed class SubsetCheckTests {
   [TestCase("def f(n: int) -> int:\n    import math\n    return 0\n", "snippet.py(2,5): error PLY1833: 'import math' is neither part of this import nor in the Python call map: an import inside a function")]
   [TestCase("def f(n: int) -> int:\n    class C:\n        pass\n    return 0\n", "snippet.py(2,5): error PLY1840: 'nested class C' is outside the first Python subset (dataclasses, simple final classes, enums)")]
   [TestCase("def f(n: int) -> int:\n    type T = int\n    return 0\n", "snippet.py(2,5): error PLY1810: statement 'type' is not supported by the Python frontend")]
-  [TestCase("def f(n: int) -> int:\n    async for x in n:\n        pass\n    return 0\n", "snippet.py(2,5): error PLY1810: statement 'async for' is not supported by the Python frontend")]
+  [TestCase("def f(n: int) -> int:\n    async for x in n:\n        pass\n    return 0\n", "snippet.py(2,5): error PLY1800: SyntaxError: 'async for' outside async function")]
   [TestCase("def f(n: int) -> int:\n    del n.x\n    return 0\n", "snippet.py(2,9): error PLY1844: attribute 'x' of class 'n' is created dynamically; only attributes assigned in __init__ or declared as dataclass fields are imported (del)")]
   [TestCase("def f(n: int) -> int:\n    xs = [1]\n    del xs[0]\n    return 0\n", "snippet.py(3,9): error PLY1820: sequence operation 'del xs[0]' is not supported by the Python frontend")]
   [TestCase("def f(n: int) -> int:\n    xs = [1]\n    del xs[0:1]\n    return 0\n", "snippet.py(3,9): error PLY1821: slice form 'del xs[0:1]' is not supported; slices are imported as values only")]
   [TestCase("def f(n: int) -> int:\n    del n\n    return 0\n", "snippet.py(2,9): error PLY1810: statement 'del' is not supported by the Python frontend")]
   [TestCase("def f(n: int) -> int:\n    global Q\n    return 0\n", "snippet.py(2,5): error PLY1833: 'global Q' is neither part of this import nor in the Python call map: 'Q' is assigned at no module level")]
-  [TestCase("def f(n: int) -> int:\n    nonlocal n\n    return 0\n", "snippet.py(2,5): error PLY1833: 'nonlocal n' is neither part of this import nor in the Python call map: no enclosing function binds 'n'")]
-  [TestCase("def f(n: int) -> int:\n    def g() -> int:\n        nonlocal q\n        return 0\n    return g()\n", "snippet.py(3,9): error PLY1833: 'nonlocal q' is neither part of this import nor in the Python call map: no enclosing function binds 'q'")]
+  [TestCase("def f(n: int) -> int:\n    nonlocal n\n    return 0\n", "snippet.py(2,5): error PLY1800: SyntaxError: name 'n' is parameter and nonlocal")]
+  [TestCase("def f(n: int) -> int:\n    def g() -> int:\n        nonlocal q\n        return 0\n    return g()\n", "snippet.py(3,9): error PLY1800: SyntaxError: no binding for nonlocal 'q' found")]
   [TestCase("def f(n: int) -> int:\n    assert n, n\n    return 0\n", "snippet.py(2,15): error PLY1810: statement 'assert' with a message other than a string literal is not supported by the Python frontend")]
   [TestCase("def f(n: int) -> int:\n    try:\n        pass\n    finally:\n        return 1\n", "snippet.py(5,9): error PLY1843: exception construct 'return in finally' is not supported by the Python frontend")]
   [TestCase("def f(n: int) -> int:\n    for i in range(n):\n        try:\n            pass\n        finally:\n            break\n    return 0\n", "snippet.py(6,13): error PLY1843: exception construct 'break in finally' is not supported by the Python frontend")]
@@ -104,7 +104,7 @@ public sealed class SubsetCheckTests {
   [TestCase("def f(n: int) -> int:\n    f(n).x = 2\n    return 0\n", "snippet.py(2,5): error PLY1802: 'assignment to the attribute x of a value of the type int, which raises AttributeError,' is not supported by the Python frontend")]
   [TestCase("def f(n: int) -> int:\n    match n:\n        case [a, b]:\n            return 1\n    return 0\n", "snippet.py(3,14): error PLY1812: match pattern '[a, b]' is not supported; supported are literals, members of an enum, '|', captures, '_' and guards")]
   [TestCase("def f(n: int) -> int:\n    match n:\n        case (1 | 2) as k:\n            return 1\n    return 0\n", "snippet.py(3,14): error PLY1812: match pattern '(1 | 2) as k' is not supported; supported are literals, members of an enum, '|', captures, '_' and guards")]
-  [TestCase("def f(n: int) -> int:\n    match n:\n        case 1 | k:\n            return 1\n    return 0\n", "snippet.py(3,18): error PLY1812: match pattern 'k' is not supported; supported are literals, members of an enum, '|', captures, '_' and guards")]
+  [TestCase("def f(n: int) -> int:\n    match n:\n        case 1 | k:\n            return 1\n    return 0\n", "snippet.py(3,14): error PLY1800: SyntaxError: alternative patterns bind different names")]
   public void Statements_AreRefused(string source, string expected)
     => Assert.That(string.Join("\n", PythonSnippet.Refusals(source)), Is.EqualTo(expected));
 
@@ -209,7 +209,7 @@ public sealed class SubsetCheckTests {
     => Assert.That(PythonSnippet.Run(source, function, arguments), Is.EqualTo(expected));
 
   /// <summary>An unpacking star outside a call is refused as an expression and inside a subscript as a display element. Each is refused with exactly these diagnostics.</summary>
-  [TestCase("def f(n: int) -> int:\n    x = *n\n    return 0\n", "snippet.py(2,9): error PLY1830: 'unpacked arguments in *n' is not supported for functions by the Python frontend")]
+  [TestCase("def f(n: int) -> int:\n    x = *n\n    return 0\n", "snippet.py(2,9): error PLY1800: SyntaxError: can't use starred expression here")]
   [TestCase("def f(n: int) -> int:\n    return [1][*n]\n", "snippet.py(2,16): error PLY1820: sequence operation '*n in a display' is not supported by the Python frontend")]
   public void Starred_AreRefused(string source, string expected)
     => Assert.That(string.Join("\n", PythonSnippet.Refusals(source)), Is.EqualTo(expected));

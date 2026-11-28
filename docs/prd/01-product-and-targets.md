@@ -118,7 +118,7 @@ A frontend and backend are **different deliverables**. A file named `PythonEmitt
 | C++ (C++17/20/23 profiles) | Clang-based semantic import or parser | C++ emitter | templates after monomorphization, containers, numeric kernels | P3–P4 |
 | Kotlin (JVM version pinned) | Kotlin compiler/PSI/FIR metadata import or dedicated semantic frontend | Kotlin emitter | numeric loops, arrays, data classes, simple image kernels | P3 |
 | Perl (Perl 5, version pinned) | Perl parser + explicit context/type semantics | Perl emitter/CPAN composer | numeric functions, arrays, hashes, loops, modules | P3 |
-| Python (3.x profile pinned) | Python AST + resolver | Python emitter/PyPI composer | typed or inferable functions, arrays/lists, comprehensions | P3 |
+| Python (3.x profile pinned) | own tokenizer, PEG parser and compile-time checks (CPython's ast and compile as the layer oracle) + resolver | Python emitter/PyPI composer | typed or inferable functions, arrays/lists, comprehensions | P3 |
 | TypeScript (version pinned) | TS compiler API typed AST | TS emitter | structural object shapes, typed numerical functions | P4 |
 | Java (JDK 17/21 profiles) | Java compiler AST / parser with semantic binding | Java emitter | numerical libraries, arrays, records/classes | P4 |
 | Go (modern pinned release) | own scanner, parser and type checker (go/parser and go/types as the layer oracle) | Go emitter | functions, slices, structs, numerical loops | P4 |

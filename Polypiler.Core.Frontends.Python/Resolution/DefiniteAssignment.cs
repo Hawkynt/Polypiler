@@ -245,10 +245,10 @@ internal sealed class DefiniteAssignment(SourceFile file, FunctionModel function
 
   /// <summary>Whether a condition is a constant that is true: <c>while True</c>, <c>while 1</c>.</summary>
   private static bool AlwaysTrue(PyNode test)
-    => test.Is("Constant") && test.Text("kind") switch {
-      "bool" => test.Text("value") == "True",
-      "int" => test.Text("value") != "0",
-      "float" => Constants.Float(test.Text("value")!) != 0,
+    => test.Is("Constant") && test.ConstantKind switch {
+      "bool" => test.Value is true,
+      "int" => !((System.Numerics.BigInteger)test.Value!).IsZero,
+      "float" => (double)test.Value! != 0,
       _ => false
     };
 

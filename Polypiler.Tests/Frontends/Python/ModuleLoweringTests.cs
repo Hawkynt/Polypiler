@@ -17,7 +17,7 @@ namespace Polypiler.Tests.Frontends.Python;
 [TestFixture]
 public sealed class ModuleLoweringTests {
 
-  /// <summary>Imports a main module and the modules it imports from their sources, each from its recorded tree; a module with submodules is a package.</summary>
+  /// <summary>Imports a main module and the modules it imports from their sources, parsed by the frontend; a module with submodules is a package.</summary>
   private static PythonImportResult Import(string main, params (string Name, string Source)[] modules) {
     var sources = modules.ToDictionary(module => module.Name, module => module.Source);
     return PythonFixture.Import("main.py", main, new PythonImportOptions {
@@ -27,7 +27,7 @@ public sealed class ModuleLoweringTests {
 
         var package = modules.Any(module => module.Name.StartsWith(name + ".", System.StringComparison.Ordinal));
         var path = name.Replace('.', '/') + (package ? "/__init__.py" : ".py");
-        return (path, source, PythonFixture.Dump(path, source));
+        return (path, source);
       }
     });
   }
@@ -206,15 +206,9 @@ public sealed class ModuleLoweringTests {
       System.IO.File.WriteAllText(System.IO.Path.Combine(directory, "pkg", "__init__.py"), "def one() -> int:\n    return 1\n");
       var path = System.IO.Path.Combine(directory, "main.py");
       const string source = "from helper import twice\nfrom pkg import one\n\ndef f(n: int) -> int:\n    return twice(n) + one()\n";
-      var result = PythonFrontend.ImportDump(path, source, PythonFixture.Dump("main.py", source), new PythonImportOptions {
-        Modules = null,
-        Interpreter = null
-      });
-      // The modules on disk are parsed by the interpreter; without one the import names why it has none.
-      if (result.Module is not null)
-        Assert.That(PythonOutcome.Interpreted(result.Module, new PythonCall("f", [4L])), Is.EqualTo("int 9"));
-      else
-        Assert.That(result.Diagnostics.Select(found => found.Code), Has.All.EqualTo(PythonFrontend.SyntaxError));
+      // The modules on disk are parsed by the frontend as the source is.
+      var result = PythonFrontend.Import(path, source, new PythonImportOptions { Modules = null });
+      Assert.That(PythonOutcome.Interpreted(PythonFixture.Module(result), new PythonCall("f", [4L])), Is.EqualTo("int 9"));
     } finally {
       System.IO.Directory.Delete(directory, true);
     }
