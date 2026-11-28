@@ -1,3 +1,4 @@
+using System.Linq;
 using NUnit.Framework;
 using Polypiler.Core.Frontends.VisualBasic;
 
@@ -21,6 +22,25 @@ public sealed class VisualBasicFixtureCaseTests {
     var module = ClassicCases.Import(fixture, cases, parsed);
     var documented = ClassicCases.Lines(expected);
     Assert.That(ClassicCases.Interpret(module, documented.Count), Is.EqualTo(documented));
+  }
+
+  [TestCase("Locale.bas", "Locale.cases.txt", "PlyFmtR8(", "PlyFmtR4(", "PlyParseR8(")]
+  [TestCase("Bitwise.bas", "Bitwise.cases.txt", "PlyVarBits_(", "PlyVarBitNot_(", "As Variant")]
+  [TestCase("Inference.bas", "Inference.cases.txt", "Add_Long_Long(", "Twice_String(", "Public Function Scaled(")]
+  public void Fixture_TranslatesToVisualBasic(string fixture, string cases, string first, string second, string third) {
+    var module = ClassicCases.Import(fixture, cases);
+    foreach (var profile in Polypiler.Core.Backends.VisualBasic.VisualBasicProfile.All) {
+      var translated = Polypiler.Tests.Backends.VisualBasic.VisualBasicFixtures.Translate(module, profile);
+      Assert.That(translated.Problems, Is.Empty, profile.Name);
+      Assert.That(translated.Source, Does.Contain(first).And.Contain(second).And.Contain(third), profile.Name);
+    }
+  }
+
+  [Test]
+  public void CurrencyFixture_TranslatesToVisualBasicWithLongLongAlone() {
+    var module = ClassicCases.Import("CurrencyDate.bas", "CurrencyDate.cases.txt");
+    Assert.That(Polypiler.Tests.Backends.VisualBasic.VisualBasicFixtures.Translate(module, Polypiler.Core.Backends.VisualBasic.VisualBasicProfile.Vba7x64).Problems, Is.Empty);
+    Assert.That(Polypiler.Tests.Backends.VisualBasic.VisualBasicFixtures.Translate(module, Polypiler.Core.Backends.VisualBasic.VisualBasicProfile.Vba7).Problems, Has.Some.Contains("LongLong"));
   }
 
   [TestCase("Locale.expected.txt", "Locale.libreoffice-26.8.3.1.txt", 46)]

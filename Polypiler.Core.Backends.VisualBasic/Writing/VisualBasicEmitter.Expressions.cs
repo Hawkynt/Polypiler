@@ -165,6 +165,12 @@ public static partial class VisualBasicEmitter {
           return new VbCall(new VbName(this.StructHelper(EqualsPrefix, type)), [this.Variable(equals.Left, pair[0]), this.Variable(equals.Right, pair[1])]);
         case IrIntrinsic intrinsic:
           return this.Intrinsic(intrinsic);
+        case IrBind bind when !bind.Local.Type.IsArray && !bind.Local.Type.IsStruct:
+          // An assignment as a value - an operand a pass evaluates once and reads twice - is the
+          // assignment before the expression and the variable in it.
+          var bound = this.Expression(bind.Value);
+          this._out.Add(new VbAssign(new VbName(this.LocalName(bind.Local)), bound));
+          return new VbName(this.LocalName(bind.Local));
         case IrVariantOf made:
           return this.VariantOf(made);
         case IrVariantTagOf tag:
@@ -380,6 +386,7 @@ public static partial class VisualBasicEmitter {
         (IrBinaryOp.SubtractChecked, false) => Native("-"),
         (IrBinaryOp.MultiplyChecked, false) => Native("*"),
         (IrBinaryOp.Divide, false) => Native("\\"),
+        (IrBinaryOp.Remainder, false) => Native("Mod"),
         (IrBinaryOp.And, _) => new VbBinary(left, "And", right),
         (IrBinaryOp.Or, _) => new VbBinary(left, "Or", right),
         (IrBinaryOp.Xor, _) => new VbBinary(left, "Xor", right),

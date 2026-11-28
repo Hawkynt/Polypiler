@@ -44,7 +44,8 @@ flowchart LR
 | `i8`, `i16` | `Integer`, an `i8` held in its range |
 | `u16`, `i32` | `Long` |
 | `u32` | the bits of a `Long`; compared with the sign bit flipped |
-| `i64`, `u64` | `LongLong` (`vba7-64`), otherwise refused with `PLY2656` |
+| `i64`, `u64` | `LongLong` (`vba7-64`, its checked `+ - *`, `\` and `Mod` the operators of the type), otherwise refused with `PLY2656` |
+| `IrBind`, an assignment as a value | the assignment before the expression, the variable in it |
 | `f32`, `f64` | `Single`, `Double` |
 | string | `String`; a character outside printable ASCII as `ChrW(n)` |
 | array | a dynamic array from 0; an empty one has no bounds, so its length is `PlyLen_<T>` |
