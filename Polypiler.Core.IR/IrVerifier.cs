@@ -129,6 +129,14 @@ public static partial class IrVerifier {
 
     /// <summary>A declared type - a struct, an enum, a class, or an array of one - is one the module declares.</summary>
     private void Declared(IrType type) {
+      if (type.UnionType is { } union) {
+        this.Require(IrUnions.Problem(type) is null, $"the type {type} is no union of the IR: {IrUnions.Problem(type)}");
+        foreach (var member in union.Members)
+          this.Declared(member);
+
+        return;
+      }
+
       if (type.IsCollection) {
         this.Declared(type.Element!);
         if (type.Key is { } key)
@@ -431,6 +439,9 @@ public static partial class IrVerifier {
           break;
         case IrVariantOf or IrVariantTagOf or IrVariantValue:
           this.Variant(expression);
+          break;
+        case IrUnionOf or IrUnionTagOf or IrUnionValue:
+          this.Union(expression);
           break;
         case IrGenericEquals or IrGenericCompare:
           this.Generic(expression);

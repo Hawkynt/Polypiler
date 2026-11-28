@@ -256,6 +256,9 @@ public static partial class IrInterpreter {
     if (type.IsVariant)
       return AcceptedVariant(value);
 
+    if (type.IsUnion)
+      return AcceptedUnion(type, value);
+
     if (type.Element is { IsVariant: true } && type.IsArray)
       return AcceptedVariants(value);
 
@@ -352,6 +355,7 @@ public static partial class IrInterpreter {
     Settled settled => Settle(type, settled),
     not null when type.IsOptional => OptionalToHost(type, value),
     Tagged variant => VariantToHost(variant),
+    Member member => UnionToHost(type, member),
     object[] elements when type.Element is { IsVariant: true } => VariantsToHost(elements),
     View view => ToArray(view),
     Record record => record.Fields.Select((field, index) => ToHost(type.StructType!.Fields[index].Type, field)).ToArray(),
@@ -627,6 +631,8 @@ public static partial class IrInterpreter {
           return this.Optional(expression, frame);
         case IrVariantOf or IrVariantTagOf or IrVariantValue:
           return this.Variant(expression, frame);
+        case IrUnionOf or IrUnionTagOf or IrUnionValue:
+          return this.Union(expression, frame);
         case IrCollection operation:
           return this.Collection(operation, frame);
         case IrLambda or IrFunctionRef or IrBoundMethod or IrInvoke:

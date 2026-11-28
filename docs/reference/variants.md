@@ -5,7 +5,7 @@ The dynamic type of the IR: a value that carries its own tag, as Visual Basic's 
 is taken out; what a language computes with its dynamic values - Visual Basic's promotion of `Integer`
 arithmetic to `Long`, its `Null` - is the frontend's code written over those three operations, so
 every backend that has them computes what the source language computes.
-Related: [repository README](../../README.md) · [ADR 0300, static types first](../adr/0300-static-types-first.md) · [optional values](optional-values.md) ·
+Related: [repository README](../../README.md) · [ADR 0300, static types first](../adr/0300-static-types-first.md) · [closed unions](unions.md) · [optional values](optional-values.md) ·
 [exceptions](exceptions.md) · [the classic Visual Basic frontend](../architecture/VISUALBASIC-FRONTEND.md) ·
 [IR and analysis](../architecture/IR.md).
 

@@ -55,6 +55,9 @@ public static class IrShape {
       (IrVariantOf a, IrVariantOf b) => a.Tag == b.Tag && (a.Value is null ? b.Value is null : b.Value is not null && Same(a.Value, b.Value)),
       (IrVariantTagOf a, IrVariantTagOf b) => Same(a.Value, b.Value),
       (IrVariantValue a, IrVariantValue b) => a.Tag == b.Tag && a.IsTested == b.IsTested && Same(a.Value, b.Value),
+      (IrUnionOf a, IrUnionOf b) => a.Type == b.Type && a.Member == b.Member && Same(a.Value, b.Value),
+      (IrUnionTagOf a, IrUnionTagOf b) => Same(a.Value, b.Value),
+      (IrUnionValue a, IrUnionValue b) => a.Member == b.Member && a.IsTested == b.IsTested && Same(a.Value, b.Value),
       (IrBind a, IrBind b) => a.Local == b.Local && Same(a.Value, b.Value),
       (IrGenericEquals a, IrGenericEquals b) => Same(a.Left, b.Left) && Same(a.Right, b.Right),
       (IrGenericCompare a, IrGenericCompare b) => Same(a.Left, b.Left) && Same(a.Right, b.Right),
@@ -111,6 +114,9 @@ public static class IrShape {
     IrVariantOf { Value: { } value } => [value],
     IrVariantTagOf tag => [tag.Value],
     IrVariantValue value => [value.Value],
+    IrUnionOf made => [made.Value],
+    IrUnionTagOf tag => [tag.Value],
+    IrUnionValue value => [value.Value],
     _ => []
   };
 
@@ -207,8 +213,9 @@ public static class IrShape {
       => IsSafeDivisor(divisor),
     IrBinary binary => !IrOperators.Traps(binary.Op) && !((binary.Left.Type.IsInteger || binary.Left.Type.IsBigInt) && binary.Op is IrBinaryOp.Divide or IrBinaryOp.Remainder),
     IrConvert conversion => conversion.Contract == IrConversion.Wrap && !conversion.Operand.Type.IsFloat,
-    IrConditional or IrVariantOf or IrVariantTagOf => true,
+    IrConditional or IrVariantOf or IrVariantTagOf or IrUnionOf or IrUnionTagOf => true,
     IrVariantValue value => value.IsTested,
+    IrUnionValue value => value.IsTested,
     IrIntrinsic { Op: IrIntrinsicOp.ToInt32 or IrIntrinsicOp.ToUint32 } => true,
     IrIntrinsic { Op: IrIntrinsicOp.TestBit or IrIntrinsicOp.SetBit or IrIntrinsicOp.ClearBit or IrIntrinsicOp.ToggleBit, Arguments: [{ Type.IsInteger: true } value, var position] }
       => IsPosition(position, value.Type.Bits),
@@ -320,6 +327,9 @@ public static class IrShape {
     IrVariantOf { Value: not null } made => made with { Value = operands[0] },
     IrVariantTagOf => new IrVariantTagOf(operands[0]),
     IrVariantValue value => value with { Value = operands[0] },
+    IrUnionOf made => made with { Value = operands[0] },
+    IrUnionTagOf => new IrUnionTagOf(operands[0]),
+    IrUnionValue value => value with { Value = operands[0] },
     _ => expression
   };
 

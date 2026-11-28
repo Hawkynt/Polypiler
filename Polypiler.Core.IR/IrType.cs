@@ -139,7 +139,13 @@ public enum IrTypeKind {
   /// Visual Basic's <c>Variant</c> and COM's <c>VARIANT</c> are. What its operations mean is stated at
   /// <see cref="IrVariants"/>.
   /// </summary>
-  Variant
+  Variant,
+
+  /// <summary>
+  /// A closed tagged union of two to four member types (ADR 0300 level 5): a value is one member, which
+  /// its tag names. What its operations mean is stated at <see cref="IrUnions"/>.
+  /// </summary>
+  Union
 
 }
 
@@ -220,6 +226,18 @@ public sealed record IrType {
 
   /// <summary>Whether the type is the dynamic type.</summary>
   public bool IsVariant => this.Kind == IrTypeKind.Variant;
+
+  /// <summary>The closed union of member types, written <c>union&lt;i32, str&gt;</c> (<see cref="IrUnions"/>); the members are kept in their canonical order.</summary>
+  /// <param name="members">The member types, in any order.</param>
+  /// <returns>The union type.</returns>
+  /// <exception cref="System.ArgumentNullException"><paramref name="members"/> or one of them is <see langword="null"/>.</exception>
+  public static IrType Union(params IrType[] members) => new(IrTypeKind.Union, null) { UnionType = new IrUnionType(members) };
+
+  /// <summary>The members of a union type, otherwise <see langword="null"/>.</summary>
+  public IrUnionType? UnionType { get; private init; }
+
+  /// <summary>Whether the type is a closed union.</summary>
+  public bool IsUnion => this.Kind == IrTypeKind.Union;
 
   /// <summary>An immutable sequence of UTF-16 code units, written <c>str</c>: a reference, which may be <c>null</c> (#1370).</summary>
   public static IrType String { get; } = new(IrTypeKind.String, null);
@@ -478,6 +496,7 @@ public sealed record IrType {
   /// strings or of the dynamic type, a view or a memory only of numbers, and a pointer only to a number or to <c>void</c>.
   /// </summary>
   public bool IsStorable => this.IsOptional ? this.Underlying!.IsOptionalValue
+    : this.IsUnion ? this.UnionType!.Members.All(member => member.IsStorable)
     : this.IsPointer ? this.Element!.IsNumeric || this.Element == Void
     : this.IsCollection ? IrCollections.IsElement(this)
     : this.IsLazySequence ? IrSequences.IsElement(this.Element!)
@@ -489,6 +508,7 @@ public sealed record IrType {
     => this.Underlying is { } underlying ? $"{underlying}?"
       : this.Declaration is { } declaration ? declaration.Name
       : this.Signature is { } signature ? signature.ToString()
+      : this.UnionType is { } union ? union.ToString()
       : this.IsString ? "str"
       : this.Element is null ? this.Kind.ToString().ToLowerInvariant()
       : this.Kind == IrTypeKind.Span ? $"span<{this.Element}>"

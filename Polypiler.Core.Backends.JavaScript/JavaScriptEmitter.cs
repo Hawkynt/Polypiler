@@ -320,6 +320,12 @@ public static partial class JavaScriptEmitter {
 
     public JsProgram Module(IrModule module) {
       this._module = module;
+      // A closed union has no lowering to JavaScript yet: it is refused, never written as a placeholder.
+      if (IrUnions.Types(module) is [var union, ..]) {
+        this._problems.Add(InexpressibleDescriptor.At($"the closed union type {union} cannot be expressed in JavaScript profile '{this._profile.LevelName}'"));
+        return new JsProgram([], [], false);
+      }
+
       this.ForeignProblems(module);
       this._members.UnionWith(module.ForeignFunctions.Select(function => this.Name(function.Name)));
       this.CountGenerics(module);
