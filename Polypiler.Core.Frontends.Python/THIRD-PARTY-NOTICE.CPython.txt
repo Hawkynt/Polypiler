@@ -10,12 +10,14 @@ following licence:
 - Syntax/PySource.cs: the source preparation of Parser/tokenizer/string_tokenizer.c and helpers.c
   (translate_newlines, check_bom, get_coding_spec, get_normal_name, check_coding_spec, valid_utf8,
   ensure_utf8);
-- Syntax/PyParser*.cs: the PEG grammar Grammar/python.gram rule by rule with its invalid_* rules,
-  the parser runtime of Parser/pegen.c (memoization, the second pass, new_identifier, number_token,
-  check_barry_as_flufl), the error reporting of Parser/pegen_errors.c and the actions of
-  Parser/action_helpers.c (make_arguments, set_expr_context, get_expr_name, get_invalid_target,
-  formatted_value, interpolation, joined_str, template_str, concatenate_strings,
-  setup_full_format_spec, checked_future_import and the other helpers);
+- Syntax/python.pgram: the PEG grammar Grammar/python.gram with its invalid_* rules, its actions
+  written in C#; Syntax/PyParser.g.cs is generated from it;
+- Syntax/PyParser.cs and PyParser.Actions.cs: the parser's use of Parser/pegen.c (the second pass,
+  new_identifier, number_token, check_barry_as_flufl, the full-source tokenizer check), the error
+  reporting of Parser/pegen_errors.c and the actions of Parser/action_helpers.c (make_arguments,
+  set_expr_context, get_expr_name, get_invalid_target, formatted_value, interpolation, joined_str,
+  template_str, concatenate_strings, setup_full_format_spec, checked_future_import and the other
+  helpers);
 - Syntax/PyLiterals.cs: parsenumber of Parser/pegen.c and the string decoding of
   Parser/string_parser.c with the unicode_escape and bytes escape decoders of Objects/;
 - Syntax/PyFuture.cs: Python/future.c;
@@ -29,7 +31,7 @@ following licence:
 
 Summary of the changes: the C sources are restated in C# for the frontend's own node model
 (Ast/PyNode); the tokenizer reads a byte array instead of a stream, a raised error is an exception
-instead of an error indicator, left-recursive rules are grown as loops, and only the checks of the
+instead of an error indicator, the grammar's actions build the frontend's nodes, and only the checks of the
 symbol table and the code generator are kept, not the code they generate.
 
 tests/fixtures/python/syntax holds source snippets taken from the tests of CPython's Lib/test, under

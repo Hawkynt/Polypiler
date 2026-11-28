@@ -309,6 +309,23 @@ jobs:
             dotnet run --project Polypiler.Tooling -c Release -- integrity check
           fi
 
+  # Every parser generated from a grammar (ADR 1000) is committed beside its grammar. This regenerates
+  # each in memory and fails on a committed file that differs from its grammar's output, is missing or
+  # has no grammar (polypiler-tooling grammar check, #1607); it never commits what it generates.
+  grammar-drift:
+    name: grammar drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: grammar check
+        run: dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -- grammar check
+
   # tests/fixtures/bitperm is exported from the pinned BitPerm page (tooling/bitperm/export.mjs). This
   # re-runs the exporter on the corpus copy of the page and fails on any file that differs, is missing
   # or is no longer produced; the wall time of the export is printed for the record, not gated.

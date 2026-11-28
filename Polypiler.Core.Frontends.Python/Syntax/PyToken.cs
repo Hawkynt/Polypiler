@@ -60,7 +60,7 @@ internal enum PyTokenKind {
 /// A token: its kind, its text as the source spells it (UTF-8 decoded), and its range as CPython
 /// records it - 1-based lines, 0-based columns counted in bytes of UTF-8.
 /// </summary>
-internal sealed class PyToken {
+internal sealed class PyToken : Polypiler.Core.Syntax.IToken<PyTokenKind> {
 
   /// <summary>The kind.</summary>
   public required PyTokenKind Kind { get; init; }
@@ -89,7 +89,10 @@ internal sealed class PyToken {
   /// <summary>The source text of an f-string or t-string expression the token ends, for debug texts and interpolations.</summary>
   public string? Metadata { get; init; }
 
-  /// <summary>The memoized results of the rules that started at this token, by rule.</summary>
-  public System.Collections.Generic.Dictionary<int, (object? Result, int End)>? Memo { get; set; }
+  /// <summary>Where the token starts: its line and byte column; the offset is not kept.</summary>
+  public Polypiler.Core.Syntax.SourcePosition Start => new(this.Line, this.Column, -1);
+
+  /// <summary>Where the token ends: its line and the byte column after it.</summary>
+  public Polypiler.Core.Syntax.SourcePosition End => new(this.EndLine, this.EndColumn, -1);
 
 }

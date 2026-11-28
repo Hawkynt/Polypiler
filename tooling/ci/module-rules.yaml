@@ -13,6 +13,8 @@ schema: 1
 projects:
   - { name: Polypiler.Core, layer: 0 }
   - { name: Polypiler.Core.Types, layer: 1 }
+  # The runtime of the generated parsers (ADR 1000): the token buffer, memo tables and errors the frontends share.
+  - { name: Polypiler.Core.Syntax, layer: 1 }
   - { name: Polypiler.Core.IR, layer: 2 }
   - { name: Polypiler.Core.Analysis, layer: 3 }
   - { name: Polypiler.Core.Recognize, layer: 4 }

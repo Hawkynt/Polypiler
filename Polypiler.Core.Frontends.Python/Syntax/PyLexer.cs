@@ -12,7 +12,7 @@ namespace Polypiler.Core.Frontends.Python.Syntax;
 /// CPython's does, so that <c>from __future__ import barry_as_FLUFL</c> changes what follows. An error
 /// throws <see cref="PyError"/>.
 /// </summary>
-internal sealed class PyLexer {
+internal sealed class PyLexer : Polypiler.Core.Syntax.ITokenSource<PyToken> {
 
   private const int Eof = -1;
   private const int MaxIndent = 100;

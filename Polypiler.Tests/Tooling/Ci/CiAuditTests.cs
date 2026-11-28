@@ -47,6 +47,22 @@ public sealed class CiAuditTests {
     Assert.That(problems, Has.Some.StartWith("PLY0075: tooling/ci/layers/bad.yaml: "));
   }
 
+  /// <summary>#1607: a grammar that generates a parser needs the drift job and its step; build output is not searched.</summary>
+  [Test]
+  public void AGeneratedGrammar_NeedsTheDriftJob() {
+    using var tree = new CiTree();
+    tree.Write("bin/c.pgram", "@class C\nstart: 'a'\n");
+    tree.Write("src/a.pgram", "@class A\nstart: 'a'\n");
+    tree.Write("src/b.pgram", "start: 'a'\n");
+    const string problem = "PLY0075: src/a.pgram generates a parser, but no step of job 'grammar-drift' in .github/workflows/ci.yml runs 'grammar check'";
+    Assert.That(Problems(tree), Does.Contain(problem));
+    var workflow = System.IO.File.ReadAllText(System.IO.Path.Combine(tree.Root, ".github/workflows/ci.yml"));
+    tree.Write(".github/workflows/ci.yml", workflow + "  grammar-drift:\n    runs-on: ubuntu-latest\n    steps:\n      - name: other\n        run: echo\n");
+    Assert.That(Problems(tree), Does.Contain(problem));
+    tree.Write(".github/workflows/ci.yml", workflow + "  grammar-drift:\n    runs-on: ubuntu-latest\n    steps:\n      - name: check\n        run: dotnet run -- grammar check\n");
+    Assert.That(Problems(tree).Where(found => found.Contains("grammar", System.StringComparison.Ordinal)), Is.Empty);
+  }
+
   /// <summary>Test design 4: a category without tests is accepted while pending and reported otherwise.</summary>
   [Test]
   public void CategoryWithoutTests_IsReportedUnlessPending() {

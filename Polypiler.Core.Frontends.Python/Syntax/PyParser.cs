@@ -1,39 +1,44 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Polypiler.Core.Frontends.Python.Ast;
+using Polypiler.Core.Syntax;
 
 namespace Polypiler.Core.Frontends.Python.Syntax;
 
 /// <summary>
-/// CPython's PEG parser for <c>file</c> input, converted rule by rule from <c>Grammar/python.gram</c>
-/// of 3.14, with the actions of <c>Parser/action_helpers.c</c>. As pegen's, it asks the tokenizer for
-/// tokens as it needs them, backtracks by resetting the position, memoizes the rules the grammar marks
-/// and grows the left-recursive ones as loops. A first pass without the <c>invalid_*</c> rules decides
-/// whether the source parses; where it does not, a second pass with them finds CPython's message.
+/// CPython's PEG parser for <c>file</c> input, generated from <c>python.pgram</c> - CPython 3.14.8's
+/// <c>Grammar/python.gram</c> with its actions in C# - into <c>PyParser.g.cs</c>. This is the
+/// hand-written half: the tokenizer as the token source, the tokens the grammar names by their kind
+/// or by a method, the positions and errors as CPython reports them (<c>Parser/pegen_errors.c</c>),
+/// and the error reporting of <c>_PyPegen_run_parser</c> around the two passes of the runtime: an
+/// error of the tokenizer in the rest of the source has priority, and what no rule explains is
+/// reported at the last token the first pass read.
 /// </summary>
 internal sealed partial class PyParser {
 
-  private const int MaxStack = 6000;
+  /// <summary>CPython's <c>MAXSTACK</c>: the rules a parse may nest.</summary>
+  public const int MaxStack = 6000;
+
+  private static readonly string[] _softKeywords = ["_", "case", "match", "type"];
 
   private readonly PyLexer _lexer;
   private readonly byte[] _source;
   private readonly int[] _lineStarts;
-  private readonly List<PyToken> _tokens = [];
   private readonly int _minor;
-  private int _mark;
-  private int _level;
-  private bool _invalid;
   private bool _barry;
 
   /// <summary>Prepares a parse.</summary>
   /// <param name="utf8">The bytes of the source as <see cref="PySource"/> prepares them.</param>
   /// <param name="minor">The minor version of Python 3 whose grammar applies, as <c>feature_version</c> sets it.</param>
-  public PyParser(byte[] utf8, int minor) {
+  public PyParser(byte[] utf8, int minor) : this(new PyLexer(utf8), utf8, minor) {
+  }
+
+  private PyParser(PyLexer lexer, byte[] utf8, int minor) : base(lexer) {
+    this._lexer = lexer;
     this._source = utf8;
-    this._lexer = new PyLexer(utf8);
     this._minor = minor;
+    this.MaxNesting = MaxStack;
     var starts = new List<int> { 0 };
     for (var i = 0; i < utf8.Length; i++)
       if (utf8[i] == '\n')
@@ -42,122 +47,81 @@ internal sealed partial class PyParser {
     this._lineStarts = [.. starts];
   }
 
+  /// <summary>An error of a parse no rule explained, to be thrown as it is.</summary>
+  private sealed class Unexplained(PyError error) : Exception(error.Message) {
+
+    public PyError Error { get; } = error;
+
+  }
+
   /// <summary>Parses the source as a module; throws <see cref="PyError"/> where CPython raises.</summary>
   public PyNode ParseModule() {
-    PyNode? module;
     try {
-      module = this.File();
+      return this.ParseFile();
+    } catch (Unexplained unexplained) {
+      throw unexplained.Error;
     } catch (PyError error) when (error.Type is "SyntaxError" or "IndentationError" or "TabError") {
-      // An error of the first pass stands, unless the tokenizer raises one in the rest of the source.
+      // An error of either pass stands, unless the tokenizer raises one in the rest of the source.
       throw this.CheckRestOfSource(error);
     }
-
-    if (module is not null)
-      return module;
-
-    // The second pass: the invalid_* rules raise CPython's specific messages.
-    var last = this._tokens[^1];
-    foreach (var token in this._tokens)
-      token.Memo = null;
-
-    this._mark = 0;
-    this._invalid = true;
-    try {
-      this.File();
-    } catch (PyError error) when (error.Type is "SyntaxError" or "IndentationError" or "TabError") {
-      throw this.CheckRestOfSource(error);
-    }
-
-    throw this.GenericError(last);
   }
+
+  /// <inheritdoc />
+  protected override Exception UnexplainedError(int lastFetched) => new Unexplained(this.GenericError(this.TokenAt(lastFetched)));
+
+  /// <inheritdoc />
+  protected override Exception NestingExceeded() => new PyError("MemoryError", "Parser stack overflowed - Python source too complex to parse", 1, 1, 1, 1);
+
+  /// <inheritdoc />
+  protected override Exception ForcedTokenMissing(string expected) => this.ErrorAt(this.Peek(), this.Peek(), $"expected '{expected}'");
+
+  /// <inheritdoc />
+  protected override Exception ForcedResultMissing(string expected) => this.Error($"expected ({expected})");
 
   // ---------------------------------------------------------------------------------------------
   // Tokens
 
-  private PyToken Fill() {
-    var token = this._lexer.Next();
-    this._tokens.Add(token);
-    return token;
-  }
-
-  private PyToken Peek() => this._mark == this._tokens.Count ? this.Fill() : this._tokens[this._mark];
-
-  private PyToken? Expect(PyTokenKind kind) {
+  /// <summary>A keyword by its text.</summary>
+  protected override PyToken? ExpectKeyword(string text) {
     var token = this.Peek();
-    if (token.Kind != kind)
+    if (token.Kind != PyTokenKind.Keyword || token.Text != text) {
+      this.Fail();
       return null;
-
-    this._mark++;
-    return token;
-  }
-
-  /// <summary>An operator or a keyword by its text.</summary>
-  private PyToken? Expect(string text) {
-    var token = this.Peek();
-    if (token.Kind is not (PyTokenKind.Operator or PyTokenKind.Keyword) || token.Text != text)
-      return null;
-
-    this._mark++;
-    return token;
-  }
-
-  private bool Check(string text) {
-    var mark = this._mark;
-    var found = this.Expect(text) is not null;
-    this._mark = mark;
-    return found;
-  }
-
-  private bool Check(PyTokenKind kind) {
-    var mark = this._mark;
-    var found = this.Expect(kind) is not null;
-    this._mark = mark;
-    return found;
-  }
-
-  private bool CheckAny(params string[] texts) {
-    foreach (var text in texts)
-      if (this.Check(text))
-        return true;
-
-    return false;
-  }
-
-  /// <summary>A token that must follow (<c>&amp;&amp;'x'</c>): its absence is an error at once.</summary>
-  private PyToken Forced(string text) {
-    var token = this.Peek();
-    if (token.Kind is PyTokenKind.Operator or PyTokenKind.Keyword && token.Text == text) {
-      this._mark++;
-      return token;
     }
 
-    throw this.ErrorAt(token, token, $"expected '{text}'");
+    this.Mark++;
+    return token;
   }
 
-  /// <summary>A soft keyword as a name: <c>"match"</c>.</summary>
+  /// <summary>An operator or delimiter by its text.</summary>
+  protected override PyToken? ExpectOperator(string text) {
+    var token = this.Peek();
+    if (token.Kind != PyTokenKind.Operator || token.Text != text) {
+      this.Fail();
+      return null;
+    }
+
+    this.Mark++;
+    return token;
+  }
+
+  /// <summary>A soft keyword as a name: <c>"match"</c> (<c>_PyPegen_expect_soft_keyword</c>).</summary>
   private PyNode? SoftKeyword(string keyword) {
     var token = this.Peek();
     return token.Kind == PyTokenKind.Name && token.Text == keyword ? this.NameToken() : null;
   }
 
-  private bool CheckSoftKeyword(string keyword) {
+  /// <summary>Any soft keyword as a name (<c>SOFT_KEYWORD</c>, <c>_PyPegen_soft_keyword_token</c>).</summary>
+  private PyNode? SoftKeywordToken() {
     var token = this.Peek();
-    return token.Kind == PyTokenKind.Name && token.Text == keyword;
-  }
-
-  private static readonly string[] _softKeywords = ["_", "case", "match", "type"];
-
-  /// <summary>Any soft keyword (<c>SOFT_KEYWORD</c>).</summary>
-  private bool CheckAnySoftKeyword() {
-    var token = this.Peek();
-    return token.Kind == PyTokenKind.Name && Array.IndexOf(_softKeywords, token.Text) >= 0;
+    return token.Kind == PyTokenKind.Name && Array.IndexOf(_softKeywords, token.Text) >= 0 ? this.NameToken() : null;
   }
 
   /// <summary>The last token consumed that is no NEWLINE, INDENT, DEDENT or ENDMARKER (<c>_PyPegen_get_last_nonnwhitespace_token</c>).</summary>
   private PyToken LastToken() {
     PyToken token = null!;
-    for (var m = this._mark - 1; m >= 0; m--) {
-      token = this._tokens[m];
+    for (var m = this.Mark - 1; m >= 0; m--) {
+      token = this.TokenAt(m);
       if (token.Kind is not (PyTokenKind.EndMarker or PyTokenKind.Newline or PyTokenKind.Indent or PyTokenKind.Dedent))
         break;
     }
@@ -184,126 +148,14 @@ internal sealed partial class PyParser {
   private PyRange Range(int line, int offset, int endLine, int endOffset)
     => new(line, offset, endLine, endOffset, this.CharColumn(line, offset), this.CharColumn(endLine, endOffset));
 
-  /// <summary>From the start of a token to the end of the last token consumed (pegen's <c>EXTRA</c>).</summary>
-  private PyRange Extra(PyToken start) {
+  /// <summary>From the token a rule started at to the end of the last token consumed (pegen's <c>EXTRA</c>).</summary>
+  private PyRange Extra(int mark) {
+    var start = this.TokenAt(mark);
     var end = this.LastToken();
     return this.Range(start.Line, start.Column, end.EndLine, end.EndColumn);
   }
 
   private PyRange Span(PyToken start, PyToken end) => this.Range(start.Line, start.Column, end.EndLine, end.EndColumn);
-
-  private PyRange Span(PyNode start, PyNode end) => this.Range(start.Range!.Line, start.Range.Offset, end.Range!.EndLine, end.Range.EndOffset);
-
-
-  // ---------------------------------------------------------------------------------------------
-  // Rules: entering, memoizing
-
-  private void Enter() {
-    if (++this._level > MaxStack)
-      throw new PyError("MemoryError", "Parser stack overflowed - Python source too complex to parse", 1, 1, 1, 1);
-  }
-
-  private void Leave() => this._level--;
-
-  /// <summary>A rule's result memoized at the token it starts at; the rule restores the position where it fails.</summary>
-  private T? Memo<T>(int rule, Func<T?> body) where T : class {
-    var token = this.Peek();
-    if (token.Memo is { } memo && memo.TryGetValue(rule, out var known)) {
-      this._mark = known.End;
-      return (T?)known.Result;
-    }
-
-    var mark = this._mark;
-    this.Enter();
-    T? result;
-    try {
-      result = body();
-    } finally {
-      this.Leave();
-    }
-
-    if (result is null)
-      this._mark = mark;
-
-    (token.Memo ??= [])[rule] = (result, this._mark);
-    return result;
-  }
-
-  /// <summary>Runs a rule, giving back the position where it fails.</summary>
-  private T? Rule<T>(Func<T?> body) where T : class {
-    var mark = this._mark;
-    this.Enter();
-    try {
-      var result = body();
-      if (result is null)
-        this._mark = mark;
-
-      return result;
-    } finally {
-      this.Leave();
-    }
-  }
-
-  /// <summary>Tries one alternative: the position is given back where it fails.</summary>
-  private T? Try<T>(Func<T?> alternative) where T : class {
-    var mark = this._mark;
-    var result = alternative();
-    if (result is null)
-      this._mark = mark;
-
-    return result;
-  }
-
-  /// <summary>Whether an item could be parsed here, without consuming it (<c>&amp;e</c>).</summary>
-  private bool Lookahead<T>(Func<T?> item) where T : class {
-    var mark = this._mark;
-    var result = item();
-    this._mark = mark;
-    return result is not null;
-  }
-
-  private List<T>? Repeat<T>(Func<T?> item, int minimum) where T : class {
-    var items = new List<T>();
-    while (true) {
-      var mark = this._mark;
-      var next = item();
-      if (next is null) {
-        this._mark = mark;
-        break;
-      }
-
-      items.Add(next);
-    }
-
-    return items.Count >= minimum ? items : null;
-  }
-
-  /// <summary><c>s.e+</c>: one or more items, separated, the separators dropped.</summary>
-  private List<T>? Gather<T>(string separator, Func<T?> item) where T : class {
-    var start = this._mark;
-    var first = item();
-    if (first is null) {
-      this._mark = start;
-      return null;
-    }
-
-    var items = new List<T> { first };
-    while (true) {
-      var mark = this._mark;
-      if (this.Expect(separator) is null)
-        break;
-
-      var next = item();
-      if (next is null) {
-        this._mark = mark;
-        break;
-      }
-
-      items.Add(next);
-    }
-
-    return items;
-  }
 
   // ---------------------------------------------------------------------------------------------
   // Errors
@@ -332,7 +184,7 @@ internal sealed partial class PyParser {
 
   /// <summary>At the last token read (<c>RAISE_SYNTAX_ERROR</c>), or at the next one (<c>RAISE_SYNTAX_ERROR_ON_NEXT_TOKEN</c>).</summary>
   private PyError Error(string message, bool next = false, string type = "SyntaxError") {
-    var token = next ? this.Peek() : this._tokens[^1];
+    var token = next ? this.Peek() : this.Tokens.Last;
     return token.Column < 0
       ? new PyError(type, message, token.Line, 1, token.EndLine, 1)
       : this.ErrorAt(token.Line, token.Column, token.EndLine, token.EndColumn, message, type);
@@ -360,7 +212,7 @@ internal sealed partial class PyParser {
       return error;
 
     // The line of the last token read, by either pass.
-    var line = this._tokens[^1].Line;
+    var line = this.Tokens.Last.Line;
     try {
       while (this._lexer.Next().Kind != PyTokenKind.EndMarker) {
       }
@@ -390,7 +242,7 @@ internal sealed partial class PyParser {
   // Names and numbers
 
   /// <summary>An identifier as CPython makes it: NFKC where it is not ASCII; <c>None</c>, <c>True</c> and <c>False</c> are refused.</summary>
-  private string Identifier(string text) {
+  private static string Identifier(string text) {
     var id = text.All(char.IsAscii) ? text : PyUnicode.Nfkc(text);
     if (id is "None" or "True" or "False")
       throw new PyError("ValueError", $"identifier field can't represent '{id}' constant", 1, 1, 1, 1);
@@ -398,13 +250,13 @@ internal sealed partial class PyParser {
     return id;
   }
 
-  /// <summary>A <c>NAME</c> token as a <c>Name</c> expression.</summary>
+  /// <summary>A <c>NAME</c> token as a <c>Name</c> expression (<c>_PyPegen_name_token</c>).</summary>
   private PyNode? NameToken() {
     var token = this.Expect(PyTokenKind.Name);
-    return token is null ? null : PyAst.Make("Name", this.Span(token, token), this.Identifier(token.Text), PyAst.Singleton("Load"));
+    return token is null ? null : PyAst.Make("Name", this.Span(token, token), Identifier(token.Text), PyAst.Singleton("Load"));
   }
 
-  /// <summary>A <c>NUMBER</c> token as a <c>Constant</c>.</summary>
+  /// <summary>A <c>NUMBER</c> token as a <c>Constant</c> (<c>_PyPegen_number_token</c>).</summary>
   private PyNode? NumberToken() {
     var token = this.Expect(PyTokenKind.Number);
     if (token is null)
@@ -419,17 +271,5 @@ internal sealed partial class PyParser {
 
     return PyAst.Make("Constant", this.Span(token, token), value, null);
   }
-
-  private static List<PyNode?> Nullable(List<PyNode> nodes) => [.. nodes];
-
-
-  private static List<T> Prepend<T>(T first, List<T>? rest) {
-    var list = new List<T> { first };
-    if (rest is not null)
-      list.AddRange(rest);
-
-    return list;
-  }
-
 
 }

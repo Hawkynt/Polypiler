@@ -48,6 +48,7 @@ Original chapter numbers and section links are retained. The pages here are a re
 - [String operations](reference/string-operations.md) — strings of UTF-16 code units: every operation with its ordinal meaning, the two white-space sets, what each frontend imports or refuses and how each profile writes it.
 - [Numbers to text and back](reference/number-text.md) — the conversions between numbers, truth values and text by the rules of .NET and of ECMA-262, each an operation of its own: what each frontend imports or refuses and how each profile writes it.
 - [Enums](reference/enums.md) — C# enums and JavaScript frozen objects of named numbers as named integer types, with .NET's rules for the text, the parse and the order of the names: what each frontend imports or refuses and how each profile writes it.
+- [Grammars and generated parsers](architecture/GRAMMARS.md) — the pegen format with hooks, guards and overlays, the runtime `Polypiler.Core.Syntax`, regenerating and the drift check.
 - [C# frontend](architecture/CSHARP-FRONTEND.md) — Roslyn binding, the host-class import boundary, typed lowering, semantic caveats and refusals.
 - [C# backend](architecture/CSHARP-BACKEND.md) — nine framework profiles, capability rows, target syntax, runtime contracts and verification.
 - [JavaScript frontend](architecture/JAVASCRIPT-FRONTEND.md) — Acornima parsing, value-flow typing, module selection and the import caveats.

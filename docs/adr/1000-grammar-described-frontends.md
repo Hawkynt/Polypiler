@@ -4,7 +4,7 @@ Area: languages
 
 | | |
 | --- | --- |
-| Status | accepted |
+| Status | accepted; the runtime, the generator and Python implemented |
 | Index | [decision records](README.md) |
 | Date | 2026-11-28 |
 | Issue | [#1578](https://github.com/Hawkynt/Polypiler/issues/1578) |
@@ -148,6 +148,51 @@ the full output are in [`evidence/1000`](evidence/1000).
    5. Perl's statements and expressions, over the hand lexer.
    New languages — Lua, Kotlin, TypeScript, PHP, Java source, Dart — start on the generator.
 
+## Implementation
+
+The runtime (`Polypiler.Core.Syntax`), the generator (`polypiler-tooling grammar generate`, `read` and
+`check`), the drift job, overlays and guards, the second pass and the parser benchmark are in place
+([grammars](../architecture/GRAMMARS.md)); Python is the first frontend generated from its grammar.
+Measured on CPython 3.14.8's `Lib/` (1870 files, 35.1 MiB, Release, .NET 10), against the
+hand-written parser it replaced, after a cold and three warm rounds:
+
+| Parser | Cold | Warm | Throughput | Allocated | Against the hand parser | Verdicts that differ |
+| --- | --- | --- | --- | --- | --- | --- |
+| hand-written (`PyParser*.cs`) | 16.1 s | 13.8–14.1 s | 2.5 MiB/s | 12.6 GiB | 1× | — |
+| generated from `python.pgram` | 15.8 s | 15.0–15.3 s | 2.3 MiB/s | 9.3 GiB | **0.98–1.09×** | **0** |
+
+Before the hand parser was deleted, both ran side by side on every file of `Lib/` and `Lib/test/` at
+every version from 3.8 to 3.14 (13069 parses), on the 60452 distinct string constants of `Lib/test/`
+as sources and on the 3263 syntax cases of `tests/fixtures/python/syntax`: the trees, the error
+classes, the messages and every position were the same in all of them, so the Python oracle table of
+#1560 stands at 0 disagreements.
+
+Where this record was silent, the implementation decided:
+
+- **Left recursion** is found as pegen finds it (the nullable rules, the first-name graph, its
+  strongly connected components, one leader per component that every cycle passes); nothing needs a
+  mark. `unmarked left recursion` is the error of a component without such a leader, which pegen
+  refuses too.
+- **The value of an alternative** is pegen's: one item gives its value, several give the dummy
+  (`@dummy`), a rule whose action gives `null` fails without trying its later alternatives and
+  without giving its position back. Every rule call, the artificial ones of groups, loops and
+  gathers included, counts one level against the nesting limit, so that Python's `MAXSTACK` of 6000
+  refuses what CPython refuses.
+- **What no rule explains** is reported at the farthest token a rule expected and did not find,
+  lookaheads left out; a grammar that reports as pegen does overrides it, as Python reports at the
+  last token the first pass read.
+- **Python's version checks stay in the actions** (`Version(minor, what, node)`, pegen's
+  `CHECK_VERSION`), where `python.gram` writes them: the oracle is `ast.parse(feature_version=…)` of
+  one CPython, whose single grammar checks the version as it builds the node. The guards and
+  overlays of decision 2 are for dialects that differ in their rules: Visual Basic's profiles,
+  VBScript, language versions that remove syntax.
+- **Dead alternatives are left out of the grammar, not out of coverage**: `python.pgram` has no
+  start rules but `file` and none of the alternatives that need a `TYPE_COMMENT` token, which the
+  tokenizer never gives; the generated parser is counted by the coverage gate like any other code.
+- **The benchmark's schema** is `spec/schemas/parser-bench.schema.json`, beside the other schemas, and
+  a missing corpus exits 66, sysexits' `EX_NOINPUT`, as the exit codes of ADR 0003 have no code for a
+  missing input.
+
 ## Consequences
 
 - A frontend's parser is a grammar, a token source and a hooks class; a dialect is an overlay.
@@ -160,18 +205,18 @@ the full output are in [`evidence/1000`](evidence/1000).
 
 In the order they can be taken (epic [#1580](https://github.com/Hawkynt/Polypiler/issues/1580)):
 
-- [#1605](https://github.com/Hawkynt/Polypiler/issues/1605) infra: Polypiler.Core.Syntax — the runtime of generated parsers — ready
-- [#1606](https://github.com/Hawkynt/Polypiler/issues/1606) infra: polypiler-tooling grammar generate — pegen-format grammars to C# parsers with typed actions — after #1605
-- [#1607](https://github.com/Hawkynt/Polypiler/issues/1607) infra: grammar drift CI job — regenerate every grammar and fail on any difference — after #1606
-- [#1608](https://github.com/Hawkynt/Polypiler/issues/1608) infra: grammar overlays — @extends, rule replacement and version or dialect guards — after #1606
-- [#1609](https://github.com/Hawkynt/Polypiler/issues/1609) infra: the invalid-rule second pass and farthest-token errors of generated parsers — after #1606
-- [#1610](https://github.com/Hawkynt/Polypiler/issues/1610) infra: parser benchmarks — generated against hand-written parsers on each oracle corpus — after #1606
-- [#1611](https://github.com/Hawkynt/Polypiler/issues/1611) frontend(python): generate the Python parser from CPython's python.gram — after #1607, #1608, #1609, #1610
-- [#1612](https://github.com/Hawkynt/Polypiler/issues/1612) frontend(visualbasic): generate the classic Visual Basic parser from the MS-VBAL grammar with profile overlays — after #1607, #1608, #1609, #1610
+- [#1605](https://github.com/Hawkynt/Polypiler/issues/1605) infra: Polypiler.Core.Syntax — the runtime of generated parsers — done
+- [#1606](https://github.com/Hawkynt/Polypiler/issues/1606) infra: polypiler-tooling grammar generate — pegen-format grammars to C# parsers with typed actions — done
+- [#1607](https://github.com/Hawkynt/Polypiler/issues/1607) infra: grammar drift CI job — regenerate every grammar and fail on any difference — done
+- [#1608](https://github.com/Hawkynt/Polypiler/issues/1608) infra: grammar overlays — @extends, rule replacement and version or dialect guards — done
+- [#1609](https://github.com/Hawkynt/Polypiler/issues/1609) infra: the invalid-rule second pass and farthest-token errors of generated parsers — done
+- [#1610](https://github.com/Hawkynt/Polypiler/issues/1610) infra: parser benchmarks — generated against hand-written parsers on each oracle corpus — done
+- [#1611](https://github.com/Hawkynt/Polypiler/issues/1611) frontend(python): generate the Python parser from CPython's python.gram — done
+- [#1612](https://github.com/Hawkynt/Polypiler/issues/1612) frontend(visualbasic): generate the classic Visual Basic parser from the MS-VBAL grammar with profile overlays — ready
 - [#1613](https://github.com/Hawkynt/Polypiler/issues/1613) frontend(vbscript): VBScript as an overlay of the Visual Basic grammar — after #1612
-- [#1614](https://github.com/Hawkynt/Polypiler/issues/1614) frontend(go): generate the Go parser from the specification's grammar, with go/parser's post-parse checks in a check pass — after #1607, #1608, #1609, #1610
-- [#1615](https://github.com/Hawkynt/Polypiler/issues/1615) frontend(rust): generate the Rust parser from the Reference's grammar — after #1607, #1608, #1609, #1610
-- [#1616](https://github.com/Hawkynt/Polypiler/issues/1616) frontend(perl): generate Perl's statement and expression layer over the hand lexer — after #1607, #1608, #1609, #1610, #1611
+- [#1614](https://github.com/Hawkynt/Polypiler/issues/1614) frontend(go): generate the Go parser from the specification's grammar, with go/parser's post-parse checks in a check pass — ready
+- [#1615](https://github.com/Hawkynt/Polypiler/issues/1615) frontend(rust): generate the Rust parser from the Reference's grammar — ready
+- [#1616](https://github.com/Hawkynt/Polypiler/issues/1616) frontend(perl): generate Perl's statement and expression layer over the hand lexer — ready
 
 Related: [ADR 0300](0300-static-types-first.md), the other half of the frontend direction ·
 [the Python frontend](../architecture/PYTHON-FRONTEND.md) · [the Go frontend](../architecture/GO-FRONTEND.md) ·
