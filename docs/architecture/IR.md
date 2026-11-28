@@ -100,6 +100,18 @@ entry of that branch. Points compare by the identity of the block node, not by r
   has recurrences but no count. `ValueFacts.EvolutionOf` and `TripCountOf` ask through the facade. The
   tests hold the analysis against the iteration traces of 2 000 seeded loops (seed 315) in the
   interpreter, and the PB-Compiler cases it is converted from.
+- `DynamicFacts` (`Polypiler.Core.Analysis.Dynamic`, #1581) is the domain of what a dynamic place may
+  hold ([ADR 0300](../adr/0300-static-types-first.md) decision 2): a `DynamicType` - `Nothing`, `Exact`
+  (one IR type, with the language's kind where two kinds share one, such as Visual Basic's `Currency` on
+  an `i64`), `Nominal`, `Shape`, `Optional` (the language's missing values `Null`, `Undefined`, `Empty`),
+  `Union` (2 to 4 members) or `Variant` - with a `Certainty` from `Dynamic` to `Proven`. Elements are
+  canonical: an optional is outermost, so a union's members are exact, nominal or shapes. Joins go up:
+  two exact types join where the language's `IJoinPolicy` cannot tell them apart, two shapes of the same
+  field names field by field, everything else to a union, a fifth member to `Variant`; a join takes the
+  weaker certainty. The widening turns shapes nested deeper than four into `Variant`. `DynamicState`
+  carries the facts of the places at a point and joins them place by place. The tests check the lattice
+  laws - commutative, associative, idempotent joins, bounds, monotone widening - over every pair and
+  triple of 40 generated elements under two policies.
 - `FactChecker` holds every answered query against runs of the interpreter, which reports each point it
   reaches to an `IIrObserver`; a value a run observes outside its fact is PLY0302. The tests check the
   constant domain on 10 000 seeded random functions (`RandomIr`, seed 300) and on loops, switches and
