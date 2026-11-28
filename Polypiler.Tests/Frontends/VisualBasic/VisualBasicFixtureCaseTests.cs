@@ -47,7 +47,7 @@ public sealed class VisualBasicFixtureCaseTests {
   [TestCase("Locale.de-DE.expected.txt", "Locale.de-DE.libreoffice-26.8.3.1.txt", 12)]
   [TestCase("CurrencyDate.expected.txt", "CurrencyDate.libreoffice-26.8.3.1.txt", 25)]
   [TestCase("Bitwise.expected.txt", "Bitwise.libreoffice-26.8.3.1.txt", 4)]
-  [TestCase("Inference.expected.txt", "Inference.libreoffice-26.8.3.1.txt", 6)]
+  [TestCase("Inference.expected.txt", "Inference.libreoffice-26.8.3.1.txt", 7)]
   public void Evidence_AgreesOnTheRowsTheAdrCounts(string expected, string evidence, int agreeing)
     => Assert.That(ClassicCases.Agreeing(ClassicCases.Lines(expected), ClassicCases.Evidence(evidence)), Has.Count.EqualTo(agreeing));
 

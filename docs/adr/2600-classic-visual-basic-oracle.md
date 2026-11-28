@@ -150,6 +150,7 @@ vba7-64 writes. The rows on which LibreOffice disagrees:
 | `0 And Null`, `5 Or Null` | `Null` | 0, 5 (the operator pages of [MS-VBAL] 5.6.9.8) | **no** |
 | `Variant` arrays, `Array(…)`, `ReDim` of one | same | same | yes |
 | `TypeName` of an untyped function's result, `Integer` 32767 + 1 | `Double` | `Long` | **no** |
+| a `ByVal` `Variant` parameter assigned a `String` (`a = a & "!"` of `CDbl(1)`, #1591) | `1!` | `1!` | yes |
 
 Beyond the table: a module LibreOffice cannot compile, and a run-time error no handler catches, stop
 the headless office at a dialog; the runner reports `PLY2691` when the run's time limit (60 s) ends.
