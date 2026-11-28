@@ -1,0 +1,3 @@
+{"functions":[
+ {"entry":"0x1000","confidence":"Proven","evidence":"entry","complete":false,"blocks":[{"start":"0x1000","end":"0x1000","successors":[],"invalid":"0x1001"}]}],
+ "bytes":{"code":["0x1000"],"data":[],"conflict":[]},"diagnostics":["PLY4071"]}

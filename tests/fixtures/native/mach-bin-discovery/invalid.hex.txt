@@ -1,0 +1,6 @@
+# An invalid opcode reached by control flow makes the function incomplete.
+# 0x1000  00      nop
+# 0x1001  FF      invalid
+# 0x1002  01      not reached
+@entries 0x1000
+00 FF 01

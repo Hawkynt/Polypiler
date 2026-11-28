@@ -21,6 +21,12 @@ namespace Polypiler.Core.BinaryFormats;
 /// <param name="Manifest">The manifest, or <see langword="null"/> when the container stated everything.</param>
 public sealed record LoadedBinary(BinaryImage Image, AddressMap AddressMap, ImmutableArray<EntryContract> Entries, JsonElement? Observe, BinaryManifest? Manifest) {
 
+  /// <summary>
+  /// Heuristic function candidates, such as a CPU-specific prologue scan finds over bytes no proven
+  /// flow reaches; discovery traverses them only when the manifest accepts heuristic functions.
+  /// </summary>
+  public ImmutableArray<ulong> Hints { get; init; } = [];
+
   /// <summary>Whether discovery may decode the byte at an address: it lies in an executable section and, when the manifest restricts decoding, in one of its code ranges.</summary>
   /// <param name="address">The address.</param>
   /// <returns>Whether it may.</returns>
@@ -31,7 +37,7 @@ public sealed record LoadedBinary(BinaryImage Image, AddressMap AddressMap, Immu
   /// <inheritdoc/>
   public bool Equals(LoadedBinary? other)
     => other is not null && this.Image == other.Image && this.AddressMap.Ranges.SequenceEqual(other.AddressMap.Ranges) && this.Entries.SequenceEqual(other.Entries)
-      && ReferenceEquals(this.Manifest, other.Manifest);
+      && ReferenceEquals(this.Manifest, other.Manifest) && this.Hints.SequenceEqual(other.Hints);
 
   /// <inheritdoc/>
   public override int GetHashCode() => HashCode.Combine(this.Image, this.Entries.Length);

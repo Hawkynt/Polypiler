@@ -1,0 +1,6 @@
+# A backward jump: the block targets itself and the traversal ends.
+# 0x1000  00      nop
+# 0x1001  03 FD   jcc 0x1000   (0x1003 - 3), falls through to 0x1003
+# 0x1003  01      ret
+@entries 0x1000
+00 03 FD 01

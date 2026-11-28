@@ -155,6 +155,42 @@ range and identify embedded data. Undefined dynamic symbols with supported GOT r
 produce import slots. Thread-local sections keep their stored layout and do not occupy the ordinary
 process address map. Unsupported relocation records remain in the image with `PLY4063`.
 
+## Discovery
+
+`Polypiler.Core.BinaryFormats.Discovery` finds functions, blocks and code bytes by recursive traversal
+([#942](https://github.com/Hawkynt/Polypiler/issues/942); Schwarz, Debray and Andrews, WCRE 2002).
+Only bytes proven reachable are decoded, through the `IDisassembler` port.
+
+- **Seeds** (`Proven`): the manifest's entries (evidence `manifest`), the container's entries (`entry`)
+  and its function symbols (`symbol`). `LoadedBinary.Hints` are heuristic candidates (`Heuristic`,
+  evidence `hint`), traversed only with `DiscoveryOptions.AcceptHeuristic`, which the caller sets from
+  the manifest's `acceptHeuristicFunctions`.
+- **Jumps.** A jump or conditional jump adds its target to the function. A jump to the entry of another
+  known function is a tail call.
+- **Calls.** A call makes its target a function (`Derived`, `call from <address>`). Its fall-through is
+  traversed only once the callee is known to return on some path. A callee returns through a return
+  instruction, or through a tail call to a function or an import that returns, computed to a fixed
+  point. So mutually recursive calls that come before every return never continue.
+- **Path ends.** A return or a trap ends a path.
+- **Indirect flow.** An indirect jump asks the `IJumpTableResolver`. Its validated targets join the
+  function and its table bytes become `Data`. Without a resolver the block ends `Unresolved` with
+  `PLY4070`. An indirect call continues after the call, its callee unresolved.
+- **Findings.**
+  - Bytes control flow reaches that do not decode (invalid, or running past the section) end the path,
+    make the function incomplete, and give `PLY4071`.
+  - A byte decoded as part of two instructions is a `Conflict` (`PLY4072`), and both functions are
+    incomplete.
+  - A target outside the executable sections and code ranges is external: no finding for an import
+    slot, `PLY4073` otherwise.
+  - The instruction budget (`DiscoveryOptions.MaxInstructions`) ends discovery with `PLY4074`.
+
+Blocks start at the entry, at every target and after a gap. A jump, conditional jump, indirect jump,
+return or trap ends a block; a call does not. Functions and blocks are listed by address, so the
+result is deterministic. `DiscoveryReport` writes it as the canonical JSON of the fixtures
+`tests/fixtures/native/mach-bin-discovery/*.expected.json`. Those files are derived by hand from the
+toy ISA of the tests (`Polypiler.Tooling/Fuzz/ToyIsa.cs`), and the fuzz target `discovery-toy`
+checks termination and determinism.
+
 ## Ports
 
 `Polypiler.Core.MachineSemantics.Ports` declares, once for every CPU: `IMachineCodeSource`,

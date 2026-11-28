@@ -1,0 +1,5 @@
+# Overlapping instructions are reported, not chosen between.
+# entry 0x1000: 0x1000  02 00  jmp 0x1002; 0x1002  02 00  jmp 0x1004; 0x1004  01  ret
+# entry 0x1003: 0x1003  00     nop (its byte is also the operand of 0x1002); 0x1004  01  ret
+@entries 0x1000 0x1003
+02 00 02 00 01

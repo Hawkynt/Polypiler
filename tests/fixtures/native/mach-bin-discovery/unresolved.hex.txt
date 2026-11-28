@@ -1,0 +1,5 @@
+# An indirect jump without a resolver: the bytes behind it stay undecoded.
+# 0x1000  05      jmp *        unresolved
+# 0x1001  00 00 01             not reached
+@entries 0x1000
+05 00 00 01

@@ -411,3 +411,8 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY4061](PLY4061.md) | error | 3 (UnsupportedConstruct) | `ELF <field> '<value>' is not supported` | MACH-BIN-ELF |
 | [PLY4062](PLY4062.md) | error | 1 (EnvironmentError) | `ELF structure is corrupt: <detail>` | MACH-BIN-ELF |
 | [PLY4063](PLY4063.md) | warning | — | `relocation type <type> at <address> is not supported; code that depends on it cannot be translated standalone` | MACH-BIN-ELF |
+| [PLY4070](PLY4070.md) | warning | — | `indirect <jump> at <address> could not be resolved; code reachable only through it stays undecoded` | #942 |
+| [PLY4071](PLY4071.md) | warning | — | `bytes at <address> reached from <address> do not decode as <isa> <mode>; '<function>' is incomplete` | #942 |
+| [PLY4072](PLY4072.md) | warning | — | `byte <address> belongs to instructions starting at <address> and at <address>` | #942 |
+| [PLY4073](PLY4073.md) | warning | — | `control flow from <address> leaves the code at <address>` | #942 |
+| [PLY4074](PLY4074.md) | error | 10 (BudgetExceeded) | `discovery stopped after <n> instructions` | #942 |

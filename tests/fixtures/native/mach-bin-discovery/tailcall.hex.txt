@@ -1,0 +1,7 @@
+# A jump to the entry of another function is a tail call.
+# 0x1000  02 01   jmp 0x1003   (0x1002 + 1), the function symbol f_1003
+# 0x1002  FF      not reached
+# 0x1003  01      ret
+@entries 0x1000
+@symbols 0x1003
+02 01 FF 01

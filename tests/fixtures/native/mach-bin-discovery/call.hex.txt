@@ -1,0 +1,8 @@
+# Straight-line code and a call: two functions; 0x1003 is never reached.
+# 0x1000  04 02   call 0x1004   (0x1002 + 2)
+# 0x1002  01      ret
+# 0x1003  FF      not reached
+# 0x1004  00      nop
+# 0x1005  01      ret
+@entries 0x1000
+04 02 01 FF 00 01

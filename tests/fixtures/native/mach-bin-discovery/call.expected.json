@@ -1,0 +1,4 @@
+{"functions":[
+ {"entry":"0x1000","confidence":"Proven","evidence":"entry","complete":true,"blocks":[{"start":"0x1000","end":"0x1002","successors":[]}]},
+ {"entry":"0x1004","confidence":"Derived","evidence":"call from 0x1000","complete":true,"blocks":[{"start":"0x1004","end":"0x1005","successors":[]}]}],
+ "bytes":{"code":["0x1000..0x1002","0x1004..0x1005"],"data":[],"conflict":[]},"diagnostics":[]}
