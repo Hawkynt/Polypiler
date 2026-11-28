@@ -50,7 +50,9 @@ flowchart LR
 | array | a dynamic array from 0; an empty one has no bounds, so its length is `PlyLen_<T>` |
 | struct | a `Public Type`; a parameter by reference, copied field by field where the body changes it |
 | global, table | a module variable that `PlyInit` sets on the first call of a public procedure |
-| `variant` ([variants](../reference/variants.md)) | `Variant`: `Empty`, `Null`, or the payload through its conversion function (`CInt(x)`, `CLng(x)`, `CDbl(x)`, …), which gives it its subtype also where a literal would have another; the tag `VarType(v)`; a payload the frontend tested `CInt(v)`, …, one it did not a test that raises error 13 first; `Currency` and `Date` are refused with `PLY2657` |
+| `variant` ([variants](../reference/variants.md)) | `Variant`: `Empty`, `Null`, or the payload through its conversion function (`CInt(x)`, `CLng(x)`, `CDbl(x)`, …), which gives it its subtype also where a literal would have another; the tag `VarType(v)`; a payload the frontend tested `CInt(v)`, …, one it did not a test that raises error 13 first; a date `CDate(x)` and `CDbl(v)`; a currency `CCur(CDec(x) / 10000)` and `CLngLng(CDec(v) * 10000)`, only where the profile has `LongLong`; arrays of it `Variant()` |
+| `FormatVisualBasic` | `PlyFmtR8(x, sep)`/`PlyFmtR4`: `CStr` with the run-time decimal separator replaced by the IR's and a three-digit exponent with a leading zero shortened, as LibreOffice writes `1E+020` |
+| `ParseDotNet` of `f64`/`f32` | `PlyParseR8`: blanks and group separators removed, error 13 for a character no number has, then `Val`, which reads a point in every locale |
 
 ## The arithmetic
 
