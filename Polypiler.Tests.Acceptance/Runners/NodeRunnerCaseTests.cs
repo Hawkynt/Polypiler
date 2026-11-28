@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -34,8 +35,23 @@ public sealed class NodeRunnerCaseTests {
   [TearDown]
   public void DeleteWorkspace() => this._workspace?.Delete(true);
 
+  /// <summary>
+  /// The sandbox of this host, vouched for as isolating. <see cref="LanguageRunnerBase.ExecuteFunction(string, string, CallSignature, IReadOnlyList{byte[]})"/>
+  /// runs its program as untrusted, which a host without isolation such as Windows refuses with
+  /// <c>PLY0034</c>; the fixtures here are this repository's own, so they run there all the same.
+  /// </summary>
+  private sealed class FixtureSandbox(ISandbox inner) : ISandbox {
+
+    public IsolationLevel Isolation => IsolationLevel.Isolated;
+
+    public IReadOnlyList<string> CommandLine(SandboxCommand command) => inner.CommandLine(command);
+
+    public IProcessTreeMonitor Watch(Process process, RunLimits limits) => inner.Watch(process, limits);
+
+  }
+
   internal static NodeRunner Runner(string workspace, RunLimits? driverLimits = null)
-    => new(new CrossLanguageRunner(RunnerTesting.Host, RunnerTesting.Toolchains), workspace, null, driverLimits);
+    => new(new CrossLanguageRunner(new FixtureSandbox(RunnerTesting.Host), RunnerTesting.Toolchains), workspace, null, driverLimits);
 
   internal static RunnerInput Input(IReadOnlyDictionary<string, string> sources, string export, string signature)
     => new(sources.ToDictionary(pair => pair.Key, pair => (ReadOnlyMemory<byte>)Encoding.UTF8.GetBytes(pair.Value), StringComparer.Ordinal),

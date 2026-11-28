@@ -232,7 +232,7 @@ public sealed class NodeRunnerUnitTests {
 
   [Test]
   public void ATapReport_GivesTheCountsAndTheFailures() {
-    var report = NodeRunner.ReadTap(_tap.Replace("\n", "\r\n", StringComparison.Ordinal))!;
+    var report = NodeRunner.ReadTap(_tap.ReplaceLineEndings("\r\n"))!;
 
     Assert.That((report.Total, report.Passed, report.Failed, report.Skipped), Is.EqualTo((5, 1, 4, 2)));
     Assert.That(report.Failures, Is.EqualTo(new[] {
