@@ -414,7 +414,7 @@ Visual Basic .NET has the exceptions of .NET: the frontend and the backend of th
 [frontend](../architecture/VISUALBASIC-FRONTEND.md#visual-basic-net)). An integer overflow is an
 `OverflowException` unless integer checks are removed; `\` and `Mod` by zero a `DivideByZeroException`.
 The dialect also keeps `Err`: `ErrProbe.vb` records, on the compiler and runtime of `dotnet-sdk`, the
-table of the dialect `vbnet` (`tests/fixtures/visualbasic/vbnet/ErrProbe.expected.txt`):
+table of the dialect `vbnet` ([`spec/languages/visualbasic/vbnet-errors.yaml`](../../spec/languages/visualbasic/vbnet-errors.yaml)):
 
 | Exception | `Err.Number` |
 | --- | --- |
@@ -426,9 +426,14 @@ table of the dialect `vbnet` (`tests/fixtures/visualbasic/vbnet/ErrProbe.expecte
 | any other, such as `InvalidOperationException` | 5 |
 | `Err.Raise(n)` | n |
 
-`Err` keeps its number after a later statement that succeeds; `Err.Clear`, `Resume Next` and an
-executed `On Error` clear it; a `Catch` sets it to the number of the exception caught. The frontend
-refuses `On Error` and `Err` (`PLY2611`).
+`Err` keeps its number after a later statement that succeeds and after the procedure that set it
+returns; `Err.Clear`, `Resume Next` and an executed `On Error` clear it; a `Catch` sets it to the
+number of the exception caught and clears it where it ends. Under `Resume Next` an error in the
+condition of an `If` or a `Do While` goes on inside it, one in the value of a `Select Case` after
+`End Select`; `Resume` outside a handler is error 20. The frontend lowers `On Error`, `Resume` and
+`Err.Number`/`Clear`/`Raise` to the IR's exceptions as a state machine with this table
+([frontend](../architecture/VISUALBASIC-FRONTEND.md#jumps-and-unstructured-error-handling)); the
+backend writes the IR's try and catch, not `On Error`.
 
 ## Known differences
 

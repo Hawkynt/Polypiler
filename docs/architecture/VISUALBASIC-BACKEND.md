@@ -100,11 +100,12 @@ the VB.NET parts of [#1088](https://github.com/Hawkynt/Polypiler/issues/1088), [
 [#1089](https://github.com/Hawkynt/Polypiler/issues/1089)), checked against the Visual Basic compiler and runtime
 of the pinned `dotnet-sdk` (layer `visualbasic`, [runner](#verification-of-visual-basic-net)).
 
-`polypiler translate <file> --to visualbasic --output <directory> --profile vbnet/vb<version>[/<framework>]`
+`polypiler translate <file> --to visualbasic --output <directory> --profile vbnet/vb<version>[/<framework>] [--vb-integer-checks]`
 writes `<Module>.vb`, one `Public Module`, and `<Module>.vbproj`, a library for the profile's framework
 and language version with every option stated, `TreatWarningsAsErrors`, and `RemoveIntegerChecks`,
-which the code needs for its wrapping arithmetic; for .NET Standard it embeds the core of the Visual
-Basic runtime (`VBRuntime=Embed`), which that framework lacks. The generated code names every type
+which the code is written for: `true` unless `--vb-integer-checks` asks for a project with integer
+checks on; for .NET Standard it embeds the core of the Visual Basic runtime (`VBRuntime=Embed`), which
+that framework lacks. The generated code names every type
 of the framework in full and calls nothing of `Microsoft.VisualBasic`.
 
 | Profile | What it is |
@@ -133,18 +134,28 @@ chooses by language version and framework:
 | checked `+ - *`, negation, conversion | `PlyAddChk`, `PlySubChk`, `PlyMulChk`, `PlyNegChk`, `PlyChk<T>`: the exact result in `Decimal`, an `OverflowException` outside the type |
 | floating point to integer | `PlySat<T>` (truncated, saturated, 0 for a NaN) or `PlyFix<T>` (truncated, an `OverflowException` for a NaN or outside the type) |
 | a step or an assignment as a value, a throw as a value | `PlyStep`, `PlyStepChk`, `PlyBind`, `PlyThrow(Of T)` |
+| a test of an exception's class | `TypeOf e Is T` |
 | `&&`, `||`, conditional | `AndAlso`, `OrElse`, `If(c, a, b)` |
 | loops, `continue` of a `for` with a step, switch, `break` | `Do … Loop`, a `GoTo` to a label before the step, `Select Case` with `Case Else` last, `Exit Do` / `Exit Select` |
 | try, catch with filter, finally, throw, rethrow | `Try`, `Catch e As T When c`, `Finally`, `Throw`, `Throw` |
 | globals, tables, the module's initializer | `Private` fields with initializers, `Private ReadOnly` arrays, `Sub New` |
+
+With integer checks on (`--vb-integer-checks`) the operators and conversion functions throw, so the
+IR's checked `+ - *` and negation are the operators and the wrapping ones are written out through
+helpers that cannot overflow: in the next wider type for 32 bits, in 32-bit halves for 64 bits
+(`PlyAddWrap`, `PlySubWrap`, `PlyMulWrap`, `PlyNegWrap` over `PlyBits`, `PlyAddBits`, `PlyMulBits`), a
+conversion that keeps the low bits through `PlyWrap<T>` of the two's complement, the logical right
+shift of a signed value through `PlyShrU`, a step through `PlyStepWrap`.
 
 Refused: classes of the module's own and interfaces, the dynamic type, foreign functions, structs
 without fields (`PLY2656`), and the string operations of ECMA-262 (split, pad) (`PLY2657`).
 
 ### Verification of Visual Basic .NET
 
-- `VbNetDifferentialTests`: every prototype fixture, emitted for `vbnet/vb16.9`, compiled by Roslyn in
-  memory with the project's options and called, returns what the IR interpreter returns; the first
+- `VbNetDifferentialTests`: every prototype fixture, emitted for `vbnet/vb16.9` with `RemoveIntegerChecks`
+  and with integer checks on, compiled by Roslyn in memory with the project's options and called,
+  returns what the IR interpreter returns; `VbNetIntegerChecksTests` calls the wrapping operations at
+  the boundaries of each type and SplitMix64 with integer checks on; the first
   fixtures compile without a warning in every language version. `VbNetBackendTests` compiles them
   against the reference assemblies of all nine frameworks.
 - `VbNetOracleTests` (layer `visualbasic`): `VbNetRunner` builds the modules with a generated driver by
