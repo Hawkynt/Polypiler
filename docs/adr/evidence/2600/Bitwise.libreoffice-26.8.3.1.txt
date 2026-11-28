@@ -1,0 +1,15 @@
+Long 8
+Long 14
+Long 6
+Long -7
+Long -5
+Long -13
+Long 8 Long -201
+Long 128 Long -201
+Long 0 Long -201
+Null|Null|Null
+Null|Null|Null
+IntegerStringNull20
+String 2 1 True
+Double 2.5 3 Empty
+!9

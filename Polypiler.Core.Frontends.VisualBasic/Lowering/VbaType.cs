@@ -4,7 +4,7 @@ using Polypiler.Core.IR;
 namespace Polypiler.Core.Frontends.VisualBasic.Lowering;
 
 /// <summary>The kinds of value of the subset.</summary>
-internal enum VbaKind { Boolean, Byte, Integer, Long, LongLong, Single, Double, String, Record, Array, Variant }
+internal enum VbaKind { Boolean, Byte, Integer, Long, LongLong, Single, Double, String, Record, Array, Variant, Currency, Date }
 
 /// <summary>
 /// A type of the subset: a scalar, a user-defined type, or an array of one with its lower bound,
@@ -28,6 +28,12 @@ internal sealed record VbaType(VbaKind Kind, IrStructType? Record = null, VbaTyp
 
   public static VbaType String { get; } = new(VbaKind.String);
 
+  /// <summary><c>Currency</c>: ten thousandths in an <c>i64</c>.</summary>
+  public static VbaType Currency { get; } = new(VbaKind.Currency);
+
+  /// <summary><c>Date</c>: days since 1899-12-30 in an <c>f64</c>, the time as the fraction.</summary>
+  public static VbaType Date { get; } = new(VbaKind.Date);
+
   /// <summary>A <c>Variant</c> the inference could not give one type: the IR's dynamic type.</summary>
   public static VbaType Variant { get; } = new(VbaKind.Variant);
 
@@ -39,8 +45,11 @@ internal sealed record VbaType(VbaKind Kind, IrStructType? Record = null, VbaTyp
 
   public bool IsFloat => this.Kind is VbaKind.Single or VbaKind.Double;
 
-  /// <summary>Whether arithmetic takes the type: the numbers and <c>Boolean</c>, which counts as an <c>Integer</c>.</summary>
-  public bool IsNumeric => this.IsInteger || this.IsFloat || this.Kind == VbaKind.Boolean;
+  /// <summary>Whether arithmetic takes the type: the numbers, <c>Currency</c>, <c>Date</c> and <c>Boolean</c>, which counts as an <c>Integer</c>.</summary>
+  public bool IsNumeric => this.IsInteger || this.IsFloat || this.Kind is VbaKind.Boolean or VbaKind.Currency or VbaKind.Date;
+
+  /// <summary>Whether the type is <c>Currency</c> or <c>Date</c>, whose IR values are no plain numbers of their type.</summary>
+  public bool IsScaled => this.Kind is VbaKind.Currency or VbaKind.Date;
 
   public bool IsArray => this.Kind == VbaKind.Array;
 
@@ -52,7 +61,8 @@ internal sealed record VbaType(VbaKind Kind, IrStructType? Record = null, VbaTyp
     VbaKind.Long => IrType.I32,
     VbaKind.LongLong => IrType.I64,
     VbaKind.Single => IrType.F32,
-    VbaKind.Double => IrType.F64,
+    VbaKind.Double or VbaKind.Date => IrType.F64,
+    VbaKind.Currency => IrType.I64,
     VbaKind.String => IrType.String,
     VbaKind.Record => IrType.Struct(this.Record!),
     VbaKind.Variant => IrType.Variant,
@@ -66,7 +76,7 @@ internal sealed record VbaType(VbaKind Kind, IrStructType? Record = null, VbaTyp
     _ => this.Kind.ToString()
   };
 
-  /// <summary>The rank of a number in the widening order Byte, Integer, Long, LongLong, Single, Double.</summary>
+  /// <summary>The rank of a number in the widening order Byte, Integer, Long, LongLong, Single, Double, Currency, Date.</summary>
   public int Rank => this.Kind switch {
     VbaKind.Byte => 1,
     VbaKind.Boolean or VbaKind.Integer => 2,
@@ -74,6 +84,8 @@ internal sealed record VbaType(VbaKind Kind, IrStructType? Record = null, VbaTyp
     VbaKind.LongLong => 4,
     VbaKind.Single => 5,
     VbaKind.Double => 6,
+    VbaKind.Currency => 7,
+    VbaKind.Date => 8,
     _ => throw new InvalidOperationException($"'{this}' is no number")
   };
 
@@ -107,7 +119,19 @@ internal enum VbaTags {
   Float = Single | Double,
 
   /// <summary>Whatever a value from outside the procedure may hold: a parameter, a call's result, a module variable.</summary>
-  Any = Empty | Null | Numeric | String
+  Any = Empty | Null | Numeric | String | Date,
+
+  /// <summary><c>Currency</c>, which a value from outside may hold as well.</summary>
+  Currency = 4096,
+
+  /// <summary><c>Date</c>.</summary>
+  Date = 8192,
+
+  /// <summary>An array of <c>Variant</c>s that starts at 0, as <c>Array(…)</c> under <c>Option Base 0</c> gives one.</summary>
+  ArrayFrom0 = 1024,
+
+  /// <summary>An array of <c>Variant</c>s that starts at 1.</summary>
+  ArrayFrom1 = 2048
 }
 
 /// <summary>

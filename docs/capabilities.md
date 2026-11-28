@@ -46,7 +46,7 @@ Known limitations, the constructs a source profile diagnoses instead of translat
 
 Known limitations, the constructs a source profile diagnoses instead of translating:
 
-- `vba7`: Variant whose text or number would depend on the locale, bitwise operators on integer Variants, Variant arrays (PLY2646); Currency, Date, Decimal, Object, LongPtr (PLY2646); GoTo, GoSub, With, For Each, Resume to a label (PLY2646); multidimensional arrays, arrays of String or Boolean (PLY2646); ByRef parameters that are assigned, ParamArray, Declare, Property (PLY2646); class modules, fixed-length strings, String fields of a Type (PLY2646)
+- `vba7`: text of a Date, a Variant holding an array and another kind, LongLong in a Variant (PLY2646); Decimal, Object, LongPtr (PLY2646); GoTo, GoSub, With, For Each, Resume to a label (PLY2646); multidimensional arrays, arrays of String or Boolean (PLY2646); ByRef parameters that are assigned, ParamArray, Declare, Property (PLY2646); class modules, fixed-length strings, String fields of a Type (PLY2646)
 
 ## States
 

@@ -106,8 +106,10 @@ approximated by a similarly named expression. See
 A value of the dynamic type `variant` ([variants](../reference/variants.md)) is a pair
 `[tag, payload]` - `[0]` for `Empty`, `[1]` for `Null` - since a JavaScript number cannot tell an
 `i16` from an `f64`: the tag is `v[0]`, a payload the frontend tested `v[1]`, one it did not
-`$variant(v, tag)`, which throws the `InvalidCastError`. A payload of 64 bits, `Currency` and `Date`
-are refused.
+`$variant(v, tag)`, which throws the `InvalidCastError`; a date is `[7, days]`, an array of the type
+an `Array` of pairs whose new elements are `[0]`. A payload of 64 bits, a currency too, is refused.
+`FormatVisualBasic`, Visual Basic's text of a number, is the helper `$fmtVb` over the exact digits of
+`$exact`.
 
 ## Objects, control flow and runtime contracts
 

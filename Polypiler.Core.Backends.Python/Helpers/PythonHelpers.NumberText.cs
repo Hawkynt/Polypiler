@@ -32,6 +32,9 @@ internal static partial class PythonHelpers {
   /// <summary>.NET's <c>double.Parse</c>.</summary>
   public const string ParseFloatDotNet = "_ply_parse_float_net";
 
+  /// <summary>Visual Basic's text of a <c>Double</c> or a <c>Single</c> (<c>FormatVisualBasic</c>).</summary>
+  public const string FormatVisualBasic = "_ply_format_vb";
+
   /// <summary>
   /// The conversions between numbers and text of .NET and of ECMA-262, whose layouts and grammars are
   /// not Python's: the shortest digits come from <c>repr</c>, which ECMA-262 and .NET Core 3.0 agree
@@ -134,6 +137,38 @@ internal static partial class PythonHelpers {
         if digits == 0:
             return text
         return text[:len(text) - digits] + "." + text[len(text) - digits:]
+
+
+    def _ply_format_vb(value: float, precision: int, separator: str) -> str:
+        if value != value:
+            return "-1.#IND"
+        if math.isinf(value):
+            return "-1.#INF" if value < 0.0 else "1.#INF"
+        if value == 0.0:
+            return "0"
+        ratio = abs(value).as_integer_ratio()
+        scale = ratio[1].bit_length() - 1
+        digits = str(ratio[0] * 5 ** scale)
+        first = len(digits) - 1 - scale
+        if len(digits) > precision:
+            kept = int(digits[:precision])
+            rest = digits[precision:]
+            if rest[0] > "5" or rest[0] == "5" and (rest[1:].strip("0") != "" or kept % 2 == 1):
+                kept = kept + 1
+            digits = str(kept)
+            if len(digits) > precision:
+                digits = digits[:precision]
+                first = first + 1
+        digits = digits.rstrip("0")
+        sign = "-" if value < 0.0 else ""
+        if first < -4 or first >= precision:
+            fraction = separator + digits[1:] if len(digits) > 1 else ""
+            return sign + digits[0] + fraction + ("E-" if first < 0 else "E+") + str(abs(first)).rjust(2, "0")
+        if first < 0:
+            return sign + "0" + separator + "0" * (-first - 1) + digits
+        if len(digits) <= first + 1:
+            return sign + digits + "0" * (first + 1 - len(digits))
+        return sign + digits[:first + 1] + separator + digits[first + 1:]
 
 
     def _ply_fixed_ecma(value: float, digits: int) -> str:

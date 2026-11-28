@@ -1,0 +1,7 @@
+Sums(41)
+Doubled("ab")
+Factorial(10)
+Factorial(1)
+IsBig(9)
+IsBig(2)
+ScaledBoth(5)

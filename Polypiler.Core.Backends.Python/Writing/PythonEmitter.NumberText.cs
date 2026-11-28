@@ -46,6 +46,8 @@ public static partial class PythonEmitter {
           return this.Helper(PythonHelpers.ParseFloatEcma, Arg(0));
         case IrIntrinsicOp.ParseIntEcma:
           return this.Helper(PythonHelpers.ParseIntEcma, Arg(0), arguments.Count > 1 ? Arg(1) : Integer(0));
+        case IrIntrinsicOp.FormatVisualBasic:
+          return this.Helper(PythonHelpers.FormatVisualBasic, Arg(0), Integer(operand == IrType.F32 ? 7 : 15), new PyString(NumberTextOperations.SeparatorOf(intrinsic)!.Value.ToString()));
         default:
           var type = intrinsic.Type;
           if (type.IsFloat)

@@ -1,0 +1,7 @@
+42 Long 3.75
+abab|77
+3628800
+1
+True
+False
+25

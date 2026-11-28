@@ -19,13 +19,19 @@ internal sealed partial class VbaLowerer {
       case VbaInteger integer:
         return Literal(integer);
       case VbaFloat number:
-        if (number.Suffix == "@")
-          throw this.Unsupported(number.Line, "Currency");
+        if (number.Suffix == "@") {
+          var scaled = Math.Round(number.Value * 10000, MidpointRounding.ToEven);
+          if (scaled is < -9.2233720368547758E+18 or >= 9.2233720368547758E+18)
+            throw this.Unresolved(number.Line, $"the Currency literal {number.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}@ does not fit a Currency");
+          return new(new IrConst(IrType.I64, (long)scaled), VbaType.Currency);
+        }
         return number.Suffix == "!"
           ? new(new IrConst(IrType.F32, IrOperators.Bits(IrType.F32, number.Value)), VbaType.Single)
           : new(new IrConst(IrType.F64, IrOperators.Bits(IrType.F64, number.Value)), VbaType.Double);
       case VbaString text:
         return new(new IrStrConst(text.Value), VbaType.String);
+      case VbaDate date:
+        return new(new IrConst(IrType.F64, IrOperators.Bits(IrType.F64, date.Value)), VbaType.Date);
       case VbaBoolean boolean:
         return new(new IrConst(IrType.Bool, boolean.Value ? 1 : 0), VbaType.Boolean);
       case VbaEmpty:
@@ -81,8 +87,10 @@ internal sealed partial class VbaLowerer {
       return constant;
     if (this._globals.TryGetValue(name.Name, out var global))
       return Returned(new IrGlobalRef(global.Global), global.Type);
-    if (this._procedures.TryGetValue(name.Name, out var signature) && signature.Returns is not null)
-      return Returned(this.Call(signature, [], name.Line), signature.Returns);
+    if (this._procedures.TryGetValue(name.Name, out var signature) && signature.Returns is not null) {
+      var called = this.Call(ref signature, [], name.Line);
+      return Returned(called, signature);
+    }
     if (this.Builtin(name.Name, [], name.Line) is { } builtin)
       return builtin;
 
@@ -107,13 +115,17 @@ internal sealed partial class VbaLowerer {
         if (call.Arguments.Count != 1)
           throw this.Unsupported(call.Line, "a multidimensional array");
         var array = this.Name(name);
-        return new(new IrArrayLoad(array.Expr, this.Index(call.Arguments[0], array.Type, call.Line)), array.Type.Element!);
+        return Element(new IrArrayLoad(array.Expr, this.Index(call.Arguments[0], array.Type, call.Line)), array.Type.Element!);
       }
+
+      if ((this._inference?.Candidates.Contains(name.Name) == true || this.Lookup(name.Name) is { Type.IsVariant: true }) && !this._procedures.ContainsKey(name.Name))
+        throw this.Unsupported(call.Line, $"an element of the Variant '{name.Name}', which may hold no array or another kind as well");
 
       if (this._procedures.TryGetValue(name.Name, out var signature) || this._raw && this._helperSignatures.TryGetValue(name.Name, out signature)) {
         if (signature.Returns is null)
           throw this.Unresolved(call.Line, $"the Sub '{name.Name}' has no value");
-        return Returned(this.Call(signature, call.Arguments, call.Line), signature.Returns);
+        var called = this.Call(ref signature, call.Arguments, call.Line);
+        return Returned(called, signature);
       }
 
       if (this.Builtin(name.Name, call.Arguments, call.Line) is { } builtin)
@@ -126,8 +138,11 @@ internal sealed partial class VbaLowerer {
     var target = this.Expression(call.Target);
     if (!target.Type.IsArray || call.Arguments.Count != 1)
       throw this.Unsupported(call.Line, "the call of a member");
-    return new(new IrArrayLoad(target.Expr, this.Index(call.Arguments[0], target.Type, call.Line)), target.Type.Element!);
+    return Element(new IrArrayLoad(target.Expr, this.Index(call.Arguments[0], target.Type, call.Line)), target.Type.Element!);
   }
+
+  /// <summary>An element of an array: one of a <c>Variant</c> array may hold anything.</summary>
+  private static VbaValue Element(IrExpr load, VbaType element) => new(load, element) { Tags = element.IsVariant ? VbaTags.Any : VbaTags.None };
 
   /// <summary>An index of an array, a <c>Long</c> less the array's lower bound.</summary>
   private IrExpr Index(VbaExpr index, VbaType array, int line) {
@@ -139,23 +154,40 @@ internal sealed partial class VbaLowerer {
   }
 
   /// <summary>The call of a procedure of the module: the arguments coerced to the parameters, an optional one left out given its default.</summary>
-  private IrCall Call(Signature signature, IReadOnlyList<VbaExpr> arguments, int line) {
+  private IrCall Call(Signature signature, IReadOnlyList<VbaExpr> arguments, int line) => this.Call(ref signature, arguments, line);
+
+  /// <summary>
+  /// The call of a procedure of the module, of the clone its arguments' kinds choose (#1564), which
+  /// <paramref name="signature"/> becomes: the arguments coerced to the parameters, an optional one
+  /// left out given its default.
+  /// </summary>
+  private IrCall Call(ref Signature signature, IReadOnlyList<VbaExpr> arguments, int line) {
     if (arguments.Count > signature.Parameters.Count)
       throw this.Unresolved(line, $"'{signature.Name}' takes {signature.Parameters.Count} arguments, not {arguments.Count}");
 
+    var given = new List<VbaValue?>();
+    for (var index = 0; index < signature.Parameters.Count; ++index) {
+      var parameter = signature.Parameters[index];
+      if (index < arguments.Count)
+        given.Add(this.Expression(arguments[index]));
+      else if (parameter.Optional)
+        given.Add(parameter.Default is { } value ? this.Expression(value) : null);
+      else
+        throw this.Unresolved(line, $"'{signature.Name}' needs the argument '{parameter.Name}'");
+    }
+
+    signature = this.Specialised(signature, given);
     var values = new List<IrExpr>();
     for (var index = 0; index < signature.Parameters.Count; ++index) {
       var parameter = signature.Parameters[index];
-      if (index < arguments.Count) {
-        var argument = this.Expression(arguments[index]);
-        if (parameter.Type.IsArray && argument.Type != parameter.Type)
-          throw this.Unresolved(line, $"the array argument {index + 1} of '{signature.Name}' is '{argument.Type}' from {argument.Type.LowerBound}, the parameter '{parameter.Type}' from {parameter.Type.LowerBound}");
-        values.Add(this.Coerce(argument, parameter.Type, line));
-      } else if (parameter.Optional) {
-        values.Add(parameter.Default is { } value ? this.Coerce(this.Expression(value), parameter.Type, line) : this.Default(parameter.Type, line));
-      } else {
-        throw this.Unresolved(line, $"'{signature.Name}' needs the argument '{parameter.Name}'");
+      if (given[index] is not { } argument) {
+        values.Add(this.Default(parameter.Type, line));
+        continue;
       }
+
+      if (index < arguments.Count && parameter.Type.IsArray && argument.Type != parameter.Type)
+        throw this.Unresolved(line, $"the array argument {index + 1} of '{signature.Name}' is '{argument.Type}' from {argument.Type.LowerBound}, the parameter '{parameter.Type}' from {parameter.Type.LowerBound}");
+      values.Add(this.Coerce(argument, parameter.Type, line));
     }
 
     if (signature.Name.StartsWith("Ply", StringComparison.Ordinal) && this._helperSignatures.ContainsKey(signature.Name))
@@ -165,7 +197,7 @@ internal sealed partial class VbaLowerer {
 
   private VbaValue Unary(VbaUnary unary) {
     var operand = this.Expression(unary.Operand);
-    if (operand.Type.IsVariant || (operand.IsVariant && unary.Operator == "-"))
+    if (operand.Type.IsVariant || operand.Promoted is not null || (operand.IsVariant && unary.Operator == "-"))
       return this.VariantUnary(unary.Operator, operand, unary.Line);
     if (unary.Operator == "Not" && operand.IsVariant) {
       var not = this.Unary(unary, operand with { Tags = VbaTags.None });
@@ -176,6 +208,7 @@ internal sealed partial class VbaLowerer {
   }
 
   private VbaValue Unary(VbaUnary unary, VbaValue operand) {
+    operand = this.AsNumber(operand);
     if (unary.Operator == "Not") {
       if (operand.Type.Kind == VbaKind.Boolean)
         return new(new IrUnary(IrUnaryOp.LogicalNot, operand.Expr), VbaType.Boolean);
@@ -186,6 +219,10 @@ internal sealed partial class VbaLowerer {
 
     if (!operand.Type.IsNumeric)
       throw this.Mismatch(unary.Line, "the negation", operand.Type);
+    if (operand.Type.Kind == VbaKind.Currency)
+      return new(new IrUnary(IrUnaryOp.NegateChecked, operand.Expr), VbaType.Currency);
+    if (operand.Type.Kind == VbaKind.Date)
+      return new(this.HelperCall("PlyDateCheck", new IrUnary(IrUnaryOp.Negate, operand.Expr)), VbaType.Date);
     if (operand.Type.IsFloat)
       return new(new IrUnary(IrUnaryOp.Negate, operand.Expr), operand.Type);
     if (operand.Type.Kind is VbaKind.Long or VbaKind.LongLong)
@@ -215,11 +252,14 @@ internal sealed partial class VbaLowerer {
     if (op == "+" && left.Type.Kind == VbaKind.String && right.Type.Kind == VbaKind.String)
       return new(new IrIntrinsic(IrIntrinsicOp.StrConcat, IrType.String, [left.Expr, right.Expr]), VbaType.String);
 
+    // A String with a number, or in an operator only numbers take, is read as a Double.
+    left = this.AsNumber(left);
+    right = this.AsNumber(right);
     if (!left.Type.IsNumeric || !right.Type.IsNumeric)
       throw this.Mismatch(binary.Line, $"'{op}'", left.Type.IsNumeric ? right.Type : left.Type);
 
     return op switch {
-      "+" or "-" or "*" => this.Arithmetic(op, Promote(left.Type, right.Type), left, right),
+      "+" or "-" or "*" => this.Arithmetic(op, ArithmeticType(op, left.Type, right.Type), left, right),
       "/" => this.Divide(left, right),
       "\\" or "Mod" => this.IntegerDivide(op, left, right, binary.Line),
       "^" => new(this.Pow(this.ToFloat(left, IrType.F64), this.ToFloat(right, IrType.F64)), VbaType.Double),
@@ -233,6 +273,10 @@ internal sealed partial class VbaLowerer {
 
   /// <summary>The type of a sum, difference or product ([MS-VBAL] 5.6.9.3): the wider operand, a <c>Boolean</c> as an <c>Integer</c>, and <c>Double</c> for a <c>Single</c> with a <c>Long</c> or a <c>LongLong</c>.</summary>
   private static VbaType Promote(VbaType left, VbaType right) {
+    if (left.Kind == VbaKind.Date || right.Kind == VbaKind.Date)
+      return VbaType.Date;
+    if (left.Kind == VbaKind.Currency || right.Kind == VbaKind.Currency)
+      return VbaType.Currency;
     if (left.Kind == VbaKind.Double || right.Kind == VbaKind.Double)
       return VbaType.Double;
     if (left.Kind == VbaKind.Single || right.Kind == VbaKind.Single) {
@@ -251,7 +295,12 @@ internal sealed partial class VbaLowerer {
   private IrExpr Widen(VbaValue value, IrType wide) {
     if (value.Type.Kind == VbaKind.Boolean)
       return new IrConditional(value.Expr, new IrConst(wide, -1), new IrConst(wide, 0));
-    if (value.Type.IsFloat)
+    if (value.Type.Kind == VbaKind.Currency) {
+      var whole = this.HelperCall("PlyCurInt", value.Expr);
+      return wide == IrType.I64 ? whole : new IrConvert(wide, whole, IrConversion.Trap);
+    }
+
+    if (value.Type.IsFloat || value.Type.Kind == VbaKind.Date)
       return new IrConvert(wide, new IrIntrinsic(IrIntrinsicOp.RoundEven, value.Expr.Type, [value.Expr]), IrConversion.Trap);
     return value.Expr.Type == wide ? value.Expr : new IrConvert(wide, value.Expr);
   }
@@ -260,6 +309,11 @@ internal sealed partial class VbaLowerer {
   private IrExpr ToFloat(VbaValue value, IrType type) {
     if (value.Type.Kind == VbaKind.Boolean)
       return new IrConditional(value.Expr, new IrConst(type, IrOperators.Bits(type, -1.0)), new IrConst(type, 0));
+    if (value.Type.Kind == VbaKind.Currency) {
+      var amount = this.HelperCall("PlyCurDbl", value.Expr);
+      return type == IrType.F64 ? amount : new IrConvert(type, amount);
+    }
+
     return value.Expr.Type == type ? value.Expr : new IrConvert(type, value.Expr);
   }
 
@@ -267,6 +321,8 @@ internal sealed partial class VbaLowerer {
   private IrExpr Narrowed(IrExpr wide, VbaType type, IrConversion contract) => wide.Type == type.Ir ? wide : new IrConvert(type.Ir, wide, contract);
 
   private VbaValue Arithmetic(string op, VbaType type, VbaValue left, VbaValue right) {
+    if (this.ScaledArithmetic(op, type, left, right) is { } scaled)
+      return scaled;
     if (type.IsFloat) {
       var a = this.ToFloat(left, type.Ir);
       var b = this.ToFloat(right, type.Ir);
@@ -309,7 +365,7 @@ internal sealed partial class VbaLowerer {
       return value;
     if (value.Type.Kind == VbaKind.Boolean)
       return new(this.Widen(value, IrType.I16), VbaType.Integer);
-    if (value.Type.IsFloat)
+    if (value.Type.IsFloat || value.Type.IsScaled)
       return new(this.Widen(value, IrType.I32), VbaType.Long);
     throw this.Mismatch(line, operation, value.Type);
   }
@@ -330,10 +386,8 @@ internal sealed partial class VbaLowerer {
   /// </summary>
   private VbaValue Logical(string op, VbaValue left, VbaExpr rightExpression, int line) {
     var right = this.Expression(rightExpression);
-    if (left.Type.IsVariant || right.Type.IsVariant)
+    if (left.Type.IsVariant || right.Type.IsVariant || left.Promoted is not null || right.Promoted is not null)
       return this.VariantLogical(op, left, right, line);
-    if (left.Promoted is not null || right.Promoted is not null)
-      throw this.Unsupported(line, $"{op} of the result of Variant arithmetic, whose type its value decides");
     if (left.IsVariant || right.IsVariant) {
       var typed = this.Logical(op, left with { Tags = VbaTags.None }, right with { Tags = VbaTags.None }, line);
       return typed with { Tags = TagOf(typed.Type.Kind) };
@@ -409,8 +463,22 @@ internal sealed partial class VbaLowerer {
     if (left.Type.Kind == VbaKind.Boolean && right.Type.Kind == VbaKind.Boolean && op is "=" or "<>")
       return new IrBinary(irOp, left.Expr, right.Expr);
 
+    // A String compared with a number is read as a number.
+    if ((left.Type.Kind == VbaKind.String) != (right.Type.Kind == VbaKind.String)) {
+      left = this.AsNumber(left);
+      right = this.AsNumber(right);
+    }
+
     if (!left.Type.IsNumeric || !right.Type.IsNumeric)
       throw this.Mismatch(line, "a comparison", left.Type.IsNumeric ? right.Type : left.Type);
+
+    // A Currency with a Currency or an integer compares exactly; with anything else, and a Date, as a Double.
+    if (left.Type.IsScaled || right.Type.IsScaled) {
+      static bool Exact(VbaType type) => type.Kind == VbaKind.Currency || type.IsInteger || type.Kind == VbaKind.Boolean;
+      return Exact(left.Type) && Exact(right.Type)
+        ? new IrBinary(irOp, this.ToCurrency(left), this.ToCurrency(right))
+        : new IrBinary(irOp, this.ToFloat(left, IrType.F64), this.ToFloat(right, IrType.F64));
+    }
 
     var type = Promote(left.Type, right.Type);
     if (type.IsFloat)
@@ -426,22 +494,25 @@ internal sealed partial class VbaLowerer {
       return this.VariantCondition(value, expression.Line);
     if (value.Type.Kind == VbaKind.Boolean)
       return value.Expr;
+    if (value.Type.Kind == VbaKind.String)
+      return this.HelperCall("PlyTextBool", value.Expr);
     if (value.Type.IsNumeric)
       return this.Compare("<>", value, new(I32(0), VbaType.Long), expression.Line);
     throw this.Mismatch(expression.Line, "a condition", value.Type);
   }
 
-  /// <summary>A value as text, as <c>CStr</c> and <c>&amp;</c> write it: an integer in decimal, a <c>Boolean</c> as <c>True</c> or <c>False</c>.</summary>
+  /// <summary>
+  /// A value as text, as <c>CStr</c> and <c>&amp;</c> write it: an integer in decimal, a <c>Boolean</c>
+  /// as <c>True</c> or <c>False</c>, a floating-point number by <c>FormatVisualBasic</c> with the
+  /// decimal separator of the locale. The result of promoting arithmetic is an integer below 10^15 or
+  /// the <c>Double</c> it was promoted to, whose text is the same.
+  /// </summary>
   private IrExpr Text(VbaValue value, int line) {
-    if (value.Type.IsVariant) {
-      this.RefuseFloatText(value.Tags, line);
-      return this.HelperCall("PlyVarCStr", value.Expr);
-    }
+    if (value.Type.IsVariant)
+      return this.HelperCall((value.Tags & VbaTags.Currency) != VbaTags.None ? "PlyVarCStrC" : "PlyVarCStr", value.Expr);
 
-    if (value.Promoted is not null) {
-      this.RefuseFloatText(value.Tags, line);
-      return this.Text(new(new IrConvert(IrType.I32, value.Expr, IrConversion.Trap), VbaType.Long), line);
-    }
+    if (value.Type.IsFloat)
+      return NumberTextOperations.VisualBasic(value.Expr, this._locale.Decimal);
 
     if (value.Type.Kind == VbaKind.String)
       return value.Expr;
@@ -452,8 +523,15 @@ internal sealed partial class VbaLowerer {
       return new IrIntrinsic(IrIntrinsicOp.FormatRadix, IrType.String, [wide, I32(10), I32(1), new IrConst(IrType.Bool, 0), I32((int)RadixMode.SignMagnitude)]);
     }
 
-    throw this.Unsupported(line, $"the text of a {value.Type}, which Visual Basic formats by the locale");
+    if (value.Type.Kind == VbaKind.Currency)
+      return this.HelperCall("PlyCurText", value.Expr);
+    if (value.Type.Kind == VbaKind.Date)
+      throw this.Unsupported(line, "the text of a Date, which Visual Basic writes in the Short Date and Long Time formats of the regional settings");
+    throw this.Unsupported(line, $"the text of a {value.Type}");
   }
+
+  /// <summary>A <c>String</c> as the number arithmetic and comparisons read it ([MS-VBAL] §5.6.9.3): a <c>Double</c> by the locale, error 13 for a text of no number; any other value as it is.</summary>
+  private VbaValue AsNumber(VbaValue value) => value.Type.Kind == VbaKind.String && !value.IsVariant ? new(this.HelperCall("PlyCDbl", value.Expr), VbaType.Double) : value;
 
   #endregion
 
@@ -467,13 +545,26 @@ internal sealed partial class VbaLowerer {
   private IrExpr Coerce(VbaValue value, VbaType target, int line) {
     if (value.Type == target)
       return value.Expr;
+    // A dynamic value the inference knows to hold exactly the target's kind is its payload.
+    if (value.Type.IsVariant && value.Promoted is null && TagOf(target.Kind) is var kind and not VbaTags.None && value.Tags == kind && VarTypeOf(target, line) is var tag)
+      return new IrVariantValue(value.Expr, tag) { IsTested = true };
     if (target.IsVariant)
       return this.Box(value, line);
     if (value.Type.IsVariant)
       return this.Unbox(value, target, line);
 
+    if (target.Kind == VbaKind.Currency && (value.Type.IsNumeric || value.Type.Kind == VbaKind.String))
+      return this.ToCurrency(value);
+    if (target.Kind == VbaKind.Date && (value.Type.IsNumeric || value.Type.Kind == VbaKind.String))
+      return this.ToDate(value);
+
     if (target.Kind == VbaKind.Boolean && value.Type.IsNumeric)
       return this.Compare("<>", value, new(I32(0), VbaType.Long), line);
+
+    if (target.IsInteger && value.Type.IsScaled) {
+      var whole = this.Widen(value, IrType.I64);
+      return target.Ir == IrType.I64 ? whole : new IrConvert(target.Ir, whole, IrConversion.Trap);
+    }
 
     if (target.IsInteger && value.Type.IsNumeric) {
       if (value.Type.Kind == VbaKind.Boolean)
@@ -489,9 +580,16 @@ internal sealed partial class VbaLowerer {
       return value.Type.Kind == VbaKind.Double && target.Kind == VbaKind.Single ? this.Checked(converted) : converted;
     }
 
-    // A String takes an integer or a Boolean as CStr writes it.
-    if (target.Kind == VbaKind.String && (value.Type.IsInteger || value.Type.Kind == VbaKind.Boolean))
+    // A String takes a number or a Boolean as CStr writes it, a number a String as CDbl reads it.
+    if (target.Kind == VbaKind.String && value.Type.IsNumeric)
       return this.Text(value, line);
+    if (value.Type.Kind == VbaKind.String && target.IsNumeric) {
+      return target.Kind switch {
+        VbaKind.Boolean => this.HelperCall("PlyTextBool", value.Expr),
+        VbaKind.Single => this.HelperCall("PlyCSng", value.Expr),
+        _ => this.Coerce(new(this.HelperCall("PlyCDbl", value.Expr), VbaType.Double), target, line)
+      };
+    }
 
     if (target.IsArray && value.Type.IsArray && target.Element == value.Type.Element)
       return value.Expr;

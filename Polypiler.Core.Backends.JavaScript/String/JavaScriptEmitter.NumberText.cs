@@ -41,6 +41,8 @@ public static partial class JavaScriptEmitter {
           return (new JsCall(new JsMember(this.Receiver(arguments[0]), "toFixed"), [this.Text(arguments[1])]), true);
         case IrIntrinsicOp.FixedDotNet:
           return (this.Helper("$fixedNet", arguments[0], arguments[1]), true);
+        case IrIntrinsicOp.FormatVisualBasic:
+          return (this.Helper("$fmtVb", [this.Text(arguments[0]), Number(operand == IrType.F32 ? "7" : "15"), new JsString(NumberTextOperations.SeparatorOf(intrinsic)!.Value.ToString())]), true);
         case IrIntrinsicOp.ParseNumberEcma:
           this.Native("Number");
           return (Invoke("Number", this.Text(arguments[0])), true);

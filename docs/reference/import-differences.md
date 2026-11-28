@@ -129,14 +129,22 @@ decision is made by the kinds the inference found:
 | --- | --- | --- |
 | integer arithmetic of a `Variant`, also of one given a fixed type | behaves like the original | promotes `Byte` → `Integer` → `Long` → `Double` (and `Single` → `Double`) where the typed operator would raise error 6 |
 | `Empty`, `Null` in operators, comparisons, conditions and conversions | behaves like the original | VBA's rules ([MS-VBAL] 5.6.9, 5.5.1.2); `Null` where a value is needed is error 94 |
-| the text of a value that may be a `Single` or a `Double` | refused (`PLY2646`) | none: Visual Basic writes it by the locale |
-| a `String` that may meet a number in arithmetic, a comparison with a typed value, a typed conversion, a condition or `IsNumeric` | refused (`PLY2646`) | none: Visual Basic reads it by the locale |
-| bitwise `And`/`Or`/`Xor`/`Not`, `Eqv`, `Imp` of a dynamic integer `Variant` | refused (`PLY2646`) | none, not modelled yet |
+| the text of a `Single` or a `Double` | behaves like the original in the locale `--vb-locale` states (default `en-US`) | 15 or 7 significant digits of the exact value, a tie to the even digit, `1E+20`, `1E-05`, the locale's decimal separator; never the culture of the machine that runs the translation |
+| a `String` read as a number: in arithmetic, a comparison with a number, a conversion, a condition, `IsNumeric` | behaves like the original in the stated locale | the locale's decimal and group separators, `E`/`D` exponents, `&H`/`&O`; error 13 for no number; currency symbols, parentheses and trailing signs, which `VarR8FromStr` also takes, are error 13 |
+| the text of a `Date` | refused (`PLY2646`) | none: Visual Basic writes it in the Short Date format of the host; in a dynamic `Variant` from outside, error 13 when it runs |
+| bitwise `And`/`Or`/`Xor`/`Eqv`/`Imp`/`Not` of a `Variant` | behaves like the original | the effective type of [MS-VBAL] 5.6.9.8 and its `Null` rules |
+| a `Currency` in a dynamic `Variant` the host passes in | error 13 | a module meets `Currency` only through its own `CCur`, `@` literals and `Currency` variables, so a module without them carries no 64-bit integer |
+| `Variant` parameters and results | typed per call signature where the calls prove one kind | the procedure as declared stays for the host (`Public`) and for calls of several kinds; the clones keep `Variant` promotion |
 
 LibreOffice Basic, the oracle, has rules of its own for `Variant`s (ADR 2600: every arithmetic
-result a `Double`, `Null & "a"` and the conversion of `Null` error 13, `Null And False` `Null`); the
-differential compares the fixture as written with the evidence file and the round trip, which writes
-VBA's rules out, with the documented values.
+result a `Double`, `Null & "a"` and the conversion of `Null` error 13, `Null And False` `Null`, every
+bitwise result a `Long`), for the text of numbers (`1E+020`, all digits of an integer below 10^16, no
+exponent for 1E-05, nine digits of a `Single`), for `Val` (`Val("1,5")` is 15), for `Currency` (four
+decimals, `Currency` for a quotient and a product with a `Double`) and for dates (negative dates
+linear, seconds truncated, no error 6 past 9999-12-31); the differential compares each fixture as
+written with its evidence file and the round trip, which writes VBA's rules out, with the documented
+values - the text of a number, which the round trip writes with the office's `CStr`, on the rows on
+which the office agrees.
 
 ## Oracle differences
 

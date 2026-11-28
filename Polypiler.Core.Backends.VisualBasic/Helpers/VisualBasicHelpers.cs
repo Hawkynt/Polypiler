@@ -119,6 +119,22 @@ internal static class VisualBasicHelpers {
   /// <summary>The ordinal comparison of two strings as -1, 0 or 1.</summary>
   public const string CompareOrdinal = "PlyCompare";
 
+  /// <summary>
+  /// The text <c>CStr</c> writes of a number with the decimal separator the IR names in place of the
+  /// one of the run-time locale, and a three-digit exponent with a leading zero (LibreOffice writes
+  /// <c>1E+020</c>) shortened to two digits as Visual Basic writes it.
+  /// </summary>
+  public const string NumberText = "PlyNumberText";
+
+  /// <summary><c>FormatVisualBasic</c> of a <c>Double</c>: its <c>CStr</c>, normalized.</summary>
+  public const string FormatDouble = "PlyFmtR8";
+
+  /// <summary><c>FormatVisualBasic</c> of a <c>Single</c>.</summary>
+  public const string FormatSingle = "PlyFmtR4";
+
+  /// <summary><c>ParseDotNet</c> of a <c>Double</c>: blanks and group separators removed, a text of other characters than those of a number error 13, then <c>Val</c>, which reads a point in every locale.</summary>
+  public const string ParseDouble = "PlyParseR8";
+
   private const string Source = """
     Private Function PlyWrap32(ByVal d As Double) As Long
         d = d - Int(d / 4294967296#) * 4294967296#
@@ -381,6 +397,42 @@ internal static class VisualBasicHelpers {
     Private Function PlyCompare(ByVal a As String, ByVal b As String) As Long
         PlyCompare = CLng(StrComp(a, b, 0))
     End Function
+
+    Private Function PlyNumberText(ByVal s As String, ByVal sep As String) As String
+        Dim d As String, e As Long, k As Long
+        d = Mid(CStr(0.5), 2, 1)
+        If d <> sep Then
+            s = Replace(s, d, sep)
+        End If
+        e = InStr(s, "E")
+        If e > 0 Then
+            k = e + 2
+            Do While k < Len(s) - 1 And Mid(s, k, 1) = "0"
+                k = k + 1
+            Loop
+            s = Left(s, e + 1) & Mid(s, k)
+        End If
+        PlyNumberText = s
+    End Function
+
+    Private Function PlyFmtR8(ByVal x As Double, ByVal sep As String) As String
+        PlyFmtR8 = PlyNumberText(CStr(x), sep)
+    End Function
+
+    Private Function PlyFmtR4(ByVal x As Single, ByVal sep As String) As String
+        PlyFmtR4 = PlyNumberText(CStr(x), sep)
+    End Function
+
+    Private Function PlyParseR8(ByVal s As String) As Double
+        Dim i As Long
+        s = Replace(Trim(s), ",", "")
+        For i = 1 To Len(s)
+            If InStr("0123456789.eE+-", Mid(s, i, 1)) = 0 Then
+                Err.Raise 13
+            End If
+        Next i
+        PlyParseR8 = Val(s)
+    End Function
     """;
 
   /// <summary>What each helper calls of the others.</summary>
@@ -395,7 +447,9 @@ internal static class VisualBasicHelpers {
     [MultiplyUnsigned32] = [Unsigned32, Wrap32],
     [ShiftLeft32] = [Unsigned32, Wrap32],
     [ShiftRightLogical32] = [Unsigned32, Wrap32],
-    [ToUnsigned32] = [Wrap32]
+    [ToUnsigned32] = [Wrap32],
+    [FormatDouble] = [NumberText],
+    [FormatSingle] = [NumberText]
   };
 
   private static readonly Lazy<IReadOnlyDictionary<string, VbProcedure>> _declarations = new(() =>
@@ -406,7 +460,7 @@ internal static class VisualBasicHelpers {
     Wrap32, Unsigned32, Add32, Subtract32, Multiply32, Negate32, Divide32, Remainder32, DivideUnsigned32, RemainderUnsigned32,
     AddUnsigned32, SubtractUnsigned32, MultiplyUnsigned32, ShiftLeft32, ShiftRight32, ShiftRightLogical32, CheckSign32,
     Wrap16, Wrap8, Check8, CheckUnsigned16, ToUnsigned32, Saturate, Minimum, Maximum, RoundAway, RoundHalfUp,
-    CodeUnitAt, Substring, IndexOf, Repeat, CompareOrdinal
+    CodeUnitAt, Substring, IndexOf, Repeat, CompareOrdinal, NumberText, FormatDouble, FormatSingle, ParseDouble
   ];
 
   /// <summary>The helpers a helper calls.</summary>

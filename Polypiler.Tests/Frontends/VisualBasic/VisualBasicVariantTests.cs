@@ -35,8 +35,8 @@ public sealed class VisualBasicVariantTests {
   /// <summary>A value as the driver of the oracle prints it through <c>CStr</c>, a dynamic one by its payload.</summary>
   internal static string Text(object? value) => value switch {
     bool flag => flag ? "True" : "False",
-    double number => number.ToString("R", CultureInfo.InvariantCulture),
-    float number => number.ToString("R", CultureInfo.InvariantCulture),
+    double number => NumberTextOperations.FormatVisualBasic(number, '.'),
+    float number => NumberTextOperations.FormatVisualBasic(number, '.'),
     IrVariant { Value: null } => "",
     IrVariant variant => Text(variant.Value),
     null => "",
@@ -276,31 +276,11 @@ public sealed class VisualBasicVariantTests {
     Assert.That(Run(Import(source), "F"), Is.EqualTo("IntegerLongStringBooleanByteDoubleSingleIntegerNullDouble"));
   }
 
-  [TestCase("Dim v\nv = 1.5\nIf F = \"x\" Then v = Null\nF = v & \"\"", "the text of a Variant that may hold a Double")]
-  [TestCase("Dim v\nv = 1.5!\nIf F = \"x\" Then v = Null\nF = CStr(v)", "the text of a Variant that may hold a Single")]
-  [TestCase("Dim v\nv = 1\nv = v / 3\nF = v", "the text of a Variant that may hold a Double")]
-  [TestCase("Dim v\nv = 1\nv = v / 3\nIf F = \"x\" Then v = Null\nF = v & Null", "the text of a Variant that may hold a Double")]
-  [TestCase("Dim v\nv = \"1\"\nIf F = \"x\" Then v = 1\nF = v + 1", "'+' of a Variant that may hold a String with a number")]
-  [TestCase("Dim v\nv = 1\nIf F = \"x\" Then v = \"1\"\nF = 1 + v", "'+' of a Variant that may hold a String with a number")]
-  [TestCase("Dim v\nv = \"1\"\nIf F = \"x\" Then v = Null\nF = v * 2", "'*' of a Variant that may hold a String with a number")]
-  [TestCase("Dim v\nv = 1\nIf F = \"x\" Then v = \"a\"\nDim i As Integer\ni = v", "the conversion to Integer of a Variant that may hold a String")]
-  [TestCase("Dim v\nv = 1\nIf F = \"x\" Then v = \"a\"\nIf v Then F = \"\"", "a condition of a Variant that may hold a String")]
-  [TestCase("Dim v\nv = 1\nIf F = \"x\" Then v = Null\nF = CStr(v = \"1\")", "the comparison of a String with a Variant that may hold a Integer")]
-  [TestCase("Dim v\nv = \"a\"\nIf F = \"x\" Then v = Null\nF = CStr(v = 1)", "the comparison of a Integer with a Variant that may hold a String")]
-  [TestCase("Dim v\nv = 1\nIf F = \"x\" Then v = Null\nF = CStr(v And 1)", "And of a Variant that may hold a Integer")]
-  [TestCase("Dim v\nv = 1\nIf F = \"x\" Then v = Null\nF = CStr(Not v)", "Not of a Variant that may hold a Integer")]
-  [TestCase("Dim v\nv = True\nIf F = \"x\" Then v = Null\nF = CStr(v Eqv True)", "Eqv of a Variant")]
-  [TestCase("Dim v\nv = \"a\"\nIf F = \"x\" Then v = Null\nF = CStr(-v)", "the negation of a Variant that may hold a String")]
-  [TestCase("Dim v\nv = 1\nIf F = \"x\" Then v = \"a\"\nF = CStr(IsNumeric(v))", "IsNumeric of a String")]
-  [TestCase("F = CStr(IsNumeric(\"1\"))", "IsNumeric of a String")]
   [TestCase("Dim v\nv = 1^\nIf F = \"x\" Then v = Null\nF = \"\"", "a LongLong in a Variant")]
-  [TestCase("Dim v\nv = 1\nF = CStr((v + 1) And 1)", "And of the result of Variant arithmetic")]
   [TestCase("Dim v\nv = Null\nDebug.Print v", "Debug.Print of a Variant that may be Null")]
   [TestCase("Dim v\nv = 1\nIf F = \"x\" Then v = Null\nF = Left(v, 1)", "Left of a Variant")]
   [TestCase("Dim i\nFor i = 1 To Null\nNext", "a For loop whose bounds may be a Null")]
   [TestCase("Dim i\nFor i = 1 To n\ni = \"a\"\nNext", "a For loop whose Variant counter 'i' may hold a String")]
-  [TestCase("Dim v(3)", "the Variant array 'v'")]
-  [TestCase("Dim v() As Variant", "the Variant array 'v'")]
   [TestCase("Dim v\nv = 1\nIf F = \"x\" Then v = Null\nF = CStr(v Like \"a\")", "Like")]
   public void LocaleOrUnmodelledConstruct_IsRefused(string body, string message)
     => Assert.That(Refused(Function("String", body, "ByVal n As Integer")), Does.Contain(message));
@@ -320,12 +300,12 @@ public sealed class VisualBasicVariantTests {
 
   [Test]
   public void Assignment_ThatTheInferenceMissedBeforeARefusal_DemotesTheLocal() {
-    // The lowering with every local dynamic refuses Not of an Integer, which a typed local lowers; the
-    // String assigned after it then makes the local dynamic, and the Not is refused as it is.
-    Assert.That(Refused(Function("Long", "Dim v\nv = 5\nF = Not v\nv = \"a\"")), Does.Contain("Not of a Variant that may hold a Integer'"));
-    var module = Import(Function("Long", "Dim v\nv = 5\nF = Not v"));
-    Assert.That(LocalType(module, "v"), Is.EqualTo(IrType.I16));
-    Assert.That(Run(module, "F"), Is.EqualTo("-6"));
+    // The lowering with every local dynamic refuses Left of a Variant, which a typed local lowers; the
+    // number assigned after it then makes the local dynamic, and the Left is refused as it is.
+    Assert.That(Refused(Function("Long", "Dim v\nv = \"abc\"\nF = Len(Left(v, 1))\nv = 5")), Does.Contain("Left of a Variant"));
+    var module = Import(Function("Long", "Dim v\nv = \"abc\"\nF = Len(Left(v, 2))"));
+    Assert.That(LocalType(module, "v"), Is.EqualTo(IrType.String));
+    Assert.That(Run(module, "F"), Is.EqualTo("2"));
   }
 
   [Test]
