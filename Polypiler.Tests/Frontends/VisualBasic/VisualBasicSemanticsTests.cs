@@ -58,8 +58,8 @@ public sealed class VisualBasicSemanticsTests {
     var pairs = 0;
     foreach (var a in _samples)
       foreach (var b in _samples) {
-        // A Date in '&' of a parameter traps in the frontend's text helper today, a defect of the
-        // lowering rather than a rule of the language; the table states Visual Basic's rule.
+        // The text of a Date a dynamic Variant holds raises error 13, a documented limit of the
+        // frontend (VISUALBASIC-FRONTEND.md) rather than a rule of the language, which the table states.
         if (operation == DynamicOperation.Concatenate && (a.Tag == IrVariantTag.Date || b.Tag == IrVariantTag.Date))
           continue;
         var (left, right) = (DynamicType.OfTag(a.Tag), DynamicType.OfTag(b.Tag));
