@@ -34,7 +34,7 @@ public static class ParserBenchLanguages {
   /// <summary>Every language with at least one parser, by name.</summary>
   public static IReadOnlyDictionary<string, ParserBenchLanguage> All { get; } = new Dictionary<string, ParserBenchLanguage>(StringComparer.Ordinal) {
     ["go"] = new("go", ".go", [new("hand", Go)]),
-    ["python"] = new("python", ".py", [new("hand", Python)])
+    ["python"] = new("python", ".py", [new("generated", Python)])
   };
 
   private static bool Go(byte[] source) {

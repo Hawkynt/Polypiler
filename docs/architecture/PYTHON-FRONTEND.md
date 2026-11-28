@@ -13,7 +13,7 @@ the modules of the import it imports, into the typed IR. The frontend lives in
 ```mermaid
 flowchart LR
   Source["f.py and the modules it imports"] --> Lexer["PyLexer<br/>(CPython's tokenizer)"]
-  Lexer -- "tokens, one at a time" --> Parser["PyParser<br/>(python.gram, both passes)"]
+  Lexer -- "tokens, one at a time" --> Parser["PyParser<br/>(generated from python.gram, both passes)"]
   Parser -- "tree in ast's shape" --> Checks["PyFuture, PyCompileCheck<br/>(symbol table, code generator)"]
   Checks --> Collect["Collector, ClassCollector<br/>ScopeResolver"]
   Collect --> Check["SubsetCheck"]
@@ -47,13 +47,20 @@ started and nothing is imported or run. CPython is only the oracle of the Python
   f-strings and t-strings as token streams (PEP 701, PEP 750), and every tokenizer error with CPython's
   message. The parser asks for one token at a time, so that `from __future__ import barry_as_FLUFL`
   changes what follows, as it does in CPython.
-- **Grammar** (`Syntax/PyParser*.cs`, converted rule by rule from `Grammar/python.gram`): a PEG parser
-  that backtracks, memoizes the rules the grammar marks, grows the left-recursive ones as loops, and
-  honours the cuts and forced tokens. A first pass decides whether the source parses; where it does
-  not, a second pass with the `invalid_*` rules finds CPython's message, and the tokenizer's errors in
-  the rest of the source take priority as they do in CPython. The actions of `Parser/action_helpers.c`
-  build the tree: string concatenation, f-string and t-string assembly with their debug texts, argument
-  shapes, contexts. Literals are decoded as `Parser/string_parser.c` decodes them, `\N{...}` included;
+- **Grammar** (`Syntax/python.pgram`, generated into `Syntax/PyParser.g.cs` by `polypiler-tooling
+  grammar generate`, [ADR 1000](../adr/1000-grammar-described-frontends.md)): CPython 3.14.8's
+  `Grammar/python.gram` itself, rule for rule and alternative for alternative, with its actions written
+  in C#; only the start rules other than `file` and the alternatives that need a `TYPE_COMMENT` token
+  are left out. The generated parser backtracks, memoizes the rules the grammar marks, grows the
+  left-recursive ones by seed growing at their leaders, honours the cuts and forced tokens, and counts
+  every rule call against CPython's `MAXSTACK` of 6000, as the parser CPython generates from the same
+  grammar does. A first pass decides whether the source parses; where it does not, a second pass with
+  the `invalid_*` rules finds CPython's message, and the tokenizer's errors in the rest of the source
+  take priority as they do in CPython (`Syntax/PyParser.cs`, the hand-written half of the class). The
+  actions of `Parser/action_helpers.c` (`Syntax/PyParser.Actions.cs`) build the tree: string
+  concatenation, f-string and t-string assembly with their debug texts, argument shapes, contexts. A
+  new CPython release is a change of `python.pgram` and a regeneration; the CI job `grammar drift`
+  holds the committed parser to its grammar. Literals are decoded as `Parser/string_parser.c` decodes them, `\N{...}` included;
   an integer literal has any size up to the 4300 digits of `sys.get_int_max_str_digits()`.
 - **Versions**: `PythonImportOptions.Version` (`--python-version 3.N`, from 3.8 to 3.14, the default)
   accepts and refuses what `ast.parse(feature_version=(3, N))` does: `match` from 3.10, `except*`

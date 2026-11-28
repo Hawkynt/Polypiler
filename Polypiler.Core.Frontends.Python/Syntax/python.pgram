@@ -1,0 +1,1371 @@
+# CPython's PEG grammar, Grammar/python.gram of CPython 3.14.8 (PSF-2.0), with its actions written in
+# C# over the frontend's tree (Ast/PyAst) and the helpers of PyParser.Actions.cs, which are those of
+# Parser/action_helpers.c. Rules, alternatives, items, memo flags and the invalid_* rules are
+# python.gram's, in its order; what differs:
+#   - only the start rule file: interactive, eval and func_type (and type_expressions) are out of scope;
+#   - the alternatives and items that need a TYPE_COMMENT token are left out: the tokenizer gives none;
+#   - CHECK_VERSION stays where python.gram has it, in the actions, as Version(minor, what, node); in
+#     invalid_match_stmt, whose node is the error itself, the error stands at every version, as in C;
+#   - the named item params of function_def_raw is called ps, a keyword of C#.
+# Regenerate PyParser.g.cs with: polypiler-tooling grammar generate <this file>
+
+@class PyParser
+@namespace "Polypiler.Core.Frontends.Python.Syntax"
+@using "System.Linq Polypiler.Core.Frontends.Python.Ast"
+@token_type PyToken
+@token_kind PyTokenKind
+@start file
+@soft_keyword "SoftKeyword PyNode"
+@dummy "DummyName PyNode"
+@tokens '''
+ENDMARKER       EndMarker
+NAME            -  NameToken         PyNode
+NUMBER          -  NumberToken       PyNode
+STRING          String
+NEWLINE         Newline
+INDENT          Indent
+DEDENT          Dedent
+FSTRING_START   FStringStart
+FSTRING_MIDDLE  FStringMiddle
+FSTRING_END     FStringEnd
+TSTRING_START   TStringStart
+TSTRING_MIDDLE  TStringMiddle
+TSTRING_END     TStringEnd
+SOFT_KEYWORD    -  SoftKeywordToken  PyNode
+'''
+
+# ========================= START OF THE GRAMMAR =========================
+
+file[PyNode]: a=[statements] ENDMARKER { PyAst.Make("Module", null, Seq(a), new List<PyNode?>()) }
+
+# GENERAL STATEMENTS
+# ==================
+
+statements[List<PyNode>]: a=statement+ { a.SelectMany(statement => statement).ToList() }
+
+statement[List<PyNode>]:
+    | a=compound_stmt { [a] }
+    | a[List<PyNode>]=simple_stmts { a }
+
+simple_stmts[List<PyNode>]:
+    | a=simple_stmt !';' NEWLINE { [a] } # Not needed, there for speedup
+    | a[List<PyNode>]=';'.simple_stmt+ [';'] NEWLINE { a }
+
+# NOTE: assignment MUST precede expression, else parsing a simple assignment
+# will throw a SyntaxError.
+simple_stmt[PyNode] (memo):
+    | assignment
+    | &"type" type_alias
+    | e=star_expressions { PyAst.Make("Expr", this.Extra(_mark), e) }
+    | &'return' return_stmt
+    | &('import' | 'from') import_stmt
+    | &'raise' raise_stmt
+    | &'pass' pass_stmt
+    | &'del' del_stmt
+    | &'yield' yield_stmt
+    | &'assert' assert_stmt
+    | &'break' break_stmt
+    | &'continue' continue_stmt
+    | &'global' global_stmt
+    | &'nonlocal' nonlocal_stmt
+
+compound_stmt[PyNode]:
+    | &('def' | '@' | 'async') function_def
+    | &'if' if_stmt
+    | &('class' | '@') class_def
+    | &('with' | 'async') with_stmt
+    | &('for' | 'async') for_stmt
+    | &'try' try_stmt
+    | &'while' while_stmt
+    | match_stmt
+
+# SIMPLE STATEMENTS
+# =================
+
+# NOTE: annotated_rhs may start with 'yield'; yield_expr must start with 'yield'
+assignment[PyNode]:
+    | a=NAME ':' b=expression c=['=' d=annotated_rhs { d }] {
+        this.Version(6, "Variable annotation syntax is", PyAst.Make("AnnAssign", this.Extra(_mark), PyAst.SetContext(a, "Store"), b, c, 1)) }
+    | a=('(' b=single_target ')' { b }
+         | single_subscript_attribute_target) ':' b=expression c=['=' d=annotated_rhs { d }] {
+        this.Version(6, "Variable annotations syntax is", PyAst.Make("AnnAssign", this.Extra(_mark), a, b, c, 0)) }
+    | a[List<PyNode>]=(z=star_targets '=' { z })+ b=annotated_rhs !'=' {
+         PyAst.Make("Assign", this.Extra(_mark), Seq(a), b, null) }
+    | a=single_target b=augassign ~ c=annotated_rhs {
+         PyAst.Make("AugAssign", this.Extra(_mark), a, b, c) }
+    | invalid_assignment
+
+annotated_rhs[PyNode]: yield_expr | star_expressions
+
+augassign[PyNode]:
+    | '+=' { Op("Add") }
+    | '-=' { Op("Sub") }
+    | '*=' { Op("Mult") }
+    | '@=' { this.Version(5, "The '@' operator is", Op("MatMult")) }
+    | '/=' { Op("Div") }
+    | '%=' { Op("Mod") }
+    | '&=' { Op("BitAnd") }
+    | '|=' { Op("BitOr") }
+    | '^=' { Op("BitXor") }
+    | '<<=' { Op("LShift") }
+    | '>>=' { Op("RShift") }
+    | '**=' { Op("Pow") }
+    | '//=' { Op("FloorDiv") }
+
+return_stmt[PyNode]:
+    | 'return' a=[star_expressions] { PyAst.Make("Return", this.Extra(_mark), a) }
+
+raise_stmt[PyNode]:
+    | 'raise' a=expression b=['from' z=expression { z }] { PyAst.Make("Raise", this.Extra(_mark), a, b) }
+    | 'raise' { PyAst.Make("Raise", this.Extra(_mark), null, null) }
+
+pass_stmt[PyNode]:
+    | 'pass' { PyAst.Make("Pass", this.Extra(_mark)) }
+
+break_stmt[PyNode]:
+    | 'break' { PyAst.Make("Break", this.Extra(_mark)) }
+
+continue_stmt[PyNode]:
+    | 'continue' { PyAst.Make("Continue", this.Extra(_mark)) }
+
+global_stmt[PyNode]: 'global' a[List<PyNode>]=','.NAME+ {
+    PyAst.Make("Global", this.Extra(_mark), a.Select(Id).ToList()) }
+
+nonlocal_stmt[PyNode]: 'nonlocal' a[List<PyNode>]=','.NAME+ {
+    PyAst.Make("Nonlocal", this.Extra(_mark), a.Select(Id).ToList()) }
+
+del_stmt[PyNode]:
+    | 'del' a=del_targets &(';' | NEWLINE) { PyAst.Make("Delete", this.Extra(_mark), Seq(a)) }
+    | invalid_del_stmt
+
+yield_stmt[PyNode]: y=yield_expr { PyAst.Make("Expr", this.Extra(_mark), y) }
+
+assert_stmt[PyNode]: 'assert' a=expression b=[',' z=expression { z }] { PyAst.Make("Assert", this.Extra(_mark), a, b) }
+
+import_stmt[PyNode]:
+    | invalid_import
+    | import_name
+    | import_from
+
+# Import statements
+# -----------------
+
+import_name[PyNode]: 'import' a=dotted_as_names { PyAst.Make("Import", this.Extra(_mark), Seq(a)) }
+# note below: the ('.' | '...') is necessary because '...' is tokenized as ELLIPSIS
+import_from[PyNode]:
+    | 'from' a=('.' | '...')* b=dotted_name 'import' c=import_from_targets {
+        this.CheckedFutureImport(Id(b), c, CountDots(a), this.Extra(_mark)) }
+    | 'from' a=('.' | '...')+ 'import' b=import_from_targets {
+        PyAst.Make("ImportFrom", this.Extra(_mark), null, Seq(b), CountDots(a)) }
+import_from_targets[List<PyNode>]:
+    | '(' a=import_from_as_names [','] ')' { a }
+    | import_from_as_names !','
+    | '*' { [PyAst.Make("alias", this.Extra(_mark), "*", null)] }
+    | invalid_import_from_targets
+import_from_as_names[List<PyNode>]:
+    | a[List<PyNode>]=','.import_from_as_name+ { a }
+import_from_as_name[PyNode]:
+    | invalid_import_from_as_name
+    | a=NAME b=['as' z=NAME { z }] { PyAst.Make("alias", this.Extra(_mark), Id(a), b is null ? null : Id(b)) }
+
+dotted_as_names[List<PyNode>]:
+    | a[List<PyNode>]=','.dotted_as_name+ { a }
+dotted_as_name[PyNode]:
+    | invalid_dotted_as_name
+    | a=dotted_name b=['as' z=NAME { z }] { PyAst.Make("alias", this.Extra(_mark), Id(a), b is null ? null : Id(b)) }
+
+dotted_name[PyNode]:
+    | a=dotted_name '.' b=NAME { PyAst.Make("Name", this.Extra(_mark), Id(a) + "." + Id(b), Op("Load")) }
+    | NAME
+
+# COMPOUND STATEMENTS
+# ===================
+
+# Common elements
+# ---------------
+
+block[List<PyNode>] (memo):
+    | NEWLINE INDENT a=statements DEDENT { a }
+    | simple_stmts
+    | invalid_block
+
+decorators[List<PyNode>]: a[List<PyNode>]=('@' f=named_expression NEWLINE { f })+ { a }
+
+# Class definitions
+# -----------------
+
+class_def[PyNode]:
+    | a=decorators b=class_def_raw { b.With("decorator_list", Seq(a)) }
+    | class_def_raw
+
+class_def_raw[PyNode]:
+    | invalid_class_def_raw
+    | 'class' a=NAME t=[type_params] b=['(' z=[arguments] ')' { z }] ':' c=block {
+        PyAst.Make("ClassDef", this.Extra(_mark), Id(a), b?.Get("args") ?? new List<PyNode?>(), b?.Get("keywords") ?? new List<PyNode?>(),
+          Seq(c), new List<PyNode?>(), Seq(t)) }
+
+# Function definitions
+# --------------------
+
+function_def[PyNode]:
+    | d=decorators f=function_def_raw { f.With("decorator_list", Seq(d)) }
+    | function_def_raw
+
+function_def_raw[PyNode]:
+    | invalid_def_raw
+    | 'def' n=NAME t=[type_params] '(' ps=[params] ')' a=['->' z=expression { z }] ':' b=block {
+        PyAst.Make("FunctionDef", this.Extra(_mark), Id(n), ps ?? EmptyArguments(), Seq(b), new List<PyNode?>(), a, null, Seq(t)) }
+    | 'async' 'def' n=NAME t=[type_params] '(' ps=[params] ')' a=['->' z=expression { z }] ':' b=block {
+        this.Version(5, "Async functions are",
+          PyAst.Make("AsyncFunctionDef", this.Extra(_mark), Id(n), ps ?? EmptyArguments(), Seq(b), new List<PyNode?>(), a, null, Seq(t))) }
+
+# Function parameters
+# -------------------
+
+params[PyNode]:
+    | invalid_parameters
+    | parameters
+
+parameters[PyNode]:
+    | a=slash_no_default b[List<PyNode>]=param_no_default* c=param_with_default* d=[star_etc] {
+        this.Version(8, "Positional-only parameters are", MakeArguments(a, null, b, c, d)) }
+    | a=slash_with_default b=param_with_default* c=[star_etc] {
+        this.Version(8, "Positional-only parameters are", MakeArguments(null, a, null, b, c)) }
+    | a[List<PyNode>]=param_no_default+ b=param_with_default* c=[star_etc] {
+        MakeArguments(null, null, a, b, c) }
+    | a=param_with_default+ b=[star_etc] { MakeArguments(null, null, null, a, b) }
+    | a=star_etc { MakeArguments(null, null, null, null, a) }
+
+# Some duplication here because we can't write (',' | &')'),
+# which is because we don't support empty alternatives (yet).
+
+slash_no_default[List<PyNode>]:
+    | a[List<PyNode>]=param_no_default+ '/' ',' { a }
+    | a[List<PyNode>]=param_no_default+ '/' &')' { a }
+slash_with_default[SlashDefaults]:
+    | a=param_no_default* b=param_with_default+ '/' ',' { new SlashDefaults(a, b) }
+    | a=param_no_default* b=param_with_default+ '/' &')' { new SlashDefaults(a, b) }
+
+star_etc[StarParameters]:
+    | invalid_star_etc
+    | '*' a=param_no_default b=param_maybe_default* c=[kwds] {
+        new StarParameters(a, b, c) }
+    | '*' a=param_no_default_star_annotation b=param_maybe_default* c=[kwds] {
+        new StarParameters(a, b, c) }
+    | '*' ',' b=param_maybe_default+ c=[kwds] {
+        new StarParameters(null, b, c) }
+    | a=kwds { new StarParameters(null, null, a) }
+
+kwds[PyNode]:
+    | invalid_kwds
+    | '**' a=param_no_default { a }
+
+# One parameter.  This *includes* a following comma; there are two alternative forms of each:
+# ends in a comma, or no comma and followed by a close paren.
+
+param_no_default[PyNode]:
+    | a=param ',' { a }
+    | a=param &')' { a }
+param_no_default_star_annotation[PyNode]:
+    | a=param_star_annotation ',' { a }
+    | a=param_star_annotation &')' { a }
+param_with_default[NameDefault]:
+    | a=param c=default ',' { new NameDefault(a, c) }
+    | a=param c=default &')' { new NameDefault(a, c) }
+param_maybe_default[NameDefault]:
+    | a=param c=default? ',' { new NameDefault(a, c) }
+    | a=param c=default? &')' { new NameDefault(a, c) }
+param[PyNode]: a=NAME b=annotation? { PyAst.Make("arg", this.Extra(_mark), Id(a), b, null) }
+param_star_annotation[PyNode]: a=NAME b=star_annotation { PyAst.Make("arg", this.Extra(_mark), Id(a), b, null) }
+annotation[PyNode]: ':' a=expression { a }
+star_annotation[PyNode]: ':' a=star_expression { a }
+default[PyNode]: '=' a=expression { a } | invalid_default
+
+# If statement
+# ------------
+
+if_stmt[PyNode]:
+    | invalid_if_stmt
+    | 'if' a=named_expression ':' b=block c=elif_stmt {
+        PyAst.Make("If", this.Extra(_mark), a, Seq(b), new List<PyNode?> { c }) }
+    | 'if' a=named_expression ':' b=block c=[else_block] { PyAst.Make("If", this.Extra(_mark), a, Seq(b), Seq(c)) }
+elif_stmt[PyNode]:
+    | invalid_elif_stmt
+    | 'elif' a=named_expression ':' b=block c=elif_stmt {
+        PyAst.Make("If", this.Extra(_mark), a, Seq(b), new List<PyNode?> { c }) }
+    | 'elif' a=named_expression ':' b=block c=[else_block] { PyAst.Make("If", this.Extra(_mark), a, Seq(b), Seq(c)) }
+else_block[List<PyNode>]:
+    | invalid_else_stmt
+    | 'else' &&':' b=block { b }
+
+# While statement
+# ---------------
+
+while_stmt[PyNode]:
+    | invalid_while_stmt
+    | 'while' a=named_expression ':' b=block c=[else_block] { PyAst.Make("While", this.Extra(_mark), a, Seq(b), Seq(c)) }
+
+# For statement
+# -------------
+
+for_stmt[PyNode]:
+    | invalid_for_stmt
+    | 'for' t=star_targets 'in' ~ ex=star_expressions ':' b=block el=[else_block] {
+        PyAst.Make("For", this.Extra(_mark), t, ex, Seq(b), Seq(el), null) }
+    | 'async' 'for' t=star_targets 'in' ~ ex=star_expressions ':' b=block el=[else_block] {
+        this.Version(5, "Async for loops are", PyAst.Make("AsyncFor", this.Extra(_mark), t, ex, Seq(b), Seq(el), null)) }
+    | invalid_for_target
+
+# With statement
+# --------------
+
+with_stmt[PyNode]:
+    | invalid_with_stmt_indent
+    | 'with' '(' a[List<PyNode>]=','.with_item+ ','? ')' ':' b=block {
+       PyAst.Make("With", this.Extra(_mark), Seq(a), Seq(b), null) }
+    | 'with' a[List<PyNode>]=','.with_item+ ':' b=block {
+        PyAst.Make("With", this.Extra(_mark), Seq(a), Seq(b), null) }
+    | 'async' 'with' '(' a[List<PyNode>]=','.with_item+ ','? ')' ':' b=block {
+       this.Version(5, "Async with statements are", PyAst.Make("AsyncWith", this.Extra(_mark), Seq(a), Seq(b), null)) }
+    | 'async' 'with' a[List<PyNode>]=','.with_item+ ':' b=block {
+       this.Version(5, "Async with statements are", PyAst.Make("AsyncWith", this.Extra(_mark), Seq(a), Seq(b), null)) }
+    | invalid_with_stmt
+
+with_item[PyNode]:
+    | e=expression 'as' t=star_target &(',' | ')' | ':') { PyAst.Make("withitem", null, e, t) }
+    | invalid_with_item
+    | e=expression { PyAst.Make("withitem", null, e, null) }
+
+# Try statement
+# -------------
+
+try_stmt[PyNode]:
+    | invalid_try_stmt
+    | 'try' &&':' b=block f=finally_block { PyAst.Make("Try", this.Extra(_mark), Seq(b), new List<PyNode?>(), new List<PyNode?>(), Seq(f)) }
+    | 'try' &&':' b=block ex[List<PyNode>]=except_block+ el=[else_block] f=[finally_block] {
+        PyAst.Make("Try", this.Extra(_mark), Seq(b), Seq(ex), Seq(el), Seq(f)) }
+    | 'try' &&':' b=block ex[List<PyNode>]=except_star_block+ el=[else_block] f=[finally_block] {
+        this.Version(11, "Exception groups are", PyAst.Make("TryStar", this.Extra(_mark), Seq(b), Seq(ex), Seq(el), Seq(f))) }
+
+
+# Except statement
+# ----------------
+
+except_block[PyNode]:
+    | invalid_except_stmt_indent
+    | 'except' e=expression ':' b=block {
+        PyAst.Make("ExceptHandler", this.Extra(_mark), e, null, Seq(b)) }
+    | 'except' e=expression 'as' t=NAME ':' b=block {
+        PyAst.Make("ExceptHandler", this.Extra(_mark), e, Id(t), Seq(b)) }
+    | 'except' e=expressions ':' b=block {
+        this.Version(14, "except expressions without parentheses are", PyAst.Make("ExceptHandler", this.Extra(_mark), e, null, Seq(b))) }
+    | 'except' ':' b=block { PyAst.Make("ExceptHandler", this.Extra(_mark), null, null, Seq(b)) }
+    | invalid_except_stmt
+except_star_block[PyNode]:
+    | invalid_except_star_stmt_indent
+    | 'except' '*' e=expression ':' b=block {
+        PyAst.Make("ExceptHandler", this.Extra(_mark), e, null, Seq(b)) }
+    | 'except' '*' e=expression 'as' t=NAME ':' b=block {
+        PyAst.Make("ExceptHandler", this.Extra(_mark), e, Id(t), Seq(b)) }
+    | 'except' '*' e=expressions ':' b=block {
+        this.Version(14, "except expressions without parentheses are", PyAst.Make("ExceptHandler", this.Extra(_mark), e, null, Seq(b))) }
+    | invalid_except_star_stmt
+finally_block[List<PyNode>]:
+    | invalid_finally_stmt
+    | 'finally' &&':' a=block { a }
+
+# Match statement
+# ---------------
+
+match_stmt[PyNode]:
+    | "match" subject=subject_expr ':' NEWLINE INDENT cases[List<PyNode>]=case_block+ DEDENT {
+        this.Version(10, "Pattern matching is", PyAst.Make("Match", this.Extra(_mark), subject, Seq(cases))) }
+    | invalid_match_stmt
+
+subject_expr[PyNode]:
+    | value=star_named_expression ',' values=star_named_expressions? {
+        PyAst.Make("Tuple", this.Extra(_mark), Insert(value, values), Op("Load")) }
+    | named_expression
+
+case_block[PyNode]:
+    | invalid_case_block
+    | "case" pattern=patterns guard=guard? ':' body=block {
+        PyAst.Make("match_case", null, pattern, guard, Seq(body)) }
+
+guard[PyNode]: 'if' guard=named_expression { guard }
+
+patterns[PyNode]:
+    | patterns[List<PyNode>]=open_sequence_pattern {
+        PyAst.Make("MatchSequence", this.Extra(_mark), Seq(patterns)) }
+    | pattern
+
+pattern[PyNode]:
+    | as_pattern
+    | or_pattern
+
+as_pattern[PyNode]:
+    | pattern=or_pattern 'as' target=pattern_capture_target {
+        PyAst.Make("MatchAs", this.Extra(_mark), pattern, Id(target)) }
+    | invalid_as_pattern
+
+or_pattern[PyNode]:
+    | patterns[List<PyNode>]='|'.closed_pattern+ {
+        patterns.Count == 1 ? patterns[0] : PyAst.Make("MatchOr", this.Extra(_mark), Seq(patterns)) }
+
+closed_pattern[PyNode] (memo):
+    | literal_pattern
+    | capture_pattern
+    | wildcard_pattern
+    | value_pattern
+    | group_pattern
+    | sequence_pattern
+    | mapping_pattern
+    | class_pattern
+
+# Literal patterns are used for equality and identity constraints
+literal_pattern[PyNode]:
+    | value=signed_number !('+' | '-') { PyAst.Make("MatchValue", this.Extra(_mark), value) }
+    | value=complex_number { PyAst.Make("MatchValue", this.Extra(_mark), value) }
+    | value=strings { PyAst.Make("MatchValue", this.Extra(_mark), value) }
+    | 'None' { PyAst.Make("MatchSingleton", this.Extra(_mark), new object?[] { null }) }
+    | 'True' { PyAst.Make("MatchSingleton", this.Extra(_mark), true) }
+    | 'False' { PyAst.Make("MatchSingleton", this.Extra(_mark), false) }
+
+# Literal expressions are used to restrict permitted mapping pattern keys
+literal_expr[PyNode]:
+    | signed_number !('+' | '-')
+    | complex_number
+    | &(STRING|FSTRING_START|TSTRING_START) strings
+    | 'None' { PyAst.Make("Constant", this.Extra(_mark), null, null) }
+    | 'True' { PyAst.Make("Constant", this.Extra(_mark), true, null) }
+    | 'False' { PyAst.Make("Constant", this.Extra(_mark), false, null) }
+
+complex_number[PyNode]:
+    | real=signed_real_number '+' imag=imaginary_number {
+        PyAst.Make("BinOp", this.Extra(_mark), real, Op("Add"), imag) }
+    | real=signed_real_number '-' imag=imaginary_number  {
+        PyAst.Make("BinOp", this.Extra(_mark), real, Op("Sub"), imag) }
+
+signed_number[PyNode]:
+    | NUMBER
+    | '-' number=NUMBER { PyAst.Make("UnaryOp", this.Extra(_mark), Op("USub"), number) }
+
+signed_real_number[PyNode]:
+    | real_number
+    | '-' real=real_number { PyAst.Make("UnaryOp", this.Extra(_mark), Op("USub"), real) }
+
+real_number[PyNode]:
+    | real=NUMBER { this.EnsureReal(real) }
+
+imaginary_number[PyNode]:
+    | imag=NUMBER { this.EnsureImaginary(imag) }
+
+capture_pattern[PyNode]:
+    | target=pattern_capture_target { PyAst.Make("MatchAs", this.Extra(_mark), null, Id(target)) }
+
+pattern_capture_target[PyNode]:
+    | !"_" name=NAME !('.' | '(' | '=') {
+        PyAst.SetContext(name, "Store") }
+
+wildcard_pattern[PyNode]:
+    | "_" { PyAst.Make("MatchAs", this.Extra(_mark), null, null) }
+
+value_pattern[PyNode]:
+    | attr=attr !('.' | '(' | '=') { PyAst.Make("MatchValue", this.Extra(_mark), attr) }
+
+attr[PyNode]:
+    | value=name_or_attr '.' attr=NAME {
+        PyAst.Make("Attribute", this.Extra(_mark), value, Id(attr), Op("Load")) }
+
+name_or_attr[PyNode]:
+    | attr
+    | NAME
+
+group_pattern[PyNode]:
+    | '(' pattern=pattern ')' { pattern }
+
+sequence_pattern[PyNode]:
+    | '[' patterns=maybe_sequence_pattern? ']' { PyAst.Make("MatchSequence", this.Extra(_mark), Seq(patterns)) }
+    | '(' patterns=open_sequence_pattern? ')' { PyAst.Make("MatchSequence", this.Extra(_mark), Seq(patterns)) }
+
+open_sequence_pattern[List<PyNode>]:
+    | pattern=maybe_star_pattern ',' patterns=maybe_sequence_pattern? {
+        [pattern, .. patterns ?? []] }
+
+maybe_sequence_pattern[List<PyNode>]:
+    | patterns=','.maybe_star_pattern+ ','? { patterns }
+
+maybe_star_pattern[PyNode]:
+    | star_pattern
+    | pattern
+
+star_pattern[PyNode] (memo):
+    | '*' target=pattern_capture_target {
+        PyAst.Make("MatchStar", this.Extra(_mark), Id(target)) }
+    | '*' wildcard_pattern {
+        PyAst.Make("MatchStar", this.Extra(_mark), new object?[] { null }) }
+
+mapping_pattern[PyNode]:
+    | '{' '}' {
+        PyAst.Make("MatchMapping", this.Extra(_mark), new List<PyNode?>(), new List<PyNode?>(), null) }
+    | '{' rest=double_star_pattern ','? '}' {
+        PyAst.Make("MatchMapping", this.Extra(_mark), new List<PyNode?>(), new List<PyNode?>(), Id(rest)) }
+    | '{' items=items_pattern ',' rest=double_star_pattern ','? '}' {
+        PyAst.Make("MatchMapping", this.Extra(_mark), PatternKeys(items), Patterns(items), Id(rest)) }
+    | '{' items=items_pattern ','? '}' {
+        PyAst.Make("MatchMapping", this.Extra(_mark), PatternKeys(items), Patterns(items), null) }
+
+items_pattern[List<KeyPattern>]:
+    | ','.key_value_pattern+
+
+key_value_pattern[KeyPattern]:
+    | key=(literal_expr | attr) ':' pattern=pattern {
+        new KeyPattern(key, pattern) }
+
+double_star_pattern[PyNode]:
+    | '**' target=pattern_capture_target { target }
+
+class_pattern[PyNode]:
+    | cls=name_or_attr '(' ')' {
+        ClassPattern(this.Extra(_mark), cls, null, null) }
+    | cls=name_or_attr '(' patterns=positional_patterns ','? ')' {
+        ClassPattern(this.Extra(_mark), cls, patterns, null) }
+    | cls=name_or_attr '(' keywords=keyword_patterns ','? ')' {
+        ClassPattern(this.Extra(_mark), cls, null, keywords) }
+    | cls=name_or_attr '(' patterns=positional_patterns ',' keywords=keyword_patterns ','? ')' {
+        ClassPattern(this.Extra(_mark), cls, patterns, keywords) }
+    | invalid_class_pattern
+
+positional_patterns[List<PyNode>]:
+    | args[List<PyNode>]=','.pattern+ { args }
+
+keyword_patterns[List<KeyPattern>]:
+    | ','.keyword_pattern+
+
+keyword_pattern[KeyPattern]:
+    | arg=NAME '=' value=pattern { new KeyPattern(arg, value) }
+
+# Type statement
+# ---------------
+
+type_alias[PyNode]:
+    | "type" n=NAME t=[type_params] '=' b=expression {
+        this.Version(12, "Type statement is", PyAst.Make("TypeAlias", this.Extra(_mark), PyAst.SetContext(n, "Store"), Seq(t), b)) }
+
+# Type parameter declaration
+# --------------------------
+
+type_params[List<PyNode>]:
+    | invalid_type_params
+    | '[' t=type_param_seq ']' {
+        this.Version(12, "Type parameter lists are", t) }
+
+type_param_seq[List<PyNode>]: a[List<PyNode>]=','.type_param+ [','] { a }
+
+type_param[PyNode] (memo):
+    | a=NAME b=[type_param_bound] c=[type_param_default] { PyAst.Make("TypeVar", this.Extra(_mark), Id(a), b, c) }
+    | invalid_type_param
+    | '*' a=NAME b=[type_param_starred_default] { PyAst.Make("TypeVarTuple", this.Extra(_mark), Id(a), b) }
+    | '**' a=NAME b=[type_param_default] { PyAst.Make("ParamSpec", this.Extra(_mark), Id(a), b) }
+
+type_param_bound[PyNode]: ':' e=expression { e }
+type_param_default[PyNode]: '=' e=expression {
+    this.Version(13, "Type parameter defaults are", e) }
+type_param_starred_default[PyNode]: '=' e=star_expression {
+    this.Version(13, "Type parameter defaults are", e) }
+
+# EXPRESSIONS
+# -----------
+
+expressions[PyNode]:
+    | a=expression b=(',' c=expression { c })+ [','] {
+        PyAst.Make("Tuple", this.Extra(_mark), Insert(a, b), Op("Load")) }
+    | a=expression ',' { PyAst.Make("Tuple", this.Extra(_mark), new List<PyNode?> { a }, Op("Load")) }
+    | expression
+
+expression[PyNode] (memo):
+    | invalid_expression
+    | invalid_legacy_expression
+    | a=disjunction 'if' b=disjunction 'else' c=expression { PyAst.Make("IfExp", this.Extra(_mark), b, a, c) }
+    | disjunction
+    | lambdef
+
+yield_expr[PyNode]:
+    | 'yield' 'from' a=expression { PyAst.Make("YieldFrom", this.Extra(_mark), a) }
+    | 'yield' a=[star_expressions] { PyAst.Make("Yield", this.Extra(_mark), a) }
+
+star_expressions[PyNode]:
+    | a=star_expression b=(',' c=star_expression { c })+ [','] {
+        PyAst.Make("Tuple", this.Extra(_mark), Insert(a, b), Op("Load")) }
+    | a=star_expression ',' { PyAst.Make("Tuple", this.Extra(_mark), new List<PyNode?> { a }, Op("Load")) }
+    | star_expression
+
+star_expression[PyNode] (memo):
+    | '*' a=bitwise_or { PyAst.Make("Starred", this.Extra(_mark), a, Op("Load")) }
+    | expression
+
+star_named_expressions[List<PyNode>]: a[List<PyNode>]=','.star_named_expression+ [','] { a }
+
+star_named_expression[PyNode]:
+    | '*' a=bitwise_or { PyAst.Make("Starred", this.Extra(_mark), a, Op("Load")) }
+    | named_expression
+
+assignment_expression[PyNode]:
+    | a=NAME ':=' ~ b=expression {
+        this.Version(8, "Assignment expressions are", PyAst.Make("NamedExpr", this.Extra(_mark), PyAst.SetContext(a, "Store"), b)) }
+
+named_expression[PyNode]:
+    | assignment_expression
+    | invalid_named_expression
+    | expression !':='
+
+disjunction[PyNode] (memo):
+    | a=conjunction b=('or' c=conjunction { c })+ { PyAst.Make("BoolOp", this.Extra(_mark), Op("Or"), Insert(a, b)) }
+    | conjunction
+
+conjunction[PyNode] (memo):
+    | a=inversion b=('and' c=inversion { c })+ { PyAst.Make("BoolOp", this.Extra(_mark), Op("And"), Insert(a, b)) }
+    | inversion
+
+inversion[PyNode] (memo):
+    | 'not' a=inversion { PyAst.Make("UnaryOp", this.Extra(_mark), Op("Not"), a) }
+    | comparison
+
+# Comparison operators
+# --------------------
+
+comparison[PyNode]:
+    | a=bitwise_or b=compare_op_bitwise_or_pair+ {
+        PyAst.Make("Compare", this.Extra(_mark), a, b.Select(pair => (PyNode?)Op(pair.Op)).ToList(), b.Select(pair => (PyNode?)pair.Operand).ToList()) }
+    | bitwise_or
+
+compare_op_bitwise_or_pair[CompareOp]:
+    | eq_bitwise_or
+    | noteq_bitwise_or
+    | lte_bitwise_or
+    | invalid_noteq
+    | lt_bitwise_or
+    | gte_bitwise_or
+    | gt_bitwise_or
+    | notin_bitwise_or
+    | in_bitwise_or
+    | isnot_bitwise_or
+    | is_bitwise_or
+
+eq_bitwise_or[CompareOp]: '==' a=bitwise_or { new CompareOp("Eq", a) }
+noteq_bitwise_or[CompareOp]:
+    | (tok='!=' { this.CheckBarryAsFlufl(tok) ? null : tok }) a=bitwise_or { new CompareOp("NotEq", a) }
+lte_bitwise_or[CompareOp]: '<=' a=bitwise_or { new CompareOp("LtE", a) }
+lt_bitwise_or[CompareOp]: '<' a=bitwise_or { new CompareOp("Lt", a) }
+gte_bitwise_or[CompareOp]: '>=' a=bitwise_or { new CompareOp("GtE", a) }
+gt_bitwise_or[CompareOp]: '>' a=bitwise_or { new CompareOp("Gt", a) }
+notin_bitwise_or[CompareOp]: 'not' 'in' a=bitwise_or { new CompareOp("NotIn", a) }
+in_bitwise_or[CompareOp]: 'in' a=bitwise_or { new CompareOp("In", a) }
+isnot_bitwise_or[CompareOp]: 'is' 'not' a=bitwise_or { new CompareOp("IsNot", a) }
+is_bitwise_or[CompareOp]: 'is' a=bitwise_or { new CompareOp("Is", a) }
+
+# Bitwise operators
+# -----------------
+
+bitwise_or[PyNode]:
+    | a=bitwise_or '|' b=bitwise_xor { PyAst.Make("BinOp", this.Extra(_mark), a, Op("BitOr"), b) }
+    | bitwise_xor
+
+bitwise_xor[PyNode]:
+    | a=bitwise_xor '^' b=bitwise_and { PyAst.Make("BinOp", this.Extra(_mark), a, Op("BitXor"), b) }
+    | bitwise_and
+
+bitwise_and[PyNode]:
+    | a=bitwise_and '&' b=shift_expr { PyAst.Make("BinOp", this.Extra(_mark), a, Op("BitAnd"), b) }
+    | shift_expr
+
+shift_expr[PyNode]:
+    | a=shift_expr '<<' b=sum { PyAst.Make("BinOp", this.Extra(_mark), a, Op("LShift"), b) }
+    | a=shift_expr '>>' b=sum { PyAst.Make("BinOp", this.Extra(_mark), a, Op("RShift"), b) }
+    | invalid_arithmetic
+    | sum
+
+# Arithmetic operators
+# --------------------
+
+sum[PyNode]:
+    | a=sum '+' b=term { PyAst.Make("BinOp", this.Extra(_mark), a, Op("Add"), b) }
+    | a=sum '-' b=term { PyAst.Make("BinOp", this.Extra(_mark), a, Op("Sub"), b) }
+    | term
+
+term[PyNode]:
+    | a=term '*' b=factor { PyAst.Make("BinOp", this.Extra(_mark), a, Op("Mult"), b) }
+    | a=term '/' b=factor { PyAst.Make("BinOp", this.Extra(_mark), a, Op("Div"), b) }
+    | a=term '//' b=factor { PyAst.Make("BinOp", this.Extra(_mark), a, Op("FloorDiv"), b) }
+    | a=term '%' b=factor { PyAst.Make("BinOp", this.Extra(_mark), a, Op("Mod"), b) }
+    | a=term '@' b=factor { this.Version(5, "The '@' operator is", PyAst.Make("BinOp", this.Extra(_mark), a, Op("MatMult"), b)) }
+    | invalid_factor
+    | factor
+
+factor[PyNode] (memo):
+    | '+' a=factor { PyAst.Make("UnaryOp", this.Extra(_mark), Op("UAdd"), a) }
+    | '-' a=factor { PyAst.Make("UnaryOp", this.Extra(_mark), Op("USub"), a) }
+    | '~' a=factor { PyAst.Make("UnaryOp", this.Extra(_mark), Op("Invert"), a) }
+    | power
+
+power[PyNode]:
+    | a=await_primary '**' b=factor { PyAst.Make("BinOp", this.Extra(_mark), a, Op("Pow"), b) }
+    | await_primary
+
+# Primary elements
+# ----------------
+
+# Primary elements are things like "obj.something.something", "obj[something]", "obj(something)", "obj" ...
+
+await_primary[PyNode] (memo):
+    | 'await' a=primary { this.Version(5, "Await expressions are", PyAst.Make("Await", this.Extra(_mark), a)) }
+    | primary
+
+primary[PyNode]:
+    | a=primary '.' b=NAME { PyAst.Make("Attribute", this.Extra(_mark), a, Id(b), Op("Load")) }
+    | a=primary b=genexp { PyAst.Make("Call", this.Extra(_mark), a, new List<PyNode?> { b }, new List<PyNode?>()) }
+    | a=primary '(' b=[arguments] ')' {
+        PyAst.Make("Call", this.Extra(_mark), a, b?.Get("args") ?? new List<PyNode?>(), b?.Get("keywords") ?? new List<PyNode?>()) }
+    | a=primary '[' b=slices ']' { PyAst.Make("Subscript", this.Extra(_mark), a, b, Op("Load")) }
+    | atom
+
+slices[PyNode]:
+    | a=slice !',' { a }
+    | a[List<PyNode>]=','.(slice | starred_expression)+ [','] { PyAst.Make("Tuple", this.Extra(_mark), Seq(a), Op("Load")) }
+
+slice[PyNode]:
+    | a=[expression] ':' b=[expression] c=[':' d=[expression] { d }] { PyAst.Make("Slice", this.Extra(_mark), a, b, c) }
+    | a=named_expression { a }
+
+atom[PyNode]:
+    | NAME
+    | 'True' { PyAst.Make("Constant", this.Extra(_mark), true, null) }
+    | 'False' { PyAst.Make("Constant", this.Extra(_mark), false, null) }
+    | 'None' { PyAst.Make("Constant", this.Extra(_mark), null, null) }
+    | &(STRING|FSTRING_START|TSTRING_START) strings
+    | NUMBER
+    | &'(' (tuple | group | genexp)
+    | &'[' (list | listcomp)
+    | &'{' (dict | set | dictcomp | setcomp)
+    | '...' { PyAst.Make("Constant", this.Extra(_mark), PyEllipsis.Value, null) }
+
+group[PyNode]:
+    | '(' a=(yield_expr | named_expression) ')' { a }
+    | invalid_group
+
+# Lambda functions
+# ----------------
+
+lambdef[PyNode]:
+    | 'lambda' a=[lambda_params] ':' b=expression {
+        PyAst.Make("Lambda", this.Extra(_mark), a ?? EmptyArguments(), b) }
+
+lambda_params[PyNode]:
+    | invalid_lambda_parameters
+    | lambda_parameters
+
+# lambda_parameters etc. duplicates parameters but without annotations, and if there's no comma
+# after a parameter, we expect a colon, not a close parenthesis.
+lambda_parameters[PyNode]:
+    | a=lambda_slash_no_default b[List<PyNode>]=lambda_param_no_default* c=lambda_param_with_default* d=[lambda_star_etc] {
+        this.Version(8, "Positional-only parameters are", MakeArguments(a, null, b, c, d)) }
+    | a=lambda_slash_with_default b=lambda_param_with_default* c=[lambda_star_etc] {
+        this.Version(8, "Positional-only parameters are", MakeArguments(null, a, null, b, c)) }
+    | a[List<PyNode>]=lambda_param_no_default+ b=lambda_param_with_default* c=[lambda_star_etc] {
+        MakeArguments(null, null, a, b, c) }
+    | a=lambda_param_with_default+ b=[lambda_star_etc] { MakeArguments(null, null, null, a, b) }
+    | a=lambda_star_etc { MakeArguments(null, null, null, null, a) }
+
+lambda_slash_no_default[List<PyNode>]:
+    | a[List<PyNode>]=lambda_param_no_default+ '/' ',' { a }
+    | a[List<PyNode>]=lambda_param_no_default+ '/' &':' { a }
+
+lambda_slash_with_default[SlashDefaults]:
+    | a=lambda_param_no_default* b=lambda_param_with_default+ '/' ',' { new SlashDefaults(a, b) }
+    | a=lambda_param_no_default* b=lambda_param_with_default+ '/' &':' { new SlashDefaults(a, b) }
+
+lambda_star_etc[StarParameters]:
+    | invalid_lambda_star_etc
+    | '*' a=lambda_param_no_default b=lambda_param_maybe_default* c=[lambda_kwds] {
+        new StarParameters(a, b, c) }
+    | '*' ',' b=lambda_param_maybe_default+ c=[lambda_kwds] {
+        new StarParameters(null, b, c) }
+    | a=lambda_kwds { new StarParameters(null, null, a) }
+
+lambda_kwds[PyNode]:
+    | invalid_lambda_kwds
+    | '**' a=lambda_param_no_default { a }
+
+lambda_param_no_default[PyNode]:
+    | a=lambda_param ',' { a }
+    | a=lambda_param &':' { a }
+lambda_param_with_default[NameDefault]:
+    | a=lambda_param c=default ',' { new NameDefault(a, c) }
+    | a=lambda_param c=default &':' { new NameDefault(a, c) }
+lambda_param_maybe_default[NameDefault]:
+    | a=lambda_param c=default? ',' { new NameDefault(a, c) }
+    | a=lambda_param c=default? &':' { new NameDefault(a, c) }
+lambda_param[PyNode]: a=NAME { PyAst.Make("arg", this.Extra(_mark), Id(a), null, null) }
+
+# LITERALS
+# ========
+
+fstring_middle[PyNode]:
+    | fstring_replacement_field
+    | t=FSTRING_MIDDLE { this.ConstantFromToken(t) }
+fstring_replacement_field[PyNode]:
+    | '{' a=annotated_rhs debug_expr='='? conversion=[fstring_conversion] format=[fstring_full_format_spec] rbrace='}' {
+        this.FormattedValue(a, debug_expr, conversion, format, rbrace, this.Extra(_mark), false) }
+    | invalid_fstring_replacement_field
+fstring_conversion[WithMetadata]:
+    | conv_token="!" conv=NAME { this.CheckFStringConversion(conv_token, conv) }
+fstring_full_format_spec[WithMetadata]:
+    | colon=':' spec=fstring_format_spec* { this.SetupFullFormatSpec(colon, spec, this.Extra(_mark)) }
+fstring_format_spec[PyNode]:
+    | t=FSTRING_MIDDLE { this.DecodedConstantFromToken(t) }
+    | fstring_replacement_field
+fstring[PyNode]:
+    | a=FSTRING_START b=fstring_middle* c=FSTRING_END { PyAst.Make("JoinedStr", this.Span(a, c), Seq(this.ResizedExpressions(a, b))) }
+
+tstring_format_spec_replacement_field[PyNode]:
+    | '{' a=annotated_rhs debug_expr='='? conversion=[fstring_conversion] format=[tstring_full_format_spec] rbrace='}' {
+        this.FormattedValue(a, debug_expr, conversion, format, rbrace, this.Extra(_mark), false) }
+    | invalid_tstring_replacement_field
+tstring_format_spec[PyNode]:
+    | t=TSTRING_MIDDLE { this.DecodedConstantFromToken(t) }
+    | tstring_format_spec_replacement_field
+tstring_full_format_spec[WithMetadata]:
+    | colon=':' spec=tstring_format_spec* { this.SetupFullFormatSpec(colon, spec, this.Extra(_mark)) }
+tstring_replacement_field[PyNode]:
+    | '{' a=annotated_rhs debug_expr='='? conversion=[fstring_conversion] format=[tstring_full_format_spec] rbrace='}' {
+        this.FormattedValue(a, debug_expr, conversion, format, rbrace, this.Extra(_mark), true) }
+    | invalid_tstring_replacement_field
+tstring_middle[PyNode]:
+    | tstring_replacement_field
+    | t=TSTRING_MIDDLE { this.ConstantFromToken(t) }
+tstring[PyNode] (memo):
+    | a=TSTRING_START b=tstring_middle* c=TSTRING_END {
+        this.Version(14, "t-strings are", PyAst.Make("TemplateStr", this.Span(a, c), Seq(this.ResizedExpressions(a, b)))) }
+
+string[PyNode]: s[PyToken]=STRING { this.ConstantFromString(s) }
+strings[PyNode] (memo):
+    | invalid_string_tstring_concat
+    | a[List<PyNode>]=(fstring|string)+ { this.ConcatenateStrings(a, this.Extra(_mark)) }
+    | a[List<PyNode>]=tstring+ { PyAst.Make("TemplateStr", this.Extra(_mark), Seq(this.ConcatenatedValues(a))) }
+
+list[PyNode]:
+    | '[' a=[star_named_expressions] ']' { PyAst.Make("List", this.Extra(_mark), Seq(a), Op("Load")) }
+
+tuple[PyNode]:
+    | '(' a=[y=star_named_expression ',' z=[star_named_expressions] { Insert(y, z) } ] ')' {
+        PyAst.Make("Tuple", this.Extra(_mark), a ?? new List<PyNode?>(), Op("Load")) }
+
+set[PyNode]: '{' a=star_named_expressions '}' { PyAst.Make("Set", this.Extra(_mark), Seq(a)) }
+
+# Dicts
+# -----
+
+dict[PyNode]:
+    | '{' a=[double_starred_kvpairs] '}' {
+        PyAst.Make("Dict", this.Extra(_mark), (a ?? []).Select(pair => pair.Key).ToList(), (a ?? []).Select(pair => (PyNode?)pair.Value).ToList()) }
+    | '{' invalid_double_starred_kvpairs '}'
+
+double_starred_kvpairs[List<KeyValue>]: a=','.double_starred_kvpair+ [','] { a }
+
+double_starred_kvpair[KeyValue]:
+    | '**' a=bitwise_or { new KeyValue(null, a) }
+    | kvpair
+
+kvpair[KeyValue]: a=expression ':' b=expression { new KeyValue(a, b) }
+
+# Comprehensions & Generators
+# ---------------------------
+
+for_if_clauses[List<PyNode>]:
+    | a[List<PyNode>]=for_if_clause+ { a }
+
+for_if_clause[PyNode]:
+    | 'async' 'for' a=star_targets 'in' ~ b=disjunction c[List<PyNode>]=('if' z=disjunction { z })* {
+        this.Version(6, "Async comprehensions are", PyAst.Make("comprehension", null, a, b, Seq(c), 1)) }
+    | 'for' a=star_targets 'in' ~ b=disjunction c[List<PyNode>]=('if' z=disjunction { z })* {
+        PyAst.Make("comprehension", null, a, b, Seq(c), 0) }
+    | invalid_for_if_clause
+    | invalid_for_target
+
+listcomp[PyNode]:
+    | '[' a=named_expression b=for_if_clauses ']' { PyAst.Make("ListComp", this.Extra(_mark), a, Seq(b)) }
+    | invalid_comprehension
+
+setcomp[PyNode]:
+    | '{' a=named_expression b=for_if_clauses '}' { PyAst.Make("SetComp", this.Extra(_mark), a, Seq(b)) }
+    | invalid_comprehension
+
+genexp[PyNode]:
+    | '(' a=( assignment_expression | expression !':=') b=for_if_clauses ')' { PyAst.Make("GeneratorExp", this.Extra(_mark), a, Seq(b)) }
+    | invalid_comprehension
+
+dictcomp[PyNode]:
+    | '{' a=kvpair b=for_if_clauses '}' { PyAst.Make("DictComp", this.Extra(_mark), a.Key, a.Value, Seq(b)) }
+    | invalid_dict_comprehension
+
+# FUNCTION CALL ARGUMENTS
+# =======================
+
+arguments[PyNode] (memo):
+    | a=args [','] &')' { a }
+    | invalid_arguments
+
+args[PyNode]:
+    | a[List<PyNode>]=','.(starred_expression | ( assignment_expression | expression !':=') !'=')+ b=[',' k=kwargs {k}] {
+        this.CollectCall(this.Extra(_mark), a, b) }
+    | a=kwargs { this.CollectCall(this.Extra(_mark), [], a) }
+
+kwargs[List<KeywordOrStarred>]:
+    | a=','.kwarg_or_starred+ ',' b=','.kwarg_or_double_starred+ { [.. a, .. b] }
+    | ','.kwarg_or_starred+
+    | ','.kwarg_or_double_starred+
+
+starred_expression[PyNode]:
+    | invalid_starred_expression_unpacking
+    | '*' a=expression { PyAst.Make("Starred", this.Extra(_mark), a, Op("Load")) }
+    | invalid_starred_expression
+
+kwarg_or_starred[KeywordOrStarred]:
+    | invalid_kwarg
+    | a=NAME '=' b=expression {
+        new KeywordOrStarred(PyAst.Make("keyword", this.Extra(_mark), Id(a), b), true) }
+    | a=starred_expression { new KeywordOrStarred(a, false) }
+
+kwarg_or_double_starred[KeywordOrStarred]:
+    | invalid_kwarg
+    | a=NAME '=' b=expression {
+        new KeywordOrStarred(PyAst.Make("keyword", this.Extra(_mark), Id(a), b), true) }
+    | '**' a=expression { new KeywordOrStarred(PyAst.Make("keyword", this.Extra(_mark), null, a), true) }
+
+# ASSIGNMENT TARGETS
+# ==================
+
+# Generic targets
+# ---------------
+
+# NOTE: star_targets may contain *bitwise_or, targets may not.
+star_targets[PyNode]:
+    | a=star_target !',' { a }
+    | a=star_target b=(',' c=star_target { c })* [','] {
+        PyAst.Make("Tuple", this.Extra(_mark), Insert(a, b), Op("Store")) }
+
+star_targets_list_seq[List<PyNode>]: a[List<PyNode>]=','.star_target+ [','] { a }
+
+star_targets_tuple_seq[List<PyNode>]:
+    | a=star_target b=(',' c=star_target { c })+ [','] { [a, .. b] }
+    | a=star_target ',' { [a] }
+
+star_target[PyNode] (memo):
+    | '*' a=(!'*' star_target) {
+        PyAst.Make("Starred", this.Extra(_mark), PyAst.SetContext(a, "Store"), Op("Store")) }
+    | target_with_star_atom
+
+target_with_star_atom[PyNode] (memo):
+    | a=t_primary '.' b=NAME !t_lookahead { PyAst.Make("Attribute", this.Extra(_mark), a, Id(b), Op("Store")) }
+    | a=t_primary '[' b=slices ']' !t_lookahead { PyAst.Make("Subscript", this.Extra(_mark), a, b, Op("Store")) }
+    | star_atom
+
+star_atom[PyNode]:
+    | a=NAME { PyAst.SetContext(a, "Store") }
+    | '(' a=target_with_star_atom ')' { PyAst.SetContext(a, "Store") }
+    | '(' a=[star_targets_tuple_seq] ')' { PyAst.Make("Tuple", this.Extra(_mark), Seq(a), Op("Store")) }
+    | '[' a=[star_targets_list_seq] ']' { PyAst.Make("List", this.Extra(_mark), Seq(a), Op("Store")) }
+
+single_target[PyNode]:
+    | single_subscript_attribute_target
+    | a=NAME { PyAst.SetContext(a, "Store") }
+    | '(' a=single_target ')' { a }
+
+single_subscript_attribute_target[PyNode]:
+    | a=t_primary '.' b=NAME !t_lookahead { PyAst.Make("Attribute", this.Extra(_mark), a, Id(b), Op("Store")) }
+    | a=t_primary '[' b=slices ']' !t_lookahead { PyAst.Make("Subscript", this.Extra(_mark), a, b, Op("Store")) }
+
+t_primary[PyNode]:
+    | a=t_primary '.' b=NAME &t_lookahead { PyAst.Make("Attribute", this.Extra(_mark), a, Id(b), Op("Load")) }
+    | a=t_primary '[' b=slices ']' &t_lookahead { PyAst.Make("Subscript", this.Extra(_mark), a, b, Op("Load")) }
+    | a=t_primary b=genexp &t_lookahead {
+        PyAst.Make("Call", this.Extra(_mark), a, new List<PyNode?> { b }, new List<PyNode?>()) }
+    | a=t_primary '(' b=[arguments] ')' &t_lookahead {
+        PyAst.Make("Call", this.Extra(_mark), a, b?.Get("args") ?? new List<PyNode?>(), b?.Get("keywords") ?? new List<PyNode?>()) }
+    | a=atom &t_lookahead { a }
+
+t_lookahead: '(' | '[' | '.'
+
+# Targets for del statements
+# --------------------------
+
+del_targets[List<PyNode>]: a[List<PyNode>]=','.del_target+ [','] { a }
+
+del_target[PyNode] (memo):
+    | a=t_primary '.' b=NAME !t_lookahead { PyAst.Make("Attribute", this.Extra(_mark), a, Id(b), Op("Del")) }
+    | a=t_primary '[' b=slices ']' !t_lookahead { PyAst.Make("Subscript", this.Extra(_mark), a, b, Op("Del")) }
+    | del_t_atom
+
+del_t_atom[PyNode]:
+    | a=NAME { PyAst.SetContext(a, "Del") }
+    | '(' a=del_target ')' { PyAst.SetContext(a, "Del") }
+    | '(' a=[del_targets] ')' { PyAst.Make("Tuple", this.Extra(_mark), Seq(a), Op("Del")) }
+    | '[' a=[del_targets] ']' { PyAst.Make("List", this.Extra(_mark), Seq(a), Op("Del")) }
+
+# ========================= END OF THE GRAMMAR ===========================
+
+
+
+# ========================= START OF INVALID RULES =======================
+
+# From here on, there are rules for invalid syntax with specialised error messages
+invalid_arguments:
+    | ((','.(starred_expression | ( assignment_expression | expression !':=') !'=')+ ',' kwargs) | kwargs) a=',' ','.(starred_expression !'=')+ {
+        throw this.ErrorFrom(a, "iterable argument unpacking follows keyword argument unpacking") }
+    | a=expression b=for_if_clauses ',' [args | expression for_if_clauses] {
+        throw this.ErrorAt(a, LastComprehensionItem(b[^1]), "Generator expression must be parenthesized") }
+    | a=NAME b='=' expression for_if_clauses {
+        throw this.ErrorAt(a, b, "invalid syntax. Maybe you meant '==' or ':=' instead of '='?") }
+    | (args ',')? a=NAME b='=' &(',' | ')') {
+        throw this.ErrorAt(a, b, "expected argument value expression") }
+    | a=args b=for_if_clauses { this.NonParenthesizedGenexpInCall(a, b) }
+    | args ',' a=expression b=for_if_clauses {
+        throw this.ErrorAt(a, LastComprehensionItem(b[^1]), "Generator expression must be parenthesized") }
+    | a=args ',' args { throw this.ArgumentsParsingError(a) }
+invalid_kwarg:
+    | a[PyToken]=('True'|'False'|'None') b='=' {
+        throw this.ErrorAt(a, b, $"cannot assign to {a.Text}") }
+    | a=NAME b='=' expression for_if_clauses {
+        throw this.ErrorAt(a, b, "invalid syntax. Maybe you meant '==' or ':=' instead of '='?") }
+    | !(NAME '=') a=expression b='=' {
+        throw this.ErrorAt(a, b, "expression cannot contain assignment, perhaps you meant \"==\"?") }
+    | a='**' expression '=' b=expression {
+        throw this.ErrorAt(a, b, "cannot assign to keyword argument unpacking") }
+
+# IMPORTANT: Note that the "_without_invalid" suffix causes the rule to not call invalid rules under it
+expression_without_invalid[PyNode]:
+    | a=disjunction 'if' b=disjunction 'else' c=expression { PyAst.Make("IfExp", this.Extra(_mark), b, a, c) }
+    | disjunction
+    | lambdef
+invalid_legacy_expression:
+    | a=NAME !'(' b=star_expressions {
+        IsLegacyStatement(a) ? throw this.ErrorAt(a, b, $"Missing parentheses in call to '{Id(a)}'. Did you mean {Id(a)}(...)?") : null }
+
+invalid_type_param:
+    | '*' a=NAME colon=':' e=expression {
+            throw this.ErrorFrom(colon, e.Is("Tuple")
+                ? "cannot use constraints with TypeVarTuple"
+                : "cannot use bound with TypeVarTuple")
+        }
+    | '**' a=NAME colon=':' e=expression {
+            throw this.ErrorFrom(colon, e.Is("Tuple")
+                ? "cannot use constraints with ParamSpec"
+                : "cannot use bound with ParamSpec")
+        }
+
+invalid_expression:
+   |  STRING a[List<PyNode>]=(!STRING expression_without_invalid)+ STRING {
+        throw this.ErrorAt(a[0], a[^1], "invalid syntax. Is this intended to be part of the string?") }
+    # !(NAME STRING) is not matched so we don't show this error with some invalid string prefixes like: kf"dsfsdf"
+    # Soft keywords need to also be ignored because they can be parsed as NAME NAME
+   | !(NAME STRING | SOFT_KEYWORD) a=disjunction b=expression_without_invalid {
+        IsLegacyStatement(a) ? null : this.TokenAt(this.Mark - 1).Level == 0 ? null :
+        throw this.ErrorAt(a, b, "invalid syntax. Perhaps you forgot a comma?") }
+   | a=disjunction 'if' b=disjunction !('else'|':') { throw this.ErrorAt(a, b, "expected 'else' after 'if' expression") }
+   | a=disjunction 'if' b=disjunction 'else' !expression {
+        throw this.Error("expected expression after 'else', but statement is given", next: true) }
+   | a[PyNode]=(pass_stmt|break_stmt|continue_stmt) 'if' b=disjunction 'else' c=simple_stmt {
+        throw this.ErrorAt(a, "expected expression before 'if', but statement is given") }
+   | a='lambda' [lambda_params] b=':' &FSTRING_MIDDLE  {
+        throw this.ErrorAt(a, b, "f-string: lambda expressions are not allowed without parentheses") }
+   | a='lambda' [lambda_params] b=':' &TSTRING_MIDDLE  {
+        throw this.ErrorAt(a, b, "t-string: lambda expressions are not allowed without parentheses") }
+
+invalid_named_expression(memo):
+    | a=expression ':=' expression {
+        throw this.ErrorAt(a, $"cannot use assignment expressions with {PyAst.Name(a)}") }
+    | a=NAME '=' b=bitwise_or !('='|':=') {
+        throw this.ErrorAt(a, b, "invalid syntax. Maybe you meant '==' or ':=' instead of '='?") }
+    | !(list|tuple|genexp|'True'|'None'|'False') a=bitwise_or b='=' bitwise_or !('='|':=') {
+        throw this.ErrorAt(a, $"cannot assign to {PyAst.Name(a)} here. Maybe you meant '==' instead of '='?") }
+
+invalid_assignment:
+    | a=invalid_ann_assign_target ':' expression {
+        throw this.ErrorAt(a, $"only single target (not {PyAst.Name(a)}) can be annotated") }
+    | a=star_named_expression ',' star_named_expressions* ':' expression {
+        throw this.ErrorAt(a, "only single target (not tuple) can be annotated") }
+    | a=expression ':' expression {
+        throw this.ErrorAt(a, "illegal target for annotation") }
+    | (star_targets '=')* a=star_expressions '=' {
+        this.RaiseInvalidTarget<object>(PyAst.Targets.Star, a) }
+    | (star_targets '=')* a=yield_expr '=' { throw this.ErrorAt(a, "assignment to yield expression not possible") }
+    | a=star_expressions augassign annotated_rhs {
+        throw this.ErrorAt(a, $"'{PyAst.Name(a)}' is an illegal expression for augmented assignment") }
+invalid_ann_assign_target[PyNode]:
+    | list
+    | tuple
+    | '(' a=invalid_ann_assign_target ')' { a }
+invalid_del_stmt:
+    | 'del' a=star_expressions {
+        this.RaiseInvalidTarget<object>(PyAst.Targets.Delete, a) }
+invalid_block:
+    | NEWLINE !INDENT { throw this.IndentationError("expected an indented block") }
+invalid_comprehension:
+    | ('[' | '(' | '{') a=starred_expression for_if_clauses {
+        throw this.ErrorAt(a, "iterable unpacking cannot be used in comprehension") }
+    | ('[' | '{') a=star_named_expression ',' b=star_named_expressions for_if_clauses {
+        throw this.ErrorAt(a, b[^1], "did you forget parentheses around the comprehension target?") }
+    | ('[' | '{') a=star_named_expression b=',' for_if_clauses {
+        throw this.ErrorAt(a, b, "did you forget parentheses around the comprehension target?") }
+invalid_dict_comprehension:
+    | '{' a='**' bitwise_or for_if_clauses '}' {
+        throw this.ErrorAt(a, a, "dict unpacking cannot be used in dict comprehension") }
+invalid_parameters:
+    | a="/" ',' {
+        throw this.ErrorAt(a, a, "at least one argument must precede /") }
+    | (slash_no_default | slash_with_default) param_maybe_default* a='/' {
+        throw this.ErrorAt(a, a, "/ may appear only once") }
+    | slash_no_default? param_no_default* invalid_parameters_helper a=param_no_default {
+        throw this.ErrorAt(a, "parameter without a default follows parameter with a default") }
+    | param_no_default* a='(' param_no_default+ ','? b=')' {
+        throw this.ErrorAt(a, b, "Function parameters cannot be parenthesized") }
+    | (slash_no_default | slash_with_default)? param_maybe_default* '*' (',' | param_no_default) param_maybe_default* a='/' {
+        throw this.ErrorAt(a, a, "/ must be ahead of *") }
+    | param_maybe_default+ '/' a='*' {
+        throw this.ErrorAt(a, a, "expected comma between / and *") }
+invalid_default:
+    | a='=' &(')'|',') { throw this.ErrorAt(a, a, "expected default value expression") }
+invalid_star_etc:
+    | a='*' (')' | ',' (')' | '**')) { throw this.ErrorAt(a, a, "named arguments must follow bare *") }
+    | '*' param a='=' { throw this.ErrorAt(a, a, "var-positional argument cannot have default value") }
+    | '*' (param_no_default | ',') param_maybe_default* a='*' (param_no_default | ',') {
+        throw this.ErrorAt(a, a, "* argument may appear only once") }
+invalid_kwds:
+    | '**' param a='=' { throw this.ErrorAt(a, a, "var-keyword argument cannot have default value") }
+    | '**' param ',' a=param { throw this.ErrorAt(a, "arguments cannot follow var-keyword argument") }
+    | '**' param ',' a[PyToken]=('*'|'**'|'/') { throw this.ErrorAt(a, a, "arguments cannot follow var-keyword argument") }
+invalid_parameters_helper: # This is only there to avoid type errors
+    | a=slash_with_default { a }
+    | param_with_default+
+invalid_lambda_parameters:
+    | a="/" ',' {
+        throw this.ErrorAt(a, a, "at least one argument must precede /") }
+    | (lambda_slash_no_default | lambda_slash_with_default) lambda_param_maybe_default* a='/' {
+        throw this.ErrorAt(a, a, "/ may appear only once") }
+    | lambda_slash_no_default? lambda_param_no_default* invalid_lambda_parameters_helper a=lambda_param_no_default {
+        throw this.ErrorAt(a, "parameter without a default follows parameter with a default") }
+    | lambda_param_no_default* a='(' ','.lambda_param+ ','? b=')' {
+        throw this.ErrorAt(a, b, "Lambda expression parameters cannot be parenthesized") }
+    | (lambda_slash_no_default | lambda_slash_with_default)? lambda_param_maybe_default* '*' (',' | lambda_param_no_default) lambda_param_maybe_default* a='/' {
+        throw this.ErrorAt(a, a, "/ must be ahead of *") }
+    | lambda_param_maybe_default+ '/' a='*' {
+        throw this.ErrorAt(a, a, "expected comma between / and *") }
+invalid_lambda_parameters_helper:
+    | a=lambda_slash_with_default { a }
+    | lambda_param_with_default+
+invalid_lambda_star_etc:
+    | '*' (':' | ',' (':' | '**')) { throw this.Error("named arguments must follow bare *") }
+    | '*' lambda_param a='=' { throw this.ErrorAt(a, a, "var-positional argument cannot have default value") }
+    | '*' (lambda_param_no_default | ',') lambda_param_maybe_default* a='*' (lambda_param_no_default | ',') {
+        throw this.ErrorAt(a, a, "* argument may appear only once") }
+invalid_lambda_kwds:
+    | '**' lambda_param a='=' { throw this.ErrorAt(a, a, "var-keyword argument cannot have default value") }
+    | '**' lambda_param ',' a=lambda_param { throw this.ErrorAt(a, "arguments cannot follow var-keyword argument") }
+    | '**' lambda_param ',' a[PyToken]=('*'|'**'|'/') { throw this.ErrorAt(a, a, "arguments cannot follow var-keyword argument") }
+invalid_with_item:
+    | expression 'as' a=expression &(',' | ')' | ':') {
+        this.RaiseInvalidTarget<object>(PyAst.Targets.Star, a) }
+
+invalid_for_if_clause:
+    | 'async'? 'for' (bitwise_or (',' bitwise_or)* [',']) !'in' {
+        throw this.Error("'in' expected after for-loop variables") }
+
+invalid_for_target:
+    | 'async'? 'for' a=star_expressions {
+        this.RaiseInvalidTarget<object>(PyAst.Targets.For, a) }
+
+invalid_group:
+    | '(' a=starred_expression ')' {
+        throw this.ErrorAt(a, "cannot use starred expression here") }
+    | '(' a='**' expression ')' {
+        throw this.ErrorAt(a, a, "cannot use double starred expression here") }
+invalid_import:
+    | a='import' ','.dotted_name+ 'from' dotted_name {
+        throw this.ErrorFrom(a, "Did you mean to use 'from ... import ...' instead?") }
+    | 'import' token=NEWLINE {
+        throw this.ErrorFrom(token, "Expected one or more names after 'import'") }
+invalid_dotted_as_name:
+    | dotted_name 'as' !(NAME (',' | ')' | ';' | NEWLINE)) a=expression {
+        throw this.ErrorAt(a, $"cannot use {PyAst.Name(a)} as import target") }
+invalid_import_from_as_name:
+    | NAME 'as' !(NAME (',' | ')' | ';' | NEWLINE)) a=expression {
+        throw this.ErrorAt(a, $"cannot use {PyAst.Name(a)} as import target") }
+
+invalid_import_from_targets:
+    | import_from_as_names ',' NEWLINE {
+        throw this.Error("trailing comma not allowed without surrounding parentheses") }
+    | token=NEWLINE {
+        throw this.ErrorFrom(token, "Expected one or more names after 'import'") }
+
+invalid_with_stmt:
+    | ['async'] 'with' ','.(expression ['as' star_target])+ NEWLINE { throw this.Error("expected ':'") }
+    | ['async'] 'with' '(' ','.(expressions ['as' star_target])+ ','? ')' NEWLINE { throw this.Error("expected ':'") }
+invalid_with_stmt_indent:
+    | ['async'] a='with' ','.(expression ['as' star_target])+ ':' NEWLINE !INDENT {
+        throw this.IndentationError($"expected an indented block after 'with' statement on line {a.Line}") }
+    | ['async'] a='with' '(' ','.(expressions ['as' star_target])+ ','? ')' ':' NEWLINE !INDENT {
+        throw this.IndentationError($"expected an indented block after 'with' statement on line {a.Line}") }
+
+invalid_try_stmt:
+    | a='try' ':' NEWLINE !INDENT {
+        throw this.IndentationError($"expected an indented block after 'try' statement on line {a.Line}") }
+    | 'try' ':' block !('except' | 'finally') { throw this.Error("expected 'except' or 'finally' block") }
+    | 'try' ':' block* except_block+ a='except' b='*' expression ['as' NAME] ':' {
+        throw this.ErrorAt(a, b, "cannot have both 'except' and 'except*' on the same 'try'") }
+    | 'try' ':' block* except_star_block+ a='except' [expression ['as' NAME]] ':' {
+        throw this.ErrorAt(a, a, "cannot have both 'except' and 'except*' on the same 'try'") }
+invalid_except_stmt:
+    | 'except' a=expression ',' expressions 'as' NAME  ':' {
+        throw this.ErrorFrom(a, "multiple exception types must be parenthesized when using 'as'") }
+    | a='except' expression ['as' NAME ] NEWLINE { throw this.Error("expected ':'") }
+    | a='except' NEWLINE { throw this.Error("expected ':'") }
+    | 'except' expression 'as' a=expression ':' block {
+        throw this.ErrorAt(a, $"cannot use except statement with {PyAst.Name(a)}") }
+invalid_except_star_stmt:
+    | 'except' '*' a=expression ',' expressions 'as' NAME  ':' {
+        throw this.ErrorFrom(a, "multiple exception types must be parenthesized when using 'as'") }
+    | a='except' '*' expression ['as' NAME ] NEWLINE { throw this.Error("expected ':'") }
+    | a='except' '*' (NEWLINE | ':') { throw this.Error("expected one or more exception types") }
+    | 'except' '*' expression 'as' a=expression ':' block {
+        throw this.ErrorAt(a, $"cannot use except* statement with {PyAst.Name(a)}") }
+invalid_finally_stmt:
+    | a='finally' ':' NEWLINE !INDENT {
+        throw this.IndentationError($"expected an indented block after 'finally' statement on line {a.Line}") }
+invalid_except_stmt_indent:
+    | a='except' expression ['as' NAME ] ':' NEWLINE !INDENT {
+        throw this.IndentationError($"expected an indented block after 'except' statement on line {a.Line}") }
+    | a='except' ':' NEWLINE !INDENT { throw this.IndentationError($"expected an indented block after 'except' statement on line {a.Line}") }
+invalid_except_star_stmt_indent:
+    | a='except' '*' expression ['as' NAME ] ':' NEWLINE !INDENT {
+        throw this.IndentationError($"expected an indented block after 'except*' statement on line {a.Line}") }
+invalid_match_stmt:
+    | "match" subject_expr NEWLINE { throw this.Error("expected ':'") }
+    | a="match" subject=subject_expr ':' NEWLINE !INDENT {
+        throw this.IndentationError($"expected an indented block after 'match' statement on line {a.Line}") }
+invalid_case_block:
+    | "case" patterns guard? NEWLINE { throw this.Error("expected ':'") }
+    | a="case" patterns guard? ':' NEWLINE !INDENT {
+        throw this.IndentationError($"expected an indented block after 'case' statement on line {a.Line}") }
+invalid_as_pattern:
+    | or_pattern 'as' a="_" { throw this.ErrorAt(a, "cannot use '_' as a target") }
+    | or_pattern 'as' a=expression {
+        throw this.ErrorAt(a, $"cannot use {PyAst.Name(a)} as pattern target") }
+invalid_class_pattern:
+    | name_or_attr '(' a=invalid_class_argument_pattern  { throw this.ErrorAt(a[0], a[^1], "positional patterns follow keyword patterns") }
+invalid_class_argument_pattern[List<PyNode>]:
+    | [positional_patterns ','] keyword_patterns ',' a=positional_patterns { a }
+invalid_if_stmt:
+    | 'if' named_expression NEWLINE { throw this.Error("expected ':'") }
+    | a='if' a=named_expression ':' NEWLINE !INDENT {
+        throw this.IndentationError($"expected an indented block after 'if' statement on line {a.Line}") }
+invalid_elif_stmt:
+    | 'elif' named_expression NEWLINE { throw this.Error("expected ':'") }
+    | a='elif' named_expression ':' NEWLINE !INDENT {
+        throw this.IndentationError($"expected an indented block after 'elif' statement on line {a.Line}") }
+invalid_else_stmt:
+    | a='else' ':' NEWLINE !INDENT {
+        throw this.IndentationError($"expected an indented block after 'else' statement on line {a.Line}") }
+    | 'else' ':' block 'elif' { throw this.Error("'elif' block follows an 'else' block") }
+invalid_while_stmt:
+    | 'while' named_expression NEWLINE { throw this.Error("expected ':'") }
+    | a='while' named_expression ':' NEWLINE !INDENT {
+        throw this.IndentationError($"expected an indented block after 'while' statement on line {a.Line}") }
+invalid_for_stmt:
+    | ['async'] 'for' star_targets 'in' star_expressions NEWLINE { throw this.Error("expected ':'") }
+    | ['async'] a='for' star_targets 'in' star_expressions ':' NEWLINE !INDENT {
+        throw this.IndentationError($"expected an indented block after 'for' statement on line {a.Line}") }
+invalid_def_raw:
+    | ['async'] a='def' NAME [type_params] '(' [params] ')' ['->' expression] ':' NEWLINE !INDENT {
+        throw this.IndentationError($"expected an indented block after function definition on line {a.Line}") }
+    | ['async'] 'def' NAME [type_params] &&'(' [params] ')' ['->' expression] &&':' block
+invalid_class_def_raw:
+    | 'class' NAME [type_params] ['(' [arguments] ')'] NEWLINE { throw this.Error("expected ':'") }
+    | a='class' NAME [type_params] ['(' [arguments] ')'] ':' NEWLINE !INDENT {
+        throw this.IndentationError($"expected an indented block after class definition on line {a.Line}") }
+
+invalid_double_starred_kvpairs:
+    | ','.double_starred_kvpair+ ',' invalid_kvpair
+    | expression ':' a='*' bitwise_or { throw this.ErrorFrom(a, "cannot use a starred expression in a dictionary value") }
+    | expression a=':' &('}'|',') { throw this.ErrorAt(a, a, "expression expected after dictionary key and ':'") }
+invalid_kvpair:
+    | a=expression !(':') {
+        throw this.ErrorAt(a.Range!.Line, a.Range.EndOffset - 1, a.Range.EndLine, -1, "':' expected after dictionary key") }
+    | expression ':' a='*' bitwise_or { throw this.ErrorFrom(a, "cannot use a starred expression in a dictionary value") }
+    | expression a=':' &('}'|',') { throw this.ErrorAt(a, a, "expression expected after dictionary key and ':'") }
+invalid_starred_expression_unpacking:
+    | a='*' expression '=' b=expression { throw this.ErrorAt(a, b, "cannot assign to iterable argument unpacking") }
+invalid_starred_expression:
+    | '*' { throw this.Error("Invalid star expression") }
+
+invalid_fstring_replacement_field:
+    | '{' a='=' { throw this.ErrorAt(a, a, "f-string: valid expression required before '='") }
+    | '{' a='!' { throw this.ErrorAt(a, a, "f-string: valid expression required before '!'") }
+    | '{' a=':' { throw this.ErrorAt(a, a, "f-string: valid expression required before ':'") }
+    | '{' a='}' { throw this.ErrorAt(a, a, "f-string: valid expression required before '}'") }
+    | '{' !annotated_rhs { throw this.Error("f-string: expecting a valid expression after '{'", next: true) }
+    | '{' annotated_rhs !('=' | '!' | ':' | '}') {
+        throw this.Error("f-string: expecting '=', or '!', or ':', or '}'", next: true) }
+    | '{' annotated_rhs '=' !('!' | ':' | '}') {
+        throw this.Error("f-string: expecting '!', or ':', or '}'", next: true) }
+    | '{' annotated_rhs '='? invalid_fstring_conversion_character
+    | '{' annotated_rhs '='? ['!' NAME] !(':' | '}') {
+        throw this.Error("f-string: expecting ':' or '}'", next: true) }
+    | '{' annotated_rhs '='? ['!' NAME] ':' fstring_format_spec* !'}' {
+        throw this.Error("f-string: expecting '}', or format specs", next: true) }
+    | '{' annotated_rhs '='? ['!' NAME] !'}' {
+        throw this.Error("f-string: expecting '}'", next: true) }
+
+invalid_fstring_conversion_character:
+    | '!' &(':' | '}') { throw this.Error("f-string: missing conversion character", next: true) }
+    | '!' !NAME { throw this.Error("f-string: invalid conversion character", next: true) }
+
+invalid_tstring_replacement_field:
+    | '{' a='=' { throw this.ErrorAt(a, a, "t-string: valid expression required before '='") }
+    | '{' a='!' { throw this.ErrorAt(a, a, "t-string: valid expression required before '!'") }
+    | '{' a=':' { throw this.ErrorAt(a, a, "t-string: valid expression required before ':'") }
+    | '{' a='}' { throw this.ErrorAt(a, a, "t-string: valid expression required before '}'") }
+    | '{' !annotated_rhs { throw this.Error("t-string: expecting a valid expression after '{'", next: true) }
+    | '{' annotated_rhs !('=' | '!' | ':' | '}') {
+        throw this.Error("t-string: expecting '=', or '!', or ':', or '}'", next: true) }
+    | '{' annotated_rhs '=' !('!' | ':' | '}') {
+        throw this.Error("t-string: expecting '!', or ':', or '}'", next: true) }
+    | '{' annotated_rhs '='? invalid_tstring_conversion_character
+    | '{' annotated_rhs '='? ['!' NAME] !(':' | '}') {
+        throw this.Error("t-string: expecting ':' or '}'", next: true) }
+    | '{' annotated_rhs '='? ['!' NAME] ':' fstring_format_spec* !'}' {
+        throw this.Error("t-string: expecting '}', or format specs", next: true) }
+    | '{' annotated_rhs '='? ['!' NAME] !'}' {
+        throw this.Error("t-string: expecting '}'", next: true) }
+
+invalid_tstring_conversion_character:
+    | '!' &(':' | '}') { throw this.Error("t-string: missing conversion character", next: true) }
+    | '!' !NAME { throw this.Error("t-string: invalid conversion character", next: true) }
+
+invalid_string_tstring_concat:
+    | a[List<PyNode>]=(fstring|string)+ b[PyNode]=tstring {
+        throw this.ErrorAt(a[^1], b, "cannot mix t-string literals with string or bytes literals") }
+    | a[List<PyNode>]=tstring+ b[PyNode]=(fstring|string) {
+        throw this.ErrorAt(a[^1], b, "cannot mix t-string literals with string or bytes literals") }
+
+invalid_arithmetic:
+    | sum ('+'|'-'|'*'|'/'|'%'|'//'|'@') a='not' b=inversion { throw this.ErrorAt(a, b, "'not' after an operator must be parenthesized") }
+invalid_factor:
+    | ('+' | '-' | '~') a='not' b=factor { throw this.ErrorAt(a, b, "'not' after an operator must be parenthesized") }
+
+invalid_type_params:
+    | '[' token=']' {
+        throw this.ErrorFrom(token, "Type parameter list cannot be empty") }
+
+invalid_noteq:
+    | a='<' b='>' {
+        TokensAreAdjacent(a, b) ? throw this.ErrorAt(a, b, "invalid syntax.  Maybe you meant '!=' instead of '<>'?") : null }
