@@ -42,6 +42,32 @@ public enum DynamicPlaceKind {
 
 }
 
+/// <summary>
+/// What the de-dynamicization found for one function or one clone of it, for a frontend that writes
+/// the typed module itself with its own lowering of typed operations (ADR 0300, Visual Basic's #1591).
+/// </summary>
+/// <param name="Function">The function of the module analysed.</param>
+/// <param name="Name">The name of the function or clone in the typed module.</param>
+/// <param name="Signature">For a clone, the exact type of every parameter it types, <see langword="null"/> for one it leaves; <see langword="null"/> for the function itself.</param>
+/// <param name="Kept">Whether the function itself stays in the typed module; a clone always does.</param>
+/// <param name="Typed">The variant locals given an exact type, the result's among them.</param>
+/// <param name="Holds">What every variant local and parameter is assigned anywhere in the function: the join of every value, the variant for one written where the analysis does not follow it.</param>
+/// <param name="Heads">What every variant local holds at the head of each loop, the variant where nothing is known of it.</param>
+/// <param name="Calls">For every call of a function of the module, the name of the function or clone it goes to.</param>
+/// <param name="Returned">The join of every value the function returns.</param>
+/// <param name="ReturnType">The type the function or clone returns.</param>
+public sealed record DynamicFunctionTyping(
+  string Function,
+  string Name,
+  IReadOnlyList<DynamicExact?>? Signature,
+  bool Kept,
+  IReadOnlyDictionary<IrLocal, DynamicExact> Typed,
+  IReadOnlyDictionary<IrLocal, DynamicType> Holds,
+  IReadOnlyDictionary<IrStmt, IReadOnlyDictionary<IrLocal, DynamicType>> Heads,
+  IReadOnlyDictionary<IrCall, string> Calls,
+  DynamicFact Returned,
+  IrType ReturnType);
+
 /// <summary>The module the de-dynamicization made and what it found for every place of the functions it typed.</summary>
 /// <param name="Module">The module.</param>
 /// <param name="Places">The places, function by function in module order.</param>
@@ -92,6 +118,27 @@ public static partial class DeDynamicize {
     program.Solve();
     var rewritten = program.Rewrite();
     return new(rewritten, program.Places(rewritten));
+  }
+
+  /// <summary>
+  /// What the de-dynamicization finds for every function of a module and every clone it makes, without
+  /// rewriting the module: for a frontend that lowers its source again with the typing given, so that
+  /// every typed operation is the one its own lowering writes.
+  /// </summary>
+  /// <param name="module">The module, as the frontend lowered it with every dynamic value a variant.</param>
+  /// <param name="semantics">The semantics table of the module's language.</param>
+  /// <param name="options">The budgets.</param>
+  /// <returns>The typing of each function and clone, function by function in module order and each function's clones after it; none for a module without variants.</returns>
+  public static IReadOnlyList<DynamicFunctionTyping> Typing(IrModule module, IDynamicSemantics semantics, DeDynamicizeOptions options) {
+    ArgumentNullException.ThrowIfNull(module);
+    ArgumentNullException.ThrowIfNull(semantics);
+    ArgumentNullException.ThrowIfNull(options);
+    if (!IrVariants.Uses(module))
+      return [];
+
+    var program = new Program(module, semantics, options);
+    program.Solve();
+    return program.Typing();
   }
 
   /// <summary>A signature a clone is made for: the IR type and tag of every parameter it types, <see langword="null"/> for one it leaves as it is.</summary>
@@ -209,7 +256,7 @@ public static partial class DeDynamicize {
       for (var index = 0; index < types.Length; ++index) {
         if (!specialisable[index])
           continue;
-        if (arguments[index] is not { IsStatic: true, Type: DynamicExact { BoxTag: not null } exact })
+        if (arguments[index] is not { IsStatic: true, Type.Plain: DynamicExact { BoxTag: not null } exact })
           return null;
         types[index] = exact;
       }
@@ -285,6 +332,19 @@ public static partial class DeDynamicize {
       }
 
       return this.Module with { Functions = functions };
+    }
+
+    /// <summary>The typing of every function and clone the rounds analysed.</summary>
+    public IReadOnlyList<DynamicFunctionTyping> Typing() {
+      var names = this.Names();
+      var typing = new List<DynamicFunctionTyping>();
+      foreach (var function in this.Module.Functions.Where(function => !this.Semantics.IsHelper(function.Name))) {
+        typing.Add(this.Walkers[Key(function.Name, null)].Typing(function.Name, this.KeepsRoot(function.Name), names));
+        foreach (var clone in this.Clones.GetValueOrDefault(function.Name, []))
+          typing.Add(this.Walkers[Key(function.Name, clone)].Typing(names[Key(function.Name, clone)], true, names));
+      }
+
+      return typing;
     }
 
     /// <summary>What every place of the functions the pass typed holds, in a module the pass made or was given.</summary>

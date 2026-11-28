@@ -56,8 +56,9 @@ public readonly record struct DynamicFact(DynamicType Type, Certainty Certainty)
 /// The abstract domain of <see cref="DynamicFact"/> under the join policy of one language: Unreachable
 /// is the proven <see cref="DynamicType.Nothing"/>, Unknown the dynamic <see cref="DynamicType.Variant"/>.
 /// Joins are those of <see cref="DynamicType.Join"/>, which are bounded except for shapes nested in
-/// shapes; the widening turns a fact that grew past <see cref="DynamicType.MostDepth"/> levels of shapes
-/// into a variant, so every chain of widenings ends.
+/// shapes and the ranges of exact integers; the widening turns a fact that grew past
+/// <see cref="DynamicType.MostDepth"/> levels of shapes into a variant and drops a range that grew, so
+/// every chain of widenings ends.
 /// </summary>
 public sealed class DynamicFacts : IFactDomain<DynamicFact> {
 
@@ -90,7 +91,7 @@ public sealed class DynamicFacts : IFactDomain<DynamicFact> {
   /// <inheritdoc/>
   public DynamicFact Widen(DynamicFact previous, DynamicFact next) {
     var joined = this.Join(previous, next);
-    return joined.Type.Depth > DynamicType.MostDepth ? joined with { Type = DynamicType.Variant } : joined;
+    return joined.Type.Depth > DynamicType.MostDepth ? joined with { Type = DynamicType.Variant } : joined with { Type = DynamicType.WidenRanges(previous.Type, joined.Type) };
   }
 
   /// <inheritdoc/>

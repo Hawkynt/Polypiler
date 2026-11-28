@@ -306,6 +306,25 @@ public sealed class VisualBasicSemanticsTests {
     yield return new TestCaseData(Call("PlyVarIsTrue", IrType.Bool, a), DynamicOperation.Truthiness, false).SetName("Classify_Truthiness");
     yield return new TestCaseData(Call("PlyVarDblC", IrType.F64, a), DynamicOperation.ToNumber, false).SetName("Classify_ToNumber");
     yield return new TestCaseData(Call("PlyVarCStr", IrType.String, a), DynamicOperation.ToString, false).SetName("Classify_ToString");
+    yield return new TestCaseData(Call("PlyVarForTest", IrType.Bool, a, b, a), DynamicOperation.LoopTest, true).SetName("Classify_LoopTest");
+  }
+
+  private static DynamicType R(IrType type, long min, long max) => DynamicType.Exact(type, null, new Polypiler.Core.Analysis.Range.ValueRange(min, max));
+
+  [Test]
+  public void IntegersOfKnownRanges_StayInTheirKind_WhereNoResultPromotes() {
+    Assert.That(Table.Result(DynamicOperation.Add, R(IrType.I16, 1, 10), R(IrType.I16, 1, 1)), Is.EqualTo(R(IrType.I16, 2, 11)));
+    Assert.That(Table.Result(DynamicOperation.Subtract, R(IrType.I16, 1, 10), R(IrType.I16, 1, 1)), Is.EqualTo(R(IrType.I16, 0, 9)));
+    Assert.That(Table.Result(DynamicOperation.Multiply, R(IrType.I16, -3, 10), R(IrType.I16, -2, 4)), Is.EqualTo(R(IrType.I16, -20, 40)));
+    Assert.That(Table.Result(DynamicOperation.Add, R(IrType.I32, 1, 10), E(IrType.I16)), Is.EqualTo(R(IrType.I32, -32767, 32777)), "one range and a whole type");
+    Assert.That(Table.Result(DynamicOperation.Add, R(IrType.U8, 200, 255), R(IrType.U8, 100, 100)), Is.EqualTo(DynamicType.Union(DistinctJoins.Instance, E(IrType.U8), E(IrType.I16), E(IrType.I32))), "a Byte that may pass 255 promotes");
+    Assert.That(Table.Result(DynamicOperation.Add, R(IrType.U8, 1, 2), R(IrType.I16, 1, 2)), Is.EqualTo(R(IrType.I16, 2, 4)), "a Byte and an Integer start in an Integer");
+    Assert.That(Table.Result(DynamicOperation.Add, R(IrType.I16, 32767, 32767), R(IrType.I16, 1, 1)), Is.EqualTo(DynamicType.Union(DistinctJoins.Instance, E(IrType.I16), E(IrType.I32))), "past the kind: promotes");
+    Assert.That(Table.Result(DynamicOperation.Add, E(IrType.I16), E(IrType.I16)), Is.EqualTo(DynamicType.Union(DistinctJoins.Instance, E(IrType.I16), E(IrType.I32))), "no range: may promote");
+    Assert.That(Table.Result(DynamicOperation.Add, R(IrType.I16, 1, 2), E(IrType.F64)), Is.EqualTo(E(IrType.F64)), "no integer");
+    Assert.That(Table.Result(DynamicOperation.Add, R(IrType.I16, 1, 2), DynamicType.Union(DistinctJoins.Instance, E(IrType.I16), E(IrType.I32))), Is.Not.EqualTo(DynamicType.Nothing), "several kinds: by the kinds");
+    Assert.That(Table.Result(DynamicOperation.Divide, R(IrType.I16, 1, 2), R(IrType.I16, 1, 2)), Is.EqualTo(E(IrType.F64)), "no arithmetic of the ranges");
+    Assert.That(Table.Result(DynamicOperation.LoopTest, E(IrType.I16), E(IrType.I16)), Is.EqualTo(E(IrType.Bool)));
   }
 
   [TestCaseSource(nameof(Calls))]

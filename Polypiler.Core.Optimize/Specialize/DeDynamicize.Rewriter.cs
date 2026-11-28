@@ -117,7 +117,7 @@ public static partial class DeDynamicize {
 
     /// <summary>Whether an assignment of a value to a local typed as an element stores one of it: the value is proven of the element where it is assigned; one that is not reaches no read.</summary>
     private bool Stores(IrExpr value, DynamicState<IrLocal>? state, DynamicExact type)
-      => state is null || this.Eval(value, state).Type == type;
+      => state is null || this.Eval(value, state).Type.Plain == type;
 
     /// <summary>A value of a typed local, parameter or result from an expression of the dynamic type: the payload of its box, which the facts prove of the tag.</summary>
     private IrExpr Unboxed(IrExpr value, DynamicState<IrLocal>? state, DynamicExact type) {

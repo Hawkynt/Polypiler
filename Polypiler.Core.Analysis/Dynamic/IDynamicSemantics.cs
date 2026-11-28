@@ -87,7 +87,15 @@ public enum DynamicOperation {
   MemberSet,
 
   /// <summary>A call of a value.</summary>
-  Call
+  Call,
+
+  /// <summary>
+  /// The test of a counted loop, Visual Basic's and VBScript's <c>For</c>: whether the counter, the
+  /// first operand, has not passed the limit, the second, in the direction of the step
+  /// (<see cref="DynamicCall.Step"/>): at most the limit for a step that is not negative, at least it
+  /// otherwise. An IR <c>bool</c>.
+  /// </summary>
+  LoopTest
 
 }
 
@@ -113,7 +121,12 @@ public readonly record struct DynamicTrap(IrTrap? Trap, int? LanguageError) {
 /// <param name="Operation">The operation.</param>
 /// <param name="Left">The first operand; the only one of a unary operation.</param>
 /// <param name="Right">The second operand, or <see langword="null"/> for a unary operation.</param>
-public sealed record DynamicCall(DynamicOperation Operation, IrExpr Left, IrExpr? Right);
+public sealed record DynamicCall(DynamicOperation Operation, IrExpr Left, IrExpr? Right) {
+
+  /// <summary>The step of a <see cref="DynamicOperation.LoopTest"/>, whose sign gives the direction of the test; <see langword="null"/> for every other operation.</summary>
+  public IrExpr? Step { get; init; }
+
+}
 
 /// <summary>
 /// The rules of one dynamic language, as data the framework reads (ADR 0300 decision 4): for every

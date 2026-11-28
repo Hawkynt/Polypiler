@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Polypiler.Core.Analysis.Dynamic;
+using Polypiler.Core.Analysis.Range;
 using Polypiler.Core.IR;
 
 namespace Polypiler.Core.Frontends.VisualBasic.Lowering;
@@ -90,12 +91,40 @@ internal sealed partial class VbaLowerer {
     public DynamicType Result(DynamicOperation operation, DynamicType left, DynamicType right) {
       ArgumentNullException.ThrowIfNull(left);
       ArgumentNullException.ThrowIfNull(right);
+      if (Ranged(operation, left, right) is { } ranged)
+        return ranged;
       return Results(operation, Tags(left), Tags(right)) is { } tags ? Element(tags) : operation switch {
         DynamicOperation.Truthiness => DynamicType.Exact(IrType.Bool),
         DynamicOperation.ToNumber => DynamicType.Exact(IrType.F64),
         DynamicOperation.ToString => DynamicType.Exact(IrType.String),
         _ => DynamicType.Variant
       };
+    }
+
+    /// <summary>
+    /// <c>+</c>, <c>-</c> or <c>*</c> of two integers of known ranges whose result lies in the kind the
+    /// operation starts in - the narrower of <c>Byte</c>, <c>Integer</c> and <c>Long</c> it gives - so
+    /// that no promotion can happen: that kind, with the range of the result; <see langword="null"/> for
+    /// every other operation and operand, whose result may promote.
+    /// </summary>
+    private static DynamicType? Ranged(DynamicOperation operation, DynamicType left, DynamicType right) {
+      if (operation is not (DynamicOperation.Add or DynamicOperation.Subtract or DynamicOperation.Multiply) || left is not DynamicExact a || right is not DynamicExact b
+          || (a.Range is null && b.Range is null))
+        return null;
+      var tags = Results(operation, Tags(a), Tags(b))!.Value;
+      if (!IsSingle(Tags(a)) || !IsSingle(Tags(b)) || ((Tags(a) | Tags(b)) & ~(VbaTags.Byte | VbaTags.Integer | VbaTags.Long)) != VbaTags.None)
+        return null;
+      var start = Each(tags).First();
+      var type = Kind(start).ToIrType()!;
+      var (x, y) = (a.Range ?? ValueRange.Of(a.Type), b.Range ?? ValueRange.Of(b.Type));
+      var range = operation switch {
+        DynamicOperation.Add => new ValueRange(x.Min + y.Min, x.Max + y.Max),
+        DynamicOperation.Subtract => new ValueRange(x.Min - y.Max, x.Max - y.Min),
+        _ => new ValueRange(
+          Int128.Min(Int128.Min(x.Min * y.Min, x.Min * y.Max), Int128.Min(x.Max * y.Min, x.Max * y.Max)),
+          Int128.Max(Int128.Max(x.Min * y.Min, x.Min * y.Max), Int128.Max(x.Max * y.Min, x.Max * y.Max)))
+      };
+      return ValueRange.Of(type).Covers(range) ? DynamicType.Exact(type, null, range) : null;
     }
 
     /// <summary>
@@ -122,6 +151,8 @@ internal sealed partial class VbaLowerer {
           return currency && (a & b & VbaTags.Null) != VbaTags.None ? Unknown : VbaTags.String | (a & b & VbaTags.Null);
         case DynamicOperation.Equal or DynamicOperation.NotEqual or DynamicOperation.Less or DynamicOperation.LessOrEqual or DynamicOperation.Greater or DynamicOperation.GreaterOrEqual:
           return VbaTags.Boolean | nulls;
+        case DynamicOperation.LoopTest:
+          return VbaTags.Boolean;
         case DynamicOperation.Negate:
           return refused ? Unknown : NegationTags(a);
         case DynamicOperation.Not:
@@ -259,6 +290,8 @@ internal sealed partial class VbaLowerer {
           return new((DynamicOperation)((int)DynamicOperation.And + code.Value), a, b);
         case IrCall { Function: "PlyVarBits", Arguments: [IrConst code, var a, var b] } when code.Value is >= 0 and <= 4:
           return new((DynamicOperation)((int)DynamicOperation.And + code.Value), a, b);
+        case IrCall { Function: "PlyVarForTest", Arguments: [var counter, var limit, var step] }:
+          return new(DynamicOperation.LoopTest, counter, limit) { Step = step };
         case IrCall { Function: "PlyVarIsTrue", Arguments: [var a] }:
           return new(DynamicOperation.Truthiness, a, null);
         case IrCall { Function: "PlyVarDbl" or "PlyVarDblC", Arguments: [var a] }:

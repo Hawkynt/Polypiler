@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Polypiler.Core.Analysis.Range;
 using Polypiler.Core.IR;
 
 namespace Polypiler.Core.Analysis.Dynamic;
@@ -91,11 +92,54 @@ public abstract record DynamicType {
   /// <param name="tag">The kind the language tells the value apart by where two kinds share one IR type, such as Visual Basic's <c>Currency</c> on an <c>i64</c>; <see langword="null"/> for the type alone.</param>
   /// <returns>The element.</returns>
   /// <exception cref="ArgumentException">The type is <c>variant</c>, <c>void</c> or a union.</exception>
-  public static DynamicType Exact(IrType type, IrVariantTag? tag = null) {
+  public static DynamicType Exact(IrType type, IrVariantTag? tag = null) => Exact(type, tag, null);
+
+  /// <summary>An exact integer type of the IR whose values lie in a range: the range facts of <c>Range/</c> that a counted loop and its arithmetic carry.</summary>
+  /// <param name="type">The type: any type of the IR but <c>variant</c>, <c>void</c> and a union.</param>
+  /// <param name="tag">The kind, as for <see cref="Exact(IrType, IrVariantTag?)"/>.</param>
+  /// <param name="range">The values, or <see langword="null"/> for every value of the type; a range of a type that is no integer, or one that covers the whole type, is dropped.</param>
+  /// <returns>The element; <see cref="Nothing"/> for an empty range.</returns>
+  /// <exception cref="ArgumentException">The type is <c>variant</c>, <c>void</c> or a union.</exception>
+  public static DynamicType Exact(IrType type, IrVariantTag? tag, ValueRange? range) {
     ArgumentNullException.ThrowIfNull(type);
     if (type.IsVariant || type == IrType.Void || type.IsUnion)
       throw new ArgumentException($"The type {type} is no exact element.", nameof(type));
-    return new DynamicExact(type, tag == IrVariants.TagOf(type) ? null : tag);
+    ValueRange? kept = null;
+    if (range is { } bounds && type.IsInteger) {
+      var whole = ValueRange.Of(type);
+      var clipped = new ValueRange(Int128.Max(bounds.Min, whole.Min), Int128.Min(bounds.Max, whole.Max));
+      if (clipped.IsEmpty)
+        return Nothing;
+      if (clipped != whole)
+        kept = clipped;
+    }
+
+    return new DynamicExact(type, tag == IrVariants.TagOf(type) ? null : tag, kept);
+  }
+
+  /// <summary>The element without the ranges of its exact members: what a place of it is typed by, and what tells two kinds apart.</summary>
+  public virtual DynamicType Plain => this;
+
+  /// <summary>
+  /// The widening of ranges at the head of a loop: where an exact member of <paramref name="joined"/>
+  /// holds values its member in <paramref name="previous"/> did not, its range is dropped, so every
+  /// chain of widenings ends.
+  /// </summary>
+  /// <param name="previous">The element the head had.</param>
+  /// <param name="joined">The join of it with what a pass brought back.</param>
+  /// <returns>The widened element.</returns>
+  public static DynamicType WidenRanges(DynamicType previous, DynamicType joined) {
+    ArgumentNullException.ThrowIfNull(previous);
+    ArgumentNullException.ThrowIfNull(joined);
+    DynamicType Member(DynamicType member) => member is DynamicExact { Range: { } range } exact
+      && !Members(Split(previous).Value).OfType<DynamicExact>().Any(known => known.Type == exact.Type && known.Tag == exact.Tag && (known.Range ?? ValueRange.Of(known.Type)).Covers(range))
+      ? new DynamicExact(exact.Type, exact.Tag, null) : member;
+    return joined switch {
+      DynamicExact => Member(joined),
+      DynamicUnion union => new DynamicUnion([.. union.Members.Select(Member)]),
+      DynamicOptional optional => Optional(WidenRanges(previous, optional.Value), optional.Missing),
+      _ => joined
+    };
   }
 
   /// <summary>
@@ -254,7 +298,8 @@ public abstract record DynamicType {
   /// <summary>One member that stands for two, or <see langword="null"/> when they stay two members of a union.</summary>
   private static DynamicType? Merge(DynamicType left, DynamicType right, IJoinPolicy policy) => (left, right) switch {
     _ when left == right => left,
-    (DynamicExact a, DynamicExact b) when a.Tag is null && b.Tag is null && policy.Join(a.Type, b.Type) is { } joined => new DynamicExact(joined, null),
+    (DynamicExact a, DynamicExact b) when a.Type == b.Type && a.Tag == b.Tag => new DynamicExact(a.Type, a.Tag, a.Range is { } x && b.Range is { } y ? new ValueRange(Int128.Min(x.Min, y.Min), Int128.Max(x.Max, y.Max)) : null),
+    (DynamicExact a, DynamicExact b) when a.Tag is null && b.Tag is null && policy.Join(a.Type, b.Type) is { } joined => new DynamicExact(joined, null, null),
     (DynamicShape a, DynamicShape b) when a.Fields.Keys.SequenceEqual(b.Fields.Keys) => Shape(a.Fields.ToDictionary(field => field.Key, field => Join(field.Value, b.Fields[field.Key], policy))),
     _ => null
   };
@@ -262,7 +307,8 @@ public abstract record DynamicType {
   /// <summary>The meet of two members of levels 1 to 3.</summary>
   private static DynamicType Below(DynamicType left, DynamicType right, IJoinPolicy policy) => (left, right) switch {
     _ when left == right => left,
-    (DynamicExact a, DynamicExact b) when a.Tag is null && b.Tag is null && policy.Join(a.Type, b.Type) is { } joined => joined == a.Type ? b : joined == b.Type ? a : Nothing,
+    (DynamicExact a, DynamicExact b) when a.Type == b.Type && a.Tag == b.Tag => Exact(a.Type, a.Tag, a.Range is { } x && b.Range is { } y ? new ValueRange(Int128.Max(x.Min, y.Min), Int128.Min(x.Max, y.Max)) : a.Range ?? b.Range),
+    (DynamicExact a, DynamicExact b) when a.Tag is null && b.Tag is null && policy.Join(a.Type, b.Type) is { } joined => joined == a.Type ? b.Plain : joined == b.Type ? a.Plain : Nothing,
     (DynamicShape a, DynamicShape b) when a.Fields.Keys.SequenceEqual(b.Fields.Keys) => Shape(a.Fields.ToDictionary(field => field.Key, field => Meet(field.Value, b.Fields[field.Key], policy))),
     _ => Nothing
   };
@@ -290,13 +336,20 @@ public sealed record DynamicNothing : DynamicType {
 /// <param name="Tag">The kind, or <see langword="null"/>.</param>
 public sealed record DynamicExact : DynamicType {
 
-  internal DynamicExact(IrType type, IrVariantTag? tag) {
+  internal DynamicExact(IrType type, IrVariantTag? tag, ValueRange? range = null) {
     this.Type = type;
     this.Tag = tag;
+    this.Range = range;
   }
 
   /// <summary>The type.</summary>
   public IrType Type { get; }
+
+  /// <summary>The values of an integer type the element is proven to hold, or <see langword="null"/> for every value of the type.</summary>
+  public ValueRange? Range { get; }
+
+  /// <inheritdoc/>
+  public override DynamicType Plain => this.Range is null ? this : new DynamicExact(this.Type, this.Tag, null);
 
   /// <summary>The kind the language tells the value apart by, or <see langword="null"/>.</summary>
   public IrVariantTag? Tag { get; }
@@ -402,6 +455,9 @@ public sealed record DynamicOptional : DynamicType {
       : null;
 
   /// <inheritdoc/>
+  public override DynamicType Plain => Optional(this.Value.Plain, this.Missing);
+
+  /// <inheritdoc/>
   public override string ToString() => $"optional<{this.Value}; {this.Missing}>";
 
 }
@@ -434,6 +490,9 @@ public sealed record DynamicUnion : DynamicType {
 
   /// <inheritdoc/>
   public override int GetHashCode() => this.Members.Aggregate(this.Members.Count, (hash, member) => hash ^ member.GetHashCode());
+
+  /// <inheritdoc/>
+  public override DynamicType Plain => this.Members.Any(member => member is DynamicExact { Range: not null }) ? new DynamicUnion([.. this.Members.Select(member => member.Plain)]) : this;
 
   /// <inheritdoc/>
   public override string ToString() => $"union<{string.Join(", ", this.Members)}>";

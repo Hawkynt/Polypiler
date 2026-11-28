@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Polypiler.Core.Analysis.Dynamic;
+using Polypiler.Core.Analysis.Range;
 using Polypiler.Core.IR;
 using Polypiler.Core.Recognize;
 
@@ -43,6 +44,7 @@ public static partial class DeDynamicize {
     private readonly Dictionary<IrLocal, string> _reasons = [];
     private readonly Dictionary<IrStmt, DynamicState<IrLocal>> _before = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<IrStmt, DynamicState<IrLocal>> _conditions = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<IrStmt, DynamicState<IrLocal>> _heads = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<IrStmt, (bool Then, bool Else)> _reached = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<IrCall, List<DynamicFact>> _arguments = new(ReferenceEqualityComparer.Instance);
     private readonly Stack<Frame> _frames = new();
@@ -125,20 +127,40 @@ public static partial class DeDynamicize {
       }
 
       // A local every read of which sees one exact type is that type; an assignment of another value
-      // reaches no read, so it is a dead store, which the rewrite keeps only for its effects.
-      foreach (var local in this._tracked.Where(local => !this._escaping.Contains(local) && !this.Function.Parameters.Contains(local) && !this._impure.Contains(local)))
-        if (this._reaching.TryGetValue(local, out var fact) && fact is { IsStatic: true, Type: DynamicExact { BoxTag: not null } exact }
-            && this._values.GetValueOrDefault(local, []).All(value => value == exact || DynamicType.Meet(value, exact, this._domain.Policy) is DynamicNothing))
+      // reaches no read, so it is a dead store, which the rewrite keeps only for its effects. A local
+      // no read sees is the one exact type of every value assigned it but the initial Empty.
+      foreach (var local in this._tracked.Where(local => !this._escaping.Contains(local) && !this.Function.Parameters.Contains(local) && !this._impure.Contains(local))) {
+        var values = this._values.GetValueOrDefault(local, []);
+        var fact = this._reaching.TryGetValue(local, out var read) ? read
+          : DynamicFact.Proven(values.Where(value => value != Unassigned).Aggregate(DynamicType.Nothing, (joined, value) => DynamicType.Join(joined, value, this._domain.Policy)));
+        if (fact is { IsStatic: true, Type.Plain: DynamicExact { BoxTag: not null } exact }
+            && values.All(value => value.Plain == exact || DynamicType.Meet(value.Plain, exact, this._domain.Policy) is DynamicNothing))
           this.Retyped[local] = (local with { Type = exact.Type }, exact);
+      }
 
       if (this.Signature is { } signature)
         for (var index = 0; index < this.Function.Parameters.Count; ++index)
           if (signature.Parameters[index] is { } exact)
             this.Retyped[this.Function.Parameters[index]] = (this.Function.Parameters[index] with { Type = exact.Type }, exact);
 
-      this.ReturnType = this.Signature is not null && this.Function.ReturnType.IsVariant && this.Returned is { IsStatic: true, Type: DynamicExact { BoxTag: not null } result }
+      this.ReturnType = this.Signature is not null && this.Function.ReturnType.IsVariant && this.Returned is { IsStatic: true, Type.Plain: DynamicExact { BoxTag: not null } result }
         ? result.Type : this.Function.ReturnType;
     }
+
+    /// <summary>What the walk found, for a frontend that writes the typing itself.</summary>
+    public DynamicFunctionTyping Typing(string name, bool kept, Dictionary<string, string> names) {
+      IReadOnlyDictionary<IrLocal, DynamicType> Plain(DynamicState<IrLocal> state)
+        => this._tracked.ToDictionary(local => local, local => state[local].Certainty == Certainty.Dynamic ? DynamicType.Variant : state[local].Type.Plain);
+      return new(this.Function.Name, name, this.Signature?.Parameters, kept,
+        this.Retyped.ToDictionary(pair => pair.Key, pair => pair.Value.Type),
+        this._tracked.ToDictionary(local => local, local => this._escaping.Contains(local) ? DynamicType.Variant : this._assigned.GetValueOrDefault(local, this._domain.Unreachable).Type.Plain),
+        this._heads.ToDictionary<KeyValuePair<IrStmt, DynamicState<IrLocal>>, IrStmt, IReadOnlyDictionary<IrLocal, DynamicType>>(pair => pair.Key, pair => Plain(pair.Value), ReferenceEqualityComparer.Instance),
+        this.Calls.ToDictionary<KeyValuePair<IrCall, CallSite>, IrCall, string>(pair => pair.Key, pair => pair.Value.Target is { } clone ? names[Program.Key(pair.Value.Function, clone)] : pair.Value.Function, ReferenceEqualityComparer.Instance),
+        this.Returned with { Type = this.Returned.Type.Plain }, this.ReturnType);
+    }
+
+    /// <summary>The element of a local that holds the language's value of no assignment yet, Visual Basic's <c>Empty</c>.</summary>
+    private static readonly DynamicType Unassigned = DynamicType.OfTag(IrVariantTag.Empty);
 
     #region Facts
 
@@ -148,8 +170,12 @@ public static partial class DeDynamicize {
         return DynamicFact.Proven(this._table.Result(call.Operation, this.Eval(call.Left, state).Type, call.Right is null ? DynamicType.Nothing : this.Eval(call.Right, state).Type));
 
       switch (expression) {
+        case IrVariantOf { Value: { Type.IsInteger: true } payload } made when IrVariants.PayloadType(made.Tag) == payload.Type && Constant(payload) is { } value:
+          return DynamicFact.Proven(DynamicType.Exact(payload.Type, made.Tag, ValueRange.Of(value)));
         case IrVariantOf made:
           return DynamicFact.Proven(DynamicType.OfTag(made.Tag));
+        case { Type.IsInteger: true } when Constant(expression) is { } value:
+          return DynamicFact.Proven(DynamicType.Exact(expression.Type, null, ValueRange.Of(value)));
         case IrLocalRef reference when this._tracked.Contains(reference.Local):
           return state[reference.Local];
         case IrConditional choice:
@@ -161,6 +187,24 @@ public static partial class DeDynamicize {
         default:
           return DynamicFact.Proven(Program.Exact(expression.Type));
       }
+    }
+
+    /// <summary>
+    /// The value of an integer expression of constants - negated, added, subtracted, multiplied or
+    /// converted, as a frontend writes <c>-1</c> - where every step fits its type; <see langword="null"/>
+    /// for every other expression.
+    /// </summary>
+    private static Int128? Constant(IrExpr expression) {
+      Int128? value = expression switch {
+        IrConst { Type.IsInteger: true } constant => IrOperators.Number(constant.Type, constant.Value),
+        IrUnary { Op: IrUnaryOp.Negate or IrUnaryOp.NegateChecked } negation => -Constant(negation.Operand),
+        IrConvert { Operand.Type.IsInteger: true } conversion => Constant(conversion.Operand),
+        IrBinary { Op: IrBinaryOp.Add or IrBinaryOp.AddChecked } sum => Constant(sum.Left) + Constant(sum.Right),
+        IrBinary { Op: IrBinaryOp.Subtract or IrBinaryOp.SubtractChecked } difference => Constant(difference.Left) - Constant(difference.Right),
+        IrBinary { Op: IrBinaryOp.Multiply or IrBinaryOp.MultiplyChecked } product => Constant(product.Left) * Constant(product.Right),
+        _ => null
+      };
+      return value is { } number && expression.Type.IsInteger && ValueRange.Of(expression.Type).Contains(number) ? number : null;
     }
 
     /// <summary>Records what an expression reads: the facts of the tracked locals, and the arguments of the calls of the module's functions.</summary>
@@ -342,15 +386,19 @@ public static partial class DeDynamicize {
 
         this._frames.Pop();
         var grown = next is null ? head : head.Join(next, this._domain, widen: true);
-        if (grown.SameAs(head))
+        if (grown.SameAs(head)) {
+          this.Record(this._heads, loop, head);
           return exit;
+        }
         if (round >= this._program.Options.MostRounds) {
           // Out of passes: what the loop changes may hold anything; one more pass records it.
           var dynamic = head.Places.Where(place => grown[place] != head[place]).Aggregate(grown, (known, place) => known.With(place, this._domain.Unknown));
           foreach (var place in head.Places.Where(place => grown[place] != head[place]))
             this.Reach(place, this._domain.Unknown, null);
-          if (dynamic.SameAs(head))
+          if (dynamic.SameAs(head)) {
+            this.Record(this._heads, loop, head);
             return exit;
+          }
           head = dynamic;
           continue;
         }
@@ -464,9 +512,33 @@ public static partial class DeDynamicize {
             : this.Refine(either.Right, this.Refine(either.Left, state, false), false);
         case IrBinary { Op: IrBinaryOp.Equal or IrBinaryOp.NotEqual } test when this.TagTest(test.Left, test.Right) is var (local, tag):
           return (test.Op == IrBinaryOp.Equal) == truth ? this.Narrow(state, local, (long)tag) : this.Without(state, local, [(long)tag]);
+        case IrCall when truth && this._table.Classify(condition) is { Operation: DynamicOperation.LoopTest, Left: IrLocalRef { Local: var counter }, Right: { } limit, Step: { } step } && this._tracked.Contains(counter):
+          return this.Bounded(state, counter, this.Eval(limit, state).Type, this.Eval(step, state).Type);
         default:
           return state;
       }
+    }
+
+    /// <summary>
+    /// The state where the test of a counted loop holds: an integer counter has not passed the limit,
+    /// so its range ends at the limit's - above for a step proven not negative, below for one proven
+    /// negative; a step of unknown sign, or a limit that is no integer of a range, narrows nothing.
+    /// </summary>
+    private DynamicState<IrLocal> Bounded(DynamicState<IrLocal> state, IrLocal counter, DynamicType limit, DynamicType step) {
+      static ValueRange? Bounds(DynamicType type) => type is DynamicExact { Type.IsInteger: true } exact ? exact.Range ?? ValueRange.Of(exact.Type) : null;
+      if (Bounds(limit) is not { } end || Bounds(step) is not { } by || (by.Min < 0 && by.Max >= 0))
+        return state;
+      var bound = by.Min >= 0 ? new ValueRange(Int128.MinValue, end.Max) : new ValueRange(end.Min, Int128.MaxValue);
+      DynamicType Narrowed(DynamicType member) => member is DynamicExact { Type.IsInteger: true } exact && Bounds(exact) is { } own
+        ? DynamicType.Exact(exact.Type, exact.Tag, new ValueRange(Int128.Max(own.Min, bound.Min), Int128.Min(own.Max, bound.Max)))
+        : member;
+      var fact = state[counter];
+      var narrowed = fact.Type switch {
+        DynamicExact => Narrowed(fact.Type),
+        DynamicUnion union => DynamicType.Union(this._domain.Policy, [.. union.Members.Select(Narrowed)]),
+        _ => fact.Type
+      };
+      return state.With(counter, fact with { Type = narrowed });
     }
 
     private DynamicState<IrLocal>? Narrow(DynamicState<IrLocal> state, IrLocal local, long tag) {
