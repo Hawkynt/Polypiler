@@ -53,13 +53,37 @@ internal sealed partial class VbNetLowerer {
     return local;
   }
 
+  /// <summary>The statements of a block; what follows a statement control never leaves normally is dead, and left out.</summary>
   private void Block(IOperation operation, List<IrStmt> statements) {
-    if (operation is IBlockOperation block)
-      foreach (var inner in block.Operations)
-        this.Statement(inner, statements);
-    else
-      this.Statement(operation, statements);
+    foreach (var inner in operation is IBlockOperation block ? [.. block.Operations] : new[] { operation }) {
+      if (statements.Count > 0 && !Completes(statements[^1]))
+        return;
+      this.Statement(inner, statements);
+    }
   }
+
+  /// <summary>
+  /// Whether control can leave a statement at its end: not after a return or a throw, nor after an
+  /// <c>If</c> whose branches both end so, a try whose body and catches do, or a switch with a default
+  /// whose sections all do and none breaks out.
+  /// </summary>
+  internal static bool Completes(IrStmt statement) => statement switch {
+    IrReturn or IrThrow or IrRethrow => false,
+    IrBlock block => block.Statements.Count == 0 || Completes(block.Statements[^1]),
+    IrIf { Else: { } otherwise } branch => Completes(branch.Then) || Completes(otherwise),
+    IrTry attempt => attempt.Finally is { } final && !Completes(final) ? false : Completes(attempt.Body) || attempt.Catches.Any(clause => Completes(clause.Body)),
+    IrSwitch choice => !choice.Sections.Any(section => section.IsDefault) || choice.Sections.Any(section => Completes(section.Body) || Breaks(section.Body)),
+    _ => true
+  };
+
+  /// <summary>Whether a block holds a break of the switch or loop it stands in, outside any loop or switch of its own.</summary>
+  private static bool Breaks(IrStmt statement) => statement switch {
+    IrBreak => true,
+    IrBlock block => block.Statements.Any(Breaks),
+    IrIf branch => Breaks(branch.Then) || branch.Else is { } otherwise && Breaks(otherwise),
+    IrTry attempt => Breaks(attempt.Body) || attempt.Catches.Any(clause => Breaks(clause.Body)) || attempt.Finally is { } final && Breaks(final),
+    _ => false
+  };
 
   private IrBlock Body(IOperation? operation) {
     var statements = new List<IrStmt>();
@@ -343,8 +367,11 @@ internal sealed partial class VbNetLowerer {
   private IrBlock Within(Frame frame, BodyOf body) {
     this._frames.Push(frame);
     var statements = new List<IrStmt>();
-    foreach (var operation in body.Operations)
+    foreach (var operation in body.Operations) {
+      if (statements.Count > 0 && !Completes(statements[^1]))
+        break;
       this.Block(operation, statements);
+    }
     this._frames.Pop();
     // An Exit Select that ends a case tested in order goes where the case ends anyway.
     if (!frame.Breakable && statements is [.., IrBreak])

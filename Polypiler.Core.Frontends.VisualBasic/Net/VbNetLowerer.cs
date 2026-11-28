@@ -164,17 +164,31 @@ internal sealed partial class VbNetLowerer(string file, VisualBasicCompilation c
     foreach (var parameter in method.Parameters.Where(parameter => parameter.IsParams))
       this.Refuse(parameter.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax(), $"the ParamArray parameter '{parameter.Name}'");
 
-    var body = new List<IrStmt>();
+    List<IrStmt> body = [];
     if (block is not null && this._model.GetOperation(block) is IBlockOperation operation) {
       this._exit = operation.Descendants().OfType<ILabeledOperation>().LastOrDefault(label => label.IsImplicit)?.Label;
       this.Block(operation, body);
     }
 
-    // Every local lives as long as the procedure: declared first, with its default value.
-    var declarations = this._locals.Where(pair => pair.Key is ILocalSymbol && !this._caught.Contains(pair.Value)).Select(pair => (IrStmt)new IrDeclare(pair.Value, Default(pair.Value.Type))).ToList();
-    var locals = this._locals.Where(pair => pair.Key is not IParameterSymbol).Select(pair => pair.Value).Concat(this._temporaries).ToList();
+    // Every local lives as long as the procedure: declared first, with its default value; one nothing
+    // reads - the function's name of a function that ends with Return - is left out with its assignments.
+    var read = body.SelectMany(IrTree.Nodes).OfType<IrLocalRef>().Select(reference => reference.Local).ToHashSet();
+    body = [.. body.Select(statement => Unread(statement, read)).OfType<IrStmt>()];
+    var declared = this._locals.Where(pair => pair.Key is ILocalSymbol && !this._caught.Contains(pair.Value) && read.Contains(pair.Value)).Select(pair => pair.Value).ToList();
+    var declarations = declared.Select(local => (IrStmt)new IrDeclare(local, Default(local.Type))).ToList();
+    var locals = declared.Concat(this._caught).Concat(this._temporaries).ToList();
     var (name, returns) = this._functions[method];
     return new IrFunction(name, method.DeclaredAccessibility == Accessibility.Public, returns, parameters, locals, new IrBlock([.. declarations, .. body]));
+  }
+
+  /// <summary>A statement without its assignments to locals nothing reads, their values kept where they could have an effect.</summary>
+  private static IrStmt? Unread(IrStmt statement, HashSet<IrLocal> read) {
+    if (statement is IrAssign assign && !read.Contains(assign.Local) && !assign.Local.Name.StartsWith("ply", StringComparison.Ordinal))
+      return assign.Value is IrConst or IrStrConst or IrLocalRef ? null : new IrExprStmt(assign.Value);
+
+    var blocks = IrTree.Blocks(statement);
+    return blocks.Count == 0 ? statement
+      : IrTree.With(statement, IrTree.Expressions(statement), [.. blocks.Select(block => new IrBlock([.. block.Statements.Select(inner => Unread(inner, read)).OfType<IrStmt>()]))]);
   }
 
   /// <summary>Whether a parameter is assigned or passed on by reference in a procedure.</summary>
