@@ -58,6 +58,8 @@ Original chapter numbers and section links are retained. The pages here are a re
 - [Rust backend](architecture/RUST-BACKEND.md) — Cargo output, editions/MSRV, value representation, traps and verification.
 - [Classic Visual Basic frontend](architecture/VISUALBASIC-FRONTEND.md) — VB6 / VBA standard modules parsed from [MS-VBAL]: 16-bit `Integer`, traps by error number, lower bounds of arrays and the `On Error` forms.
 - [Classic Visual Basic backend](architecture/VISUALBASIC-BACKEND.md) — the four dialect profiles, exact 32-bit helpers, `On Error GoTo` for try/catch and verification on LibreOffice Basic.
+- [Kotlin frontend](architecture/KOTLIN-FRONTEND.md) — Kotlin/JVM parsed by Polypiler's own parser, Kotlin's numeric semantics in the IR, the imported subset and its refusals.
+- [Kotlin backend](architecture/KOTLIN-BACKEND.md) — language versions and JVM targets, the lowering table, the helpers, refusals and verification under `kotlinc`.
 - [Benchmarks](benchmarks/README.md) — how to add a benchmark, run it, read its result and compare two result sets against the budgets.
 - [Audit of the PB-Compiler LLVM emitter](llvm/pb-emitter-audit.md) — what PB-Compiler's `--emit-llvm` writes at the pinned commit, what LLVM 23.1.3 accepts of it, and the gaps against PRD §26.3.
 - [Licence of emitted code](../LICENSE-OUTPUT.md) — the helpers and portable implementations a translation copies into its output are MIT, so a translated program keeps the licence of its source; the compiler stays LGPL-3.0-or-later.

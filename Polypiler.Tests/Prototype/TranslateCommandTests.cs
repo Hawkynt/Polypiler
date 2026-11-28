@@ -116,7 +116,7 @@ public sealed class TranslateCommandTests {
   [TestCase(new[] { "A.cs", "--from", "csharp", "--to", "javascript" }, "option '--output' is required", TestName = "Misuse: missing --output")]
   [TestCase(new[] { "A.cs", "--to", "javascript", "--output", "out" }, "option '--from' is required", TestName = "Misuse: missing --from")]
   [TestCase(new[] { "A.cs", "--from", "csharp", "--output", "out" }, "option '--to' is required", TestName = "Misuse: missing --to")]
-  [TestCase(new[] { "A.cs", "--from", "kotlin", "--to", "javascript", "--output", "out" }, "unknown source language 'kotlin'", TestName = "Misuse: unknown --from")]
+  [TestCase(new[] { "A.cs", "--from", "cobol", "--to", "javascript", "--output", "out" }, "unknown source language 'cobol'", TestName = "Misuse: unknown --from")]
   [TestCase(new[] { "A.cs", "--from", "csharp", "--to", "cobol", "--output", "out" }, "unknown target language 'cobol'", TestName = "Misuse: unknown --to")]
   [TestCase(new[] { "A.cs", "--from", "CSharp", "--to", "javascript", "--output", "out" }, "unknown source language 'CSharp'", TestName = "Misuse: language names are case-sensitive")]
   [TestCase(new[] { "A.cs", "--from", "csharp", "--to", "javascript", "--output" }, "option '--output' requires a value", TestName = "Misuse: option without value")]

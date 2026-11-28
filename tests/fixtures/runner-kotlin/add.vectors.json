@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "fixture": "runner-kotlin.add",
+  "provenance": {
+    "kind": "published",
+    "source": "Kotlin language specification",
+    "detail": "kotlin.Int is a 32-bit two's-complement integer whose + wraps",
+    "generatedBy": "hand"
+  },
+  "export": "add",
+  "signature": {
+    "parameters": [
+      {
+        "name": "a",
+        "type": "i32"
+      },
+      {
+        "name": "b",
+        "type": "i32"
+      }
+    ],
+    "result": "i32"
+  },
+  "vectors": [
+    {
+      "name": "add(2, 3)",
+      "input": {
+        "hex": "0200000003000000"
+      },
+      "expected": {
+        "hex": "05000000"
+      }
+    },
+    {
+      "name": "add(2147483647, 1)",
+      "input": {
+        "hex": "ffffff7f01000000"
+      },
+      "expected": {
+        "hex": "00000080"
+      }
+    }
+  ]
+}

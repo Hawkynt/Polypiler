@@ -73,7 +73,7 @@ public sealed class ShowcaseTests {
     var byBackend = targets.ToDictionary(t => t.Backend, t => t.Profiles, StringComparer.Ordinal);
     Assert.That(byBackend.Keys, Does.Contain("csharp").And.Contain("javascript").And.Contain("rust")
       .And.Contain("python").And.Contain("perl").And.Contain("cpp")
-      .And.Contain("vbscript").And.Contain("visualbasic").And.Contain("batch").And.Contain("msil").And.Contain("jvm").And.Contain("go"));
+      .And.Contain("vbscript").And.Contain("visualbasic").And.Contain("batch").And.Contain("msil").And.Contain("jvm").And.Contain("go").And.Contain("kotlin"));
     Assert.That(byBackend["javascript"], Does.Contain("es5").And.Contain("es2022"));
     Assert.That(byBackend["csharp"], Does.Contain("net2.0").And.Contain("net10.0"));
     Assert.That(byBackend["batch"], Does.Contain("cmd").And.Contain("dos622"));
@@ -257,6 +257,8 @@ public sealed class ShowcaseTests {
     Assert.That(ShowcaseGenerator.RenderOutputFile("a.js", Encoding.UTF8.GetBytes("1")).Fence, Is.EqualTo("javascript"));
     Assert.That(ShowcaseGenerator.RenderOutputFile("a.py", Encoding.UTF8.GetBytes("1")).Fence, Is.EqualTo("python"));
     Assert.That(ShowcaseGenerator.RenderOutputFile("a.rs", Encoding.UTF8.GetBytes("1")).Fence, Is.EqualTo("rust"));
+    Assert.That(ShowcaseGenerator.RenderOutputFile("a.kt", Encoding.UTF8.GetBytes("1")).Fence, Is.EqualTo("kotlin"));
+    Assert.That(ShowcaseGenerator.RenderOutputFile("a.kts", Encoding.UTF8.GetBytes("1")).Fence, Is.EqualTo("kotlin"));
     Assert.That(ShowcaseGenerator.RenderOutputFile("a.toml", Encoding.UTF8.GetBytes("1")).Fence, Is.EqualTo("toml"));
     Assert.That(ShowcaseGenerator.RenderOutputFile("a.pm", Encoding.UTF8.GetBytes("1")).Fence, Is.EqualTo("perl"));
     Assert.That(ShowcaseGenerator.RenderOutputFile("a.hpp", Encoding.UTF8.GetBytes("1")).Fence, Is.EqualTo("cpp"));
@@ -293,7 +295,7 @@ public sealed class ShowcaseTests {
 
     // Generate across multi-dialect text + binary backends (showing partial refusal ⚠️ and distinct dialect groups)
     var (exit1, out1, err1) = this.RunCommand(runner, "--examples", "examples", "--out", "docs/out.md", "--polypiler", marker,
-      "--targets", "csharp:net2.0,csharp:net10.0,javascript:es5,javascript:es2022,rust:rust2018,rust:rust2024,msil,jvm:jvm/21,batch");
+      "--targets", "csharp:net2.0,csharp:net10.0,javascript:es5,javascript:es2022,rust:rust2018,rust:rust2024,msil,jvm:jvm/21,batch,kotlin:kotlin2.0,kotlin:kotlin2.4");
     Assert.That(exit1, Is.Zero, err1);
     Assert.That(out1, Does.Contain("written"));
     var markdown = File.ReadAllText(this.At("docs/out.md"));
@@ -302,6 +304,10 @@ public sealed class ShowcaseTests {
     Assert.That(markdown, Does.Contain("⚠️ 1/2"));
     Assert.That(markdown, Does.Contain("<strong>MSIL</strong>"));
     Assert.That(markdown, Does.Contain("<strong>JVM</strong>"));
+    // The Kotlin profile banner differs per dialect only, so both dialects collapse into one group.
+    Assert.That(markdown, Does.Contain("<strong>Kotlin</strong>"));
+    Assert.That(markdown, Does.Contain("```kotlin"));
+    Assert.That(markdown, Does.Contain("<code>kotlin2.0</code>, <code>kotlin2.4</code>"));
     Assert.That(markdown, Does.Contain("Refused dialects:"));
     Assert.That(markdown, Does.Contain("Frontend refusal (all backends & dialects)"));
     Assert.That(markdown, Does.Contain("Refused by:"));
@@ -312,19 +318,19 @@ public sealed class ShowcaseTests {
 
     // Second run reports unchanged
     var (exit2, out2, _) = this.RunCommand(runner, "--examples", "examples", "--out", "docs/out.md", "--polypiler", marker,
-      "--targets", "csharp:net2.0,csharp:net10.0,javascript:es5,javascript:es2022,rust:rust2018,rust:rust2024,msil,jvm:jvm/21,batch");
+      "--targets", "csharp:net2.0,csharp:net10.0,javascript:es5,javascript:es2022,rust:rust2018,rust:rust2024,msil,jvm:jvm/21,batch,kotlin:kotlin2.0,kotlin:kotlin2.4");
     Assert.That(exit2, Is.Zero);
     Assert.That(out2, Does.Contain("unchanged"));
 
     // --check passes on both LF and CRLF
     var (exit3, out3, _) = this.RunCommand(runner, "--examples", "examples", "--out", "docs/out.md", "--polypiler", marker,
-      "--targets", "csharp:net2.0,csharp:net10.0,javascript:es5,javascript:es2022,rust:rust2018,rust:rust2024,msil,jvm:jvm/21,batch", "--check");
+      "--targets", "csharp:net2.0,csharp:net10.0,javascript:es5,javascript:es2022,rust:rust2018,rust:rust2024,msil,jvm:jvm/21,batch,kotlin:kotlin2.0,kotlin:kotlin2.4", "--check");
     Assert.That(exit3, Is.Zero);
     Assert.That(out3, Does.Contain("up to date"));
 
     File.WriteAllText(this.At("docs/out.md"), markdown.Replace("\n", "\r\n", StringComparison.Ordinal));
     var (exitCrlf, _, _) = this.RunCommand(runner, "--examples", "examples", "--out", "docs/out.md", "--polypiler", marker,
-      "--targets", "csharp:net2.0,csharp:net10.0,javascript:es5,javascript:es2022,rust:rust2018,rust:rust2024,msil,jvm:jvm/21,batch", "--check");
+      "--targets", "csharp:net2.0,csharp:net10.0,javascript:es5,javascript:es2022,rust:rust2018,rust:rust2024,msil,jvm:jvm/21,batch,kotlin:kotlin2.0,kotlin:kotlin2.4", "--check");
     Assert.That(exitCrlf, Is.Zero);
 
     // --check fails with PLY0091 when file differs or is missing

@@ -1,7 +1,7 @@
 # O0501 — Remove helpers and private constants that nothing in the target syntax tree references
 
 <!-- status: implemented (prototype) -->
-> **Status: implemented (prototype).** The target passes `CSharpUnusedDeclarations`, `JavaScriptUnusedDeclarations`, `PythonUnusedDeclarations` and `RustUnusedDeclarations` run between the backend's syntax tree and its printer ([#1336](https://github.com/Hawkynt/Polypiler/issues/1336)). Switched off with `--disable-opt O0501`. Removing dead functions and globals of the program stays [O0381](O0381-dead-function-elimination.md) and [O0383](O0383-global-dead-code-elimination.md).
+> **Status: implemented (prototype).** The target passes `CSharpUnusedDeclarations`, `JavaScriptUnusedDeclarations`, `PythonUnusedDeclarations`, `RustUnusedDeclarations` and `KotlinUnusedDeclarations` run between the backend's syntax tree and its printer ([#1336](https://github.com/Hawkynt/Polypiler/issues/1336)). Switched off with `--disable-opt O0501`. Removing dead functions and globals of the program stays [O0381](O0381-dead-function-elimination.md) and [O0383](O0383-global-dead-code-elimination.md).
 
 ## What it does
 

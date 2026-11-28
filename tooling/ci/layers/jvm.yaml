@@ -1,9 +1,10 @@
 # The Kotlin/Java layer (PRD §7.3): Java and Kotlin sources compiled with the pinned JDK and Kotlin
-# compiler, warnings as errors, executed on the pinned JDK's java and their outputs compared. Run by
+# compiler, warnings as errors, executed on the pinned JDK's java and their outputs compared; the Kotlin backend's
+# differential tests, the Kotlin frontend's recordings and the Kotlin runner (#426) run here too. Run by
 # the job layer-jvm of .github/workflows/ci.yml. Format: spec/schemas/ci-layer.schema.json.
 schema: 1
 layer: jvm
 toolchains: [jdk, kotlinc]
 os: [ubuntu-latest]
-paths: ["Polypiler.Core.Frontends.Kotlin/**", "Polypiler.Core.Frontends.Java/**", "Polypiler.Core.Frontends.Jvm/**", "Polypiler.Core.Frontends.JVM/**", "Polypiler.Core.Backends.Kotlin/**", "Polypiler.Core.Backends.Java/**", "Polypiler.Core.Backends.Jvm/**", "Polypiler.Tests/Frontends/Jvm/**", "Polypiler.Tests/Backends/Jvm/**", "Polypiler.Tests.Acceptance/Bytecode/**", "tests/fixtures/**/*.kt", "tests/fixtures/**/*.java", "tests/fixtures/infra/ci/jvm/**", "tests/features/infra/infra-ci-jvm.feature", "Polypiler.Tests.Acceptance/Infra/Ci/**", "Polypiler.Core.Verification/Running/**", "tooling/ci/layers/jvm.yaml", "tests/features/infra/infra-runner-toolchain-roots.feature", "Polypiler.Tests.Acceptance/Infra/ToolchainRootSteps.cs"]
+paths: ["Polypiler.Core.Frontends.Kotlin/**", "Polypiler.Core.Frontends.Java/**", "Polypiler.Core.Frontends.Jvm/**", "Polypiler.Core.Frontends.JVM/**", "Polypiler.Core.Backends.Kotlin/**", "Polypiler.Core.Backends.Java/**", "Polypiler.Core.Backends.Jvm/**", "Polypiler.Tests/Frontends/Jvm/**", "Polypiler.Tests/Backends/Jvm/**", "Polypiler.Tests.Acceptance/Bytecode/**", "Polypiler.Tests.Acceptance/Kotlin/**", "Polypiler.Tests.Acceptance/Runners/Kotlin*", "Polypiler.Tests/Backends/Kotlin/**", "Polypiler.Tests/Frontends/Kotlin/**", "Polypiler.Tests/Backends/Support/KotlinFixtures.cs", "Polypiler.Core.Verification/Runners/Kotlin*", "tests/fixtures/kotlin/**", "tests/fixtures/runner-kotlin/**", "tests/features/infra/infra-runner-kotlin.feature", "tests/fixtures/**/*.kt", "tests/fixtures/**/*.java", "tests/fixtures/infra/ci/jvm/**", "tests/features/infra/infra-ci-jvm.feature", "Polypiler.Tests.Acceptance/Infra/Ci/**", "Polypiler.Core.Verification/Running/**", "tooling/ci/layers/jvm.yaml", "tests/features/infra/infra-runner-toolchain-roots.feature", "Polypiler.Tests.Acceptance/Infra/ToolchainRootSteps.cs"]
 always: false

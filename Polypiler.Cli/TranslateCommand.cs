@@ -14,6 +14,7 @@ using Polypiler.Core.Backends.Jvm;
 using Polypiler.Core.Backends.Msil;
 using Polypiler.Core.Backends.Perl;
 using Polypiler.Core.Backends.Go;
+using Polypiler.Core.Backends.Kotlin;
 using Polypiler.Core.Backends.Python;
 using Polypiler.Core.Backends.Rust;
 using Polypiler.Core.Backends.VBScript;
@@ -26,6 +27,7 @@ using Polypiler.Core.Frontends.Jvm;
 using Polypiler.Core.Frontends.Msil;
 using Polypiler.Core.Frontends.Perl;
 using Polypiler.Core.Frontends.Go;
+using Polypiler.Core.Frontends.Kotlin;
 using Polypiler.Core.Frontends.Python;
 using Polypiler.Core.Frontends.Rust;
 using Polypiler.Core.Frontends.Rust.Cargo;
@@ -141,7 +143,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     [Export] = "JavaScript, MSIL and JVM: the functions or methods to translate",
     [ExplainTypes] = "JavaScript: write why every value has its type to standard output",
     [BatchDialectOption] = "Batch source: cmd.exe (the default) or MS-DOS 6.22 COMMAND.COM",
-    [Profile] = "the target profile: a target framework of C#, a language level of JavaScript, a version of Python, an edition of Rust, a Perl version, a C++ standard, a VBScript version, a classic Visual Basic dialect, an MSIL framework, a JVM classfile version or a Go language version",
+    [Profile] = "the target profile: a target framework of C#, a language level of JavaScript, a version of Python, an edition of Rust, a Perl version, a C++ standard, a VBScript version, a classic Visual Basic dialect, an MSIL framework, a JVM classfile version, a Go language version or a Kotlin language version with its JVM target",
     [Module] = "JavaScript: how the file is packaged",
     [Global] = "JavaScript: the global object a script declares",
     [TypedArrays] = "JavaScript: an ECMAScript 5 engine with typed arrays",
@@ -200,7 +202,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     new("cpp", [], _ => null, ImportCpp),
     new("vbscript", [new(VBScriptContractOption, "<file-or-line>")], _ => null, ImportVBScript),
     new("visualbasic", [new(VbLocaleOption, "<" + string.Join('|', VisualBasicLocale.All.Select(locale => locale.Name)) + ">"), new(VbLanguageVersionOption, "<9..16.9>"), new(VbRemoveIntegerChecksOption, null)], VbLocaleMisuse, ImportVisualBasic),
-    new("go", [], _ => null, ImportGo)
+    new("go", [], _ => null, ImportGo),
+    new("kotlin", [], _ => null, ImportKotlin)
   ];
 
   /// <summary>The target languages; another one is another entry.</summary>
@@ -216,7 +219,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     Cpp(Implementations),
     VBScript(Implementations),
     VisualBasic(Implementations),
-    Go(GoCapabilities.Standard, Implementations)
+    Go(GoCapabilities.Standard, Implementations),
+    Kotlin(Implementations)
   ];
 
   /// <summary>
@@ -267,7 +271,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// <param name="capabilities">The table the JavaScript backend chooses its constructs from.</param>
   /// <returns>The process exit code.</returns>
   public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, JavaScriptCapabilities capabilities)
-    => Run(arguments, output, error, [JavaScript(capabilities, Implementations), CSharp(CSharpCapabilities.Default, Implementations), Python(PythonCapabilities.Standard, Implementations), Rust(RustCapabilities.Default, Implementations), Perl(Implementations), Batch(), Msil(Implementations), Jvm(Implementations), Cpp(Implementations), VBScript(Implementations), Go(GoCapabilities.Standard, Implementations), VisualBasic(Implementations)]);
+    => Run(arguments, output, error, [JavaScript(capabilities, Implementations), CSharp(CSharpCapabilities.Default, Implementations), Python(PythonCapabilities.Standard, Implementations), Rust(RustCapabilities.Default, Implementations), Perl(Implementations), Batch(), Msil(Implementations), Jvm(Implementations), Cpp(Implementations), VBScript(Implementations), Go(GoCapabilities.Standard, Implementations), VisualBasic(Implementations), Kotlin(Implementations)]);
 
   /// <summary>Runs the command with portable floating-point implementations of the caller's in place of the precomputed ones.</summary>
   /// <param name="arguments">The arguments after the word <c>translate</c>.</param>
@@ -279,7 +283,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// </param>
   /// <returns>The process exit code.</returns>
   public static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Func<IrModule> implementations)
-    => Run(arguments, output, error, [JavaScript(JavaScriptCapabilities.Standard, implementations), CSharp(CSharpCapabilities.Default, implementations), Python(PythonCapabilities.Standard, implementations), Rust(RustCapabilities.Default, implementations), Perl(implementations), Batch(), Msil(implementations), Jvm(implementations), Cpp(implementations), VBScript(implementations), Go(GoCapabilities.Standard, implementations), VisualBasic(implementations)]);
+    => Run(arguments, output, error, [JavaScript(JavaScriptCapabilities.Standard, implementations), CSharp(CSharpCapabilities.Default, implementations), Python(PythonCapabilities.Standard, implementations), Rust(RustCapabilities.Default, implementations), Perl(implementations), Batch(), Msil(implementations), Jvm(implementations), Cpp(implementations), VBScript(implementations), Go(GoCapabilities.Standard, implementations), VisualBasic(implementations), Kotlin(implementations)]);
 
   /// <summary>Runs <c>polypiler translate</c> with the arguments, the command made with the given backends.</summary>
   private static int Run(IReadOnlyList<string> arguments, TextWriter output, TextWriter error, Backend[] backends) {
@@ -358,7 +362,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   /// of their numbers.
   /// </summary>
   private static readonly string[] _optimizations = [
-    .. RuleTable.Default.Ids.Concat(IrPassPipeline.Default.Ids).Append(PyIntSpecialization.Id).Concat(CSharpTargetPasses.Pipeline.Ids).Concat(JavaScriptTargetPasses.Pipeline.Ids).Concat(PythonTargetPasses.Pipeline.Ids).Concat(RustTargetPasses.Pipeline.Ids)
+    .. RuleTable.Default.Ids.Concat(IrPassPipeline.Default.Ids).Append(PyIntSpecialization.Id).Concat(CSharpTargetPasses.Pipeline.Ids).Concat(JavaScriptTargetPasses.Pipeline.Ids).Concat(PythonTargetPasses.Pipeline.Ids).Concat(RustTargetPasses.Pipeline.Ids).Concat(Polypiler.Core.Backends.Kotlin.Passes.KotlinTargetPasses.Pipeline.Ids)
       .Distinct().Order(StringComparer.Ordinal)
   ];
 
@@ -691,6 +695,17 @@ public sealed partial class TranslateCommand : ICliCommand {
       context.Report(diagnostic);
 
     var failure = imported.Diagnostics.Any(diagnostic => diagnostic.ExitCode == ExitCode.InvalidSource) ? InvalidSource : UnsupportedConstruct;
+    return (imported.Module, failure, []);
+  }
+
+  /// <summary>Imports Kotlin, parsed by the frontend's own parser; a syntax error is an invalid source, anything else outside the subset an unsupported construct.</summary>
+  private static (IrModule? Module, int ExitCode, IReadOnlyList<ManifestMessage> Caveats) ImportKotlin(
+    string file, string source, IReadOnlyDictionary<string, string> options, CliContext context) {
+    var imported = KotlinFrontend.Import(file, source);
+    foreach (var diagnostic in imported.Diagnostics)
+      context.Report(diagnostic);
+
+    var failure = imported.Diagnostics.Any(diagnostic => diagnostic.Code == KotlinFrontend.SyntaxErrorCode) ? InvalidSource : UnsupportedConstruct;
     return (imported.Module, failure, []);
   }
 
@@ -1035,6 +1050,24 @@ public sealed partial class TranslateCommand : ICliCommand {
     (module, options) => PythonEmitter.Check(module, PythonProfileOf(options).Profile!, capabilities),
     (module, options, passes, _) => PythonEmitter.Emit(module, PythonProfileOf(options).Profile!, FloatModeOf(options), capabilities, passes),
     PythonProfile.Names);
+
+  /// <summary>The Kotlin backend; <c>--profile</c> names the language version and, after <c>-jvm</c>, the JVM target (<c>kotlin2.4-jvm17</c>).</summary>
+  private static Backend Kotlin(Func<IrModule> implementations) => new("kotlin",
+    KotlinEmitter.Runtime,
+    options => KotlinProfileOf(options).Profile!.ToString(),
+    RuleTarget.Neutral,
+    [new(Profile, "<name>"), new(Float, FloatChoice)],
+    options => FloatMisuse(options) ?? KotlinProfileOf(options).Error,
+    (module, options) => KotlinEmitter.Legalize(module, implementations, KotlinProfileOf(options).Profile!, FloatModeOf(options)),
+    (module, options) => KotlinEmitter.Check(module, KotlinProfileOf(options).Profile!),
+    (module, options, passes, _) => KotlinEmitter.Emit(module, KotlinProfileOf(options).Profile!, FloatModeOf(options), null, passes),
+    KotlinProfile.Everything.Select(profile => profile.ToString()).ToList());
+
+  /// <summary>The Kotlin profile <c>--profile</c> names, the default one without it, or what is wrong with the name.</summary>
+  private static (KotlinProfile? Profile, string? Error) KotlinProfileOf(IReadOnlyDictionary<string, string> options) {
+    KotlinProfile.TryParse(options.GetValueOrDefault(Profile), out var profile, out var error);
+    return (profile, error);
+  }
 
   /// <summary>The Python profile <c>--profile</c> names, the default one without it, or what is wrong with the name.</summary>
   private static (PythonProfile? Profile, string? Error) PythonProfileOf(IReadOnlyDictionary<string, string> options) {

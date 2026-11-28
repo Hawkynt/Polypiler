@@ -41,6 +41,7 @@ public sealed class DependencyDirectionTests {
     "Polypiler.Core.Backends.Go",
     "Polypiler.Core.Backends.JavaScript",
     "Polypiler.Core.Backends.Jvm",
+    "Polypiler.Core.Backends.Kotlin",
     "Polypiler.Core.Backends.Msil",
     "Polypiler.Core.Backends.Perl",
     "Polypiler.Core.Backends.Python",
@@ -54,6 +55,7 @@ public sealed class DependencyDirectionTests {
     "Polypiler.Core.Frontends.Go",
     "Polypiler.Core.Frontends.JavaScript",
     "Polypiler.Core.Frontends.Jvm",
+    "Polypiler.Core.Frontends.Kotlin",
     "Polypiler.Core.Frontends.Msil",
     "Polypiler.Core.Frontends.Perl",
     "Polypiler.Core.Frontends.Python",
@@ -331,7 +333,7 @@ public sealed class DependencyDirectionTests {
     var projects = ProjectFile.Discover(_root).ToDictionary(project => project.Name);
     Assert.That(projects["Polypiler.Core"].References, Is.Empty);
     Assert.That(projects["Polypiler.Tests.Acceptance"].References,
-      Is.EquivalentTo(new[] { "Polypiler.Cli", "Polypiler.Core.Analysis", "Polypiler.Core.Backends.Cpp", "Polypiler.Core.Backends.CSharp", "Polypiler.Core.Backends.Jvm", "Polypiler.Core.Backends.Msil", "Polypiler.Core.Backends.Perl", "Polypiler.Core.BinaryFormats", "Polypiler.Core.MachineSemantics", "Polypiler.Core.Backends.Rust", "Polypiler.Core.Backends.VBScript", "Polypiler.Core.Backends.VisualBasic", "Polypiler.Core.Backends.Go", "Polypiler.Core.Frontends.Cpp", "Polypiler.Core.Frontends.CSharp", "Polypiler.Core.Frontends.JavaScript", "Polypiler.Core.Frontends.Jvm", "Polypiler.Core.Frontends.Msil", "Polypiler.Core.Frontends.Perl", "Polypiler.Core.Frontends.Python", "Polypiler.Core.Frontends.Rust", "Polypiler.Core.Frontends.VBScript", "Polypiler.Core.Frontends.VisualBasic", "Polypiler.Core.Frontends.Go", "Polypiler.Core.IR", "Polypiler.Core.Optimize", "Polypiler.Core.Verification", "Polypiler.Permutation", "Polypiler.Tooling", "Polypiler.Tests.Probe", "Polypiler.Tests.Generator" }));
+      Is.EquivalentTo(new[] { "Polypiler.Cli", "Polypiler.Core.Analysis", "Polypiler.Core.Backends.Cpp", "Polypiler.Core.Backends.CSharp", "Polypiler.Core.Backends.Jvm", "Polypiler.Core.Backends.Msil", "Polypiler.Core.Backends.Perl", "Polypiler.Core.BinaryFormats", "Polypiler.Core.MachineSemantics", "Polypiler.Core.Backends.Rust", "Polypiler.Core.Backends.VBScript", "Polypiler.Core.Backends.VisualBasic", "Polypiler.Core.Backends.Go", "Polypiler.Core.Backends.Kotlin", "Polypiler.Core.Frontends.Cpp", "Polypiler.Core.Frontends.CSharp", "Polypiler.Core.Frontends.JavaScript", "Polypiler.Core.Frontends.Jvm", "Polypiler.Core.Frontends.Msil", "Polypiler.Core.Frontends.Perl", "Polypiler.Core.Frontends.Python", "Polypiler.Core.Frontends.Rust", "Polypiler.Core.Frontends.VBScript", "Polypiler.Core.Frontends.VisualBasic", "Polypiler.Core.Frontends.Go", "Polypiler.Core.Frontends.Kotlin", "Polypiler.Core.IR", "Polypiler.Core.Optimize", "Polypiler.Core.Verification", "Polypiler.Permutation", "Polypiler.Tooling", "Polypiler.Tests.Probe", "Polypiler.Tests.Generator" }));
     Assert.That(projects["Polypiler.Tests"].References,
       Is.EquivalentTo(_projects.Except(["Polypiler.Tests", "Polypiler.Tests.Acceptance", "Polypiler.Benchmarks", "Polypiler.Tests.Generator"])));
     Assert.That(projects.Values.SelectMany(project => project.MissingReferences), Is.Empty);
