@@ -143,6 +143,35 @@ passes. [CSharpProfilesTests](../../Polypiler.Tests.Acceptance/Prototype/CSharpP
 and the other [prototype acceptance tests](../../Polypiler.Tests.Acceptance/Prototype/) compile
 and run translations against the original C# or JavaScript and the IR interpreter.
 
+The runner (`Polypiler.Core.Verification/Runners`, [#220](https://github.com/Hawkynt/Polypiler/issues/220)):
+`CSharpRunner` is the language runner `csharp` on the toolchain `dotnet-sdk`. It is built on
+`LanguageRunnerBase`, so `ExecuteFunction`, `RunVectors` and `Record` follow the shared driver
+protocol. `Compile` finds the export's declaration with Roslyn (`CSharpSignatures.Find`; `Type.Method`,
+`Namespace.Type.Method`, or a bare method name one type declares) and binds the vector file's
+signature to it. A supplied signature must name the derived image types and modes; only an array
+may be widened from `in` to `inout`. It then writes `Driver.csproj` and `Driver.cs`
+(`CSharpDriverGenerator`) beside the sources and runs `dotnet build -c Release` in the sandbox. The
+restore has no package source, so it never reaches the network. The driver decodes each input image
+with straight-line `BinaryPrimitives` reads and calls the method directly with its `ref`, `out` and
+`in` modifiers inside `try`/`catch`. It prints the output image (the result, then the `inout` and
+`out` parameters) or `!<class> <exception type>` from `CSharpTraps` (`OverflowException` overflow,
+`DivideByZeroException` divide-by-zero, `IndexOutOfRangeException` bounds, `NullReferenceException`
+null, the `Argument*Exception`s invalid-argument, `UnreachableException` unreachable, every other
+exception `other:<type>`).
+
+`CSharpSignatures.Derive` covers the integers, `bool`, `char`, `float`, `double`, `string`,
+`T[]`, `ReadOnlySpan<T>` (`in`), `Span<T>` (`inout`), `byte` sequences as `bytes`, nullable
+annotations as `opt`, enums, value tuples and structs of fields. `decimal`, `nint`, classes and
+generic structs have no derived image. Profiles are `csharp/net10` (unchecked) and
+`csharp/net10-checked`; other frameworks extend `CSharpProfile.Known` (#251). `RunTests` runs
+`dotnet test` on an NUnit project and reads the TRX file. The packages the project references, with
+their dependencies, are copied from the local packages folder into a feed inside the run, because
+the sandbox does not show the home directory. Diagnostics: `PLY1091` the compiler rejected the
+input, `PLY1092` the driver or test host crashed, `PLY1094` (from `CSharpRunner.Explain`, after
+`PLY0051`) the values of a call that differs from its vector, `PLY1095` a protocol error. The
+acceptance tests (`CSharpRunnerTests`, `CSharpRunnerConformanceTests`, `infra-run-cs.feature`) run in the
+layer `core` against the fixtures of `tests/fixtures/runner-csharp`.
+
 An older syntax profile compiled by a modern Roslyn/runtime is evidence for its syntax and tested
 contracts, not evidence that that older runtime itself executed the program. Gate records and the
 [capability report](../capabilities.md) distinguish emitted, compiled, executed and verified states.
