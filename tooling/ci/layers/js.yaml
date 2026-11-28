@@ -7,5 +7,5 @@ schema: 1
 layer: js
 toolchains: [node, typescript]
 os: [ubuntu-latest, windows-latest]
-paths: ["Polypiler.Core.Frontends.JavaScript/**", "Polypiler.Core.Frontends.TypeScript/**", "Polypiler.Core.Backends.JavaScript/**", "Polypiler.Core.Backends.TypeScript/**", "tests/fixtures/**/*.js", "tests/fixtures/**/*.mjs", "tests/fixtures/**/*.ts", "tests/fixtures/infra/ci/js/**", "tests/features/infra/infra-ci-js.feature", "Polypiler.Tests.Acceptance/Infra/Ci/Js*.cs", "tooling/ci/layers/js.yaml"]
+paths: ["Polypiler.Core.Frontends.JavaScript/**", "Polypiler.Core.Frontends.TypeScript/**", "Polypiler.Core.Backends.JavaScript/**", "Polypiler.Core.Backends.TypeScript/**", "tests/fixtures/**/*.js", "tests/fixtures/**/*.mjs", "tests/fixtures/**/*.cjs", "tests/fixtures/runner-javascript/**", "Polypiler.Core.Verification/Runners/Node*", "Polypiler.Core.Verification/Runners/Node/**", "Polypiler.Tests.Acceptance/Runners/Node*.cs", "tests/features/infra/infra-run-js.feature", "tests/fixtures/**/*.ts", "tests/fixtures/infra/ci/js/**", "tests/features/infra/infra-ci-js.feature", "Polypiler.Tests.Acceptance/Infra/Ci/Js*.cs", "tooling/ci/layers/js.yaml"]
 always: false

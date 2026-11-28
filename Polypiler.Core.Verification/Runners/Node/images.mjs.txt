@@ -1,0 +1,438 @@
+// The Polypiler driver of one export on node: the value images of the image codec (little-endian,
+// counts as u32), decoded into the JavaScript values of the runner's image-type table and encoded
+// back with its acceptance rules; one line per call on standard output, the output image in
+// lower-case hexadecimal or "!<trap class> <native name>". Exit code 2 is a protocol error, 3 an
+// export that does not exist; a module that throws while loading ends with node's own exit code.
+// The generator puts ENTRY, COMMONJS, EXPORT and SIGNATURE in front of this text.
+
+import { readFileSync, writeSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { pathToFileURL } from 'node:url';
+import { resolve } from 'node:path';
+
+class ProtocolError extends Error {}
+
+class ResultTypeError extends Error {
+  constructor(value) {
+    super(describe(value));
+  }
+}
+
+function describe(value) {
+  let text;
+  try {
+    text = String(value);
+  } catch {
+    text = Object.prototype.toString.call(value);
+  }
+
+  return (typeof value + ':' + text).slice(0, 32).replace(/[\r\n\t]/g, ' ');
+}
+
+const protocol = (reason) => {
+  process.stderr.write(reason + '\n');
+  process.exit(2);
+};
+
+const TYPED = {
+  'u8': Uint8Array, 'i8': Int8Array, 'u16': Uint16Array, 'i16': Int16Array, 'u32': Uint32Array, 'i32': Int32Array,
+  'f32': Float32Array, 'f64': Float64Array, 'u64': BigUint64Array, 'i64': BigInt64Array
+};
+
+const typedOf = (type) => type.k === 'int' || type.k === 'float' ? TYPED[type.n] : undefined;
+
+class Reader {
+  constructor(bytes) {
+    this.bytes = bytes;
+    this.view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    this.at = 0;
+  }
+
+  take(count) {
+    if (this.bytes.length - this.at < count)
+      throw new ProtocolError('the input image ends inside a value');
+    const at = this.at;
+    this.at += count;
+    return at;
+  }
+
+  count() {
+    const count = this.view.getUint32(this.take(4), true);
+    if (count > this.bytes.length - this.at)
+      throw new ProtocolError('a count of ' + count + ' exceeds the rest of the input image');
+    return count;
+  }
+
+  value(type) {
+    switch (type.k) {
+      case 'int': {
+        const at = this.take(type.w);
+        switch (type.w) {
+          case 1: return type.s ? this.view.getInt8(at) : this.view.getUint8(at);
+          case 2: return type.s ? this.view.getInt16(at, true) : this.view.getUint16(at, true);
+          case 4: return type.s ? this.view.getInt32(at, true) : this.view.getUint32(at, true);
+          default: return type.s ? this.view.getBigInt64(at, true) : this.view.getBigUint64(at, true);
+        }
+      }
+      case 'enum': return this.value(type.e);
+      case 'float': return type.w === 4 ? this.view.getFloat32(this.take(4), true) : this.view.getFloat64(this.take(8), true);
+      case 'bool': {
+        const byte = this.bytes[this.take(1)];
+        if (byte > 1)
+          throw new ProtocolError('a bool is 00 or 01');
+        return byte === 1;
+      }
+      case 'char16': return this.view.getUint16(this.take(2), true);
+      case 'bigint': {
+        const count = this.count();
+        const at = this.take(count);
+        let value = 0n;
+        for (let index = count - 1; index >= 0; --index)
+          value = (value << 8n) | BigInt(this.bytes[at + index]);
+        return count > 0 && this.bytes[at + count - 1] >= 0x80 ? value - (1n << BigInt(8 * count)) : value;
+      }
+      case 'bytes': {
+        const count = this.count();
+        const at = this.take(count);
+        return this.bytes.slice(at, at + count);
+      }
+      case 'utf8': {
+        const count = this.count();
+        const at = this.take(count);
+        try {
+          return new TextDecoder('utf-8', { fatal: true }).decode(this.bytes.subarray(at, at + count));
+        } catch {
+          throw new ProtocolError('a utf8 value is not well-formed UTF-8');
+        }
+      }
+      case 'utf16': {
+        const count = this.count();
+        let text = '';
+        for (let index = 0; index < count; ++index)
+          text += String.fromCharCode(this.view.getUint16(this.take(2), true));
+        return text;
+      }
+      case 'seq': {
+        const count = this.count();
+        const Typed = typedOf(type.e);
+        const values = Typed ? new Typed(count) : new Array(count);
+        for (let index = 0; index < count; ++index)
+          values[index] = this.value(type.e);
+        return values;
+      }
+      case 'opt': {
+        const present = this.bytes[this.take(1)];
+        if (present > 1)
+          throw new ProtocolError('a presence byte is 00 or 01');
+        return present === 1 ? this.value(type.e) : null;
+      }
+      case 'record': {
+        const record = {};
+        for (const [name, field] of type.f)
+          record[name] = this.value(field);
+        return record;
+      }
+      case 'tuple': return type.f.map((element) => this.value(element));
+      case 'union': {
+        const tag = this.bytes[this.take(1)];
+        if (tag >= type.f.length)
+          throw new ProtocolError('union tag ' + tag + ' names no alternative');
+        return this.value(type.f[tag]);
+      }
+      default: return null;
+    }
+  }
+
+  end() {
+    if (this.at !== this.bytes.length)
+      throw new ProtocolError('the input image has ' + (this.bytes.length - this.at) + ' byte(s) after the last argument');
+  }
+}
+
+const RANGES = {
+  'u8': [0, 0xff], 'i8': [-0x80, 0x7f], 'u16': [0, 0xffff], 'i16': [-0x8000, 0x7fff], 'u32': [0, 0xffffffff], 'i32': [-0x80000000, 0x7fffffff],
+  'u64': [0n, 0xffffffffffffffffn], 'i64': [-0x8000000000000000n, 0x7fffffffffffffffn]
+};
+
+const wellFormed = (text) => !/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(text);
+
+class Writer {
+  constructor() {
+    this.bytes = [];
+  }
+
+  raw(width, set) {
+    const view = new DataView(new ArrayBuffer(width));
+    set(view);
+    for (let index = 0; index < width; ++index)
+      this.bytes.push(view.getUint8(index));
+  }
+
+  count(count) {
+    this.raw(4, (view) => view.setUint32(0, count, true));
+  }
+
+  value(type, value) {
+    switch (type.k) {
+      case 'int': {
+        const [low, high] = RANGES[type.n];
+        if (type.w === 8) {
+          if (typeof value !== 'bigint' || value < low || value > high)
+            throw new ResultTypeError(value);
+          this.raw(8, (view) => type.s ? view.setBigInt64(0, value, true) : view.setBigUint64(0, value, true));
+          return;
+        }
+        if (typeof value !== 'number' || !Number.isInteger(value) || value < low || value > high)
+          throw new ResultTypeError(value);
+        const number = value === 0 ? 0 : value;
+        this.raw(type.w, (view) => {
+          if (type.w === 1) type.s ? view.setInt8(0, number) : view.setUint8(0, number);
+          else if (type.w === 2) type.s ? view.setInt16(0, number, true) : view.setUint16(0, number, true);
+          else type.s ? view.setInt32(0, number, true) : view.setUint32(0, number, true);
+        });
+        return;
+      }
+      case 'enum': this.value(type.e, value); return;
+      case 'float': {
+        if (typeof value !== 'number' || type.w === 4 && !Number.isNaN(value) && Math.fround(value) !== value)
+          throw new ResultTypeError(value);
+        if (type.w === 4)
+          this.raw(4, (view) => Number.isNaN(value) ? view.setUint32(0, 0x7fc00000, true) : view.setFloat32(0, value, true));
+        else
+          this.raw(8, (view) => Number.isNaN(value) ? view.setBigUint64(0, 0x7ff8000000000000n, true) : view.setFloat64(0, value, true));
+        return;
+      }
+      case 'bool':
+        if (typeof value !== 'boolean')
+          throw new ResultTypeError(value);
+        this.bytes.push(value ? 1 : 0);
+        return;
+      case 'char16':
+        if (typeof value !== 'number' || !Number.isInteger(value) || value < 0 || value > 0xffff)
+          throw new ResultTypeError(value);
+        this.raw(2, (view) => view.setUint16(0, value, true));
+        return;
+      case 'bigint': {
+        if (typeof value !== 'bigint')
+          throw new ResultTypeError(value);
+        const bytes = [];
+        let rest = value;
+        do {
+          bytes.push(Number(BigInt.asUintN(8, rest)));
+          rest >>= 8n;
+        } while (!(rest === 0n && bytes[bytes.length - 1] < 0x80 || rest === -1n && bytes[bytes.length - 1] >= 0x80));
+        if (value === 0n)
+          bytes.length = 0;
+        this.count(bytes.length);
+        this.bytes.push(...bytes);
+        return;
+      }
+      case 'bytes':
+        if (!(value instanceof Uint8Array || value instanceof Uint8ClampedArray))
+          throw new ResultTypeError(value);
+        this.count(value.length);
+        for (const byte of value)
+          this.bytes.push(byte);
+        return;
+      case 'utf8':
+        if (typeof value !== 'string' || !wellFormed(value))
+          throw new ResultTypeError(value);
+        {
+          const encoded = new TextEncoder().encode(value);
+          this.count(encoded.length);
+          for (const byte of encoded)
+            this.bytes.push(byte);
+        }
+        return;
+      case 'utf16':
+        if (typeof value !== 'string')
+          throw new ResultTypeError(value);
+        this.count(value.length);
+        for (let index = 0; index < value.length; ++index)
+          this.raw(2, (view) => view.setUint16(0, value.charCodeAt(index), true));
+        return;
+      case 'seq': {
+        const Typed = typedOf(type.e);
+        if (Typed) {
+          const clamped = type.e.n === 'u8' && value instanceof Uint8ClampedArray;
+          if (!(value instanceof Typed) && !clamped)
+            throw new ResultTypeError(value);
+        } else if (!Array.isArray(value)) {
+          throw new ResultTypeError(value);
+        }
+        this.count(value.length);
+        for (let index = 0; index < value.length; ++index) {
+          if (!Typed && !(index in value))
+            throw new ResultTypeError(value);
+          this.value(type.e, value[index]);
+        }
+        return;
+      }
+      case 'opt':
+        if (value === null || value === undefined) {
+          this.bytes.push(0);
+          return;
+        }
+        this.bytes.push(1);
+        this.value(type.e, value);
+        return;
+      case 'record': {
+        if (typeof value !== 'object' || value === null || Array.isArray(value))
+          throw new ResultTypeError(value);
+        const keys = Object.keys(value);
+        if (keys.length !== type.f.length || type.f.some(([name]) => !Object.prototype.hasOwnProperty.call(value, name)))
+          throw new ResultTypeError(value);
+        for (const [name, field] of type.f)
+          this.value(field, value[name]);
+        return;
+      }
+      case 'tuple':
+        if (!Array.isArray(value) || value.length !== type.f.length)
+          throw new ResultTypeError(value);
+        type.f.forEach((element, index) => this.value(element, value[index]));
+        return;
+      case 'union': {
+        for (let tag = 0; tag < type.f.length; ++tag) {
+          const attempt = new Writer();
+          try {
+            attempt.value(type.f[tag], value);
+          } catch (error) {
+            if (error instanceof ResultTypeError)
+              continue;
+            throw error;
+          }
+          this.bytes.push(tag, ...attempt.bytes);
+          return;
+        }
+        throw new ResultTypeError(value);
+      }
+      default:
+        if (value !== null && value !== undefined)
+          throw new ResultTypeError(value);
+    }
+  }
+
+  hex() {
+    return this.bytes.map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  }
+}
+
+const TRAP_CODES = { Overflow: 'overflow', DivideByZero: 'divide-by-zero', IndexOutOfRange: 'bounds', NullReference: 'null', Unreachable: 'unreachable' };
+
+const NULL_ACCESS = ['Cannot read properties of null', 'Cannot read properties of undefined', 'Cannot set properties of null', 'Cannot set properties of undefined'];
+
+function trap(thrown) {
+  const object = (typeof thrown === 'object' || typeof thrown === 'function') && thrown !== null;
+  const name = object && typeof thrown.name === 'string' && thrown.name.length > 0 ? thrown.name.replace(/\s/g, '_') : undefined;
+  const message = object && typeof thrown.message === 'string' ? thrown.message : '';
+  if (object && typeof thrown.code === 'string' && Object.prototype.hasOwnProperty.call(TRAP_CODES, thrown.code))
+    return '!' + TRAP_CODES[thrown.code] + ' ' + (name ?? 'NonError');
+  if (name === 'RangeError' && message === 'Division by zero')
+    return '!divide-by-zero RangeError';
+  if (name === 'TypeError' && NULL_ACCESS.some((prefix) => message.startsWith(prefix)))
+    return '!null TypeError';
+  if (name === 'RangeError' && (message === 'Invalid array length' || message.startsWith('Invalid typed array length: ') || message === 'Invalid array buffer length'))
+    return '!invalid-argument RangeError';
+  if (name !== undefined)
+    return '!other:' + name + ' ' + name;
+  return '!other:NonError NonError';
+}
+
+/** Whether a parameter goes in as a holder { value }: every out one, and an inout one that is not a sequence, record or tuple. */
+const held = (parameter) => parameter.m === 'out' || parameter.m === 'inout' && !['seq', 'bytes', 'record', 'tuple'].includes(parameter.t.k);
+
+async function main() {
+  if (process.argv[2] !== EXPORT)
+    protocol("the export '" + (process.argv[2] ?? '') + "' was asked of a driver of '" + EXPORT + "'");
+
+  const path = resolve(ENTRY);
+  const module = COMMONJS ? createRequire(pathToFileURL(path).href)(path) : await import(pathToFileURL(path).href);
+  let owner = undefined;
+  let target = module;
+  for (const segment of EXPORT.split('.')) {
+    owner = target;
+    target = target === null || target === undefined ? undefined : target[segment];
+  }
+  if (typeof target !== 'function') {
+    process.stderr.write("the export '" + EXPORT + "' does not exist in " + ENTRY + ' or is not a function\n');
+    process.exit(3);
+  }
+
+  const input = readFileSync(0, 'utf8');
+  const lines = input.length === 0 ? [] : input.replace(/\n$/, '').split('\n');
+  const answers = [];
+  const write = process.stdout.write;
+  const log = { log: console.log, info: console.info, debug: console.debug, dir: console.dir, table: console.table };
+  let wrote = false;
+  const guard = () => {
+    wrote = true;
+    return true;
+  };
+  for (let number = 1; number <= lines.length; ++number) {
+    const line = lines[number - 1];
+    if (!/^(?:[0-9a-f]{2})*$/.test(line))
+      protocol('line ' + number + ' is not an image in hexadecimal');
+
+    const reader = new Reader(Uint8Array.from(line.match(/../g) ?? [], (pair) => parseInt(pair, 16)));
+    const values = [];
+    try {
+      for (const parameter of SIGNATURE.p) {
+        const value = parameter.m === 'out' ? undefined : reader.value(parameter.t);
+        values.push(held(parameter) ? { value } : value);
+      }
+      reader.end();
+    } catch (error) {
+      if (error instanceof ProtocolError)
+        protocol('line ' + number + ': ' + error.message);
+      throw error;
+    }
+
+    let result;
+    let answer;
+    process.stdout.write = guard;
+    Object.keys(log).forEach((method) => { console[method] = guard; });
+    try {
+      result = target.apply(owner, values);
+    } catch (thrown) {
+      answer = trap(thrown);
+    } finally {
+      process.stdout.write = write;
+      Object.entries(log).forEach(([method, original]) => { console[method] = original; });
+    }
+    if (wrote)
+      protocol('call ' + number + ': the function under test wrote to standard output');
+
+    if (answer === undefined) {
+      const writer = new Writer();
+      try {
+        if (SIGNATURE.r !== null)
+          writer.value(SIGNATURE.r, result);
+        else if (result !== undefined)
+          throw new ResultTypeError(result);
+        SIGNATURE.p.forEach((parameter, index) => {
+          if (parameter.m !== 'in')
+            writer.value(parameter.t, held(parameter) ? values[index].value : values[index]);
+        });
+        answer = writer.hex();
+      } catch (error) {
+        if (!(error instanceof ResultTypeError))
+          throw error;
+        answer = '!result-type ' + error.message;
+      }
+    }
+    answers.push(answer);
+  }
+
+  // A pipe takes a large write in parts, and a non-blocking one answers EAGAIN while it is full.
+  const output = Buffer.from(answers.length > 0 ? answers.join('\n') + '\n' : '', 'utf8');
+  for (let offset = 0; offset < output.length;) {
+    try {
+      offset += writeSync(1, output, offset, output.length - offset);
+    } catch (error) {
+      if (error.code !== 'EAGAIN')
+        throw error;
+    }
+  }
+}
+
+await main();

@@ -65,6 +65,13 @@ public sealed class LanguageRunnerBaseTests {
   }
 
   [Test]
+  public void OutputOutsideTheProtocol_IsAnImageException_UnlessTheRunnerNamesItsDiagnostic() {
+    var vectors = Vectors();
+
+    Assert.Throws<ImageException>(() => new Runner("nonsense\n").ExecuteFunction("d", "add", vectors.Signature!, [[3, 0, 0, 0]]));
+  }
+
+  [Test]
   public void TreatsCallerSuppliedDirectoriesAsUntrusted() {
     var vectors = Vectors();
     var runner = new Runner("03000000\n");
