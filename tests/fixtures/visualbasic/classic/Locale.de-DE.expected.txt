@@ -1,0 +1,15 @@
+1,5
+1E-20
+x0,333333333333333
+1,5;-0,25
+1000
+2
+True
+True
+False
+1
+Double 50
+Double 5
+True
+True
+False

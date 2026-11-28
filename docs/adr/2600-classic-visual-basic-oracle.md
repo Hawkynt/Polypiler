@@ -36,7 +36,9 @@ library with its preset on first start. It starts `soffice --headless --invisibl
 --nolockcheck macro:///Standard.PlyDriver.Main` as one plan of the cross-language runner and collects
 `out.txt`, one line per call: the value through `CStr`, or `!` and `Err.Number`. Every call runs in a
 function of its own under `On Error GoTo`. A module is loaded as the VBA editor imports a `.bas`
-file: its `Attribute` lines are dropped and `Option VBASupport 1` is put in front. The toolchain is
+file: its `Attribute` lines are dropped and `Option VBASupport 1` is put in front. The office's locale is
+stated, never the host's: `registrymodifications.xcu` sets `ooSetupSystemLocale` (`en-US` unless a run
+names another, #1565), which decides the separators `CStr` writes and `CDbl` reads. The toolchain is
 the lock key `libreoffice` (26.8.3.1), installed in CI from the Debian packages of the Document
 Foundation's archive (`tooling/ci/visualbasic/install.sh`, job `layer-visualbasic`).
 
@@ -111,6 +113,44 @@ the backend writes VBA's rules out as helpers over `VarType` and the conversion 
 The frontend imports VBA's rules and the backend writes them out, so the round trip agrees with the
 documented column on every row; the fixture as written is compared with LibreOffice's own column.
 
+### Locale, Currency and Date, bitwise Variants, inference (#1564 - #1567)
+
+Each fixture of [`tests/fixtures/visualbasic/classic`](../../tests/fixtures/visualbasic/classic) -
+`Locale.bas` (in `en-US` and `de-DE`), `CurrencyDate.bas`, `Bitwise.bas`, `Inference.bas` - prints its
+cases as written into the evidence files `<Fixture>[.<locale>].libreoffice-26.8.3.1.txt`; the
+documented values are the `.expected.txt` files. The interpreter prints the documented values, and so
+do C#, node and CPython; the round trip through the IR (vb6, vba7) prints them on every row of
+`Bitwise.bas` and `Inference.bas`, and on the rows of `Locale.bas` where the office's own `CStr`, which
+the round trip calls, agrees. `CurrencyDate.bas` has no round trip: a currency is an `i64`, which only
+vba7-64 writes. The rows on which LibreOffice disagrees:
+
+| Probe | LibreOffice | VB6 / VBA | Agrees |
+| --- | --- | --- | --- |
+| `CStr(1E+20)`, `CStr(1E+15)`, `CStr(0.00001)` | `1E+020`, `1000000000000000`, `0.00001` | `1E+20`, `1E+15`, `1E-05` (`%.15G`) | **no** |
+| `CStr(123456789012344.5)` (a tie at the 15th digit) | `123456789012345` | `123456789012344` (a tie to even, as the C runtime's `%G`) | **no** |
+| `CStr` of a `Single` (`CSng(1 / 3)`, `1E+7`, `0.1`) | `0.333333343`, `10000000`, `0.100000001` | `0.3333333`, `1E+07`, `0.1` | **no** |
+| `CStr(1 / 3)`, `0.1 + 0.2`, `-0#`, `1.5E-100`, `0.0001` | `0.333333333333333`, `0.3`, `0`, `1.5E-100`, `0.0001` | same | yes |
+| `CDbl("1,000.5")`, `" -1.5e3 "`, `"1D2"`, `"&H10"`, `".5"`, `"1,5"` (en-US) | 1000.5, -1500, 100, 16, 0.5, 15 | same | yes |
+| `CDbl("1.5x")`, `""`, `"-"` | error 13 | error 13 | yes |
+| `CDbl("1e400")` | error 13 | error 6 (out of range, [MS-VBAL] 5.5.1.2.4) | **no** |
+| `Val("1,5")`, `Val("1d3")` | 15, 1 | 1, 1000 | **no** |
+| `Val(" 1 2 3")`, `"&HFFFF"`, `"abc"`, `"2.5.3"` | 123, -1, 0, 2.5 | same | yes |
+| a `String` declared, compared with a number (`"9" < 10`) | `False` (as strings) | `True` (as numbers) | **no** |
+| de-DE: `CStr(1.5)`, `CDbl("1.000,5")`, `"2.5" * 2` in a `Variant` | `1,5`, `1000,5`, `50` | same | yes |
+| `CStr` of a `Currency` | four decimals (`1.5000`) | the digits without trailing zeros (`1.5`) | **no** |
+| `CCur(1) * 2.5`, `CCur(1) / CCur(3)` | `Currency` | `Double` ([MS-VBAL] 5.6.9.3.3, 5.6.9.3.5) | **no** |
+| `CCur(0.00005)`; `CCur(1.0001) * CCur(1.5)` (a tie in ten thousandths) | 0.0001; 1.5001 | 0 (`x * 10000` half to even); 1.5002 (a tie to even) | **no** |
+| `CCur` overflow, `CLng` of a `Currency` 2.5/3.5/-2.5 | error 6; 2, 4, -2 | same | yes |
+| `DateSerial` normalisation, two-digit years, `Year`/`Month`/`Day`/`Weekday` of dates from 1899-12-30 on, `#yyyy-mm-dd#`, `TimeSerial` | same | same | yes |
+| a date before 1899-12-30 (`CDate(-1.25)`) | linear (12/28/1899 18:00) | the day `Fix(v)`, the time `Abs(v - Fix(v))` (12/29/1899 06:00) | **no** |
+| `Second` of 12:00:00.518 | 0 (truncated) | 1 (rounded) | **no** |
+| `#12/31/9999# + 1` in a `Date` | 2958466 | error 6 | **no** |
+| a date literal with a time (`#1/2/2000 6:00:00 PM#`) | a compile error | a `Date` | **no** |
+| the type of a bitwise operator of `Variant`s (`CInt(12) And CInt(10)`, `Not CByte(200)`) | `Long` | `Integer`, `Byte` ([MS-VBAL] 5.6.9.8) | **no** |
+| `0 And Null`, `5 Or Null` | `Null` | 0, 5 (the operator pages of [MS-VBAL] 5.6.9.8) | **no** |
+| `Variant` arrays, `Array(…)`, `ReDim` of one | same | same | yes |
+| `TypeName` of an untyped function's result, `Integer` 32767 + 1 | `Double` | `Long` | **no** |
+
 Beyond the table: a module LibreOffice cannot compile, and a run-time error no handler catches, stop
 the headless office at a dialog; the runner reports `PLY2691` when the run's time limit (60 s) ends.
 
@@ -129,9 +169,10 @@ number, nor for `LongLong`. What follows:
    the typed array in every dialect; a record is copied out of a record parameter field by field. The differential tests therefore compare the documented semantics.
 2. **The frontend imports the documented semantics** - `Integer * Integer` traps, 0/0 is error 6 -
    and the tests that compare an import with the oracle use only the rows that agree.
-3. **Not verified, and documented as such**: `LongLong` (profile `vba7-64`: emitted, compiled by no
-   oracle), clearing `Err` at the exit of a procedure (not modelled by the frontend), the text of a
-   floating-point number (refused by both directions).
+3. **Not verified, and documented as such**: `LongLong` and so `Currency` (profile `vba7-64`:
+   emitted, compiled by no oracle), clearing `Err` at the exit of a procedure (not modelled by the
+   frontend), and the text of a floating-point number on the rows above, where LibreOffice's `CStr`
+   departs from `%.15G`.
 4. **Parser**: the grammars found are GPL-3.0 (ANTLR `grammars-v4/vba`, Rubberduck), which the
    repository's LGPL cannot absorb, so the parser is written from [MS-VBAL] (rung 3 of the sourcing
    ladder) and LibreOffice is the oracle of its results.

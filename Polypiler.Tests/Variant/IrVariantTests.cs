@@ -39,7 +39,7 @@ public sealed class IrVariantTests {
     Assert.That(IrType.Variant.ToString(), Is.EqualTo("variant"));
     Assert.That(IrType.Variant.IsVariant && IrType.Variant.IsStorable, Is.True);
     Assert.That(IrType.Variant.IsNumeric || IrType.Variant.IsNullable || IrType.Variant.IsOptionalValue, Is.False);
-    Assert.That(IrType.Array(IrType.Variant).IsStorable, Is.False);
+    Assert.That(IrType.Array(IrType.Variant).IsStorable, Is.True);
     Assert.That(IrType.I32.IsVariant, Is.False);
   }
 
@@ -180,9 +180,9 @@ public sealed class IrVariantTests {
   }
 
   [Test]
-  public void Verifier_KeepsTheTypeOutOfArraysAndFields() {
+  public void Verifier_KeepsTheTypeOutOfFields_AndLetsArraysHoldIt() {
     var array = new IrLocal("a", IrType.Array(IrType.Variant));
-    Assert.That(IrVerifier.Verify(new IrModule("M", [new IrFunction("F", true, IrType.Void, [array], [], new IrBlock([new IrReturn(null)]))])), Is.Not.Empty);
+    Assert.That(IrVerifier.Verify(new IrModule("M", [new IrFunction("F", true, IrType.Void, [array], [], new IrBlock([new IrReturn(null)]))])), Is.Empty, "an array of the dynamic type (#1567)");
     var record = new IrStructType("R");
     record.Define([new IrField("v", IrType.Variant, false)]);
     var module = new IrModule("M", [new IrFunction("F", true, IrType.Void, [], [], new IrBlock([new IrReturn(null)]))]) { Types = [record] };

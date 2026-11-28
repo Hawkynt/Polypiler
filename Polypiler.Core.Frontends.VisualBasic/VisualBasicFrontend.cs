@@ -51,8 +51,9 @@ public static class VisualBasicFrontend {
   /// <summary>Parses and lowers a standard module.</summary>
   /// <param name="fileName">The file name, which names the module when it has no <c>Attribute VB_Name</c>.</param>
   /// <param name="source">The text of the module.</param>
+  /// <param name="options">The locale the module runs under; the default one for <see langword="null"/>.</param>
   /// <returns>The verified module, or the diagnostics of why there is none.</returns>
-  public static VisualBasicImportResult Import(string fileName, string source) {
+  public static VisualBasicImportResult Import(string fileName, string source, VisualBasicImportOptions? options = null) {
     ArgumentNullException.ThrowIfNull(fileName);
     ArgumentNullException.ThrowIfNull(source);
     VbaModule parsed;
@@ -65,7 +66,7 @@ public static class VisualBasicFrontend {
     }
 
     var diagnostics = new List<Diagnostic>();
-    var module = new VbaLowerer(fileName, diagnostics).Lower(parsed);
+    var module = new VbaLowerer(fileName, diagnostics, (options ?? new()).Locale).Lower(parsed);
     if (diagnostics.Count > 0 || module is null)
       return new(null, diagnostics);
 

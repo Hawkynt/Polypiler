@@ -34,7 +34,6 @@ public sealed class VisualBasicParserTests {
   [TestCase("Implements IFoo", "PLY2646", "Implements")]
   [TestCase("Public Function F() As Long\n    Dim c As New Collection\nEnd Function", "PLY2648", "New Collection")]
   [TestCase("Public Function F() As Long\n    Dim c As Scripting.Dictionary\nEnd Function", "PLY2648", "Scripting.Dictionary")]
-  [TestCase("Public Function F() As Long\n    Dim c@\nEnd Function", "PLY2646", "Currency")]
   [TestCase("Public Function F() As Long\n    On F GoTo 10, 20\nEnd Function", "PLY2646", "On")]
   [TestCase("Public Function F() As Long\n    On Error GoTo -1\nEnd Function", "PLY2646", "GoTo -1")]
   [TestCase("Public Function F() As Long\n    On Error GoTo H\n    Exit Function\nH:\n    Resume 10\nEnd Function", "PLY2646", "Resume")]

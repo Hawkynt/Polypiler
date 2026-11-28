@@ -11,12 +11,10 @@ public static partial class PythonEmitter {
     /// The nodes of the dynamic type, a tuple <c>(tag, payload)</c> (<c>(0,)</c> for <c>Empty</c>,
     /// <c>(1,)</c> for <c>Null</c>): Python's <c>int</c> cannot tell an <c>i16</c> from an <c>i32</c>,
     /// which the tag does. The tag is the first element, a tested payload the second, an untested one
-    /// the helper <c>_ply_variant</c>, which raises the cast trap on another tag. A currency or a date has no form here.
+    /// the helper <c>_ply_variant</c>, which raises the cast trap on another tag; a currency is <c>(6, ten thousandths)</c>, a date <c>(7, days)</c>.
     /// </summary>
     private PyExpression? VariantExpression(IrExpr expression) {
       switch (expression) {
-        case IrVariantOf { Tag: IrVariantTag.Currency or IrVariantTag.Date } or IrVariantValue { Tag: IrVariantTag.Currency or IrVariantTag.Date }:
-          return this.Inexpressible($"a variant of the tag {(expression as IrVariantOf)?.Tag ?? ((IrVariantValue)expression).Tag}");
         case IrVariantOf made:
           var tag = Integer((int)made.Tag, IrType.I32);
           return new PyTuple(made.Value is null ? [tag] : [tag, this.Expression(made.Value)]);

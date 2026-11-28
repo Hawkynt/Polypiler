@@ -3,8 +3,10 @@ namespace Polypiler.Core.Backends.CSharp;
 
 /// <summary>
 /// The helpers of the IR's dynamic type, which is a C# <c>object</c>: <c>Empty</c> is <c>null</c>,
-/// <c>Null</c> is <c>System.DBNull.Value</c> and every other tag is the boxed .NET value of its payload
-/// type, so the tag is the type of the box. They are C# 2 for .NET Framework 2.0.
+/// <c>Null</c> is <c>System.DBNull.Value</c>, a currency the <c>decimal</c> of its amount, as COM
+/// interop marshals <c>VT_CY</c>, a date the nested <c>VariantDate</c> of its days, and every other tag
+/// the boxed .NET value of its payload type, so the tag is the type of the box. They are C# 2 for .NET
+/// Framework 2.0.
 /// </summary>
 public static class CSharpVariantHelpers {
 
@@ -27,6 +29,12 @@ public static class CSharpVariantHelpers {
     "}",
     "if (value is double) {",
     "  return 5;",
+    "}",
+    "if (value is decimal) {",
+    "  return 6;",
+    "}",
+    "if (value is VariantDate) {",
+    "  return 7;",
     "}",
     "if (value is string) {",
     "  return 8;",

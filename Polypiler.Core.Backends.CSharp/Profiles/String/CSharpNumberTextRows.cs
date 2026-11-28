@@ -64,7 +64,9 @@ internal static class CSharpNumberTextRows {
     Row("Double.Parse(String, NumberStyles, IFormatProvider)", IrIntrinsicOp.ParseDotNet, _text, $"double.Parse({{0}}, {Floating}, {Invariant})", "{h}({0}, 0, 0)", CSharpNumberTextHelpers.ParseText)
       .When(Yields(IrTypeKind.F64)),
     Row("Single.Parse(String, NumberStyles, IFormatProvider)", IrIntrinsicOp.ParseDotNet, _text, $"float.Parse({{0}}, {Floating}, {Invariant})", "(float){h}({0}, 1, 0)", CSharpNumberTextHelpers.ParseText)
-      .When(Yields(IrTypeKind.F32))
+      .When(Yields(IrTypeKind.F32)),
+    Helped("CStr of a Double of Visual Basic", IrIntrinsicOp.FormatVisualBasic, _double, "{h}({0}, 15, {1})", CSharpNumberTextHelpers.VisualBasicText),
+    Helped("CStr of a Single of Visual Basic", IrIntrinsicOp.FormatVisualBasic, _single, "{h}({0}, 7, {1})", CSharpNumberTextHelpers.VisualBasicText)
   ];
 
   /// <summary>Whether a parse yields a type.</summary>

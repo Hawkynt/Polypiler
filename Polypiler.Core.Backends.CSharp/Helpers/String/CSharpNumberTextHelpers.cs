@@ -521,6 +521,84 @@ internal static class CSharpNumberTextHelpers {
     """));
 
   // A raw string literal has the line ends of the working copy, CR LF on Windows: a helper is written with LF everywhere.
+  /// <summary>
+  /// Visual Basic's text of a number (<c>FormatVisualBasic</c>): the exact value in decimal from the
+  /// bits, rounded to <c>precision</c> significant digits with a tie to the even digit, laid out as
+  /// C's <c>%.&lt;n&gt;G</c> with the separator in place of the point; a <c>float</c> is given as the
+  /// <c>double</c> it is exactly.
+  /// </summary>
+  public static CSharpHelper VisualBasicText { get; } = new("VisualBasicText", "string", "double value, int precision, int separator", Lines("""
+    unchecked {
+      char zero = "0"[0];
+      char five = "5"[0];
+      char nine = "9"[0];
+      if (double.IsNaN(value)) return "-1.#IND";
+      if (double.IsInfinity(value)) return value > 0 ? "1.#INF" : "-1.#INF";
+      if (value == 0) return "0";
+      long bits = global::System.BitConverter.DoubleToInt64Bits(value);
+      ulong mantissa = (ulong)bits & 0xFFFFFFFFFFFFFUL;
+      int exponent = (int)((bits >> 52) & 0x7FF);
+      if (exponent == 0) exponent = 1;
+      else mantissa |= 1UL << 52;
+      int shift = exponent - 1075;
+      uint[] limbs = new uint[90];
+      limbs[0] = (uint)(mantissa % 1000000000UL);
+      limbs[1] = (uint)(mantissa / 1000000000UL % 1000000000UL);
+      limbs[2] = (uint)(mantissa / 1000000000000000000UL);
+      int used = 3;
+      int left = shift < 0 ? -shift : shift;
+      while (left > 0) {
+        int step = shift < 0 ? (left < 13 ? left : 13) : (left < 30 ? left : 30);
+        ulong factor = 1;
+        for (int index = 0; index < step; ++index) factor *= shift < 0 ? 5UL : 2UL;
+        ulong carry = 0;
+        for (int index = 0; index < used; ++index) {
+          ulong product = limbs[index] * factor + carry;
+          limbs[index] = (uint)(product % 1000000000UL);
+          carry = product / 1000000000UL;
+        }
+        while (carry != 0) {
+          limbs[used++] = (uint)(carry % 1000000000UL);
+          carry /= 1000000000UL;
+        }
+        left -= step;
+      }
+      global::System.Text.StringBuilder exact = new global::System.Text.StringBuilder();
+      for (int index = used - 1; index >= 0; --index) exact.Append(limbs[index].ToString("D9", global::System.Globalization.CultureInfo.InvariantCulture));
+      string digits = exact.ToString().TrimStart(zero);
+      int first = digits.Length - 1 + (shift < 0 ? shift : 0);
+      if (digits.Length > precision) {
+        bool rest = false;
+        for (int index = precision + 1; index < digits.Length && !rest; ++index) rest = digits[index] != zero;
+        bool up = digits[precision] > five || digits[precision] == five && (rest || (digits[precision - 1] - zero) % 2 == 1);
+        char[] kept = digits.Substring(0, precision).ToCharArray();
+        for (int index = precision - 1; up && index >= 0; --index) {
+          if (kept[index] == nine) {
+            kept[index] = zero;
+          } else {
+            kept[index] = (char)(kept[index] + 1);
+            up = false;
+          }
+        }
+        digits = new string(kept);
+        if (up) {
+          digits = "1" + digits.Substring(0, precision - 1);
+          ++first;
+        }
+      }
+      digits = digits.TrimEnd(zero);
+      string sign = value < 0 ? "-" : "";
+      string point = ((char)separator).ToString();
+      if (first < -4 || first >= precision) {
+        int magnitude = first < 0 ? -first : first;
+        return sign + digits.Substring(0, 1) + (digits.Length > 1 ? point + digits.Substring(1) : "") + (first < 0 ? "E-" : "E+") + magnitude.ToString("00", global::System.Globalization.CultureInfo.InvariantCulture);
+      }
+      if (first < 0) return sign + "0" + point + new string(zero, -first - 1) + digits;
+      if (digits.Length <= first + 1) return sign + digits + new string(zero, first + 1 - digits.Length);
+      return sign + digits.Substring(0, first + 1) + point + digits.Substring(first + 1);
+    }
+    """));
+
   private static string[] Lines(string text) => text.Replace("\r\n", "\n").Split('\n');
 
 }

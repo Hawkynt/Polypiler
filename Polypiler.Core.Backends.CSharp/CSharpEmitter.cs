@@ -493,7 +493,7 @@ public static partial class CSharpEmitter {
     IrArraySequence => IrTree.Operands(expression),
     IrAwait or IrAsync => IrTree.Operands(expression),
     IrForeignCall or IrLastError => IrTree.Operands(expression),
-    IrVariantOf { Tag: not (IrVariantTag.Currency or IrVariantTag.Date) } or IrVariantTagOf or IrVariantValue { Tag: not (IrVariantTag.Currency or IrVariantTag.Date) } => IrTree.Operands(expression),
+    IrVariantOf or IrVariantTagOf or IrVariantValue => IrTree.Operands(expression),
     _ => null
   };
 
@@ -701,7 +701,7 @@ public static partial class CSharpEmitter {
       this._outer = module.Types.OfType<IrClassType>().Any(type => type.Fields.Select(field => field.Name).Concat(type.Methods.Select(method => method.Name))
         .Concat(type.Properties.Select(property => property.Name)).Contains(this.ClassName)) ? "global::" + this._class : this._class;
       // The nested classes of the collections give way to every name of the module and its helpers.
-      this._nested = Names([CSharpCollectionClasses.KeyedSlotsName, CSharpCollectionClasses.FloatKeysName, CSharpCollectionClasses.SingleKeysName, CSharpCollectionClasses.AssertionExceptionName, CSharpCollectionClasses.UninitializedName],
+      this._nested = Names([CSharpCollectionClasses.KeyedSlotsName, CSharpCollectionClasses.FloatKeysName, CSharpCollectionClasses.SingleKeysName, CSharpCollectionClasses.AssertionExceptionName, CSharpCollectionClasses.UninitializedName, CSharpCollectionClasses.VariantDateName],
         [.. this._taken, .. this._typeNames.Values]);
     }
 

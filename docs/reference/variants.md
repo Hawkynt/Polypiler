@@ -11,8 +11,9 @@ Related: [repository README](../../README.md) · [optional values](optional-valu
 
 ## The model
 
-- **Type.** `IrType.Variant`, written `variant`, `IrTypeKind.Variant`. A variant is a scalar: a local,
-  a parameter, a result or a global. No array, struct field, record field, optional value or
+- **Type.** `IrType.Variant`, written `variant`, `IrTypeKind.Variant`. A variant is a local, a
+  parameter, a result, a global or an element of an array (`variant[]`, #1567), whose new elements are
+  `Empty` and which `ArrayCopy` copies as values. No struct field, record field, optional value or
   collection holds one, and there is no constant of it; the verifier refuses each.
 - **Tags.** `IrVariantTag`, numbered as the COM `VARENUM` (copied exactly, so Visual Basic's `VarType`
   is the tag itself):
@@ -47,8 +48,8 @@ Related: [repository README](../../README.md) · [optional values](optional-valu
   tests the tag and works on payloads. A tested payload and the other two nodes never trap
   (`IrShape.IsTrapFreeNode`), which the effect summaries see.
 - **Boundary.** A value crosses the interpreter's boundary as an `IrVariant(tag, value)`, the payload
-  a .NET value of its type (`(short)5`, `"a"`), `IrVariant.Empty` and `IrVariant.Null` without one;
-  one of another shape is refused as an argument.
+  a .NET value of its type (`(short)5`, `"a"`), `IrVariant.Empty` and `IrVariant.Null` without one,
+  an array of them as an `IrVariant[]`; one of another shape is refused as an argument.
 - **Module format.** The type is its kind; the three nodes are tags of their own after the last
   older one, so every older layout reads as before.
 
@@ -56,12 +57,13 @@ Related: [repository README](../../README.md) · [optional values](optional-valu
 
 | Backend | A variant | Tag | Payload of a tag not tested |
 | --- | --- | --- | --- |
-| Visual Basic | `Variant`: `Empty`, `Null`, the payload through its conversion function (`CInt(x)`, `CLng(x)`, …) | `VarType(v)` | a test that raises error 13, then the conversion function |
-| C# | `object`: `null` for `Empty`, `System.DBNull.Value` for `Null`, the payload boxed as its own type | the helper `VariantTag`, by the type of the box | the cast, through `VariantPayload`, which turns `Empty` and `Null` into the `InvalidCastException` |
-| JavaScript | a pair `[tag, payload]` (`[0]`, `[1]` without one) | `v[0]` | `$variant(v, tag)`, which throws the `InvalidCastError` |
-| Python | a tuple `(tag, payload)` (`(0,)`, `(1,)`) | `v[0]` | `_ply_variant(v, tag)`, which raises the `InvalidCastError` |
+| Visual Basic | `Variant`: `Empty`, `Null`, the payload through its conversion function (`CInt(x)`, `CLng(x)`, `CDate(x)`, `CCur(CDec(x) / 10000)`); arrays `Variant()` | `VarType(v)` | a test that raises error 13, then the conversion function (`CLngLng(CDec(v) * 10000)` of a currency) |
+| C# | `object`: `null` for `Empty`, `System.DBNull.Value` for `Null`, a currency the `decimal` of its amount, a date the nested `VariantDate` of its days, every other payload boxed as its own type; arrays `object[]` | the helper `VariantTag`, by the type of the box | the cast, through `VariantPayload`, which turns `Empty` and `Null` into the `InvalidCastException` |
+| JavaScript | a pair `[tag, payload]` (`[0]`, `[1]` without one); arrays of pairs | `v[0]` | `$variant(v, tag)`, which throws the `InvalidCastError` |
+| Python | a tuple `(tag, payload)` (`(0,)`, `(1,)`); lists of tuples | `v[0]` | `_ply_variant(v, tag)`, which raises the `InvalidCastError` |
 
 JavaScript and Python keep the tag because their own values cannot tell an `i16` from an `i32` or an
-`f64`, which the source language can. JavaScript refuses a payload of 64 bits, `Currency` and `Date`;
-C#, Python and Visual Basic refuse `Currency` and `Date`. Rust, Go, C++, the JVM, MSIL, Perl, Batch and
-VBScript have no form of the type yet and refuse it with their type diagnostic.
+`f64`, which the source language can. C# boxes a date in a class of its own rather than as a `DateTime`,
+whose `FromOADate` rounds to the millisecond. JavaScript refuses a payload of 64 bits, a currency too;
+Visual Basic writes a currency only where the profile has `LongLong` (vba7-64). Rust, Go, C++, the JVM,
+MSIL, Perl, Batch and VBScript have no form of the type yet and refuse it with their type diagnostic.

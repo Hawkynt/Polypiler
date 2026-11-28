@@ -58,6 +58,9 @@ internal static class NumberTextModules {
     ("FixedNet0", IrType.F64, x => NumberTextOperations.Fixed(IrIntrinsicOp.FixedDotNet, x, 0)),
     ("FixedNet2", IrType.F64, x => NumberTextOperations.Fixed(IrIntrinsicOp.FixedDotNet, x, 2)),
     ("FixedNet15", IrType.F64, x => NumberTextOperations.Fixed(IrIntrinsicOp.FixedDotNet, x, 15)),
+    ("VbDouble", IrType.F64, x => NumberTextOperations.VisualBasic(x, '.')),
+    ("VbDoubleComma", IrType.F64, x => NumberTextOperations.VisualBasic(x, ',')),
+    ("VbSingle", IrType.F32, x => NumberTextOperations.VisualBasic(x, '.')),
     ("ParseNumber", _str, x => Op(IrIntrinsicOp.ParseNumberEcma, IrType.F64, x)),
     ("ParseFloat", _str, x => Op(IrIntrinsicOp.ParseFloatEcma, IrType.F64, x)),
     ("ParseInt", _str, x => Op(IrIntrinsicOp.ParseIntEcma, IrType.F64, x)),
@@ -104,14 +107,15 @@ internal static class NumberTextModules {
     .. new[] {
       0.0, 1e-7, 1e-6, 1.5e-6, 1e20, 1e21, 1e-5, 1e-4, 1e16, 1e17, 5e-324, double.MaxValue, double.NaN, double.PositiveInfinity,
       0.5, 1.5, 2.5, 0.125, 1.005, 0.045, 999.995, 123.456, 0.1, 0.2, 0.1 + 0.2, 9007199254740993, 123456789012345680000.0, 1e300,
-      2.2250738585072014E-308, 4.9406564584124654E-324 * 3, 1e22, 0.000001234, 100, 7
+      2.2250738585072014E-308, 4.9406564584124654E-324 * 3, 1e22, 0.000001234, 100, 7,
+      123456789012344.5, 123456789012345.5, 999999999999999.5, 1e15, 1e14, 0.00001, 1.0 / 3, 1e100
     }.SelectMany(value => new[] { value, -value }),
     .. Vectors().Where(vector => vector.Kind == "f64").Take(150).Select(vector => BitConverter.UInt64BitsToDouble(vector.Bits))
   ];
 
   /// <summary>The floats of the layout thresholds, both signs, and floats of the reference vectors.</summary>
   public static IReadOnlyList<float> Singles { get; } = [
-    .. new[] { 0f, 0.1f, 16777217f, 1e10f, 1e8f, 1e9f, 1e-5f, 1e-4f, float.MaxValue, float.Epsilon, 3.4e38f, 170739.125f, float.NaN, float.PositiveInfinity }
+    .. new[] { 0f, 0.1f, 16777217f, 1e10f, 1e8f, 1e9f, 1e-5f, 1e-4f, float.MaxValue, float.Epsilon, 3.4e38f, 170739.125f, float.NaN, float.PositiveInfinity, 1e7f, 9999999.5f, 1f / 3 }
       .SelectMany(value => new[] { value, -value }),
     .. Vectors().Where(vector => vector.Kind == "f32").Take(100).Select(vector => BitConverter.UInt32BitsToSingle((uint)vector.Bits))
   ];

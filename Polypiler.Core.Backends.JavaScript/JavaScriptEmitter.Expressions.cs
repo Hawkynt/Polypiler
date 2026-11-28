@@ -91,6 +91,9 @@ public static partial class JavaScriptEmitter {
 
           if (element.IsFunction)
             return (this.Helper("$new", [count, new JsNull()]), true);
+          // An element of the dynamic type is a pair, which no typed array holds; a new one is Empty.
+          if (element.IsVariant)
+            return (this.Helper("$new", [count, new JsArray([Number("0")])]), true);
 
           return (this.Native(Storage(element)) ? new JsNew(Id(Storage(element)), [count]) : this.Helper("$new", [count, this.Zero(element)]), true);
         case IrStep step:
@@ -137,13 +140,13 @@ public static partial class JavaScriptEmitter {
 
       var arguments = intrinsic.Arguments;
       switch (intrinsic.Op) {
-        case IrIntrinsicOp.ArrayOf when intrinsic.Type.Element!.IsStruct || intrinsic.Type.Element.IsString || intrinsic.Type.Element.IsFunction:
+        case IrIntrinsicOp.ArrayOf when intrinsic.Type.Element!.IsStruct || intrinsic.Type.Element.IsString || intrinsic.Type.Element.IsFunction || intrinsic.Type.Element.IsVariant:
           // Typed arrays hold numbers: an array of structs or of strings is an Array of objects.
           return (new JsArray([.. arguments.Select(this.Value)]), true);
         case IrIntrinsicOp.ArrayOf:
           return (this.ArrayOf(intrinsic.Type.Element!, [.. arguments.Select(this.Text)]), true);
         case IrIntrinsicOp.ArrayCopy:
-          var typed = this.Native(Storage(arguments[0].Type.Element!)) && this.Native(".set") && this.Native(".subarray");
+          var typed = !arguments[0].Type.Element!.IsVariant && this.Native(Storage(arguments[0].Type.Element!)) && this.Native(".set") && this.Native(".subarray");
           return (this.Helper(typed ? "$copy" : "$copya", arguments.ToArray()), true);
         case IrIntrinsicOp.ArrayFill:
           return (this.Fill(arguments[0], this.Text(arguments[1])), true);

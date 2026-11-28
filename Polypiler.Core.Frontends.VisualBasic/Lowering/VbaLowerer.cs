@@ -17,10 +17,24 @@ internal sealed class VbaRefusal(DiagnosticDescriptor descriptor, int line, stri
 }
 
 /// <summary>Lowers a parsed standard module into the IR: the declarations first, then every procedure.</summary>
-internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnostics) {
+internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnostics, VisualBasicLocale locale) {
+
+  /// <summary>The regional settings the module runs under.</summary>
+  private readonly VisualBasicLocale _locale = locale;
 
   /// <summary>A procedure's signature, which calls are checked against.</summary>
-  private sealed record Signature(string Name, bool IsPublic, IReadOnlyList<(string Name, VbaType Type, bool ByVal, bool Optional, VbaExpr? Default)> Parameters, VbaType? Returns, VbaProcedure? Source);
+  private sealed record Signature(string Name, bool IsPublic, IReadOnlyList<(string Name, VbaType Type, bool ByVal, bool Optional, VbaExpr? Default)> Parameters, VbaType? Returns, VbaProcedure? Source) {
+
+    /// <summary>Whether each parameter is declared <c>Variant</c>, explicitly or by giving no type: a clone's typed one keeps the arithmetic of a <c>Variant</c>.</summary>
+    public IReadOnlyList<bool> DeclaredVariant { get; init; } = [];
+
+    /// <summary>Whether the result is declared <c>Variant</c>.</summary>
+    public bool DeclaredVariantResult { get; init; }
+
+    /// <summary>The kinds a call's result may hold: those the inference found for a clone, any for a dynamic result.</summary>
+    public VbaTags ResultTags { get; init; } = VbaTags.Any;
+
+  }
 
   private readonly Dictionary<string, VbaType> _types = new(StringComparer.OrdinalIgnoreCase);
   private readonly Dictionary<string, (IrField Field, VbaType Type)> _fields = new(StringComparer.Ordinal);
@@ -63,15 +77,7 @@ internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnosti
     if (diagnostics.Count > 0)
       return null;
 
-    var functions = new List<IrFunction>();
-    foreach (var procedure in procedures) {
-      try {
-        functions.Add(this.Procedure(procedure));
-      } catch (VbaRefusal refusal) {
-        this.Report(refusal);
-      }
-    }
-
+    var functions = this.LowerAll(procedures);
     if (diagnostics.Count > 0)
       return null;
 
@@ -192,7 +198,7 @@ internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnosti
   }
 
   private static bool IsConstant(VbaExpr expression) => expression switch {
-    VbaInteger or VbaFloat or VbaString or VbaBoolean or VbaName => true,
+    VbaInteger or VbaFloat or VbaString or VbaBoolean or VbaName or VbaDate => true,
     VbaUnary unary => IsConstant(unary.Operand),
     VbaBinary binary => IsConstant(binary.Left) && IsConstant(binary.Right),
     VbaParenthesized parenthesized => IsConstant(parenthesized.Inner),
@@ -220,6 +226,10 @@ internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnosti
         return VbaType.String;
       case "variant":
         return VbaType.Variant;
+      case "currency":
+        return VbaType.Currency;
+      case "date":
+        return VbaType.Date;
     }
 
     if (this._enumTypes.Contains(type.Name))
@@ -228,8 +238,6 @@ internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnosti
       return record;
 
     var name = type.Name.ToLowerInvariant() switch {
-      "currency" => "Currency",
-      "date" => "Date",
       "object" => "Object",
       "decimal" => "Decimal",
       "longptr" => "LongPtr",
@@ -245,8 +253,8 @@ internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnosti
   /// <summary>The type of a declared variable: an array of its element type with its lower bound, or a scalar. A field of a record holds no array.</summary>
   private VbaType VariableType(VbaVariable variable, bool field, IEnumerable<VbaStatement>? resized = null) {
     var element = variable.Type is null ? VbaType.Variant : this.TypeOf(variable.Type, field);
-    if (element.IsVariant && (field || variable.IsArray))
-      throw this.Unsupported(variable.Line, $"the Variant {(field ? "field" : "array")} '{variable.Name}'{(field ? " of a Type" : "")}");
+    if (element.IsVariant && field)
+      throw this.Unsupported(variable.Line, $"the Variant field '{variable.Name}' of a Type");
     if (field && element.Kind == VbaKind.String)
       throw this.Unsupported(variable.Line, $"the String field '{variable.Name}' of a Type, which the IR's records do not hold");
     if (!variable.IsArray)
@@ -300,7 +308,11 @@ internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnosti
         returns = VbaType.ArrayOf(returns, this._optionBase);
     }
 
-    return new(procedure.Name, procedure.IsPublic, parameters, returns, procedure);
+    return new(procedure.Name, procedure.IsPublic, parameters, returns, procedure) {
+      DeclaredVariant = [.. parameters.Select(parameter => parameter.Item2.IsVariant)],
+      DeclaredVariantResult = returns is { IsVariant: true },
+      ResultTags = returns is { IsVariant: true } ? VbaTags.Any : VbaTags.None
+    };
   }
 
   /// <summary>The value a variable of a type starts with: zero, <c>False</c>, an empty string, an empty array, a record of defaults.</summary>
