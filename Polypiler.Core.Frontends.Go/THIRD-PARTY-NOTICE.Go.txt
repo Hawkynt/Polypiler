@@ -1,0 +1,46 @@
+Origin: https://go.googlesource.com/go/+/refs/tags/go1.27.4/src/go
+Licence: BSD-3-Clause
+
+Polypiler.Core.Frontends.Go converts, from the Go distribution, https://go.dev, under the following
+licence:
+- Syntax/GoScanner.cs: the scanner of src/go/scanner/scanner.go (next, scanComment, scanIdentifier,
+  digits, scanNumber, invalidSep, scanEscape, scanRune, scanString, scanRawString, Scan);
+- Syntax/GoParser.cs: the parser of src/go/parser/parser.go (every parse function, its look-ahead
+  decisions and error messages, extractName, isTypeElem, packIndexExpr);
+- Syntax/GoBuildConstraint.cs: minVersion of src/go/build/constraint/vers.go;
+- Checking/GoConstant.cs: the representation and operations of src/go/constant/value.go (makeRat,
+  makeFloatFromLiteral, smallFloat, ToInt, ToFloat, match, BinaryOp, UnaryOp, Shift, Compare,
+  ExactString) and the 'p' format of src/math/big/ftoa.go;
+- Checking/GoChecker*.cs: rules of src/go/types (representableConst, implicitTypeAndValue,
+  updateExprType, matchTypes, comparison, shift, assignment, assignableTo, convertibleTo,
+  isTerminating, hasBreak, blockBranches, the built-ins, compositeLit) restated for this checker;
+- Checking/GoLibrary.cs: the constants of src/math/const.go and src/math/bits/bits.go verbatim, and
+  the signatures of the exported functions of math and math/bits.
+
+Copyright 2009 The Go Authors.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+   * Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+   * Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the
+distribution.
+   * Neither the name of Google LLC nor the names of its
+contributors may be used to endorse or promote products derived from
+this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.

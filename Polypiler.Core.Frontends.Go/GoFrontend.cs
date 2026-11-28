@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Polypiler.Core.Frontends.Go.Ast;
-using Polypiler.Core.Frontends.Go.AstDump;
+using Polypiler.Core.Frontends.Go.Checking;
 using Polypiler.Core.Frontends.Go.Lowering;
+using Polypiler.Core.Frontends.Go.Syntax;
 using Polypiler.Core.IR;
 
 namespace Polypiler.Core.Frontends.Go;
@@ -15,14 +17,12 @@ public sealed record GoCaveat(string Id, string Description);
 /// <summary>How a Go source is imported.</summary>
 public sealed record GoImportOptions {
 
-  /// <summary>The <c>go</c> command that builds the helper, the only one tried; <see langword="null"/> for <c>POLYPILER_GO</c>, then <c>go</c>.</summary>
-  public string? Toolchain { get; init; }
-
-  /// <summary>The language version of Go 1 the source is written for, its minor version; 22 and later give every pass of a three-clause loop its own loop variables.</summary>
+  /// <summary>
+  /// The language version of Go 1 the source is written for, its minor version: 22 and later give every
+  /// pass of a three-clause loop its own loop variables and range over integers, 21 and later have
+  /// <c>min</c>, <c>max</c> and <c>clear</c>, 26 and later <c>new</c> of an expression.
+  /// </summary>
   public int LanguageMinor { get; init; } = 27;
-
-  /// <summary>The printed bound tree of the source, when one was recorded: the helper does not run.</summary>
-  public string? Dump { get; init; }
 
 }
 
@@ -30,10 +30,36 @@ public sealed record GoImportOptions {
 /// <param name="Module">The imported module, or <see langword="null"/> when there are diagnostics.</param>
 /// <param name="Diagnostics">Why the source was refused; empty when <paramref name="Module"/> is set.</param>
 /// <param name="Caveats">The known differences of the module, each at most once; empty without a module.</param>
-public sealed record GoImportResult(IrModule? Module, IReadOnlyList<Diagnostic> Diagnostics, IReadOnlyList<GoCaveat> Caveats) {
+public sealed record GoImportResult(IrModule? Module, IReadOnlyList<Diagnostic> Diagnostics, IReadOnlyList<GoCaveat> Caveats);
 
-  /// <summary>The version of Go that checked the source; empty when none did.</summary>
-  public string Go { get; init; } = "";
+/// <summary>What the type checker decided of a source.</summary>
+public enum GoVerdict {
+
+  /// <summary>The source is valid Go: it parses and type-checks.</summary>
+  Valid,
+
+  /// <summary>The source is no valid Go: Go refuses it with the error of the diagnostic.</summary>
+  Invalid,
+
+  /// <summary>The source uses a construct the checker does not model, so it gives no verdict.</summary>
+  Unsupported
+
+}
+
+/// <summary>A constant declared at the package level, with the type and the exact value the checker gives it.</summary>
+/// <param name="Name">The name.</param>
+/// <param name="Type">The type, as <c>types.TypeString</c> writes it, for example <c>untyped float</c>.</param>
+/// <param name="Value">The exact value, as <c>constant.Value.ExactString</c> writes it.</param>
+public sealed record GoConstantValue(string Name, string Type, string Value);
+
+/// <summary>What checking a Go source found.</summary>
+/// <param name="Verdict">Whether the source is valid Go, invalid, or outside what the checker models.</param>
+/// <param name="Diagnostics">The error of an invalid source, or what is outside the checker; empty for a valid one.</param>
+/// <param name="Constants">The package-level constants of a valid source.</param>
+public sealed record GoCheckResult(GoVerdict Verdict, IReadOnlyList<Diagnostic> Diagnostics, IReadOnlyList<GoConstantValue> Constants) {
+
+  /// <summary>Whether the source parses: false for a syntax error, or a source nested deeper than the parser follows.</summary>
+  public bool Parsed { get; init; } = true;
 
 }
 
@@ -45,16 +71,16 @@ public sealed record GoImportResult(IrModule? Module, IReadOnlyList<Diagnostic> 
 /// fusion, <c>bool</c>, slices that are not resliced, struct types, <c>if</c>, every form of
 /// <c>for</c> with <c>range</c> over an integer or a slice, <c>switch</c>, <c>break</c> and
 /// <c>continue</c>, the built-ins <c>len</c>, <c>make</c>, <c>min</c>, <c>max</c> and <c>panic</c>, and the
-/// exact functions of <c>math</c> and <c>math/bits</c>. The source is parsed by <c>go/parser</c> and
-/// type-checked by <c>go/types</c> of the installed Go through a helper that only prints the bound tree
-/// as JSON (<see cref="GoHelper"/>): types and constant values are the type checker's, and whatever it
-/// refuses - an unused variable or import, a mismatched type, a constant that overflows - is refused
-/// with <see cref="CheckError"/>. Everything outside the subset is refused with a diagnostic that names
-/// the construct.
+/// exact functions of <c>math</c> and <c>math/bits</c>. The source is parsed by the frontend's own
+/// scanner and parser (<see cref="GoParser"/>) and type-checked by its own checker
+/// (<see cref="GoChecker"/>), without any Go installed: types and constant values are the checker's,
+/// and whatever Go refuses - a syntax error, an unused variable or import, a mismatched type, a
+/// constant that overflows - is refused with <see cref="CheckError"/>. Everything outside the subset
+/// is refused with a diagnostic that names the construct.
 /// </summary>
 public static class GoFrontend {
 
-  /// <summary>The code for an error of the Go parser or type checker, or a helper that fails.</summary>
+  /// <summary>The code for an error of Go: the source does not parse or does not type-check.</summary>
   public const string CheckError = "PLY2100";
 
   /// <summary>The registered diagnostic of <see cref="CheckError"/>.</summary>
@@ -92,40 +118,64 @@ public static class GoFrontend {
     ArgumentNullException.ThrowIfNull(path);
     ArgumentNullException.ThrowIfNull(source);
     options ??= new GoImportOptions();
-    var json = options.Dump;
-    if (json is null) {
-      var (printed, failure) = GoHelper.Run(path, source, options.Toolchain);
-      if (printed is null)
-        return new(null, [CheckErrorDescriptor.At($"the Go helper failed: {failure}", path)], []);
-
-      json = printed;
-    }
-
-    var parsed = DumpReader.Read(json);
-    if (parsed.Error is { } error)
-      return new(null, [CheckErrorDescriptor.At($"Go {error.Kind} error: {error.Message}", path, error.Line, error.Column)], []) { Go = parsed.Go };
+    var (file, checker, diagnostic) = Analyze(path, source, options);
+    if (diagnostic is not null)
+      return new(null, [diagnostic], []);
 
     try {
-      var lowerer = new Lowerer(options.LanguageMinor);
-      var module = lowerer.Module(parsed.File!);
+      var lowerer = new Lowerer(LanguageMinor(file!, options));
+      var module = lowerer.Module(file!, checker!.PackageName);
       var problems = IrVerifier.Verify(module);
       if (problems.Count > 0)
-        return new(null, [UnsupportedDescriptor.At($"the imported module is no valid IR: {problems[0].Message}", path)], []) { Go = parsed.Go };
+        return new(null, [UnsupportedDescriptor.At($"the imported module is no valid IR: {problems[0].Message}", path)], []);
 
-      return new(module, [], lowerer.Caveats) { Go = parsed.Go };
+      return new(module, [], lowerer.Caveats);
     } catch (GoUnsupportedException exception) {
-      return new(null, [exception.Descriptor.At(exception.Message, path, exception.Line, exception.Column)], []) { Go = parsed.Go };
+      return new(null, [exception.Descriptor.At(exception.Message, path, exception.Line, exception.Column)], []);
     }
   }
 
-  /// <summary>The bound tree the helper prints for a source, as the frontend reads it, or why it printed none: what a recorded dump holds.</summary>
-  /// <param name="path">The name of the file.</param>
-  /// <param name="source">The text.</param>
-  /// <param name="toolchain">The <c>go</c> command, or <see langword="null"/> for <c>POLYPILER_GO</c>, then <c>go</c>.</param>
-  /// <returns>The JSON, or the failure.</returns>
-  public static (string? Json, string? Failure) Print(string path, string source, string? toolchain = null) => GoHelper.Run(path, source, toolchain);
+  /// <summary>Parses and type-checks a source without importing it: the verdict and the package-level constants.</summary>
+  /// <param name="path">The name of the file, which the diagnostics carry.</param>
+  /// <param name="source">The text of the file.</param>
+  /// <param name="options">The language version; the defaults when <see langword="null"/>.</param>
+  /// <returns>The verdict, the diagnostic of an invalid or unsupported source, and the constants of a valid one.</returns>
+  public static GoCheckResult Check(string path, string source, GoImportOptions? options = null) {
+    ArgumentNullException.ThrowIfNull(path);
+    ArgumentNullException.ThrowIfNull(source);
+    var (file, checker, diagnostic) = Analyze(path, source, options ?? new GoImportOptions());
+    if (diagnostic is not null)
+      return new(diagnostic.Code == CheckError ? GoVerdict.Invalid : GoVerdict.Unsupported, [diagnostic], []) { Parsed = file is not null };
 
-  /// <summary>The text of the helper the frontend builds and runs, for a test that records its output.</summary>
-  public static string HelperSource => GoHelper.Source;
+    var constants = checker!.Constants.Where(constant => constant.Name != "_")
+      .Select(constant => new GoConstantValue(constant.Name, constant.Type!.ToString(), constant.Value!.ExactString)).ToList();
+    return new(GoVerdict.Valid, [], constants);
+  }
+
+  /// <summary>The language version of a file: the one its <c>//go:build</c> line implies, go1.21 at the least, as go/types gives it; otherwise the one of the options.</summary>
+  private static int LanguageMinor(GoNode file, GoImportOptions options)
+    => file.Text("GoVersion") is { } version ? Math.Max(int.Parse(version, System.Globalization.CultureInfo.InvariantCulture), 21) : options.LanguageMinor;
+
+  private static (GoNode? File, GoChecker? Checker, Diagnostic? Diagnostic) Analyze(string path, string source, GoImportOptions options) {
+    var text = new GoSource(source);
+    GoNode file;
+    try {
+      file = GoParser.ParseFile(text);
+    } catch (GoSyntaxException exception) {
+      var (line, column) = text.Position(exception.Offset);
+      return (null, null, CheckErrorDescriptor.At($"Go syntax error: {exception.Message}", path, line, column));
+    } catch (GoNestingException exception) {
+      var (line, column) = text.Position(exception.Offset);
+      return (null, null, UnsupportedDescriptor.At($"'{exception.Message}' is not supported by the Go frontend", path, line, column));
+    }
+
+    try {
+      return (file, GoChecker.Check(file, LanguageMinor(file, options)), null);
+    } catch (GoCheckException exception) {
+      return (file, null, CheckErrorDescriptor.At($"Go type error: {exception.Message}", path, exception.Node?.Line ?? 1, exception.Node?.Column ?? 1));
+    } catch (GoUnsupportedException exception) {
+      return (file, null, exception.Descriptor.At(exception.Message, path, exception.Line, exception.Column));
+    }
+  }
 
 }

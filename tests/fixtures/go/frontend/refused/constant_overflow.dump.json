@@ -1,1 +1,0 @@
-{"error":{"col":9,"kind":"type","line":4,"msg":"cannot use 300 (untyped int constant) as uint8 value in return statement (overflows)"},"format":1,"go":"go1.27.4-X:nodwarf5"}
