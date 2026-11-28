@@ -87,7 +87,7 @@ internal sealed class Collector(Func<string, ModuleSource?> locate, Dictionary<P
           module.Statements.Add(statement);
 
         break;
-      case "Expr" when statement.Node("value") is { Kind: "Constant" } docstring && docstring.Text("kind") == "str":
+      case "Expr" when statement.Node("value") is { Kind: "Constant" } docstring && docstring.ConstantKind == "str":
       case "ImportFrom" when statement.Text("module") == "__future__":
       case "If" when IsMainGuard(statement):
         break;

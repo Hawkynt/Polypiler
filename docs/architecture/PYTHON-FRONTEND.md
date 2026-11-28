@@ -12,9 +12,10 @@ the modules of the import it imports, into the typed IR. The frontend lives in
 
 ```mermaid
 flowchart LR
-  Source["f.py and the modules it imports"] --> Helper["polypiler_ast_dump.py<br/>(CPython's ast, parse only)"]
-  Helper -- "JSON, wire format 1" --> Reader["AstReader"]
-  Reader --> Collect["Collector, ClassCollector<br/>ScopeResolver"]
+  Source["f.py and the modules it imports"] --> Lexer["PyLexer<br/>(CPython's tokenizer)"]
+  Lexer -- "tokens, one at a time" --> Parser["PyParser<br/>(python.gram, both passes)"]
+  Parser -- "tree in ast's shape" --> Checks["PyFuture, PyCompileCheck<br/>(symbol table, code generator)"]
+  Checks --> Collect["Collector, ClassCollector<br/>ScopeResolver"]
   Collect --> Check["SubsetCheck"]
   Check --> Evaluate["ModuleEvaluation<br/>(the module's statements, once)"]
   Evaluate --> Assigned["DefiniteAssignment"]
@@ -31,23 +32,54 @@ construct. The behaviour and test contracts of the issues hold; their IR form is
 
 ## Parsing
 
-The source is parsed by the standard `ast` module of the installed CPython through
-`AstDump/polypiler_ast_dump.py`, which the assembly carries. The interpreter is the one
-`PythonImportOptions.Interpreter` or `POLYPILER_PYTHON` names, else `python3`, else `python`; it runs
-with `-I -B` and reads the source from standard input. The helper only parses: the source is never
-compiled, imported or executed. It prints one JSON object - `format` (1), `python` (the version), and
-either `module`, the tree, or `error`, CPython's syntax error. A node carries its class under `_`, its
-range as `line`, `col`, `endLine` and `endCol` (columns counted in characters from 1) and every field
-under its own name; a constant carries `kind` and `value` as text: an `int` in decimal digits of any
-size, a `float` as `float.hex()`, which reads back exactly, `bytes` in hexadecimal.
+The frontend tokenizes, parses and checks the source itself, as CPython 3.14 does; no interpreter is
+started and nothing is imported or run. CPython is only the oracle of the Python layer.
 
-`PythonFrontend.Dump` returns that JSON and `PythonFrontend.ImportDump` imports from it, so that a
-recorded tree imports without an interpreter. The unit tests do exactly that from
-`tests/fixtures/prototype/python/ast/`; the tests of the Python layer hold every recorded tree to what
-the helper prints with the pinned CPython.
+- **Source** (`Syntax/PySource`): a source given as text is taken as decoded, as `ast.parse(str)` takes
+  it; one given as bytes (`PythonFrontend.Check(path, byte[])`) honours the UTF-8 BOM and the encoding
+  declaration of PEP 263 on one of the first two lines, and is refused as CPython refuses it where the
+  declaration conflicts with the BOM or a byte does not decode. Every `\r\n` and `\r` is a `\n`. An
+  encoding the frontend has no decoder for gives no verdict at all.
+- **Tokens** (`Syntax/PyLexer`, converted from `Parser/lexer/lexer.c`): the UTF-8 bytes, INDENT and
+  DEDENT with the tab consistency check, implicit and explicit line joining, names with PEP 3131
+  (XID_Start and XID_Continue, NFKC, `Syntax/PyUnicode` with the tables of the Unicode Character
+  Database 16.0 that CPython 3.14 carries), numbers with `_`, imaginary literals, every string prefix,
+  f-strings and t-strings as token streams (PEP 701, PEP 750), and every tokenizer error with CPython's
+  message. The parser asks for one token at a time, so that `from __future__ import barry_as_FLUFL`
+  changes what follows, as it does in CPython.
+- **Grammar** (`Syntax/PyParser*.cs`, converted rule by rule from `Grammar/python.gram`): a PEG parser
+  that backtracks, memoizes the rules the grammar marks, grows the left-recursive ones as loops, and
+  honours the cuts and forced tokens. A first pass decides whether the source parses; where it does
+  not, a second pass with the `invalid_*` rules finds CPython's message, and the tokenizer's errors in
+  the rest of the source take priority as they do in CPython. The actions of `Parser/action_helpers.c`
+  build the tree: string concatenation, f-string and t-string assembly with their debug texts, argument
+  shapes, contexts. Literals are decoded as `Parser/string_parser.c` decodes them, `\N{...}` included;
+  an integer literal has any size up to the 4300 digits of `sys.get_int_max_str_digits()`.
+- **Versions**: `PythonImportOptions.Version` (`--python-version 3.N`, from 3.8 to 3.14, the default)
+  accepts and refuses what `ast.parse(feature_version=(3, N))` does: `match` from 3.10, `except*`
+  from 3.11, `type` and type parameter lists from 3.12, type parameter defaults from 3.13, t-strings
+  and `except A, B:` from 3.14.
+- **Compile-time checks** (`Syntax/PyFuture`, `Syntax/PyCompileCheck`, converted from `Python/future.c`,
+  `Python/symtable.c` and `Python/codegen.c`): what `compile(source, path, "exec")` raises after the
+  parser - `__future__` features, the symbol table's errors (`global` and `nonlocal` misuse and
+  resolution, duplicate parameters, `__debug__`, `import *` outside the module, `await`, `async for` and
+  `async with` outside an async function, assignment expressions in comprehensions, annotation and
+  type-parameter scopes) and the code generator's (`return`, `yield` and `yield from` outside a function,
+  `break` and `continue` outside a loop or in `except*`, starred assignment targets, repeated keyword
+  arguments, unreachable and conflicting `match` patterns, static nesting, a surrogate in a docstring).
 
-A syntax error, an interpreter that cannot be started and a dump of another wire format are `PLY1800`
-(exit code 4).
+The tree (`Ast/PyNode`) has CPython's `ast` classes, field names and ranges (`lineno`, `col_offset`,
+`end_lineno`, `end_col_offset` in bytes, and the columns in characters the diagnostics carry);
+`PythonFrontend.Check` returns the parse and compile verdicts and the tree as one line of text in the
+form the Python layer's oracle writes CPython's. Every refusal is `PLY1800` (exit code 4),
+`<CPython's exception class>: <CPython's message>` at CPython's position.
+
+**Evidence.** The layer test `PythonSyntaxOracleTests` holds the frontend to the pinned CPython on the
+syntax cases of `tests/fixtures/python/syntax` (the versioned constructs, the trees, and snippets of
+CPython's own tests with every kind of error), on every Python fixture of the repository, on every `.py`
+file of CPython's `Lib/` and `Lib/test/` at every version of the frontend, and on every string of
+`Lib/test/` taken as a source: the verdicts agree, the trees are `ast.dump`-equal with every position,
+and the messages are CPython's.
 
 ## The module graph
 
@@ -276,7 +308,7 @@ exception classes with members, and `return`, `break` or `continue` in a `finall
 
 | Code | Meaning |
 | --- | --- |
-| `PLY1800` | CPython reports a syntax error, or the helper fails |
+| `PLY1800` | CPython refuses the source: a tokenizer, parser or compile-time error, with its class and message |
 | `PLY1801` | a type that is not known, or a hint the import does not know |
 | `PLY1802` | an expression outside the subset |
 | `PLY1803` | values of types no type of the import holds both of |
@@ -324,3 +356,10 @@ emitted from the IR to the recordings, the acceptance tests the JavaScript emitt
 by node, and the round trip the Python the backend writes from the IR, run by CPython; the tests of
 the Python layer hold the recordings to CPython again. `MemoryLoweringTests`, `TypeLoweringTests` and
 `ModuleLoweringTests` hold the scenarios and test designs of #451, #453 and #450 and every refusal.
+
+The tokenizer, parser and compile-time checks are held by `PythonSyntaxTests` to the cases of
+`tests/fixtures/python/syntax` - `versions.jsonl` and `errors.jsonl` (written for this repository,
+one source per rule, error and boundary), `trees.jsonl` and `cpython-tests.jsonl` (snippets of
+CPython's `Lib/test`, PSF-2.0); every expected verdict and tree is the one CPython 3.14 produces -
+and by the Python layer's
+`PythonSyntaxOracleTests` to the pinned CPython, as described under [Parsing](#parsing).

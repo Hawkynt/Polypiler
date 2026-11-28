@@ -1714,12 +1714,21 @@ codes:
   - code: PLY1700
     severity: error
     exit: InvalidSource
-    title: Perl compilation or op-tree helper failed
-    message: "Perl compilation failed: <detail>"
+    title: Perl syntax error or malformed contract
+    message: "Perl <detail>"
     rule: perl.frontend.compile
     area: perl
-    owner: "#438"
-    surfaces: "standard error of polypiler translate --from perl: syntax errors reported by perl, missing or 32-bit interpreter, or wire-format mismatch"
+    owner: "#1561"
+    surfaces: "standard error of polypiler translate --from perl, for a source that is no valid Perl as the frontend's own lexer and parser find it (Perl syntax error: ...) - an unbalanced bracket, an unterminated string or heredoc, a term where an operator belongs - or for a malformed --perl-contract (Perl compilation failed: ...); stops import"
+  - code: PLY1701
+    severity: error
+    exit: UnsupportedConstruct
+    title: Perl construct outside the parser
+    message: "Perl construct outside the parser: <construct>"
+    rule: perl.frontend.parse
+    area: perl
+    owner: "#1561"
+    surfaces: "standard error of polypiler translate --from perl, for a construct the parser does not decide without running the file - a source filter or keyword plugin, format, the class feature, a regex code block, a call whose parse depends on a sub a module or BEGIN code may define; stops import"
   - code: PLY1702
     severity: error
     exit: UnsupportedConstruct
@@ -1930,12 +1939,12 @@ codes:
   - code: PLY1800
     severity: error
     exit: InvalidSource
-    title: Python syntax error or helper failure
-    message: "<python's exception class>: <python's message>"
+    title: Python syntax or compile-time error
+    message: "<CPython's exception class>: <CPython's message>"
     rule: python.syntax
     area: python
     owner: "#452"
-    surfaces: "standard error of polypiler translate --from python: a source CPython's ast module rejects, an interpreter that cannot be started, or a helper that speaks another wire format"
+    surfaces: "standard error of polypiler translate --from python, for a source CPython refuses - a tokenizer or parser error (SyntaxError, IndentationError, TabError), an error of its compile-time checks such as 'return' outside function or no binding for nonlocal, a construct of a later version than --python-version, an undecodable source - as the frontend's own tokenizer, parser and checks find it, with CPython's message; stops import"
   - code: PLY1801
     severity: error
     exit: UnsupportedConstruct

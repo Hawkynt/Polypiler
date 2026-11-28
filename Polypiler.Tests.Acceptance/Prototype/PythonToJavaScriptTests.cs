@@ -12,7 +12,7 @@ using Polypiler.Prototype.Testing;
 namespace Polypiler.Tests.Acceptance.Prototype;
 
 /// <summary>
-/// The Python fixtures imported from their recorded trees, emitted as JavaScript and run by
+/// The Python fixtures imported, emitted as JavaScript and run by
 /// <c>node</c>: every call has the outcome CPython recorded for the original source, as the unit tests
 /// hold the interpreter and the emitted C# to it. An <c>int</c> is a <c>BigInt</c> there, a
 /// <c>float</c> a number, written as Python's <c>repr</c> writes it, an exception by the Python class

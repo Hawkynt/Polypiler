@@ -65,10 +65,10 @@ internal sealed class StructFormat {
 
   /// <summary>The format a node holds, or why it is refused.</summary>
   public static (StructFormat? Format, string? Problem) Parse(PyNode node) {
-    if (!(node.Is("Constant") && node.Text("kind") is "str" or "bytes"))
+    if (!(node.Is("Constant") && node.ConstantKind is "str" or "bytes"))
       return (null, "the format is not a constant");
 
-    var text = node.Text("kind") == "str" ? node.Text("value")! : System.Text.Encoding.Latin1.GetString(System.Convert.FromHexString(node.Text("value")!));
+    var text = node.ConstantKind == "str" ? node.Text("value")! : System.Text.Encoding.Latin1.GetString((byte[])node.Value!);
     return Parse(text);
   }
 

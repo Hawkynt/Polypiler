@@ -40,6 +40,12 @@ notices:
   - path: Polypiler.Core.Frontends.Go/THIRD-PARTY-NOTICE.Go.txt
     components:
       - { name: 'Go go/scanner, go/parser, go/constant, go/build/constraint and math constants (golang/go go1.27.4)', licence: BSD-3-Clause }
+  - path: Polypiler.Core.Frontends.Python/THIRD-PARTY-NOTICE.CPython.txt
+    components:
+      - { name: 'CPython tokenizer, PEG grammar, parser actions, symbol table and code generator checks, and Lib/test snippets (python/cpython v3.14.8)', licence: PSF-2.0 }
+  - path: Polypiler.Core.Frontends.Python/THIRD-PARTY-NOTICE.Unicode.txt
+    components:
+      - { name: 'Unicode Character Database 16.0.0 (names, aliases, XID properties, normalization)', licence: Unicode-3.0 }
   - path: Polypiler.Core.Frontends.CSharp/THIRD_PARTY_NOTICES.md
     components:
       - { name: 'Roslyn (Microsoft.CodeAnalysis.CSharp 5.3.0)', licence: MIT }

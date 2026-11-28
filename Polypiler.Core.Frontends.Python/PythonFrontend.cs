@@ -2,10 +2,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Polypiler.Core.Frontends.Python.Ast;
-using Polypiler.Core.Frontends.Python.AstDump;
 using Polypiler.Core.Frontends.Python.Lowering;
 using Polypiler.Core.Frontends.Python.Model;
 using Polypiler.Core.Frontends.Python.Resolution;
+using Polypiler.Core.Frontends.Python.Syntax;
 using Polypiler.Core.Frontends.Python.Typing;
 using Polypiler.Core.IR;
 
@@ -19,8 +19,13 @@ public sealed record PythonCaveat(string Id, string Description);
 /// <summary>How a Python source is imported.</summary>
 public sealed record PythonImportOptions {
 
-  /// <summary>The interpreter that parses the source, tried before <c>POLYPILER_PYTHON</c>, <c>python3</c> and <c>python</c>; <see langword="null"/> for those.</summary>
-  public string? Interpreter { get; init; }
+  /// <summary>
+  /// The minor version of Python 3 whose grammar the source is parsed with, as <c>ast.parse</c>'s
+  /// <c>feature_version</c> sets it: from <see cref="PythonFrontend.MinimumVersion"/> to
+  /// <see cref="PythonFrontend.LatestVersion"/> (the default). The constructs of a later version are
+  /// refused, such as <c>match</c> before 10.
+  /// </summary>
+  public int Version { get; init; } = PythonFrontend.LatestVersion;
 
   /// <summary>Whether type hints are recorded as source contracts (the profile key <c>annotations</c>: <c>record</c>, or <c>ignore</c>).</summary>
   public bool RecordAnnotations { get; init; } = true;
@@ -29,12 +34,11 @@ public sealed record PythonImportOptions {
   public bool StripAssertions { get; init; }
 
   /// <summary>
-  /// How a module the source imports is found, by its name such as <c>pkg.helper</c>: its path, its
-  /// text and, where one is recorded, the tree the helper printed for it; <see langword="null"/> where
-  /// there is no such module. Without a locator modules are files under the directory of the source
-  /// (the profile key <c>searchPath</c>).
+  /// How a module the source imports is found, by its name such as <c>pkg.helper</c>: its path and its
+  /// text; <see langword="null"/> where there is no such module. Without a locator modules are files
+  /// under the directory of the source (the profile key <c>searchPath</c>).
   /// </summary>
-  public System.Func<string, (string Path, string Source, string? Dump)?>? Modules { get; init; }
+  public System.Func<string, (string Path, string Source)?>? Modules { get; init; }
 
 }
 
@@ -46,12 +50,19 @@ public sealed record PythonImportOptions {
 /// The type hints as source contracts, <c>f.a: int</c> and <c>f.return: int</c>, in source order:
 /// recorded, never trusted - a hint does not change what the imported code does.
 /// </param>
-public sealed record PythonImportResult(IrModule? Module, IReadOnlyList<Diagnostic> Diagnostics, IReadOnlyList<PythonCaveat> Caveats, IReadOnlyList<string> Contracts) {
+public sealed record PythonImportResult(IrModule? Module, IReadOnlyList<Diagnostic> Diagnostics, IReadOnlyList<PythonCaveat> Caveats, IReadOnlyList<string> Contracts);
 
-  /// <summary>The version of the interpreter that parsed the source; empty when none did.</summary>
-  public string Python { get; init; } = "";
-
-}
+/// <summary>What checking a Python source found, as CPython decides it.</summary>
+/// <param name="Parsed">Whether <c>ast.parse</c> accepts the source.</param>
+/// <param name="Compiled">Whether <c>compile(source, path, "exec")</c> accepts it as well.</param>
+/// <param name="Decided">Whether the frontend gives a verdict at all; it gives none for a source that declares an encoding it has no decoder for.</param>
+/// <param name="Diagnostics">The error of a refused source as <see cref="PythonFrontend.SyntaxError"/>; empty for one that compiles.</param>
+/// <param name="Tree">
+/// The tree of a parsed source as one line of text, the fields and positions of
+/// <c>ast.dump(tree, include_attributes=True)</c>, in the form the Python layer's oracle writes;
+/// <see langword="null"/> for a source that does not parse.
+/// </param>
+public sealed record PythonCheckResult(bool Parsed, bool Compiled, bool Decided, IReadOnlyList<Diagnostic> Diagnostics, string? Tree);
 
 /// <summary>
 /// Imports Python 3: module-level functions with type hints and the calls between them, <c>int</c>,
@@ -59,8 +70,8 @@ public sealed record PythonImportResult(IrModule? Module, IReadOnlyList<Diagnost
 /// rounded <c>float</c>, <c>//</c> and <c>%</c> rounding toward negative infinity, exact comparisons
 /// of an <c>int</c> with a <c>float</c>, <c>and</c>/<c>or</c> giving an operand - and <c>if</c>,
 /// <c>while</c>, <c>for</c> over <c>range</c> with their <c>else</c> clauses, <c>match</c> on literals
-/// and <c>assert</c>. The source is parsed by the standard <c>ast</c> module of the installed CPython
-/// through a helper that only parses and prints JSON; it is never imported or executed.
+/// and <c>assert</c>. The source is tokenized, parsed and checked by the frontend itself, as CPython's
+/// tokenizer, PEG parser, symbol table and code generator do; nothing is started, imported or run.
 /// <para>
 /// A value has the static type its hint states for a parameter, and of the values that reach it for
 /// a local and a result. An <c>int</c> is the arbitrary-precision integer of the IR, whose every operation gives Python's exact
@@ -70,7 +81,7 @@ public sealed record PythonImportResult(IrModule? Module, IReadOnlyList<Diagnost
 /// </summary>
 public static class PythonFrontend {
 
-  /// <summary>The code for a syntax error python reports, or a helper that fails.</summary>
+  /// <summary>The code for a source CPython refuses while it parses or compiles it.</summary>
   public const string SyntaxError = "PLY1800";
 
   /// <summary>The registered diagnostic of <see cref="SyntaxError"/>, as <c>spec/diagnostics.yaml</c> records it.</summary>
@@ -258,58 +269,69 @@ public static class PythonFrontend {
       + "byte and struct operations, is a 64-bit integer there: one outside -2**63 .. 2**63 - 1 raises OverflowError, where Python keeps it exact"
   };
 
-  /// <summary>Imports one Python source file, parsed by the installed CPython.</summary>
+  /// <summary>The oldest minor version of Python 3 the frontend parses for.</summary>
+  public const int MinimumVersion = 8;
+
+  /// <summary>The newest minor version of Python 3 the frontend parses for, the default.</summary>
+  public const int LatestVersion = 14;
+
+  /// <summary>Imports one Python source file.</summary>
   /// <param name="path">The name of the file, used in diagnostics; its stem names the module.</param>
   /// <param name="source">The text of the file.</param>
   /// <param name="options">How to import; <see langword="null"/> for the defaults.</param>
   /// <returns>The module, or the diagnostics that explain why there is none.</returns>
   public static PythonImportResult Import(string path, string source, PythonImportOptions? options = null) {
     options ??= new();
-    var (json, failure) = AstHelper.Run(path, source, options.Interpreter);
-    return json is null
-      ? Refused(path, failure!, 1, 1, "")
-      : ImportDump(path, source, json, options);
-  }
-
-  /// <summary>
-  /// The tree the helper prints for a source, in wire format 1: what <see cref="Import"/> reads. A
-  /// recorded tree imports again without an interpreter (<see cref="ImportDump"/>).
-  /// </summary>
-  /// <param name="path">The name of the file, which python's messages carry.</param>
-  /// <param name="source">The text of the file.</param>
-  /// <param name="interpreter">An interpreter to try first, or <see langword="null"/>.</param>
-  /// <returns>The JSON the helper printed, or the reason it printed none.</returns>
-  public static (string? Json, string? Failure) Dump(string path, string source, string? interpreter = null) => AstHelper.Run(path, source, interpreter);
-
-  /// <summary>Imports a source from the tree the helper printed for it.</summary>
-  /// <param name="path">The name of the file, used in diagnostics; its stem names the module.</param>
-  /// <param name="source">The text of the file, which diagnostics quote.</param>
-  /// <param name="dump">What the helper printed for the text (<see cref="Dump"/>).</param>
-  /// <param name="options">How to import; <see langword="null"/> for the defaults.</param>
-  /// <returns>The module, or the diagnostics that explain why there is none.</returns>
-  public static PythonImportResult ImportDump(string path, string source, string dump, PythonImportOptions? options = null) {
-    options ??= new();
-    var parsed = AstReader.Read(dump);
-    if (parsed.Error is var (message, line, column))
-      return Refused(path, message, line, column, parsed.Python);
+    var parsed = PythonSyntax.Parse(source, Version(options));
+    if (parsed.Error is { } error)
+      return new(null, [Refusal(path, error)], [], []);
 
     var previous = (Tuples.Current, Classes.Current);
     Tuples.Current = new();
     Classes.Current = new();
     try {
-      return Run(path, source, parsed, options);
+      return Run(path, source, parsed.Module!, options);
     } finally {
       (Tuples.Current, Classes.Current) = previous;
     }
   }
 
-  private static PythonImportResult Run(string path, string source, ParsedSource parsed, PythonImportOptions options) {
+  /// <summary>Checks a source given as text, as <c>ast.parse(str)</c> and <c>compile(str, path, "exec")</c> do.</summary>
+  /// <param name="path">The name of the file, used in diagnostics.</param>
+  /// <param name="source">The text; an encoding declaration in it is ignored, as CPython ignores it in a str.</param>
+  /// <param name="options">The version to parse for; <see langword="null"/> for the defaults.</param>
+  /// <returns>The verdicts, the error and the tree.</returns>
+  public static PythonCheckResult Check(string path, string source, PythonImportOptions? options = null)
+    => Checked(path, PythonSyntax.Parse(source, Version(options ?? new())));
+
+  /// <summary>Checks a source given as bytes, as <c>ast.parse(bytes)</c> and <c>compile(bytes, path, "exec")</c> do: its BOM and encoding declaration count.</summary>
+  /// <param name="path">The name of the file, used in diagnostics.</param>
+  /// <param name="source">The bytes of the file.</param>
+  /// <param name="options">The version to parse for; <see langword="null"/> for the defaults.</param>
+  /// <returns>The verdicts, the error and the tree.</returns>
+  public static PythonCheckResult Check(string path, byte[] source, PythonImportOptions? options = null)
+    => Checked(path, PythonSyntax.Parse(source, Version(options ?? new())));
+
+  private static PythonCheckResult Checked(string path, PySyntaxResult result)
+    => new(result.Parsed, result.Parsed && result.Error is null, !result.Undecided, result.Error is { } error ? [Refusal(path, error)] : [],
+      result.Module is { } module && result.Parsed ? PyDump.Canonical(module) : null);
+
+  private static int Version(PythonImportOptions options)
+    => options.Version is >= MinimumVersion and <= LatestVersion
+      ? options.Version
+      : throw new System.ArgumentOutOfRangeException(nameof(options), options.Version, $"the Python frontend parses for 3.{MinimumVersion} to 3.{LatestVersion}");
+
+  /// <summary>CPython's error as <see cref="SyntaxError"/>: its class and its message.</summary>
+  private static Diagnostic Refusal(string path, PyError error)
+    => SyntaxErrorDescriptor.At($"{error.Type}: {error.Text}", path, System.Math.Max(1, error.Line), System.Math.Max(1, error.Column));
+
+  private static PythonImportResult Run(string path, string source, PyNode tree, PythonImportOptions options) {
     var diagnostics = new List<Diagnostic>();
     var bound = new Dictionary<PyNode, Variable>(ReferenceEqualityComparer.Instance);
     var name = Path.GetFileNameWithoutExtension(path);
     var locate = Locator(path, options, diagnostics);
     var collector = new Collector(locate, bound, diagnostics);
-    var main = collector.Collect(new ModuleSource(name, new SourceFile(path, source), parsed.Module!), true);
+    var main = collector.Collect(new ModuleSource(name, new SourceFile(path, source), tree), true);
     var modules = collector.Modules;
     if (main.Functions.Count == 0 && main.Classes.Count == 0 && diagnostics.Count == 0)
       diagnostics.Add(main.File.At(main.Node, UnsupportedStatementDescriptor, "statement 'a module without a function' is not supported by the Python frontend"));
@@ -374,7 +396,7 @@ public static class PythonFrontend {
     }
 
     if (diagnostics.Count > 0)
-      return new(null, [.. diagnostics.OrderBy(diagnostic => diagnostic.File == path ? 0 : 1).ThenBy(diagnostic => diagnostic.Line).ThenBy(diagnostic => diagnostic.Column)], [], []) { Python = parsed.Python };
+      return new(null, [.. diagnostics.OrderBy(diagnostic => diagnostic.File == path ? 0 : 1).ThenBy(diagnostic => diagnostic.Line).ThenBy(diagnostic => diagnostic.Column)], [], []);
 
     var caveats = new List<string>();
 
@@ -406,7 +428,7 @@ public static class PythonFrontend {
       Globals = [.. context.Tables, .. globals]
     };
     var contracts = options.RecordAnnotations ? Contracts(modules, notes) : [];
-    return new(imported, [], [.. caveats.Select(id => new PythonCaveat(id, _caveats[id]))], contracts) { Python = parsed.Python };
+    return new(imported, [], [.. caveats.Select(id => new PythonCaveat(id, _caveats[id]))], contracts);
   }
 
   /// <summary>The names the functions of a module have in the IR: their own in the module the import started from, the module's before them in another.</summary>
@@ -427,7 +449,7 @@ public static class PythonFrontend {
   /// <summary>
   /// How the modules a source imports are found: by the options' locator, or as files under the
   /// directory of the source - <c>a/b.py</c> for <c>a.b</c>, or <c>a/b/__init__.py</c> for a package -
-  /// parsed by the same interpreter, never imported or run.
+  /// parsed the same way, never imported or run.
   /// </summary>
   private static System.Func<string, ModuleSource?> Locator(string path, PythonImportOptions options, List<Diagnostic> diagnostics) {
     var cache = new Dictionary<string, ModuleSource?>();
@@ -437,7 +459,7 @@ public static class PythonFrontend {
 
       ModuleSource? found = null;
       if (options.Modules?.Invoke(name) is { } given) {
-        found = Parse(name, given.Path, given.Source, given.Dump ?? AstHelper.Run(given.Path, given.Source, options.Interpreter).Json, given.Path.EndsWith("__init__.py", System.StringComparison.Ordinal), diagnostics);
+        found = Parse(name, given.Path, given.Source, given.Path.EndsWith("__init__.py", System.StringComparison.Ordinal), options, diagnostics);
       } else if (options.Modules is null) {
         var root = Path.GetDirectoryName(Path.GetFullPath(path))!;
         var relative = Path.Combine([root, .. name.Split('.')]);
@@ -445,8 +467,7 @@ public static class PythonFrontend {
           if (!File.Exists(file))
             continue;
 
-          var text = File.ReadAllText(file);
-          found = Parse(name, file, text, AstHelper.Run(file, text, options.Interpreter).Json, package, diagnostics);
+          found = Parse(name, file, File.ReadAllText(file), package, options, diagnostics);
           break;
         }
       }
@@ -456,24 +477,20 @@ public static class PythonFrontend {
     };
   }
 
-  private static ModuleSource? Parse(string name, string path, string source, string? dump, bool package, List<Diagnostic> diagnostics) {
-    var parsed = dump is null ? null : AstReader.Read(dump);
-    if (parsed?.Module is null) {
-      var (message, line, column) = parsed?.Error ?? ($"the Python helper could not parse {path}", 1, 1);
-      diagnostics.Add(SyntaxErrorDescriptor.At(message, path, line, column));
+  private static ModuleSource? Parse(string name, string path, string source, bool package, PythonImportOptions options, List<Diagnostic> diagnostics) {
+    var parsed = PythonSyntax.Parse(source, Version(options));
+    if (parsed.Error is { } error) {
+      diagnostics.Add(Refusal(path, error));
       return null;
     }
 
-    return new ModuleSource(name, new SourceFile(path, source), parsed.Module, package);
+    return new ModuleSource(name, new SourceFile(path, source), parsed.Module!, package);
   }
 
   /// <summary>The description of a caveat, by its name.</summary>
   /// <param name="id">The name of the caveat, such as <see cref="Widened"/>.</param>
   /// <returns>What Python does and what the imported code does instead.</returns>
   public static string Describe(string id) => _caveats[id];
-
-  private static PythonImportResult Refused(string path, string message, int line, int column, string python)
-    => new(null, [SyntaxErrorDescriptor.At(message, path, line, column)], [], []) { Python = python };
 
   /// <summary>The contracts the hints of parameters, results and locals state, function by function.</summary>
   private static List<string> Contracts(IEnumerable<ModuleModel> modules, LoweringNotes notes) {
