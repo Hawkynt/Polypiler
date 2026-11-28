@@ -16,7 +16,7 @@ internal static class VbNetCases {
   public static string Folder { get; } = Path.Combine(PrototypeFixture.RepositoryRoot, "tests", "fixtures", "visualbasic", "vbnet");
 
   /// <summary>The fixtures, by name.</summary>
-  public static IReadOnlyList<string> Names { get; } = ["Numeric", "Control", "Records"];
+  public static IReadOnlyList<string> Names { get; } = ["Numeric", "Control", "Records", "Jumps"];
 
   /// <summary>The text of a fixture.</summary>
   public static string Source(string name) => File.ReadAllText(Path.Combine(Folder, name + ".vb"));
@@ -44,6 +44,12 @@ internal static class VbNetCases {
       Call("Countdown", 0), Call("PastTheEnd", int.MaxValue - 2), Call("Collatz", 27L), Call("Collatz", 1L), Call("Halvings", 1000), Call("Halvings", 0),
       Call("WhileSum", 10), Call("Kept", 5), Call("Total", new[] { 1, 2, 3 }), Call("Total", new int[0]), Call("Total", new[] { int.MaxValue, 1 }),
       Call("Vowels", "education"), Call("Vowels", "")
+    ],
+    "Jumps" => [
+      Call("Triangle", 0), Call("Triangle", 1), Call("Triangle", 10), Call("FirstProduct", 0), Call("FirstProduct", 30), Call("FirstProduct", 1000),
+      Call("Quotient", 0), Call("Quotient", 7), Call("Retried", 0), Call("Retried", 3), Call("Element", 0), Call("Element", 2), Call("Element", 3),
+      Call("Element", -1), Call("Skipped", 0), Call("Skipped", 1), Call("Skipped", 5), Call("Skipped", -1), Call("Branched", 0), Call("Branched", 1),
+      Call("Branched", 5), Call("Raised", 1), Call("Raised", 2), Call("Raised", 3), Call("Twice", 0), Call("Twice", 2)
     ],
     _ => [
       Call("Distance", 3, 4), Call("Distance", -3, 1000000000), Call("Darkness", true), Call("Darkness", false), Call("Squares", 4), Call("Squares", 0),

@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Operations;
+using Microsoft.CodeAnalysis.VisualBasic.Syntax;
 using Polypiler.Core.IR;
 
 namespace Polypiler.Core.Frontends.VisualBasic.Net;
@@ -28,6 +29,8 @@ internal sealed partial class VbNetLowerer {
     this._temporaries.Clear();
     this._caught.Clear();
     this._frames.Clear();
+    this._selectExits.Clear();
+    this._hoisted.Clear();
     this._exit = null;
   }
 
@@ -46,12 +49,22 @@ internal sealed partial class VbNetLowerer {
   private readonly HashSet<IrLocal> _caught = new(ReferenceEqualityComparer.Instance);
 
   /// <summary>A temporary of the procedure, declared before the statement that sets it.</summary>
+  /// <remarks>In a state machine it is declared at the procedure's start and set where it stands, as a section can read what another sets.</remarks>
   private IrLocal Temporary(IrType type, List<IrStmt> statements, IrExpr value) {
     var local = new IrLocal("ply" + (this._temporaries.Count + 1).ToString(CultureInfo.InvariantCulture), type);
     this._temporaries.Add(local);
-    statements.Add(new IrDeclare(local, value));
+    if (this._flat) {
+      this._hoisted.Add(new IrDeclare(local, Default(type)));
+      statements.Add(new IrAssign(local, value));
+    } else {
+      statements.Add(new IrDeclare(local, value));
+    }
+
     return local;
   }
+
+  /// <summary>The declarations of the temporaries of a state machine.</summary>
+  private readonly List<IrStmt> _hoisted = [];
 
   /// <summary>The statements of a block; what follows a statement control never leaves normally is dead, and left out.</summary>
   private void Block(IOperation operation, List<IrStmt> statements) {
@@ -137,6 +150,9 @@ internal sealed partial class VbNetLowerer {
         break;
       case ILabeledOperation label when SymbolEqualityComparer.Default.Equals(label.Label, this._exit):
         break;
+      case ILabeledOperation or { Kind: OperationKind.None, Syntax: OnErrorGoToStatementSyntax or OnErrorResumeNextStatementSyntax or ResumeStatementSyntax }:
+        this.JumpNeeded(operation.Syntax, $"'{operation.Syntax.ToString().Split('\n')[0].Trim()}' inside a Try, Using or With");
+        break;
       case ITryOperation attempt:
         this.Try(attempt, statements);
         break;
@@ -166,6 +182,9 @@ internal sealed partial class VbNetLowerer {
       case IInvocationOperation call when this.WriteLine(call) is { } line:
         statements.Add(line);
         break;
+      case IInvocationOperation call when this.ErrCall(call) is { } err:
+        statements.Add(err);
+        break;
       default:
         statements.Add(new IrExprStmt(this.Value(operation)));
         break;
@@ -189,6 +208,9 @@ internal sealed partial class VbNetLowerer {
         break;
       case IArrayElementReferenceOperation { Indices.Length: 1 } element:
         statements.Add(new IrStore(this.Value(element.ArrayReference), this.Value(element.Indices[0]), value));
+        break;
+      case IPropertyReferenceOperation property when this.ErrValue(property) is not null:
+        statements.Add(new IrGlobalAssign(this.Err, value));
         break;
       default:
         this.Refuse(target.Syntax, $"an assignment to '{target.Syntax}'");
@@ -256,6 +278,13 @@ internal sealed partial class VbNetLowerer {
   /// throws, as Visual Basic's does.
   /// </summary>
   private void ForTo(IForToLoopOperation loop, List<IrStmt> statements) {
+    var (condition, step) = this.ForToParts(loop, statements);
+    var body = this.Within(new Frame(loop.ExitLabel, loop.ContinueLabel, true), loop.Body);
+    statements.Add(new IrFor(condition, body, new IrBlock(step)));
+  }
+
+  /// <summary>The start of a <c>For … To</c>, added to the statements, and the test and the step of each pass.</summary>
+  private (IrExpr Condition, List<IrStmt> Step) ForToParts(IForToLoopOperation loop, List<IrStmt> statements) {
     var counterOperation = loop.LoopControlVariable is IVariableDeclaratorOperation declarator ? null : loop.LoopControlVariable;
     var type = loop.LoopControlVariable is IVariableDeclaratorOperation declared ? declared.Symbol.Type : loop.LoopControlVariable.Type!;
     var irType = this.Type(type);
@@ -283,18 +312,24 @@ internal sealed partial class VbNetLowerer {
       stepBlock.Add(new IrAssign(this.Local(counter.Symbol, counter.Symbol.Type), next));
     else
       this.Assign(counterOperation!, next, stepBlock);
-
-    var body = this.Within(new Frame(loop.ExitLabel, loop.ContinueLabel, true), loop.Body);
-    statements.Add(new IrFor(condition, body, new IrBlock(stepBlock)));
+    return (condition, stepBlock);
   }
 
   /// <summary><c>For Each v In a</c> over an array or the code units of a string: the collection evaluated once, then every element in order.</summary>
   private void ForEach(IForEachLoopOperation loop, List<IrStmt> statements) {
+    if (this.ForEachParts(loop, statements) is not var (condition, head, step))
+      return;
+    head.AddRange(this.Within(new Frame(loop.ExitLabel, loop.ContinueLabel, true), loop.Body).Statements);
+    statements.Add(new IrFor(condition, new IrBlock(head), new IrBlock(step)));
+  }
+
+  /// <summary>The start of a <c>For Each</c>, added to the statements, and the test, the element's assignment and the step of each pass; <see langword="null"/> after a refusal.</summary>
+  private (IrExpr Condition, List<IrStmt> Head, List<IrStmt> Step)? ForEachParts(IForEachLoopOperation loop, List<IrStmt> statements) {
     var collection = loop.Collection is IConversionOperation { IsImplicit: true } conversion ? conversion.Operand : loop.Collection;
     var source = this.Value(collection);
     if (!source.Type.IsArray && !source.Type.IsString) {
       this.Refuse(loop.Syntax, "For Each over anything but an array or a string");
-      return;
+      return null;
     }
 
     var held = new IrLocalRef(this.Temporary(source.Type, statements, source));
@@ -309,9 +344,7 @@ internal sealed partial class VbNetLowerer {
       this.Assign(loop.LoopControlVariable, this.Convert(element, ElementOf(collection.Type!), loop.LoopControlVariable.Type!, loop.Syntax), body);
     }
 
-    body.AddRange(this.Within(new Frame(loop.ExitLabel, loop.ContinueLabel, true), loop.Body).Statements);
-    statements.Add(new IrFor(new IrBinary(IrBinaryOp.Less, new IrLocalRef(index), length), new IrBlock(body),
-      new IrBlock([new IrAssign(index, new IrBinary(IrBinaryOp.Add, new IrLocalRef(index), new IrConst(IrType.I32, 1)))])));
+    return (new IrBinary(IrBinaryOp.Less, new IrLocalRef(index), length), body, [new IrAssign(index, new IrBinary(IrBinaryOp.Add, new IrLocalRef(index), new IrConst(IrType.I32, 1)))]);
   }
 
   private ITypeSymbol ElementOf(ITypeSymbol collection)
@@ -371,10 +404,28 @@ internal sealed partial class VbNetLowerer {
       this.Block(operation, statements);
     }
     this._frames.Pop();
-    // An Exit Select that ends a case tested in order goes where the case ends anyway.
-    if (!frame.Breakable && statements is [.., IrBreak])
+    // An Exit Select that ends a case tested in order goes where the case ends anyway; one anywhere
+    // else needs a jump.
+    if (!frame.Breakable && statements is [.., IrBreak last] && this._selectExits.Contains(last))
       statements.RemoveAt(statements.Count - 1);
+    if (!frame.Breakable && statements.SelectMany(Statements).Any(this._selectExits.Contains))
+      this.JumpNeeded(null, "Exit Select");
     return new IrBlock(statements);
+  }
+
+  /// <summary>The <c>Exit Select</c>s of the cases tested in order, until their case ends.</summary>
+  private readonly HashSet<IrStmt> _selectExits = new(ReferenceEqualityComparer.Instance);
+
+  /// <summary>A statement and every statement inside it.</summary>
+  private static IEnumerable<IrStmt> Statements(IrStmt statement)
+    => IrTree.Blocks(statement).SelectMany(block => block.Statements).SelectMany(Statements).Prepend(statement);
+
+  /// <summary>A jump the structured lowering cannot write: lowered again as a state machine, or refused inside one.</summary>
+  private void JumpNeeded(SyntaxNode? syntax, string construct) {
+    if (this._flat)
+      this.Refuse(syntax, construct);
+    else
+      this._wantsJumps = true;
   }
 
   private IrExpr Clause(ICaseClauseOperation clause, IrExpr value, ITypeSymbol type) {
@@ -402,7 +453,15 @@ internal sealed partial class VbNetLowerer {
       return;
     }
 
-    var innermost = this._frames.Count > 0 ? this._frames.Peek() : null;
+    if (branch.BranchKind == BranchKind.Break && this._frames.Count > 0 && this._frames.Peek() is { Breakable: false } tested && SymbolEqualityComparer.Default.Equals(tested.Exit, branch.Target)) {
+      var exit = new IrBreak();
+      this._selectExits.Add(exit);
+      statements.Add(exit);
+      return;
+    }
+
+    // The IR's break leaves the innermost loop or switch: a Select Case tested in order is none.
+    var innermost = this._frames.FirstOrDefault(frame => frame.Breakable);
     if (branch.BranchKind == BranchKind.Break && innermost is not null && SymbolEqualityComparer.Default.Equals(innermost.Exit, branch.Target)) {
       statements.Add(new IrBreak());
       return;
@@ -414,7 +473,7 @@ internal sealed partial class VbNetLowerer {
       return;
     }
 
-    this.Refuse(branch.Syntax, branch.BranchKind == BranchKind.GoTo ? "GoTo" : $"'{branch.Syntax}' out of a statement around the innermost one");
+    this.JumpNeeded(branch.Syntax, $"'{branch.Syntax}' out of a Try, Using or a statement around it");
   }
 
   /// <summary>The implicit local a function's name stands for, which the procedure's declarations bind first and its end returns.</summary>
@@ -434,7 +493,7 @@ internal sealed partial class VbNetLowerer {
         this._caught.Add(local);
       if (clause.ExceptionDeclarationOrExpression is not null and not IVariableDeclaratorOperation)
         this.Refuse(clause.Syntax, "a Catch into a variable declared elsewhere");
-      catches.Add(new IrCatch(type, local, clause.Filter is null ? null : this.Condition(clause.Filter), this.Body(clause.Handler)));
+      catches.Add(new IrCatch(type, local, clause.Filter is null ? null : this.Condition(clause.Filter), this.CatchBody(clause, type)));
     }
 
     if (attempt.ExitLabel is { } exit && attempt.Descendants().OfType<IBranchOperation>().Any(branch => SymbolEqualityComparer.Default.Equals(branch.Target, exit)))

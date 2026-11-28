@@ -29,6 +29,8 @@ internal sealed partial class VbNetLowerer {
         return new IrFieldLoad(this.Value(instance), member);
       case IArrayElementReferenceOperation { Indices.Length: 1 } element:
         return new IrArrayLoad(this.Value(element.ArrayReference), this.Value(element.Indices[0]));
+      case IPropertyReferenceOperation property when this.ErrValue(property) is { } err:
+        return err;
       case IPropertyReferenceOperation property when this.Property(property) is { } read:
         return read;
       case IBinaryOperation { OperatorMethod: null } binary:

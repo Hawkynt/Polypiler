@@ -25,6 +25,7 @@ internal sealed partial class VbNetLowerer(string file, VisualBasicCompilation c
   private readonly HashSet<string> _caveats = new(StringComparer.Ordinal);
   private readonly HashSet<string> _refused = new(StringComparer.Ordinal);
   private INamedTypeSymbol? _module;
+  private bool _readsErr;
 
   /// <summary>Whether the file compares strings as text, which the IR has no comparison of.</summary>
   private bool CompareText => tree.GetRoot().DescendantNodes().OfType<OptionStatementSyntax>().LastOrDefault(option => option.NameKeyword.IsKind(SyntaxKind.CompareKeyword)) is { } compare
@@ -45,6 +46,7 @@ internal sealed partial class VbNetLowerer(string file, VisualBasicCompilation c
     }
 
     this._module = modules[0];
+    this._readsErr = this.ReadsErr;
     foreach (var type in this.Types().Where(type => type.TypeKind != TypeKind.Module))
       if (type.TypeKind == TypeKind.Structure)
         this._structs[type] = new IrStructType(type.Name);
@@ -90,6 +92,8 @@ internal sealed partial class VbNetLowerer(string file, VisualBasicCompilation c
     }
 
     var functions = methods.Select(this.Function).ToList();
+    if (this._err is { } err)
+      globals.Insert(0, err);
     return new IrModule(this._module.Name, functions, []) {
       Types = [.. this._structs.Values],
       Globals = globals,
@@ -154,10 +158,18 @@ internal sealed partial class VbNetLowerer(string file, VisualBasicCompilation c
     _ => new IrConst(type, 0)
   };
 
+  /// <summary>A procedure, structured; as a state machine where its source has jumps, or its structured lowering meets one it cannot write.</summary>
   private IrFunction Function(IMethodSymbol method) {
-    this.Begin(method);
     var syntax = method.DeclaringSyntaxReferences[0].GetSyntax();
     var block = syntax.Parent as MethodBlockBaseSyntax ?? syntax as MethodBlockBaseSyntax;
+    this._wantsJumps = false;
+    var function = this.Function(method, block, block is not null && NeedsJumps(block));
+    return this._wantsJumps ? this.Function(method, block, true) : function;
+  }
+
+  private IrFunction Function(IMethodSymbol method, MethodBlockBaseSyntax? block, bool flat) {
+    this.Begin(method);
+    this._flat = flat;
     var parameters = method.Parameters.Select(parameter => this.Local(parameter, parameter.Type)).ToList();
     foreach (var parameter in method.Parameters.Where(parameter => parameter.RefKind != RefKind.None))
       if (block is not null && this.Assigned(block, parameter))
@@ -168,7 +180,10 @@ internal sealed partial class VbNetLowerer(string file, VisualBasicCompilation c
     List<IrStmt> body = [];
     if (block is not null && this._model.GetOperation(block) is IBlockOperation operation) {
       this._exit = operation.Descendants().OfType<ILabeledOperation>().LastOrDefault(label => label.IsImplicit)?.Label;
-      this.Block(operation, body);
+      if (flat)
+        body = this.Flat(operation);
+      else
+        this.Block(operation, body);
     }
 
     // Every local lives as long as the procedure: declared first, with its default value; one nothing
