@@ -35,11 +35,11 @@ public sealed class LicencePolicyTests {
     => string.Join("\n", Assert.Throws<CorpusException>(() => LicencePolicy.Parse(text, "p.yaml", decisions))!.Diagnostics.Select(diagnostic => $"{diagnostic.Code}: {diagnostic.Message}"));
 
   [Test]
-  public void ShippedPolicy_Has18Allowed3ReferenceOnlyAndNothingPending_EachWithItsDecision() {
+  public void ShippedPolicy_Has20Allowed3ReferenceOnlyAndNothingPending_EachWithItsDecision() {
     var policy = LicencePolicy.Load(Shipped);
     Assert.That(policy.Allowed, Is.EquivalentTo(new[] {
       "LGPL-3.0-or-later", "LGPL-3.0-only", "LGPL-2.1-or-later", "LGPL-2.1-only", "LGPL-2.0-or-later", "LGPL-2.0-only", "GPL-3.0-or-later", "GPL-3.0-only",
-      "GPL-2.0-or-later", "MIT", "BSD-2-Clause", "BSD-3-Clause", "Apache-2.0", "ISC", "Zlib", "0BSD", "Unlicense", "CC0-1.0" }));
+      "GPL-2.0-or-later", "MIT", "BSD-2-Clause", "BSD-3-Clause", "Apache-2.0", "ISC", "Zlib", "0BSD", "Unlicense", "CC0-1.0", "PSF-2.0", "Unicode-3.0" }));
     Assert.That(policy.ReferenceOnly, Is.EquivalentTo(new[] { "GPL-2.0-only", "AGPL-3.0-only", "AGPL-3.0-or-later" }));
     Assert.That(policy.PendingDecisions, Is.Empty);
     Assert.That(policy.AllowedExceptions, Is.Empty);
