@@ -1,0 +1,13 @@
+# run.sh on 2026-11-28: go1.27.4 (GOROOT/src), .NET SDK 10.0.114, Release, Linux x64, 16 cores; single-threaded.
+# The PEG run overlapped the warm rounds of the ANTLR run, which ran on another core.
+corpus /usr/lib/go/src: 8088 files, 88,4 MiB
+cold: hand 5846 ms (15,1 MiB/s, 4561 MiB alloc), peg 8602 ms (10,3 MiB/s, 4972 MiB alloc), ratio 1,47x
+warm 1: hand 5216 ms (16,9 MiB/s, 4560 MiB alloc), peg 8175 ms (10,8 MiB/s, 4972 MiB alloc), ratio 1,57x
+warm 2: hand 5033 ms (17,6 MiB/s, 4560 MiB alloc), peg 7871 ms (11,2 MiB/s, 4972 MiB alloc), ratio 1,56x
+warm 3: hand 4732 ms (18,7 MiB/s, 4560 MiB alloc), peg 8295 ms (10,7 MiB/s, 4972 MiB alloc), ratio 1,75x
+verdicts: both accept 8043, both refuse 40, only hand accepts 0, only peg accepts 5
+  peg accepts: cmd/compile/internal/syntax/testdata/issue69506.go
+  peg accepts: internal/types/testdata/check/stmt0.go
+  peg accepts: internal/types/testdata/fixedbugs/issue48827.go
+  peg accepts: internal/types/testdata/fixedbugs/issue50372.go
+  peg accepts: internal/types/testdata/spec/range.go
