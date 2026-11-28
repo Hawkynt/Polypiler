@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/parser-bench.schema.json",
+  "title": "Parser benchmark",
+  "description": "What polypiler-tooling bench parsers writes to --out: every parser of a language over every file of a corpus, a cold round and the warm ones, and the files on which the parsers' verdicts differ (ADR 1000, decision 5).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "language", "corpus", "files", "bytes", "parsers", "rounds", "verdicts"],
+  "$defs": {
+    "count": { "type": "integer", "minimum": 0 },
+    "quantity": { "type": "number", "minimum": 0 },
+    "parser": { "type": "string", "enum": ["hand", "generated"] }
+  },
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "language": { "type": "string", "pattern": "^[a-z][a-z0-9]*$" },
+    "corpus": { "type": "string", "minLength": 1, "description": "The corpus folder, with forward slashes." },
+    "files": { "$ref": "#/$defs/count" },
+    "bytes": { "$ref": "#/$defs/count" },
+    "parsers": { "type": "array", "items": { "$ref": "#/$defs/parser" }, "minItems": 1, "uniqueItems": true },
+    "rounds": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The cold round first, then the warm ones.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["round", "results", "ratio"],
+        "properties": {
+          "round": { "type": "string", "pattern": "^(cold|warm [1-9][0-9]*)$" },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["parser", "milliseconds", "mibPerSecond", "allocatedMiB"],
+              "properties": {
+                "parser": { "$ref": "#/$defs/parser" },
+                "milliseconds": { "$ref": "#/$defs/quantity" },
+                "mibPerSecond": { "$ref": "#/$defs/quantity" },
+                "allocatedMiB": { "$ref": "#/$defs/quantity" }
+              }
+            }
+          },
+          "ratio": { "type": ["number", "null"], "minimum": 0, "description": "The time of the generated parser over that of the one written by hand; null unless both exist." }
+        }
+      }
+    },
+    "verdicts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["accepted", "differences"],
+      "properties": {
+        "accepted": { "type": "object", "additionalProperties": { "$ref": "#/$defs/count" }, "description": "The files each parser accepts, by parser." },
+        "differences": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["file", "acceptedBy"],
+            "properties": {
+              "file": { "type": "string", "minLength": 1 },
+              "acceptedBy": { "type": "array", "items": { "$ref": "#/$defs/parser" }, "minItems": 1 }
+            }
+          }
+        }
+      }
+    }
+  }
+}

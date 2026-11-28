@@ -65,6 +65,7 @@ public static class Program {
       output.WriteLine($"       {Name} {LicensesCommand.Verb} inventory [--policy <file>]");
       output.WriteLine($"       {Name} {BenchCommand.Verb} run (--id <id> | --all) [--out <dir>]");
       output.WriteLine($"       {Name} {BenchCommand.Verb} compare --baseline <dir> --current <dir> [--budgets <file>] [--out <file.md>]");
+      output.WriteLine($"       {Name} {BenchCommand.Verb} {ParserBenchCommand.Verb} --language <go|python> --corpus <dir> [--rounds <n>] [--out <file.json>]");
       output.WriteLine($"       {Name} {CatalogCommand.Verb} audit-adapter --audit <file> [--touch <path>]... [--corpus <dir>]");
       output.WriteLine($"       {Name} {ImportBitPermCommand.Verb} {ImportBitPermCommand.Import} [--fixtures <dir>] [--out <dir>] [--check]");
       output.WriteLine($"       {Name} {RebuildCommand.Verb} check --output <dir> [--runs <n>] [--input <path>]... [--wall-time <seconds>] [--memory <MiB>] -- <toolchain key> <args>");
@@ -114,6 +115,8 @@ public static class Program {
       return new IntegrityCommand().Run(args[1..], output, error);
     if (args[0] == LicensesCommand.Verb)
       return new LicensesCommand().Run(args[1..], output, error);
+    if (args[0] == BenchCommand.Verb && args.Length > 1 && args[1] == ParserBenchCommand.Verb)
+      return new ParserBenchCommand().Run(args[2..], output, error);
     if (args[0] == BenchCommand.Verb)
       return new BenchCommand().Run(args[1..], output, error);
     if (args[0] == CatalogCommand.Verb)

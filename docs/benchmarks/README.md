@@ -116,3 +116,23 @@ budgets:
 ```
 
 Related: [verification and release gates](../quality/VERIFICATION.md) · [documentation index](../README.md).
+
+## Parser benchmarks
+
+A frontend whose parser moves to a grammar ([ADR 1000](../adr/1000-grammar-described-frontends.md),
+decision 5) may take at most twice the time of the parser it replaces on its oracle corpus.
+`polypiler-tooling bench parsers` measures that the same way for every migration:
+
+```bash
+dotnet run --project Polypiler.Tooling -c Release -- bench parsers --language go --corpus "$(go env GOROOT)/src" --out artifacts/bench/parsers-go.json
+dotnet run --project Polypiler.Tooling -c Release -- bench parsers --language python --corpus <CPython>/Lib --rounds 3
+```
+
+It runs every parser the language has in this build - `hand` and `generated` while both exist - over
+every file of the corpus in one process, a cold round and then `--rounds` warm ones (3 by default),
+and prints per parser the time, the throughput and the bytes allocated (counted for the whole
+process: run it alone), the ratio of the generated parser to the hand-written one, and the files on
+which their verdicts differ. `--out` writes the same as JSON
+([`spec/schemas/parser-bench.schema.json`](../../spec/schemas/parser-bench.schema.json)). Nothing is
+gated in CI: the pull request of the migration records the numbers, measured in Release before the
+hand-written parser is deleted. A missing corpus exits 66.
