@@ -46,3 +46,13 @@ End Function
 Public Function ScaledBoth(ByVal n As Integer) As Long
     ScaledBoth = Scaled(n) + Scaled(n, CInt(3))
 End Function
+
+' A ByVal parameter the body assigns a value of another kind stays a Variant: no call types it.
+Private Function Bang(ByVal a)
+    a = a & "!"
+    Bang = a
+End Function
+
+Public Function Banged() As String
+    Banged = Bang(CDbl(1))
+End Function
