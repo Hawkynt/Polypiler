@@ -54,6 +54,11 @@ public sealed class PerlFoldTests {
   [TestCase("undef // 6", 6L)]
   [TestCase("A + B", 3L, "use constant { A => 1, B => 2 };")]
   [TestCase("C * 2", 14L, "sub C () { 7 }")]
+  [TestCase("ord ''", 0L)]
+  [TestCase("length 'abc'", 3L)]
+  [TestCase("-9223372036854775808", long.MinValue)]
+  [TestCase("int(9223372036854775807)", long.MaxValue)]
+  [TestCase("+5", 5L)]
   public void Integers_FoldAsPerlFoldsThem(string expression, long expected, string prelude = "")
     => Assert.That(System.Convert.ToInt64(Value(expression, "i64", prelude)), Is.EqualTo(expected));
 
@@ -61,6 +66,9 @@ public sealed class PerlFoldTests {
   [TestCase("~0", ulong.MaxValue)]
   [TestCase("18446744073709551615 & 1", 1UL)]
   [TestCase("2 ** 63", 9223372036854775808UL)]
+  [TestCase("-9223372036854775808 / -1", 9223372036854775808UL)]
+  [TestCase("- -9223372036854775808", 9223372036854775808UL)]
+  [TestCase("18446744073709551615 - 1", 18446744073709551614UL)]
   public void Unsigned_FoldsToUVs(string expression, ulong expected)
     => Assert.That(System.Convert.ToUInt64(Value(expression, "u64")), Is.EqualTo(expected));
 
@@ -72,6 +80,9 @@ public sealed class PerlFoldTests {
   [TestCase("abs(-1.5)", 1.5)]
   [TestCase("-1.5", -1.5)]
   [TestCase("18446744073709551615 * 2", 36893488147419103230.0)]
+  [TestCase("18446744073709551615 + 1", 18446744073709551616.0)]
+  [TestCase("-9223372036854775808 - 1", -9223372036854775809.0)]
+  [TestCase("3 ** 41", 36472996377170786403.0)]
   public void Floats_FoldToNVs(string expression, double expected)
     => Assert.That(System.Convert.ToDouble(Value(expression, "f64")), Is.EqualTo(expected));
 
@@ -91,6 +102,8 @@ public sealed class PerlFoldTests {
   [TestCase("-'foo'", "-foo")]
   [TestCase("\"x\" . NAME", "xN", "use constant NAME => 'N';")]
   [TestCase("'v' . 1.5", "v1.5")]
+  [TestCase("18446744073709551615 . ''", "18446744073709551615")]
+  [TestCase("-'_x'", "-_x")]
   public void Strings_FoldAsPerlFoldsThem(string expression, string expected, string prelude = "")
     => Assert.That(Value(expression, "str", prelude), Is.EqualTo(expected));
 

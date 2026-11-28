@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Numerics;
@@ -82,8 +83,11 @@ internal sealed partial class PerlLowerer {
     return value is null ? FoldedValue.Undef : this.Fold(value);
   }
 
+  /// <summary>The builtins perl folds on a constant operand.</summary>
+  private static readonly HashSet<string> _foldedBuiltins = new(StringComparer.Ordinal) { "chr", "ord", "length", "abs", "int", "lc", "uc", "lcfirst", "ucfirst", "undef" };
+
   private FoldedValue? FoldBuiltin(PerlCall call) {
-    if (call.Arguments is not [var argument] || call.Name is not ("chr" or "ord" or "length" or "abs" or "int" or "lc" or "uc" or "lcfirst" or "ucfirst" or "undef"))
+    if (call.Arguments is not [var argument] || !_foldedBuiltins.Contains(call.Name))
       return call is { Name: "undef", Arguments.Count: 0 } ? FoldedValue.Undef : null;
     if (call.Name == "undef" || this.Fold(argument) is not { } value)
       return null;
@@ -124,7 +128,8 @@ internal sealed partial class PerlLowerer {
       case "-":
         if (value.Number is { } n)
           return new(n.Kind switch {
-            PerlNumericKind.Integer when n.Integer != long.MinValue => PerlNumeric.Of(-n.Integer),
+            PerlNumericKind.Integer when n.Integer == long.MinValue => PerlNumeric.OfUnsigned(9223372036854775808UL),
+            PerlNumericKind.Integer => PerlNumeric.Of(-n.Integer),
             PerlNumericKind.Unsigned when n.Unsigned == 9223372036854775808UL => PerlNumeric.Of(long.MinValue),
             _ => PerlNumeric.Of(-n.Double)
           }, null, null);
@@ -230,15 +235,11 @@ internal sealed partial class PerlLowerer {
     _ => BigInteger.Zero
   };
 
-  /// <summary>An integer result as perl keeps it: an IV, a UV beyond, a binary64 beyond that; under <c>use integer</c> wrapped to 64 bits.</summary>
+  /// <summary>An integer result as perl keeps it: an IV, a UV beyond; under <c>use integer</c> wrapped to 64 bits. The callers keep a result without <c>use integer</c> between <see cref="long.MinValue"/> and <see cref="ulong.MaxValue"/>, beyond which perl computes in binary64.</summary>
   private static FoldedValue Integral(BigInteger value, bool integer) {
     if (integer)
       return new(PerlNumeric.Of(unchecked((long)(ulong)(value & ulong.MaxValue))), null, null);
-    if (value >= long.MinValue && value <= long.MaxValue)
-      return new(PerlNumeric.Of((long)value), null, null);
-    if (value >= 0 && value <= ulong.MaxValue)
-      return new(PerlNumeric.OfUnsigned((ulong)value), null, null);
-    return new(PerlNumeric.Of((double)value), null, null);
+    return value <= long.MaxValue ? new(PerlNumeric.Of((long)value), null, null) : new(PerlNumeric.OfUnsigned((ulong)value), null, null);
   }
 
 }

@@ -262,6 +262,8 @@ internal sealed partial class PerlLowerer {
     var name = (this._integer ? "i_" : "") + (post ? "post" : "pre") + (step.Increment ? "inc" : "dec");
     if (!target.Type.IsNumeric)
       throw this.Fail(PerlFrontend.ScalarUnsupported, $"string {name}");
+    if (target is not (IrLocalRef or IrGlobalRef or IrArrayLoad))
+      throw this.Fail(PerlFrontend.ScalarUnsupported, $"{name} of a hash element or an object field");
     return new IrStep(target, step.Increment, post, Trap: false);
   }
 

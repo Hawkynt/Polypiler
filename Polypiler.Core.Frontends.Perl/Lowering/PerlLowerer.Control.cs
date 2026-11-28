@@ -169,11 +169,15 @@ internal sealed partial class PerlLowerer {
     return true;
   }
 
+  private static readonly HashSet<string> _statementJumps = new(StringComparer.Ordinal) { "return", "last", "next" };
+
+  private static readonly HashSet<string> _statementLogic = new(StringComparer.Ordinal) { "&&", "and", "||", "or" };
+
   /// <summary>Whether perl compiles an expression into a statement-like op: a block, a jump, a conditional, an assignment.</summary>
   private static bool IsStatementExpression(PerlExpr expression) => expression switch {
-    PerlJump { Keyword: "return" or "last" or "next" } => true,
+    PerlJump jump => _statementJumps.Contains(jump.Keyword),
     PerlCall { Builtin: true, Name: "die" } => true,
-    PerlBinary { Operator: "&&" or "and" or "||" or "or" } => true,
+    PerlBinary binary => _statementLogic.Contains(binary.Operator),
     PerlTernary => true,
     PerlAssign { Operator: "=" } => true,
     PerlList { Parenthesized: true, Items: [var only] } => IsStatementExpression(only),
