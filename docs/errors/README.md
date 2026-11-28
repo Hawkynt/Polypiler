@@ -149,6 +149,10 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY1003](PLY1003.md) | error | 4 (InvalidSource) | `<CS0220\|CS0221>: <the compiler's message>` | PROTOTYPE |
 | [PLY1052](PLY1052.md) | error | 3 (UnsupportedConstruct) | `<reason>` | PROTOTYPE |
 | [PLY1053](PLY1053.md) | error | 3 (UnsupportedConstruct) | `'<operation>' cannot be expressed in C# profile '<profile>'` | PROTOTYPE |
+| [PLY1091](PLY1091.md) | error | 6 (TargetBuildFailure) | `the C# compiler rejected the input: <every CS error with its file, line, column and text>` | #220 |
+| [PLY1092](PLY1092.md) | error | 7 (OracleFailure) | `the C# driver crashed with exit code <code>: <standard error>` | #220 |
+| [PLY1094](PLY1094.md) | error | 5 (SemanticMismatch) | `call <index>: expected <values>, actual <values>` | #220 |
+| [PLY1095](PLY1095.md) | error | 7 (OracleFailure) | `<reason>` | #220 |
 
 ## PLY1100–PLY1199 · javascript
 

@@ -7152,6 +7152,21 @@
       "bytes": 1746
     },
     {
+      "path": "tests/fixtures/runner-csharp/Add.vectors.json",
+      "sha256": "52c051ca3f3d76e9f24576eafd7b46a3d4a2e81cae19ba876901809c407515f9",
+      "bytes": 749
+    },
+    {
+      "path": "tests/fixtures/runner-csharp/CheckedAdd.vectors.json",
+      "sha256": "822852513a7be1a111c094050758c65daf9953baddc460ef9bd7ea9ec8912dd7",
+      "bytes": 888
+    },
+    {
+      "path": "tests/fixtures/runner-csharp/Mismatch.vectors.json",
+      "sha256": "7e11ce6833f7d5f615eb14877e4e06b6bef75df737ed36bd04f5f846cd117c96",
+      "bytes": 599
+    },
+    {
       "path": "tests/fixtures/verify/adler32.vectors.json",
       "sha256": "f0bb9ef0d19281add39928d0953daf2b93bb9496957ee5b97d7e59af07548640",
       "bytes": 625

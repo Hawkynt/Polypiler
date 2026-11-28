@@ -1054,6 +1054,42 @@ codes:
     area: csharp
     owner: PROTOTYPE
     surfaces: standard error of polypiler translate --to csharp
+  - code: PLY1091
+    severity: error
+    exit: TargetBuildFailure
+    title: C# compiler rejected the input
+    message: "the C# compiler rejected the input: <every CS error with its file, line, column and text>"
+    rule: csharp.runner.compile
+    area: csharp
+    owner: "#220"
+    surfaces: the diagnostics of CSharpRunner.Compile and RunTests, after PLY0030
+  - code: PLY1092
+    severity: error
+    exit: OracleFailure
+    title: C# driver crashed
+    message: "the C# driver crashed with exit code <code>: <standard error>"
+    rule: csharp.runner.crash
+    area: csharp
+    owner: "#220"
+    surfaces: the diagnostics of CSharpRunner for a driver that called Environment.FailFast, overflowed its stack or was killed, or a test host that wrote no results
+  - code: PLY1094
+    severity: error
+    exit: SemanticMismatch
+    title: C# call differs from its vector
+    message: "call <index>: expected <values>, actual <values>"
+    rule: csharp.runner.mismatch
+    area: csharp
+    owner: "#220"
+    surfaces: CSharpRunner.Explain, after the PLY0051 or PLY0052 of each vector that failed
+  - code: PLY1095
+    severity: error
+    exit: OracleFailure
+    title: C# driver protocol error
+    message: "<reason>"
+    rule: csharp.runner.protocol
+    area: csharp
+    owner: "#220"
+    surfaces: "the diagnostics of CSharpRunner: an unknown profile or export, a signature that does not fit the declaration or has no derived image, an input image the driver cannot read, a function under test that writes to standard output"
   - code: PLY1100
     severity: error
     exit: InvalidSource

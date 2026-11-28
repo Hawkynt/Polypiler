@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "fixture": "runner-csharp/Add",
+  "provenance": {
+    "kind": "published",
+    "source": "fixture",
+    "detail": "written by hand: two's-complement little-endian images",
+    "generatedBy": "hand"
+  },
+  "export": "T.F",
+  "signature": {
+    "parameters": [
+      {
+        "name": "a",
+        "type": "i32"
+      },
+      {
+        "name": "b",
+        "type": "i32"
+      }
+    ],
+    "result": "i32"
+  },
+  "vectors": [
+    {
+      "name": "wrong",
+      "input": {
+        "hex": "0200000003000000"
+      },
+      "expected": {
+        "hex": "06000000"
+      }
+    }
+  ]
+}
