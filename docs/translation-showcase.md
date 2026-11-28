@@ -31796,3 +31796,5 @@ public static class FileIoBoundary {
 ```
 
 > **Frontend refusal (all backends & dialects):** `PLY1002`: 'File.ReadAllLines' is not supported yet
+
+stale line
