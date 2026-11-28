@@ -154,7 +154,7 @@ internal sealed partial class VbaLowerer {
       while (this._usedHelpers.Except(written).OrderBy(name => name, StringComparer.Ordinal).FirstOrDefault() is { } next) {
         written.Add(next);
         this._procedures[next] = this._helperSignatures[next];
-        functions.Add(this.Procedure(this._helperProcedures![next]));
+        functions.Add(this.Procedure(this._helperProcedures![next], this._helperSignatures[next]));
         this._procedures.Remove(next);
       }
     } catch (VbaRefusal refusal) {

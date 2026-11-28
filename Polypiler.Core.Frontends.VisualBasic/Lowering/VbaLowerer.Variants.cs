@@ -135,26 +135,29 @@ internal sealed partial class VbaLowerer {
   /// with one kind and no read before an assignment get that type, and the procedure is lowered again
   /// until every assignment of such a local is of its type.
   /// </summary>
-  private IrFunction Procedure(VbaProcedure procedure) {
-    var candidates = this._raw ? [] : Candidates(procedure);
+  private IrFunction Procedure(VbaProcedure procedure, Signature signature) {
+    this._lastReturns = null;
+    var candidates = this._raw ? [] : Candidates(procedure, signature);
     if (candidates.Count == 0)
-      return this.LowerProcedure(procedure);
+      return this.LowerProcedure(procedure, signature);
 
     var inference = new Inference(candidates);
     this._inference = inference;
     try {
-      this.Infer(procedure, inference);
+      this.Infer(procedure, signature, inference);
       // The lowering with the types given checks them: a local of a fixed type assigned another one,
       // or read where it may still be Empty, and kinds the inference had not seen, lower it again.
       while (true) {
         var helpers = this._usedHelpers.ToList();
         var err = this._err;
         inference.Begin();
-        var function = this.LowerProcedure(procedure);
+        var function = this.LowerProcedure(procedure, signature);
         var grown = inference.Merge() | inference.HeadsGrew;
         var empty = inference.ReadEmpty.Where(inference.Fixed.ContainsKey).ToList();
-        if (!grown && inference.Violations.Count == 0 && empty.Count == 0)
+        if (!grown && inference.Violations.Count == 0 && empty.Count == 0) {
+          this._lastReturns = signature.DeclaredVariantResult && inference.Fixed.TryGetValue(procedure.Name, out var fixedResult) ? fixedResult : signature.Returns;
           return function;
+        }
 
         inference.Demoted.UnionWith(inference.Violations);
         inference.MayBeEmpty.UnionWith(inference.ReadEmpty);
@@ -169,7 +172,7 @@ internal sealed partial class VbaLowerer {
   }
 
   /// <summary>Lowers the procedure with every <c>Variant</c> local dynamic until the kinds assigned to them no longer grow.</summary>
-  private void Infer(VbaProcedure procedure, Inference inference) {
+  private void Infer(VbaProcedure procedure, Signature signature, Inference inference) {
     var helpers = this._usedHelpers.ToList();
     var err = this._err;
     inference.Dry = true;
@@ -180,7 +183,7 @@ internal sealed partial class VbaLowerer {
       do {
         inference.Begin();
         try {
-          this.LowerProcedure(procedure);
+          this.LowerProcedure(procedure, signature);
         } catch (VbaRefusal) {
           refused = true;
         }
@@ -198,9 +201,11 @@ internal sealed partial class VbaLowerer {
     inference.Decide();
   }
 
-  /// <summary>The locals a procedure declares as <c>Variant</c>, explicitly or by giving no type.</summary>
-  private HashSet<string> Candidates(VbaProcedure procedure) {
+  /// <summary>The locals a procedure declares as <c>Variant</c>, explicitly or by giving no type, and its result where it is declared so.</summary>
+  private static HashSet<string> Candidates(VbaProcedure procedure, Signature signature) {
     var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    if (signature.DeclaredVariantResult)
+      names.Add(procedure.Name);
     foreach (var variable in Dims(procedure.Body).SelectMany(dim => dim.Variables))
       if (!variable.IsArray && (variable.Type is null || string.Equals(variable.Type.Name, "Variant", StringComparison.OrdinalIgnoreCase)))
         names.Add(variable.Name);
@@ -448,8 +453,12 @@ internal sealed partial class VbaLowerer {
   }
 
 
-  /// <summary>The value of a call of a procedure of the module: a <c>Variant</c> result may hold anything.</summary>
+  /// <summary>The value of a global, which a <c>Variant</c> may hold anything in.</summary>
   private static VbaValue Returned(IrExpr call, VbaType type) => new(call, type) { Tags = type.IsVariant ? VbaTags.Any : VbaTags.None };
+
+  /// <summary>The value of a call of a procedure of the module: a result declared <c>Variant</c> holds the kinds the inference found, also where it has a fixed type.</summary>
+  private static VbaValue Returned(IrExpr call, Signature signature)
+    => new(call, signature.Returns!) { Tags = signature.DeclaredVariantResult ? (signature.Returns!.IsVariant ? signature.ResultTags : TagOf(signature.Returns.Kind)) : VbaTags.None };
 
   #endregion
 

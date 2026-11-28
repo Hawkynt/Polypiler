@@ -27,6 +27,8 @@ internal sealed partial class VbaLowerer {
 
   private void BeginProcedure(string name) {
     this._procedure = name;
+    this._calls.Clear();
+    this._exitTags = VbaTags.None;
     this._locals.Clear();
     this._localConstants.Clear();
     this._declared.Clear();
@@ -44,14 +46,16 @@ internal sealed partial class VbaLowerer {
     return local;
   }
 
-  private IrFunction LowerProcedure(VbaProcedure procedure) {
+  private IrFunction LowerProcedure(VbaProcedure procedure, Signature signature) {
     this.BeginProcedure(procedure.Name);
-    var signature = this._procedures[procedure.Name];
     var parameters = new List<IrLocal>();
-    foreach (var (name, type, _, _, _) in signature.Parameters) {
+    for (var index = 0; index < signature.Parameters.Count; ++index) {
+      var (name, type, _, _, _) = signature.Parameters[index];
       var local = new IrLocal(name, type.Ir);
       parameters.Add(local);
-      if (!this._locals.TryAdd(name, new(local, type, true) { Tags = type.IsVariant ? VbaTags.Any : VbaTags.None }))
+      // A parameter declared Variant that a clone types keeps the arithmetic of a Variant.
+      var tags = type.IsVariant ? VbaTags.Any : index < signature.DeclaredVariant.Count && signature.DeclaredVariant[index] ? TagOf(type.Kind) : VbaTags.None;
+      if (!this._locals.TryAdd(name, new(local, type, true) { Tags = tags }))
         throw this.Unresolved(procedure.Line, $"the parameter '{name}' is declared twice");
     }
 
@@ -60,11 +64,15 @@ internal sealed partial class VbaLowerer {
         throw this.Unsupported(procedure.Line, $"the parameter '{name}' of '{procedure.Name}', passed by reference and {(type.IsArray ? "resized" : "assigned")} - the IR passes values; declare it ByVal or return the value");
 
     var prologue = new List<IrStmt>();
+    this._returns = signature.Returns;
     if (signature.Returns is { } returns) {
-      this._result = new IrLocal(procedure.Name, returns.Ir);
-      this._locals[procedure.Name] = new(this._result, returns, false) { Tags = returns.IsVariant ? VbaTags.Any : VbaTags.None };
+      // A result declared Variant is a local of the inference: a fixed type where it has one kind.
+      var (type, tags) = signature.DeclaredVariantResult && this._inference?.Candidates.Contains(procedure.Name) == true ? this.VariantLocal(procedure.Name)
+        : (returns, returns.IsVariant ? VbaTags.Any : VbaTags.None);
+      this._result = new IrLocal(procedure.Name, type.Ir);
+      this._locals[procedure.Name] = new(this._result, type, false) { Tags = tags };
       this._declared.Add(this._result);
-      prologue.Add(new IrDeclare(this._result, this.Default(returns, procedure.Line)));
+      prologue.Add(new IrDeclare(this._result, this.Default(type, procedure.Line)));
     }
 
     // Every variable a procedure declares exists, with its initial value, from its first statement on.
@@ -90,10 +98,25 @@ internal sealed partial class VbaLowerer {
 
     var body = this.TopLevel(procedure.Body);
     var statements = new List<IrStmt>([.. prologue, .. body]);
-    if (this._result is { } result)
-      statements.Add(new IrReturn(new IrLocalRef(result)));
+    if (this._result is not null)
+      statements.Add(this.Return());
     var returnType = signature.Returns?.Ir ?? IrType.Void;
-    return new IrFunction(procedure.Name, procedure.IsPublic && !this._raw, returnType, parameters, [.. this._declared.Distinct()], new IrBlock(statements));
+    return new IrFunction(signature.Name, signature.IsPublic && !this._raw, returnType, parameters, [.. this._declared.Distinct()], new IrBlock(statements));
+  }
+
+  /// <summary>The type the function returns, which its result is converted to.</summary>
+  private VbaType? _returns;
+
+  /// <summary>The return of a function's result: a read of it, whose kinds the inference adds to those at the exits, converted to the type the function returns.</summary>
+  private IrStmt Return() {
+    var saved = this._pending;
+    this._pending = [];
+    var value = this.Name(new VbaName(this._procedure, "", 0));
+    this._exitTags |= TagsOf(value);
+    var returned = this.Coerce(value, this._returns!, 0);
+    var statements = this._pending;
+    this._pending = saved;
+    return statements.Count == 0 ? new IrReturn(returned) : new IrBlock([.. statements, new IrReturn(returned)]);
   }
 
   /// <summary>The initial value of a declared variable: a fixed array has its elements, of the defaults of their type.</summary>
@@ -445,11 +468,11 @@ internal sealed partial class VbaLowerer {
   }
 
   /// <summary>
-  /// The copy of the first elements of an array into another: <c>ArrayCopy</c> of numbers, a loop of
-  /// records and of <c>Variant</c>s, which the IR's copy does not take.
+  /// The copy of the first elements of an array into another: <c>ArrayCopy</c> of numbers and of
+  /// <c>Variant</c>s, a loop of records, which the IR's copy does not take.
   /// </summary>
   private IrStmt CopyElements(VbaType array, IrExpr source, IrExpr target, IrExpr count) {
-    if (array.Element!.Kind is not (VbaKind.Record or VbaKind.Variant))
+    if (array.Element!.Kind != VbaKind.Record)
       return new IrExprStmt(new IrIntrinsic(IrIntrinsicOp.ArrayCopy, IrType.Void, [source, new IrConst(IrType.I32, 0), target, new IrConst(IrType.I32, 0), count]));
 
     var index = this.Temporary(IrType.I32, new IrConst(IrType.I32, 0));
@@ -635,8 +658,8 @@ internal sealed partial class VbaLowerer {
         if (this._loops.Peek() != exit.Kind)
           throw this.Unsupported(exit.Line, $"Exit {exit.Kind} out of a {this._loops.Peek()} loop inside it");
         return new IrBreak();
-      case "Function" when this._result is { } result:
-        return new IrReturn(new IrLocalRef(result));
+      case "Function" when this._result is not null:
+        return this.Return();
       case "Sub" when this._result is null:
         return new IrReturn(null);
       default:

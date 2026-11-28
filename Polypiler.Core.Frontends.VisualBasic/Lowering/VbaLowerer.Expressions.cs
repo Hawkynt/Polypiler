@@ -87,8 +87,10 @@ internal sealed partial class VbaLowerer {
       return constant;
     if (this._globals.TryGetValue(name.Name, out var global))
       return Returned(new IrGlobalRef(global.Global), global.Type);
-    if (this._procedures.TryGetValue(name.Name, out var signature) && signature.Returns is not null)
-      return Returned(this.Call(signature, [], name.Line), signature.Returns);
+    if (this._procedures.TryGetValue(name.Name, out var signature) && signature.Returns is not null) {
+      var called = this.Call(ref signature, [], name.Line);
+      return Returned(called, signature);
+    }
     if (this.Builtin(name.Name, [], name.Line) is { } builtin)
       return builtin;
 
@@ -116,13 +118,14 @@ internal sealed partial class VbaLowerer {
         return Element(new IrArrayLoad(array.Expr, this.Index(call.Arguments[0], array.Type, call.Line)), array.Type.Element!);
       }
 
-      if (this._inference?.Candidates.Contains(name.Name) == true || this.Lookup(name.Name) is { Type.IsVariant: true })
+      if ((this._inference?.Candidates.Contains(name.Name) == true || this.Lookup(name.Name) is { Type.IsVariant: true }) && !this._procedures.ContainsKey(name.Name))
         throw this.Unsupported(call.Line, $"an element of the Variant '{name.Name}', which may hold no array or another kind as well");
 
       if (this._procedures.TryGetValue(name.Name, out var signature) || this._raw && this._helperSignatures.TryGetValue(name.Name, out signature)) {
         if (signature.Returns is null)
           throw this.Unresolved(call.Line, $"the Sub '{name.Name}' has no value");
-        return Returned(this.Call(signature, call.Arguments, call.Line), signature.Returns);
+        var called = this.Call(ref signature, call.Arguments, call.Line);
+        return Returned(called, signature);
       }
 
       if (this.Builtin(name.Name, call.Arguments, call.Line) is { } builtin)
@@ -151,23 +154,40 @@ internal sealed partial class VbaLowerer {
   }
 
   /// <summary>The call of a procedure of the module: the arguments coerced to the parameters, an optional one left out given its default.</summary>
-  private IrCall Call(Signature signature, IReadOnlyList<VbaExpr> arguments, int line) {
+  private IrCall Call(Signature signature, IReadOnlyList<VbaExpr> arguments, int line) => this.Call(ref signature, arguments, line);
+
+  /// <summary>
+  /// The call of a procedure of the module, of the clone its arguments' kinds choose (#1564), which
+  /// <paramref name="signature"/> becomes: the arguments coerced to the parameters, an optional one
+  /// left out given its default.
+  /// </summary>
+  private IrCall Call(ref Signature signature, IReadOnlyList<VbaExpr> arguments, int line) {
     if (arguments.Count > signature.Parameters.Count)
       throw this.Unresolved(line, $"'{signature.Name}' takes {signature.Parameters.Count} arguments, not {arguments.Count}");
 
+    var given = new List<VbaValue?>();
+    for (var index = 0; index < signature.Parameters.Count; ++index) {
+      var parameter = signature.Parameters[index];
+      if (index < arguments.Count)
+        given.Add(this.Expression(arguments[index]));
+      else if (parameter.Optional)
+        given.Add(parameter.Default is { } value ? this.Expression(value) : null);
+      else
+        throw this.Unresolved(line, $"'{signature.Name}' needs the argument '{parameter.Name}'");
+    }
+
+    signature = this.Specialised(signature, given);
     var values = new List<IrExpr>();
     for (var index = 0; index < signature.Parameters.Count; ++index) {
       var parameter = signature.Parameters[index];
-      if (index < arguments.Count) {
-        var argument = this.Expression(arguments[index]);
-        if (parameter.Type.IsArray && argument.Type != parameter.Type)
-          throw this.Unresolved(line, $"the array argument {index + 1} of '{signature.Name}' is '{argument.Type}' from {argument.Type.LowerBound}, the parameter '{parameter.Type}' from {parameter.Type.LowerBound}");
-        values.Add(this.Coerce(argument, parameter.Type, line));
-      } else if (parameter.Optional) {
-        values.Add(parameter.Default is { } value ? this.Coerce(this.Expression(value), parameter.Type, line) : this.Default(parameter.Type, line));
-      } else {
-        throw this.Unresolved(line, $"'{signature.Name}' needs the argument '{parameter.Name}'");
+      if (given[index] is not { } argument) {
+        values.Add(this.Default(parameter.Type, line));
+        continue;
       }
+
+      if (index < arguments.Count && parameter.Type.IsArray && argument.Type != parameter.Type)
+        throw this.Unresolved(line, $"the array argument {index + 1} of '{signature.Name}' is '{argument.Type}' from {argument.Type.LowerBound}, the parameter '{parameter.Type}' from {parameter.Type.LowerBound}");
+      values.Add(this.Coerce(argument, parameter.Type, line));
     }
 
     if (signature.Name.StartsWith("Ply", StringComparison.Ordinal) && this._helperSignatures.ContainsKey(signature.Name))
@@ -525,6 +545,9 @@ internal sealed partial class VbaLowerer {
   private IrExpr Coerce(VbaValue value, VbaType target, int line) {
     if (value.Type == target)
       return value.Expr;
+    // A dynamic value the inference knows to hold exactly the target's kind is its payload.
+    if (value.Type.IsVariant && value.Promoted is null && TagOf(target.Kind) is var kind and not VbaTags.None && value.Tags == kind && VarTypeOf(target, line) is var tag)
+      return new IrVariantValue(value.Expr, tag) { IsTested = true };
     if (target.IsVariant)
       return this.Box(value, line);
     if (value.Type.IsVariant)

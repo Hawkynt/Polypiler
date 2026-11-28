@@ -23,7 +23,18 @@ internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnosti
   private readonly VisualBasicLocale _locale = locale;
 
   /// <summary>A procedure's signature, which calls are checked against.</summary>
-  private sealed record Signature(string Name, bool IsPublic, IReadOnlyList<(string Name, VbaType Type, bool ByVal, bool Optional, VbaExpr? Default)> Parameters, VbaType? Returns, VbaProcedure? Source);
+  private sealed record Signature(string Name, bool IsPublic, IReadOnlyList<(string Name, VbaType Type, bool ByVal, bool Optional, VbaExpr? Default)> Parameters, VbaType? Returns, VbaProcedure? Source) {
+
+    /// <summary>Whether each parameter is declared <c>Variant</c>, explicitly or by giving no type: a clone's typed one keeps the arithmetic of a <c>Variant</c>.</summary>
+    public IReadOnlyList<bool> DeclaredVariant { get; init; } = [];
+
+    /// <summary>Whether the result is declared <c>Variant</c>.</summary>
+    public bool DeclaredVariantResult { get; init; }
+
+    /// <summary>The kinds a call's result may hold: those the inference found for a clone, any for a dynamic result.</summary>
+    public VbaTags ResultTags { get; init; } = VbaTags.Any;
+
+  }
 
   private readonly Dictionary<string, VbaType> _types = new(StringComparer.OrdinalIgnoreCase);
   private readonly Dictionary<string, (IrField Field, VbaType Type)> _fields = new(StringComparer.Ordinal);
@@ -66,15 +77,7 @@ internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnosti
     if (diagnostics.Count > 0)
       return null;
 
-    var functions = new List<IrFunction>();
-    foreach (var procedure in procedures) {
-      try {
-        functions.Add(this.Procedure(procedure));
-      } catch (VbaRefusal refusal) {
-        this.Report(refusal);
-      }
-    }
-
+    var functions = this.LowerAll(procedures);
     if (diagnostics.Count > 0)
       return null;
 
@@ -305,7 +308,11 @@ internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnosti
         returns = VbaType.ArrayOf(returns, this._optionBase);
     }
 
-    return new(procedure.Name, procedure.IsPublic, parameters, returns, procedure);
+    return new(procedure.Name, procedure.IsPublic, parameters, returns, procedure) {
+      DeclaredVariant = [.. parameters.Select(parameter => parameter.Item2.IsVariant)],
+      DeclaredVariantResult = returns is { IsVariant: true },
+      ResultTags = returns is { IsVariant: true } ? VbaTags.Any : VbaTags.None
+    };
   }
 
   /// <summary>The value a variable of a type starts with: zero, <c>False</c>, an empty string, an empty array, a record of defaults.</summary>
