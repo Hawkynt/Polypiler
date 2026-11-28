@@ -139,11 +139,10 @@ public sealed class VbNetOracleTests {
   [Test, RequiresToolchain(VbNetRunner.Toolchain)]
   public async Task ErrProbe_RecordsTheTableOfTheDialect() {
     var probe = File.ReadAllText(Path.Combine(VbNetCases.Folder, "ErrProbe.vb"));
-    var table = File.ReadAllLines(Path.Combine(VbNetCases.Folder, "ErrProbe.expected.txt")).Where(line => line.Length > 0 && !line.StartsWith('#'))
-      .Select(line => line.Split('=')).ToList();
-    var cases = table.Select(entry => new VisualBasicCase(entry[0].StartsWith("number:", StringComparison.Ordinal) ? $"NumberOf(\"{entry[0]["number:".Length..]}\")" : entry[0] + "()")).ToList();
+    var table = VbNetRunner.Table(File.ReadAllText(Path.Combine(VbNetCases.Folder, "ErrProbe.expected.txt")));
+    var cases = table.Select(entry => new VisualBasicCase(entry.Key.StartsWith("number:", StringComparison.Ordinal) ? $"NumberOf(\"{entry.Key["number:".Length..]}\")" : entry.Key + "()")).ToList();
     var output = await RunAsync(new Dictionary<string, string> { ["ErrProbe.vb"] = probe }, cases, removeIntegerChecks: false);
-    Assert.That(output, Is.EqualTo(table.Select(entry => entry[1])));
+    Assert.That(VbNetRunner.Compare(table, output), Is.Empty, string.Join("\n", output));
   }
 
   [Test, RequiresToolchain(VbNetRunner.Toolchain)]

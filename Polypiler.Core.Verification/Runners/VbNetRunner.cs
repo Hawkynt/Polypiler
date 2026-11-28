@@ -23,7 +23,7 @@ public static class VbNetRunnerDiagnostics {
 
   /// <summary><c>PLY2696</c>: the recorded dialect table differs from the committed one. Argument: the first entry that differs.</summary>
   [Diagnostic]
-  public static readonly DiagnosticDescriptor TableDiffers = new("PLY2696", DiagnosticSeverity.Error, ExitCode.OracleFailure, "the recorded dialect table differs from spec/languages/visualbasic/vbnet-errors.yaml at '{0}'", "visualbasic.net.runner.table");
+  public static readonly DiagnosticDescriptor TableDiffers = new("PLY2696", DiagnosticSeverity.Error, ExitCode.OracleFailure, "the recorded dialect table differs from tests/fixtures/visualbasic/vbnet/ErrProbe.expected.txt at '{0}'", "visualbasic.net.runner.table");
 
 }
 
@@ -161,6 +161,32 @@ public sealed class VbNetRunner {
       return new(null, result.Diagnostics);
 
     return Read(Encoding.UTF8.GetString(result.Stdout.Span), cases.Count, result.ExitCode, Encoding.UTF8.GetString(result.Stderr.Span));
+  }
+
+  /// <summary>
+  /// The entries of a dialect table, <c>key=value</c> per line, <c>#</c> a comment: what
+  /// <c>ErrProbe.expected.txt</c> records.
+  /// </summary>
+  /// <param name="text">The text of the table.</param>
+  /// <returns>The entries in order.</returns>
+  public static IReadOnlyList<(string Key, string Value)> Table(string text) {
+    ArgumentNullException.ThrowIfNull(text);
+    return [.. text.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n').Where(line => line.Length > 0 && !line.StartsWith('#'))
+      .Select(line => (line[..line.IndexOf('=')], line[(line.IndexOf('=') + 1)..]))];
+  }
+
+  /// <summary>Compares what a run recorded with a table: <c>PLY2696</c> at the first entry that differs, none when all agree.</summary>
+  /// <param name="table">The committed entries.</param>
+  /// <param name="recorded">What the run printed for each entry, in order.</param>
+  /// <returns>The diagnostic, or none.</returns>
+  public static IReadOnlyList<Diagnostic> Compare(IReadOnlyList<(string Key, string Value)> table, IReadOnlyList<string> recorded) {
+    ArgumentNullException.ThrowIfNull(table);
+    ArgumentNullException.ThrowIfNull(recorded);
+    for (var index = 0; index < table.Count; ++index)
+      if (index >= recorded.Count || recorded[index] != table[index].Value)
+        return [Diagnostic.Create(VbNetRunnerDiagnostics.TableDiffers, null, table[index].Key)];
+
+    return [];
   }
 
   /// <summary>The outcomes a driver of a number of calls printed.</summary>

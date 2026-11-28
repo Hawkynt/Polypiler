@@ -70,7 +70,8 @@ internal static class VbNetFixtures {
     var tree = VisualBasicSyntaxTree.ParseText(source, new VisualBasicParseOptions(LanguageOf(profile)), "Generated.vb");
     var options = new VisualBasicCompilationOptions(OutputKind.DynamicallyLinkedLibrary, globalImports: GlobalImport.Parse(["Microsoft.VisualBasic", "System", "System.Collections.Generic"]),
       optionStrict: OptionStrict.On, optionExplicit: true, optionInfer: true,
-      checkOverflow: !removeIntegerChecks, generalDiagnosticOption: ReportDiagnostic.Error, deterministic: true);
+      checkOverflow: !removeIntegerChecks, generalDiagnosticOption: ReportDiagnostic.Error, deterministic: true,
+      embedVbCoreRuntime: profile.Framework!.Name.StartsWith("netstandard", StringComparison.Ordinal));
     return VisualBasicCompilation.Create("Generated" + Guid.NewGuid().ToString("N"), [tree], references ?? _references.Value, options);
   }
 
