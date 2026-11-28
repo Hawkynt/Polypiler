@@ -115,15 +115,14 @@ internal sealed partial class VbNetLowerer {
     if (source == target && !(from.SpecialType == SpecialType.System_Char ^ to.SpecialType == SpecialType.System_Char))
       return value;
 
+    // Only a Char, a Boolean and a number convert to a String under the subset's types.
     if (target.IsString) {
       if (from.SpecialType == SpecialType.System_Char)
         return new IrIntrinsic(IrIntrinsicOp.StrFromCodeUnit, IrType.String, [value]);
       if (source == IrType.Bool)
         return new IrIntrinsic(IrIntrinsicOp.FormatBoolDotNet, IrType.String, [value]);
-      if (source.IsNumeric) {
-        this._caveats.Add(VbNetFrontend.InvariantCulture);
-        return new IrIntrinsic(IrIntrinsicOp.FormatDotNet, IrType.String, [value]);
-      }
+      this._caveats.Add(VbNetFrontend.InvariantCulture);
+      return new IrIntrinsic(IrIntrinsicOp.FormatDotNet, IrType.String, [value]);
     }
 
     if (from.SpecialType == SpecialType.System_Char || to.SpecialType == SpecialType.System_Char) {
@@ -281,19 +280,16 @@ internal sealed partial class VbNetLowerer {
       return new IrBinary(op, Number(left), Number(right));
     }
 
-    // A narrow integer is compared as the Integer it widens to exactly; the IR compares the wide types.
-    if (left.Type.IsInteger && !left.Type.IsWideInteger)
-      return new IrBinary(op, new IrConvert(IrType.I32, left), new IrConvert(IrType.I32, right));
-    if (left.Type.IsNumeric || left.Type == IrType.Bool)
-      return new IrBinary(op, left, right);
-
-    this.Refuse(syntax, $"the comparison of {type.ToDisplayString()}");
-    return new IrConst(IrType.Bool, 0);
+    // A narrow integer is compared as the Integer it widens to exactly; the IR compares the wide types,
+    // and the Booleans by equality. Nothing else has a comparison of its own in the subset.
+    return left.Type.IsInteger && !left.Type.IsWideInteger ? new IrBinary(op, new IrConvert(IrType.I32, left), new IrConvert(IrType.I32, right)) : new IrBinary(op, left, right);
   }
 
   private IrExpr Unary(IUnaryOperation unary) {
     var operand = this.Value(unary.Operand);
     var type = operand.Type;
+    // Visual Basic negates floating-point numbers and signed integers - an unsigned one is widened to a
+    // signed type first - and complements Booleans and integers.
     switch (unary.OperatorKind) {
       case UnaryOperatorKind.Plus:
         return operand;
@@ -301,17 +297,14 @@ internal sealed partial class VbNetLowerer {
         return new IrUnary(IrUnaryOp.Negate, operand);
       case UnaryOperatorKind.Minus when type == IrType.I32 || type == IrType.I64:
         return new IrUnary(unary.IsChecked && checks ? IrUnaryOp.NegateChecked : IrUnaryOp.Negate, operand);
-      case UnaryOperatorKind.Minus when type.IsSigned:
+      case UnaryOperatorKind.Minus:
         return new IrConvert(type, new IrUnary(IrUnaryOp.Negate, new IrConvert(IrType.I32, operand)), unary.IsChecked && checks ? IrConversion.Trap : IrConversion.Wrap);
       case UnaryOperatorKind.Not when type == IrType.Bool:
         return new IrUnary(IrUnaryOp.LogicalNot, operand);
       case UnaryOperatorKind.Not when type.IsWideInteger:
         return new IrUnary(IrUnaryOp.BitNot, operand);
-      case UnaryOperatorKind.Not when type.IsInteger:
-        return new IrConvert(type, new IrUnary(IrUnaryOp.BitNot, new IrConvert(type.IsSigned ? IrType.I32 : IrType.U32, operand)), IrConversion.Wrap);
       default:
-        this.Refuse(unary.Syntax, $"the operator of '{unary.Syntax}'");
-        return operand;
+        return new IrConvert(type, new IrUnary(IrUnaryOp.BitNot, new IrConvert(type.IsSigned ? IrType.I32 : IrType.U32, operand)), IrConversion.Wrap);
     }
   }
 
@@ -327,11 +320,11 @@ internal sealed partial class VbNetLowerer {
     var (a, b) = (this.Type(left), this.Type(right));
     if (kind == BinaryOperatorKind.Concatenate)
       return compilation.GetSpecialType(SpecialType.System_String);
-    if (kind is BinaryOperatorKind.LeftShift or BinaryOperatorKind.RightShift)
-      return a.IsInteger ? left : null;
-    if (a.IsString && b.IsString && kind == BinaryOperatorKind.Add)
+    // A shift has the type of its left operand, an integer; a String or a Char takes part in no other
+    // compound assignment of the subset than a concatenation.
+    if (kind is BinaryOperatorKind.LeftShift or BinaryOperatorKind.RightShift || a.IsString && b.IsString)
       return left;
-    if (!a.IsNumeric || !b.IsNumeric || left.SpecialType == SpecialType.System_Char || right.SpecialType == SpecialType.System_Char)
+    if (!a.IsNumeric || !b.IsNumeric)
       return null;
     if (kind == BinaryOperatorKind.Power)
       return compilation.GetSpecialType(SpecialType.System_Double);
@@ -344,7 +337,7 @@ internal sealed partial class VbNetLowerer {
     else if (a == b)
       result = a;
     else if (a.IsSigned == b.IsSigned)
-      result = a.Bits >= b.Bits ? a : b;
+      result = new[] { a, b }.MaxBy(candidate => candidate.Bits)!;
     else {
       var (signed, unsigned) = a.IsSigned ? (a, b) : (b, a);
       var bits = Math.Max(signed.Bits, unsigned.Bits * 2);
@@ -353,10 +346,8 @@ internal sealed partial class VbNetLowerer {
       result = bits switch { 16 => IrType.I16, 32 => IrType.I32, _ => IrType.I64 };
     }
 
-    if (kind == BinaryOperatorKind.Divide && !result.IsFloat)
-      result = IrType.F64;
-    if (kind is BinaryOperatorKind.IntegerDivide or BinaryOperatorKind.And or BinaryOperatorKind.Or or BinaryOperatorKind.ExclusiveOr && result.IsFloat)
-      result = IrType.I64;
+    // The compiler converts the value of /= to Double and of \= and the bitwise ones to an integer
+    // already, so that the operator type of two numbers is the wider one.
     return Symbol(result);
   }
 

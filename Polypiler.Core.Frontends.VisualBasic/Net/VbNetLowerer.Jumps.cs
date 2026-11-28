@@ -193,9 +193,8 @@ internal sealed partial class VbNetLowerer {
           this.Flatten(inner, pieces);
         break;
       case ILabeledOperation label:
+        // A label of Visual Basic stands alone: the statement after it is one of its own.
         pieces.Add(new MarkPiece(label.Label));
-        if (label.Operation is { } labeled)
-          this.Flatten(labeled, pieces);
         break;
       case IBranchOperation branch:
         pieces.Add(new JumpPiece(branch.Target, null));

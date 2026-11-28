@@ -74,14 +74,8 @@ internal sealed partial class VbNetWriter {
     }
   }
 
-  /// <summary>The Visual Basic name of a function of the module.</summary>
-  private string FunctionName(string function) {
-    if (this._functions.TryGetValue(function, out var name))
-      return name;
-
-    this.Refuse(VisualBasicEmitter.InexpressibleDescriptor, $"the call of '{function}', which the module does not define");
-    return VbNetNaming.Valid(function, "Function");
-  }
+  /// <summary>The Visual Basic name of a function of the module, which the verifier has made sure it defines.</summary>
+  private string FunctionName(string function) => this._functions[function];
 
   /// <summary>
   /// A literal of a type in the form Visual Basic reads with that type: a suffix for <c>Short</c>,

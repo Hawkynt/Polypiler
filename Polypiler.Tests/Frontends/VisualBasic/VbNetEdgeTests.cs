@@ -57,6 +57,11 @@ public sealed class VbNetEdgeTests {
   [TestCase("Public Function F(ByVal n As Integer) As Integer\nDim r As Integer = 0\nDim s As Integer = -1\nIf n > 3 Then s = 2\nFor i As Integer = 0 To 10 Step s\nr += i\nNext\nReturn r\nEnd Function", 7)]
   [TestCase("Public Function F(ByVal n As Integer) As String\nDim e As New ArgumentException(\"bad\")\nDim o As New OverflowException()\nReturn e.Message & CStr(o.Message.Length > 0) & CStr(e.InnerException Is Nothing)\nEnd Function", 7)]
   [TestCase("Public Function F(ByVal n As Integer) As Integer\nDim a(n) As Short\nReDim Preserve a(n + 2)\na(n + 2) += 3S\nReturn a.Length + a(n + 2)\nEnd Function", 7)]
+  [TestCase("Public Function F(ByVal n As Integer) As Double\nDim b As Boolean = n > 3\nIf b = False Then Return -1\nReturn CDbl(b) + CSng(Not b)\nEnd Function", 7)]
+  [TestCase("Public Function F(ByVal n As Integer) As Integer\nSelect Case n\nCase 1\nIf n > 0 Then Exit Select\nReturn 1\nCase 7\nTry\nIf n > 1 Then Exit Select\nCatch ex As OverflowException\nEnd Try\nReturn 2\nCase Else\nReturn 3\nEnd Select\nReturn 4\nEnd Function", 7)]
+  [TestCase("Public Function F(ByVal n As Integer) As Integer\nSelect Case n\nCase 7\nReturn 1\nn = 2\nCase Else\nReturn 3\nEnd Select\nReturn 4\nEnd Function", 7)]
+  [TestCase("Public Function F(ByVal n As Integer) As Integer\nDim r As Integer = 0\nSelect Case CStr(n)\nCase \"7\"\nIf n > 3 Then Exit Select\nr = 5\nCase Else\nr = 6\nEnd Select\nReturn r\nEnd Function", 7)]
+  [TestCase("Public Function F(ByVal n As Integer) As Integer\nDim r As Integer = 0\nTry\nr = 10 \\ (n - 7)\nCatch ex As DivideByZeroException\nr = -1\nFinally\nr += 100\nEnd Try\nReturn r\nEnd Function", 7)]
   public void Construct_ComputesWhatTheCompilerComputes(string members, int argument) => Agrees(Module(members), argument, true);
 
   /// <summary>Under <c>Option Strict Off</c> a compound assignment narrows back implicitly, checked as the compiler checks it.</summary>
@@ -66,6 +71,8 @@ public sealed class VbNetEdgeTests {
   [TestCase("Public Function F(ByVal n As Integer) As Integer\nDim i As Integer = n\ni /= 2\nReturn i\nEnd Function", 7)]
   [TestCase("Public Function F(ByVal n As Integer) As UShort\nDim u As UShort = 3\nu += CSByte(n)\nReturn u\nEnd Function", 7)]
   [TestCase("Public Function F(ByVal n As Integer) As Integer\nDim i As Integer = n\ni = i And 2.5\ni = i Or 1.5F\nReturn i\nEnd Function", 7)]
+  [TestCase("Public Function F(ByVal n As Integer) As Short\nDim s As Short = 1\ns += CUInt(n)\nReturn s\nEnd Function", 7)]
+  [TestCase("Public Function F(ByVal n As Integer) As SByte\nDim s As SByte = 1\ns += CByte(n)\nReturn s\nEnd Function", 7)]
   public void StrictOff_ComputesWhatTheCompilerComputes(string members, int argument) => Agrees(Module(members, "Off"), argument, false);
 
   [TestCase("Public Function F() As String\nReturn String.Concat(\"a\", 1)\nEnd Function", "String.Concat")]
@@ -101,6 +108,13 @@ public sealed class VbNetEdgeTests {
   [TestCase("Public Function F(ByVal x As Exception) As Integer\nDim e As ArgumentException = DirectCast(x, ArgumentException)\nReturn 0\nEnd Function", "conversion from")]
   [TestCase("Public Function F() As Integer\nDim r As Integer\nTry\nr = 1\nCatch ex As Exception When r > 0\nEnd Try\nReturn r\nEnd Function", null)]
   [TestCase("Public Function F() As Integer\nDim ex As Exception = Nothing\nTry\nReturn 1\nCatch ex\nReturn 2\nEnd Try\nEnd Function", "declared elsewhere")]
+  [TestCase("Public Function F() As Integer\nReturn Environment.TickCount\nEnd Function", "the expression")]
+  [TestCase("Public Sub F()\nEnvironment.ExitCode = 1\nEnd Sub", "an assignment to")]
+  [TestCase("Public Sub F(ByRef x As Integer)\nG(x)\nEnd Sub\nPublic Sub G(ByRef y As Integer)\nEnd Sub", "the ByRef parameter 'x'")]
+  [TestCase("Public Structure P\nPublic Property X As Integer\nEnd Structure\nPublic Function F() As Integer\nDim p As New P With {.X = 1}\nReturn 0\nEnd Function", "the initializer")]
+  [TestCase("Public Function F() As Integer\nDim g As Guid = Guid.NewGuid()\nReturn 0\nEnd Function", "Guid")]
+  [TestCase("Public Sub F()\nStop\nEnd Sub", "the statement 'Stop'")]
+  [TestCase("Public Function F() As Integer\nDim xs As New System.Collections.Generic.List(Of Integer)()\nFor Each x As Integer In xs\nGoTo e\nNext\ne:\nReturn 0\nEnd Function", "List")]
   public void Construct_OutsideTheSubset_IsPly2611(string members, string? construct) {
     var imported = VbNetFrontend.Import("M.vb", Module(members));
     if (construct is null) {

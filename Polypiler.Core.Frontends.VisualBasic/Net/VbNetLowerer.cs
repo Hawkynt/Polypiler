@@ -53,13 +53,13 @@ internal sealed partial class VbNetLowerer(string file, VisualBasicCompilation c
       if (type.TypeKind == TypeKind.Structure)
         this._structs[type] = new IrStructType(type.Name);
       else if (type.TypeKind != TypeKind.Enum)
-        this.Refuse(type.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax(), $"the {type.TypeKind.ToString().ToLowerInvariant()} '{type.Name}'");
+        this.Refuse(SyntaxOf(type), $"the {type.TypeKind.ToString().ToLowerInvariant()} '{type.Name}'");
 
     foreach (var (symbol, declaration) in this._structs)
       declaration.Define([.. symbol.GetMembers().OfType<IFieldSymbol>().Where(field => !field.IsStatic && !field.IsImplicitlyDeclared).Select(field => this._fields[field] = new IrField(field.Name, this.Type(field.Type, field), field.IsReadOnly))]);
     foreach (var symbol in this._structs.Keys)
       foreach (var member in symbol.GetMembers().Where(member => !member.IsImplicitlyDeclared && member is not IFieldSymbol { IsStatic: false } && !(member is IMethodSymbol { MethodKind: MethodKind.Constructor, Parameters.Length: 0 })))
-        this.Refuse(member.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax(), $"the member '{member.Name}' of the structure '{symbol.Name}'");
+        this.Refuse(SyntaxOf(member), $"the member '{member.Name}' of the structure '{symbol.Name}'");
 
     var methods = this._module.GetMembers().OfType<IMethodSymbol>().Where(method => method.MethodKind == MethodKind.Ordinary).ToList();
     var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -71,22 +71,23 @@ internal sealed partial class VbNetLowerer(string file, VisualBasicCompilation c
     }
 
     foreach (var member in this._module.GetMembers().Where(member => !member.IsImplicitlyDeclared && member is not IMethodSymbol { MethodKind: MethodKind.Ordinary } and not IFieldSymbol and not INamedTypeSymbol))
-      this.Refuse(member.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax(), $"the member '{member.Name}' of the module");
+      this.Refuse(SyntaxOf(member), $"the member '{member.Name}' of the module");
 
     // A module variable is initialized in the order of the source; an initializer reads the ones before it.
     var globals = new List<IrGlobal>();
     foreach (var field in this._module.GetMembers().OfType<IFieldSymbol>().Where(field => !field.IsConst && !field.IsImplicitlyDeclared)) {
       var type = this.Type(field.Type, field);
       IrExpr? value = null;
-      if (field.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax() is ModifiedIdentifierSyntax { Parent: VariableDeclaratorSyntax declarator } identifier) {
-        this.Begin(null);
-        if (declarator.Initializer is { } initializer && this._model.GetOperation(initializer) is IFieldInitializerOperation operation)
-          value = this.Value(operation.Value);
-        else if (identifier.ArrayBounds is { Arguments: [var bound] } && this._model.GetConstantValue(bound.GetExpression()) is { HasValue: true, Value: int upper } && type.Element is { IsString: false })
-          value = new IrNewArray(type, new IrConst(IrType.I32, upper + 1L));
-        else if (identifier.ArrayBounds is not null)
-          this.Refuse(identifier, "the bounds of a module array that are no constant, or of an array of strings");
-      }
+      // A module variable is declared by a name of a declarator, Dim x As T [= v] or Dim a(n) As T.
+      var identifier = (ModifiedIdentifierSyntax)SyntaxOf(field)!;
+      var declarator = (VariableDeclaratorSyntax)identifier.Parent!;
+      this.Begin(null);
+      if (declarator.Initializer is { } initializer)
+        value = this.Value(((IFieldInitializerOperation)this._model.GetOperation(initializer)!).Value);
+      else if (identifier.ArrayBounds is { Arguments: [var bound] } && this._model.GetConstantValue(bound.GetExpression()) is { HasValue: true, Value: int upper } && type.Element is { IsString: false })
+        value = new IrNewArray(type, new IrConst(IrType.I32, upper + 1L));
+      else if (identifier.ArrayBounds is not null)
+        this.Refuse(identifier, "the bounds of a module array that are no constant, or of an array of strings");
 
       var global = new IrGlobal(field.Name, type, value);
       this._globals[field] = global;
@@ -115,7 +116,7 @@ internal sealed partial class VbNetLowerer(string file, VisualBasicCompilation c
   private IrType Type(ITypeSymbol type, ISymbol? where = null) {
     switch (type) {
       case IArrayTypeSymbol { Rank: 1, ElementType: IArrayTypeSymbol }:
-        this.Refuse(where?.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax(), "an array of arrays");
+        this.Refuse(SyntaxOf(where), "an array of arrays");
         return IrType.Array(IrType.I32);
       case IArrayTypeSymbol { Rank: 1 } array:
         return IrType.Array(this.Type(array.ElementType, where));
@@ -144,7 +145,7 @@ internal sealed partial class VbNetLowerer(string file, VisualBasicCompilation c
         this._caveats.Add(VbNetFrontend.NothingString);
         return IrType.String;
       default:
-        this.Refuse(where?.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax(), $"the type {type.ToDisplayString()}");
+        this.Refuse(SyntaxOf(where), $"the type {type.ToDisplayString()}");
         return IrType.I32;
     }
   }
@@ -164,31 +165,34 @@ internal sealed partial class VbNetLowerer(string file, VisualBasicCompilation c
 
   /// <summary>A procedure, structured; as a state machine where its source has jumps, or its structured lowering meets one it cannot write.</summary>
   private IrFunction Function(IMethodSymbol method) {
-    var syntax = method.DeclaringSyntaxReferences[0].GetSyntax();
-    var block = syntax.Parent as MethodBlockBaseSyntax ?? syntax as MethodBlockBaseSyntax;
+    // An ordinary procedure of a module is declared by the statement that opens its block.
+    var block = (MethodBlockBaseSyntax)SyntaxOf(method)!.Parent!;
     this._wantsJumps = false;
-    var function = this.Function(method, block, block is not null && NeedsJumps(block));
+    var function = this.Function(method, block, NeedsJumps(block));
     return this._wantsJumps ? this.Function(method, block, true) : function;
   }
 
-  private IrFunction Function(IMethodSymbol method, MethodBlockBaseSyntax? block, bool flat) {
+  /// <summary>The syntax that declares a symbol of the file, or <see langword="null"/> for none or one of a library.</summary>
+  private static SyntaxNode? SyntaxOf(ISymbol? symbol) => symbol?.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax();
+
+  private IrFunction Function(IMethodSymbol method, MethodBlockBaseSyntax block, bool flat) {
     this.Begin(method);
     this._flat = flat;
     var parameters = method.Parameters.Select(parameter => this.Local(parameter, parameter.Type)).ToList();
     foreach (var parameter in method.Parameters.Where(parameter => parameter.RefKind != RefKind.None))
-      if (block is not null && this.Assigned(block, parameter))
-        this.Refuse(parameter.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax(), $"the ByRef parameter '{parameter.Name}', which the procedure assigns");
+      if (this.Assigned(block, parameter))
+        this.Refuse(SyntaxOf(parameter), $"the ByRef parameter '{parameter.Name}', which the procedure assigns");
     foreach (var parameter in method.Parameters.Where(parameter => parameter.IsParams))
-      this.Refuse(parameter.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax(), $"the ParamArray parameter '{parameter.Name}'");
+      this.Refuse(SyntaxOf(parameter), $"the ParamArray parameter '{parameter.Name}'");
 
+    // The body ends with the implicit label an Exit of the procedure goes to.
     List<IrStmt> body = [];
-    if (block is not null && this._model.GetOperation(block) is IBlockOperation operation) {
-      this._exit = operation.Descendants().OfType<ILabeledOperation>().LastOrDefault(label => label.IsImplicit)?.Label;
-      if (flat)
-        body = this.Flat(operation);
-      else
-        this.Block(operation, body);
-    }
+    var operation = (IBlockOperation)this._model.GetOperation(block)!;
+    this._exit = operation.Descendants().OfType<ILabeledOperation>().Last(label => label.IsImplicit).Label;
+    if (flat)
+      body = this.Flat(operation);
+    else
+      this.Block(operation, body);
 
     // Every local lives as long as the procedure: declared first, with its default value; one nothing
     // reads - the function's name of a function that ends with Return - is left out with its assignments.
@@ -213,10 +217,10 @@ internal sealed partial class VbNetLowerer(string file, VisualBasicCompilation c
 
   /// <summary>Whether a parameter is assigned or passed on by reference in a procedure.</summary>
   private bool Assigned(MethodBlockBaseSyntax block, IParameterSymbol parameter)
-    => this._model.GetOperation(block)?.Descendants().Any(operation => operation switch {
+    => this._model.GetOperation(block)!.Descendants().Any(operation => operation switch {
       IAssignmentOperation { Target: IParameterReferenceOperation target } => SymbolEqualityComparer.Default.Equals(target.Parameter, parameter),
       IArgumentOperation { Parameter.RefKind: not RefKind.None, Value: IParameterReferenceOperation passed } => SymbolEqualityComparer.Default.Equals(passed.Parameter, parameter),
       _ => false
-    }) == true;
+    });
 
 }

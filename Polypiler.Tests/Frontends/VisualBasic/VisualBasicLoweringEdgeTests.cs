@@ -91,6 +91,33 @@ public sealed class VisualBasicLoweringEdgeTests {
     Assert.That(Run(Import("Public Function F() As Long\n    F = 3000000000 - 2147483647\nEnd Function\n"), "F"), Is.EqualTo("852516353"));
   }
 
+  /// <summary>Each built-in function of the subset by each of its names, with what the interpreter gives for it.</summary>
+  [TestCase("CLngLng(3.5)", "4")]
+  [TestCase("TimeSerial(1, 30, 0) * 48", "3")]
+  [TestCase("Month(DateSerial(2024, 7, 9)) * 100 + Day(DateSerial(2024, 7, 9))", "709")]
+  [TestCase("CLng(Hour(TimeSerial(13, 4, 5))) * 10000 + Minute(TimeSerial(13, 4, 5)) * 100 + Second(TimeSerial(13, 4, 5))", "130405")]
+  [TestCase("Fix(-2.5) + Int(-2.5) + Fix(7)", "2")]
+  [TestCase("Round(7) + Round(2.5)", "9")]
+  [TestCase("Asc(\"A\") + AscW(\"B\")", "131")]
+  [TestCase("Atn(0) + Cos(0) + Sin(0) + Tan(0) + Exp(0) + Log(1) + Sqr(4)", "4")]
+  [TestCase("Len(Right$(\"abc\", 2) & Left$(\"abc\", 1) & Mid$(\"abc\", 2) & Space(2) & String(3, \"x\") & ChrW(65) & Chr$(66))", "12")]
+  [TestCase("InStr(\"abc\", \"c\") + StrComp(\"a\", \"b\") + Sgn(-3) + Abs(-4)", "5")]
+  public void Builtin_ByEachName_IsLowered(string expression, string expected)
+    => Assert.That(IrRun(Import($"Public Function F() As Double\n    F = {expression}\nEnd Function\n")), Is.EqualTo(expected));
+
+  private static System.Collections.Generic.IEnumerable<string> Unsupported() => [
+    "IsMissing(x)", "IsObject(x)", "Format(x)", "UCase(\"a\")", "LCase(\"a\")", "Trim(\"a\")", "LTrim(\"a\")", "RTrim(\"a\")", "Replace(\"a\", \"b\", \"c\")",
+    "Split(\"a\")", "Join(x)", "Now", "Date", "Time", "Timer", "Rnd", "CDec(1)", "StrConv(\"a\", 1)", "StrReverse(\"a\")", "InStrRev(\"a\", \"b\")",
+    "DoEvents", "Environ(\"a\")", "Shell(\"a\")", "CreateObject(\"a\")", "GetObject(\"a\")", "MsgBox(\"a\")", "InputBox(\"a\")", "Error(1)"
+  ];
+
+  /// <summary>Each built-in function of Visual Basic outside the subset is refused by its name.</summary>
+  [TestCaseSource(nameof(Unsupported))]
+  public void Builtin_OutsideTheSubset_IsPly2646(string call) {
+    var name = call.Split('(')[0];
+    Assert.That(Refused($"Public Function F(ByVal x As Variant) As Variant\n    F = {call}\nEnd Function"), Does.Contain("PLY2646").And.Contains(name));
+  }
+
   [Test]
   public void LocalConstants_ErrNumberAssignmentAndDebugPrintOfIntegers() {
     var module = Import("Public Function F() As Long\n    Const K As Integer = 7\n    Const T = \"t\"\n    Err.Number = K\n    Debug.Print K\n    Debug.Print T\n    F = Err.Number + Len(T)\nEnd Function\n");

@@ -54,6 +54,8 @@ public sealed class VbNetJumpTests {
   [TestCase("Public Function F(ByVal n As Integer) As Integer\nOn Error Resume Next\nH()\nIf n = 0 Then Throw New InvalidOperationException()\nReturn Err.Number\nEnd Function\nPrivate Sub H()\nTry\nErr.Raise(1234)\nCatch ex As Exception\nEnd Try\nEnd Sub", 0, 1)]
   [TestCase("Public Function F(ByVal n As Integer) As Integer\nOn Error Resume Next\nG(n)\nReturn Err.Number\nEnd Function\nPrivate Sub G(ByVal n As Integer)\nIf n > 0 Then Resume Next\nEnd Sub", 0, 1)]
   [TestCase("Public Function F(ByVal n As Integer) As Integer\nErr.Clear()\nTry\nIf n = 1 Then zero = Integer.MaxValue + n\nIf n = 2 Then Throw New ArithmeticException()\nzero = 1 \\ (n - n)\nCatch When n > 5\nReturn -1\nCatch ex As ArithmeticException\nReturn Err.Number\nEnd Try\nReturn -2\nEnd Function", 0, 1, 2, 7)]
+  [TestCase("Public Function F(ByVal n As Integer) As Integer\nDim r As Integer = 0\nDo Until r >= n\nr += 3\nIf Not (r < 5) Then GoTo Out\nLoop\nOut:\nReturn r\nEnd Function", 0, 1, 9)]
+  [TestCase("Public Function F(ByVal n As Integer) As Integer\nDim r As Integer = 0\nFor Each c As Char In CStr(n * 37)\nIf c = \"5\"c Then GoTo Found\nr += 1\nNext\nReturn -r\nFound:\nReturn r\nEnd Function", 1, 4)]
   public void Procedure_ComputesWhatTheCompilerComputes(string members, params int[] arguments) {
     var source = Module(members);
     var module = Imported(source);

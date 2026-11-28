@@ -138,6 +138,7 @@ public static class VbNetHelpers {
 
   private static bool IsWide(string type) => type is "Integer" or "UInteger" or "Long" or "ULong";
 
+  /// <summary>The conversion function of an integer type, the only types a helper converts to.</summary>
   private static string Conversion(string type) => type switch {
     "SByte" => "CSByte",
     "Byte" => "CByte",
@@ -146,20 +147,17 @@ public static class VbNetHelpers {
     "Integer" => "CInt",
     "UInteger" => "CUInt",
     "Long" => "CLng",
-    "ULong" => "CULng",
-    "Single" => "CSng",
-    _ => "CDbl"
+    _ => "CULng"
   };
 
-  /// <summary>The literal one of a type.</summary>
+  /// <summary>The literal one of a type a step adds it to: an integer of 32 or 64 bits or a floating-point number.</summary>
   private static VnExpression One(string type) => type switch {
     "Integer" => L("1"),
     "UInteger" => L("1UI"),
     "Long" => L("1L"),
     "ULong" => L("1UL"),
     "Single" => L("1.0F"),
-    "Double" => L("1.0"),
-    _ => L("1")
+    _ => L("1.0")
   };
 
   /// <summary>The helpers a helper calls, by key.</summary>
@@ -173,7 +171,7 @@ public static class VbNetHelpers {
       "PlyStepWrap" => IsWide(type) ? [Wrapping(IrBinaryOp.Add, type), Wrapping(IrBinaryOp.Subtract, type)] : [Bits, Wrap(type)],
       "PlyAddWrap" or "PlySubWrap" or "PlyMulWrap" or "PlyNegWrap" => type switch {
         "Integer" => [Bits, Wrap(type)],
-        "UInteger" => name == "PlyAddWrap" || name == "PlyMulWrap" ? [Wrap(type)] : [Bits, Wrap(type)],
+        "UInteger" => name == "PlySubWrap" ? [Bits, Wrap(type)] : [Wrap(type)],
         "Long" => [Bits, name == "PlyMulWrap" ? MulBits : AddBits, Wrap(type)],
         _ => [name == "PlyMulWrap" ? MulBits : AddBits]
       },
@@ -314,7 +312,7 @@ public static class VbNetHelpers {
       new VnReturn(Call(Conversion(type), N("u"))));
   }
 
-  /// <summary>The wrapping sum, difference, product or negation of a type of 32 or 64 bits, with integer checks on: in a wider type, or in halves.</summary>
+  /// <summary>The wrapping sum, difference or product of a type of 32 or 64 bits, or the negation of a signed one, with integer checks on: in a wider type, or in halves.</summary>
   private static VnMethod WrappingDeclaration(string name, string type) {
     VnExpression a = N("a"), b = N("b");
     var op = name switch { "PlyAddWrap" => "+", "PlySubWrap" => "-", _ => "*" };
@@ -330,12 +328,10 @@ public static class VbNetHelpers {
     VnExpression result = (type, name) switch {
       ("Integer", "PlyNegWrap") => Call(Wrap(type), Call(Bits, new VnUnary("-", Long(a)))),
       ("Integer", _) => Call(Wrap(type), Call(Bits, B(Long(a), op, Long(b)))),
-      ("UInteger", "PlyNegWrap") => Call(Wrap(type), Call(Bits, new VnUnary("-", Long(a)))),
       ("UInteger", "PlySubWrap") => Call(Wrap(type), Call(Bits, B(Long(a), "-", Long(b)))),
       ("UInteger", _) => Call(Wrap(type), B(Unsigned(a), op, Unsigned(b))),
       ("Long", "PlyNegWrap") => Call(Wrap(type), Combined(Call(Bits, a), L("0UL"))),
       ("Long", _) => Call(Wrap(type), Combined(Call(Bits, a), Call(Bits, b))),
-      (_, "PlyNegWrap") => Combined(a, L("0UL")),
       _ => Combined(a, b)
     };
     VnParameter[] parameters = name == "PlyNegWrap" ? [new("a", type, false)] : [new("a", type, false), new("b", type, false)];

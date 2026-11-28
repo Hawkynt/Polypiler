@@ -435,11 +435,10 @@ internal sealed partial class VbNetLowerer {
       case IRangeCaseClauseOperation range:
         return new IrBinary(IrBinaryOp.LogicalAnd, this.Comparison(BinaryOperatorKind.GreaterThanOrEqual, value, this.Value(range.MinimumValue), type, clause.Syntax),
           this.Comparison(BinaryOperatorKind.LessThanOrEqual, value, this.Value(range.MaximumValue), type, clause.Syntax));
-      case IRelationalCaseClauseOperation relation:
-        return this.Comparison(relation.Relation, value, this.Value(relation.Value), type, clause.Syntax);
       default:
-        this.Refuse(clause.Syntax, "the case clause " + clause.Syntax);
-        return new IrConst(IrType.Bool, 0);
+        // Case Is op v, the last kind of clause besides Case Else, which has no test.
+        var relation = (IRelationalCaseClauseOperation)clause;
+        return this.Comparison(relation.Relation, value, this.Value(relation.Value), type, clause.Syntax);
     }
   }
 
@@ -498,7 +497,7 @@ internal sealed partial class VbNetLowerer {
       catches.Add(new IrCatch(type, local, clause.Filter is null ? null : this.Condition(clause.Filter), this.CatchBody(clause, type, local)));
     }
 
-    if (attempt.ExitLabel is { } exit && attempt.Descendants().OfType<IBranchOperation>().Any(branch => SymbolEqualityComparer.Default.Equals(branch.Target, exit)))
+    if (attempt.Descendants().OfType<IBranchOperation>().Any(branch => SymbolEqualityComparer.Default.Equals(branch.Target, attempt.ExitLabel)))
       this.Refuse(attempt.Syntax, "Exit Try");
     statements.Add(new IrTry(this.Body(attempt.Body), catches, attempt.Finally is null ? null : this.Body(attempt.Finally)));
   }

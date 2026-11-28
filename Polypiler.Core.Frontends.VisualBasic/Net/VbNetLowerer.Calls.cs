@@ -18,7 +18,7 @@ internal sealed partial class VbNetLowerer {
 
   /// <summary>The arguments of a call in the order of the parameters, a missing optional one its default.</summary>
   private List<IrExpr> Arguments(IInvocationOperation call)
-    => [.. call.Arguments.OrderBy(argument => argument.Parameter?.Ordinal ?? 0).Select(argument => this.Value(argument.Value))];
+    => [.. call.Arguments.OrderBy(argument => argument.Parameter!.Ordinal).Select(argument => this.Value(argument.Value))];
 
   private IrExpr Invocation(IInvocationOperation call) {
     var method = call.TargetMethod;
@@ -121,8 +121,10 @@ internal sealed partial class VbNetLowerer {
 
       var given = new Dictionary<IrField, IrExpr>(ReferenceEqualityComparer.Instance);
       var order = new List<IrField>();
+      // An initializer of an object sets instance fields, each of which the structure's declaration has.
       foreach (var initializer in creation.Initializer.Initializers) {
-        if (initializer is ISimpleAssignmentOperation { Target: IFieldReferenceOperation field } assignment && this._fields.TryGetValue(field.Field, out var member)) {
+        if (initializer is ISimpleAssignmentOperation { Target: IFieldReferenceOperation field } assignment) {
+          var member = this._fields[field.Field];
           given[member] = this.Value(assignment.Value);
           order.Add(member);
         } else {
@@ -137,7 +139,7 @@ internal sealed partial class VbNetLowerer {
     }
 
     if (type is { IsObject: true, Declaration: IrClassType { IsLibrary: true } library }) {
-      var arguments = creation.Arguments.OrderBy(argument => argument.Parameter?.Ordinal ?? 0).Select(argument => this.Value(argument.Value)).ToList();
+      var arguments = creation.Arguments.OrderBy(argument => argument.Parameter!.Ordinal).Select(argument => this.Value(argument.Value)).ToList();
       if (arguments.Count <= 2) {
         var constructor = IrExceptionClass.Constructor(library, arguments.Count);
         if (IrExceptionClass.Parameters(constructor) is { } parameters && parameters.Zip(arguments).All(pair => pair.Second.Type.IsAssignableTo(pair.First)))
@@ -157,15 +159,10 @@ internal sealed partial class VbNetLowerer {
       return Default(type);
     }
 
-    // New T(n) {} with empty braces is the sized form, every element its default.
-    if (creation.Initializer is { ElementValues.Length: > 0 } initializer) {
-      if (initializer.ElementValues.Any(element => element is IArrayInitializerOperation)) {
-        this.Refuse(creation.Syntax, "a nested array initializer");
-        return Default(type);
-      }
-
+    // New T(n) {} with empty braces is the sized form, every element its default; the braces of one
+    // dimension hold no braces.
+    if (creation.Initializer is { ElementValues.Length: > 0 } initializer)
       return new IrIntrinsic(IrIntrinsicOp.ArrayOf, type, [.. initializer.ElementValues.Select(this.Value)]);
-    }
 
     var size = this.Value(creation.DimensionSizes[0]);
     if (type.Element!.IsString) {
