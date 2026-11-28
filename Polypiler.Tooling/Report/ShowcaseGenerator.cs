@@ -413,16 +413,20 @@ public static partial class ShowcaseGenerator {
   }
 
   /// <summary>
-  /// Builds a comparison key across emitted files while ignoring pure profile-banner metadata lines
-  /// so dialects that emit structurally identical code collapse cleanly under one heading.
+  /// Builds a comparison key across emitted files while ignoring pure profile-banner metadata lines -
+  /// and the edition of a <c>Cargo.toml</c> and the language version of a <c>.vbproj</c>, which name the
+  /// profile again - so dialects that emit structurally identical code collapse cleanly under one heading.
   /// </summary>
-  internal static string StructuralKey(IReadOnlyList<ShowcaseFile> files) {
+  /// <param name="files">The files one dialect emitted.</param>
+  /// <returns>A key equal for two dialects exactly when their files differ in nothing but the profile.</returns>
+  public static string StructuralKey(IReadOnlyList<ShowcaseFile> files) {
     var sb = new StringBuilder();
     foreach (var file in files) {
       sb.Append(file.Path).Append('\0');
       var isCargoToml = file.Path.EndsWith("Cargo.toml", StringComparison.Ordinal);
+      var isVbProject = file.Path.EndsWith(".vbproj", StringComparison.Ordinal);
       foreach (var line in file.Content.Split('\n')) {
-        if (IsProfileBannerLine(line, isCargoToml))
+        if (IsProfileBannerLine(line, isCargoToml) || isVbProject && line.TrimStart().StartsWith("<LangVersion>", StringComparison.Ordinal))
           continue;
         sb.Append(line).Append('\n');
       }
@@ -436,6 +440,7 @@ public static partial class ShowcaseGenerator {
       || line.StartsWith("// JavaScript profile:", StringComparison.Ordinal)
       || line.StartsWith("# Python profile:", StringComparison.Ordinal)
       || line.StartsWith("//! Rust profile:", StringComparison.Ordinal)
+      || line.StartsWith("' Visual Basic profile:", StringComparison.Ordinal)
       || line.StartsWith("// classfile version ", StringComparison.Ordinal))
       return true;
     return isCargoToml && (line.StartsWith("edition = ", StringComparison.Ordinal) || line.StartsWith("rust-version = ", StringComparison.Ordinal));
