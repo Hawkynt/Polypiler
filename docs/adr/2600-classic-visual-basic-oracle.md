@@ -86,6 +86,31 @@ language reference and [MS-VBAL] document.
 | a function `As Long()` | a compile error | allowed since VB6 | **no** |
 | a record assigned from a record parameter passed by reference, then changed | changes the caller's record too (an alias) | a copy | **no** |
 
+### Variant (#1556)
+
+[`tests/fixtures/visualbasic/classic/Variants.bas`](../../tests/fixtures/visualbasic/classic/Variants.bas)
+as written prints [`evidence/2600/Variants.libreoffice-26.8.3.1.txt`](evidence/2600/Variants.libreoffice-26.8.3.1.txt);
+the documented values are `Variants.expected.txt`, which the round trip prints on LibreOffice, since
+the backend writes VBA's rules out as helpers over `VarType` and the conversion functions.
+
+| Probe | LibreOffice | VB6 / VBA | Agrees |
+| --- | --- | --- | --- |
+| the value of `Integer` 32767 + 1, `Long` 2147483647 + 1, `Byte` 0 - 1 in a `Variant` | 32768, 2147483648, -1 | same (promoted) | yes |
+| `TypeName` of those results | `Double` each | `Long`, `Double`, `Integer` | **no** |
+| `TypeName`/`VarType`/`IsEmpty`/`IsNull` of an assigned or an unassigned `Variant` | `Integer 2`, `String 8`, `Boolean 11`, `Null 1`, `Empty 0` | same | yes |
+| `Empty + 1`, `Empty & "a"`, `Empty = 0`, `Empty = ""` | 1, a, True, True | same | yes |
+| `Null + 1`, `Null = 1`, `Null & Null` | `Null` | `Null` | yes |
+| `Null & "a"` | error 13 | `"a"` | **no** |
+| `Null` assigned to an `Integer` | error 13 | error 94 | **no** |
+| `If Null Then` | the `Else` branch | the `Else` branch | yes |
+| `Null And False`, `Null Or True` | `Null`, `Null` | `False`, `True` | **no** |
+| `TypeName(Integer \ 2)` of `Variant`s | `Long` | `Integer` | **no** |
+| `Null \ 0` | error 13 | `Null` | **no** |
+| number below string in a `Variant` comparison (`10 < "9"`) | True | True | yes |
+
+The frontend imports VBA's rules and the backend writes them out, so the round trip agrees with the
+documented column on every row; the fixture as written is compared with LibreOffice's own column.
+
 Beyond the table: a module LibreOffice cannot compile, and a run-time error no handler catches, stop
 the headless office at a dialog; the runner reports `PLY2691` when the run's time limit (60 s) ends.
 

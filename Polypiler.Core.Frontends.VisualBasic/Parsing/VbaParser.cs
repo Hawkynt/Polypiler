@@ -962,7 +962,10 @@ internal static class VbaParser {
         case Kind.Name when token.Is("True") || token.Is("False"):
           ++this._at;
           return new VbaBoolean(token.Is("True"), token.Line);
-        case Kind.Name when token.Is("Nothing") || token.Is("Empty") || token.Is("Null") || token.Is("New"):
+        case Kind.Name when token.Is("Empty") || token.Is("Null"):
+          ++this._at;
+          return token.Is("Empty") ? new VbaEmpty(token.Line) : new VbaNull(token.Line);
+        case Kind.Name when token.Is("Nothing") || token.Is("New"):
           throw new VbaUnsupportedException(token.Line, Canonical(token.Text));
         case Kind.Name when token.Is("Error") || token.Is("Err") || !_reserved.Contains(token.Text):
           ++this._at;

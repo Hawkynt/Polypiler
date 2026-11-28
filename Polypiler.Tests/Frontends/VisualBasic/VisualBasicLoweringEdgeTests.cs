@@ -49,7 +49,7 @@ public sealed class VisualBasicLoweringEdgeTests {
   [TestCase("Private Const C As Long = Len(\"a\")", "PLY2646", "no constant expression")]
   [TestCase("Option Base 2", "PLY2646", "Option Base 2")]
   [TestCase("Public Function F() As Decimal\nEnd Function", "PLY2646", "Decimal")]
-  [TestCase("Public Function F() As Variant\nEnd Function", "PLY2646", "Variant")]
+  [TestCase("Public Function F() As Currency\nEnd Function", "PLY2646", "Currency")]
   [TestCase("Public Function F() As String * 4\nEnd Function", "PLY2646", "String * n")]
   [TestCase("Public Type T\n    A() As Long\nEnd Type", "PLY2646", "array field")]
   [TestCase("Public Sub S()\n    Dim x As Long\n    x = 1 Is 2\nEnd Sub", "PLY2646", "Is")]

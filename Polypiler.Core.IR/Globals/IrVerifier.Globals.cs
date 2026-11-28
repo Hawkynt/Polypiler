@@ -56,7 +56,7 @@ public static partial class IrVerifier {
 
   /// <summary>Whether a node may stand in the initializer of a global.</summary>
   private static bool IsStatic(IrExpr node, HashSet<string> impure) => node switch {
-    IrConst or IrStrConst or IrConstRef or IrGlobalRef or IrUnary or IrBinary or IrConvert or IrConditional or IrNewArray => true,
+    IrConst or IrStrConst or IrConstRef or IrGlobalRef or IrUnary or IrBinary or IrConvert or IrConditional or IrNewArray or IrVariantOf or IrVariantTagOf or IrVariantValue => true,
     IrIntrinsic intrinsic => intrinsic.Op == IrIntrinsicOp.ArrayOf || StringOperations.IsString(intrinsic.Op) || NumberTextOperations.IsNumberText(intrinsic.Op) || EnumOperations.IsEnum(intrinsic.Op)
       || RegexOperations.IsRegex(intrinsic.Op),
     // A new collection, empty or of static elements, observes nothing (#1365).

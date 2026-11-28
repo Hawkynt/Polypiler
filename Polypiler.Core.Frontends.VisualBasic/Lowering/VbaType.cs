@@ -4,7 +4,7 @@ using Polypiler.Core.IR;
 namespace Polypiler.Core.Frontends.VisualBasic.Lowering;
 
 /// <summary>The kinds of value of the subset.</summary>
-internal enum VbaKind { Boolean, Byte, Integer, Long, LongLong, Single, Double, String, Record, Array }
+internal enum VbaKind { Boolean, Byte, Integer, Long, LongLong, Single, Double, String, Record, Array, Variant }
 
 /// <summary>
 /// A type of the subset: a scalar, a user-defined type, or an array of one with its lower bound,
@@ -28,6 +28,11 @@ internal sealed record VbaType(VbaKind Kind, IrStructType? Record = null, VbaTyp
 
   public static VbaType String { get; } = new(VbaKind.String);
 
+  /// <summary>A <c>Variant</c> the inference could not give one type: the IR's dynamic type.</summary>
+  public static VbaType Variant { get; } = new(VbaKind.Variant);
+
+  public bool IsVariant => this.Kind == VbaKind.Variant;
+
   public static VbaType ArrayOf(VbaType element, int lowerBound) => new(VbaKind.Array, null, element, lowerBound);
 
   public bool IsInteger => this.Kind is VbaKind.Byte or VbaKind.Integer or VbaKind.Long or VbaKind.LongLong;
@@ -50,6 +55,7 @@ internal sealed record VbaType(VbaKind Kind, IrStructType? Record = null, VbaTyp
     VbaKind.Double => IrType.F64,
     VbaKind.String => IrType.String,
     VbaKind.Record => IrType.Struct(this.Record!),
+    VbaKind.Variant => IrType.Variant,
     _ => IrType.Array(this.Element!.Ir)
   };
 
@@ -73,5 +79,54 @@ internal sealed record VbaType(VbaKind Kind, IrStructType? Record = null, VbaTyp
 
 }
 
-/// <summary>A lowered expression with its Visual Basic type.</summary>
-internal readonly record struct VbaValue(IrExpr Expr, VbaType Type);
+/// <summary>
+/// The kinds of value a <c>Variant</c> may hold, as the inference collects them: <c>Empty</c>,
+/// <c>Null</c> and one flag per scalar type.
+/// </summary>
+[Flags]
+internal enum VbaTags {
+  None = 0,
+  Empty = 1,
+  Null = 2,
+  Boolean = 4,
+  Byte = 8,
+  Integer = 16,
+  Long = 32,
+  LongLong = 64,
+  Single = 128,
+  Double = 256,
+  String = 512,
+
+  /// <summary>The numbers and <c>Boolean</c>, on which arithmetic works.</summary>
+  Numeric = Boolean | Byte | Integer | Long | Single | Double,
+
+  /// <summary>The integers and <c>Boolean</c>, whose arithmetic promotes on overflow.</summary>
+  Integral = Boolean | Byte | Integer | Long,
+
+  /// <summary>The floating-point numbers, whose text Visual Basic writes by the locale.</summary>
+  Float = Single | Double,
+
+  /// <summary>Whatever a value from outside the procedure may hold: a parameter, a call's result, a module variable.</summary>
+  Any = Empty | Null | Numeric | String
+}
+
+/// <summary>
+/// A lowered expression with its Visual Basic type. A value of a <c>Variant</c> - a dynamic one, of
+/// the type <see cref="VbaType.Variant"/>, or one the inference gave a fixed type - carries the kinds
+/// it may hold in <see cref="Tags"/>, and its arithmetic follows the rules of <c>Variant</c>s.
+/// </summary>
+internal readonly record struct VbaValue(IrExpr Expr, VbaType Type) {
+
+  /// <summary>The kinds the value may hold when it is one of a <c>Variant</c>; <see cref="VbaTags.None"/> for a typed value.</summary>
+  public VbaTags Tags { get; init; }
+
+  /// <summary>Whether the value is one of a <c>Variant</c>: its arithmetic promotes, its type is that of its tag.</summary>
+  public bool IsVariant => this.Tags != VbaTags.None || this.Type.IsVariant;
+
+  /// <summary>
+  /// For the result of one arithmetic operation of <c>Variant</c>s computed exactly as a <c>Double</c>:
+  /// the type it promotes from, which with the value gives its tag. <see langword="null"/> for every other value.
+  /// </summary>
+  public VbaType? Promoted { get; init; }
+
+}

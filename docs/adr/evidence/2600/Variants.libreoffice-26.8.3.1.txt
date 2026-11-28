@@ -1,0 +1,30 @@
+42
+Double 32768
+40000
+Double -1
+2147483648
+Integer 2
+String 8
+Boolean 11
+Null 1
+Empty 0
+Empty True 1 a True True Double
+True True True Null
+!13
+else
+!13
+Null Null Null Null
+Double 165
+123457
+False True
+True True
+Long|3|1
+Long|32768|0
+!13
+5
+5
+Integer
+String
+Empty
+Double
+Null

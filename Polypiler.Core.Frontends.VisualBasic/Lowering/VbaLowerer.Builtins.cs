@@ -124,7 +124,7 @@ internal sealed partial class VbaLowerer {
     if (this._helperProcedures is not null)
       return;
 
-    var parsed = VbaParser.Parse(HelperSource);
+    var parsed = VbaParser.Parse(HelperSource + "\n" + VariantHelperSource);
     this._helperProcedures = parsed.Declarations.Cast<VbaProcedure>().ToDictionary(procedure => procedure.Name, StringComparer.Ordinal);
     foreach (var procedure in this._helperProcedures.Values)
       this._helperSignatures[procedure.Name] = this.SignatureOf(procedure) with { IsPublic = false };
@@ -173,7 +173,13 @@ internal sealed partial class VbaLowerer {
   /// </summary>
   private VbaValue? Builtin(string name, IReadOnlyList<VbaExpr> arguments, int line) {
     var key = name.TrimEnd('$').ToLowerInvariant();
-    VbaValue Argument(int index) => index < arguments.Count ? this.Expression(arguments[index]) : throw this.Unresolved(line, $"{name} needs {index + 1} arguments");
+    // A Variant takes part only in the built-in functions that convert or look at one.
+    var aware = key is "cbool" or "cbyte" or "cint" or "clng" or "clnglng" or "csng" or "cdbl" or "cstr" or "iif" or "isempty" or "isnull" or "vartype" or "typename" or "isnumeric" or "cvar"
+      || key.StartsWith("plyir", StringComparison.Ordinal);
+    VbaValue Argument(int index) {
+      var value = index < arguments.Count ? this.Expression(arguments[index]) : throw this.Unresolved(line, $"{name} needs {index + 1} arguments");
+      return value.Type.IsVariant && !aware ? throw this.Unsupported(line, $"{name} of a Variant") : value;
+    }
     void Arity(params int[] counts) {
       if (!counts.Contains(arguments.Count))
         throw this.Unresolved(line, $"{name} takes {string.Join(" or ", counts)} arguments, not {arguments.Count}");
@@ -205,6 +211,11 @@ internal sealed partial class VbaLowerer {
 
     if (this._raw && key.StartsWith("plyir", StringComparison.Ordinal))
       return this.Primitive(key, arguments, line);
+
+    if (key is "isempty" or "isnull" or "vartype" or "typename" or "isnumeric" or "cvar") {
+      Arity(1);
+      return this.VariantBuiltin(key, Argument, line);
+    }
 
     switch (key) {
       case "cbool":
@@ -328,11 +339,12 @@ internal sealed partial class VbaLowerer {
         var condition = this.Condition(arguments[0]);
         var yes = Argument(1);
         var no = Argument(2);
-        var type = yes.Type == no.Type ? yes.Type : yes.Type.IsNumeric && no.Type.IsNumeric ? Promote(yes.Type, no.Type) : throw this.Mismatch(line, name, no.Type);
+        var type = yes.Type == no.Type ? yes.Type : yes.Type.IsVariant || no.Type.IsVariant ? VbaType.Variant
+          : yes.Type.IsNumeric && no.Type.IsNumeric ? Promote(yes.Type, no.Type) : throw this.Mismatch(line, name, no.Type);
         // IIf evaluates both values before it chooses.
         var whenTrue = Pure(yes.Expr) ? this.Coerce(yes, type, line) : new IrLocalRef(this.Temporary(type.Ir, this.Coerce(yes, type, line)));
         var whenFalse = Pure(no.Expr) ? this.Coerce(no, type, line) : new IrLocalRef(this.Temporary(type.Ir, this.Coerce(no, type, line)));
-        return new(new IrConditional(condition, whenTrue, whenFalse), type);
+        return new(new IrConditional(condition, whenTrue, whenFalse), type) { Tags = type.IsVariant ? TagsOf(yes) | TagsOf(no) : VbaTags.None };
       case "hex":
         Arity(1);
         var number = Argument(0);
@@ -341,8 +353,8 @@ internal sealed partial class VbaLowerer {
         var digits = number.Type.Kind switch { VbaKind.Byte or VbaKind.Integer => number.Type.Kind == VbaKind.Byte ? IrType.U8 : IrType.I16, _ => number.Expr.Type };
         var bits = digits == IrType.I16 ? new IrConvert(IrType.U16, number.Expr) : number.Expr;
         return new(new IrIntrinsic(IrIntrinsicOp.FormatRadix, IrType.String, [bits, I32(16), I32(1), new IrConst(IrType.Bool, 1), I32((int)RadixMode.TwoComplement)]), VbaType.String);
-      case "isnumeric" or "isarray" or "isempty" or "isnull" or "ismissing" or "isobject" or "typename" or "vartype" or "val" or "format" or "ucase" or "lcase"
-        or "trim" or "ltrim" or "rtrim" or "replace" or "split" or "join" or "array" or "now" or "date" or "time" or "timer" or "rnd" or "ccur" or "cdec" or "cdate" or "cvar"
+      case "isarray" or "ismissing" or "isobject" or "val" or "format" or "ucase" or "lcase"
+        or "trim" or "ltrim" or "rtrim" or "replace" or "split" or "join" or "array" or "now" or "date" or "time" or "timer" or "rnd" or "ccur" or "cdec" or "cdate"
         or "strconv" or "strreverse" or "instrrev" or "doevents" or "environ" or "shell" or "createobject" or "getobject" or "msgbox" or "inputbox" or "error":
         throw this.Unsupported(line, name);
       default:
@@ -353,6 +365,8 @@ internal sealed partial class VbaLowerer {
   /// <summary>An operation of the IR as a helper names it: <c>PlyIrSubstring</c>, <c>PlyIrIndexOf</c>, <c>PlyIrCodeUnit</c>, <c>PlyIrFromCodeUnit</c>, <c>PlyIrRepeat</c>, <c>PlyIrPow</c>, <c>PlyIrSqrt</c>, <c>PlyIrLog</c>, <c>PlyIrExp</c>.</summary>
   private VbaValue Primitive(string key, IReadOnlyList<VbaExpr> arguments, int line) {
     var values = arguments.Select(this.Expression).ToList();
+    if (VariantPrimitive(key, values[0].Expr) is { } variant)
+      return variant;
     IrExpr Long(int index) => this.Coerce(values[index], VbaType.Long, line);
     IrExpr Double(int index) => this.Coerce(values[index], VbaType.Double, line);
     return key switch {
