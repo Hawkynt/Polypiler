@@ -37,7 +37,7 @@ internal sealed partial class VbNetLowerer {
         return Op(method.Name == "Min" ? IrIntrinsicOp.Min : IrIntrinsicOp.Max, type, arguments[0], arguments[1]);
       case ("System.Math", "Round", 1) when first.IsFloat:
         return Op(IrIntrinsicOp.RoundEven, type, arguments[0]);
-      case ("System.Math", "Round", 2) when first.IsFloat && call.Arguments.Last().Value.ConstantValue is { HasValue: true, Value: int mode } && mode is 0 or 1:
+      case ("System.Math", "Round", 2) when first.IsFloat && method.Parameters[1].Type.Name == "MidpointRounding" && call.Arguments.Last().Value.ConstantValue is { HasValue: true, Value: int mode } && mode is 0 or 1:
         return Op(mode == 0 ? IrIntrinsicOp.RoundEven : IrIntrinsicOp.RoundAway, type, arguments[0]);
       case ("System.Math", "Pow" or "Atan2", 2):
         return Op(method.Name == "Pow" ? IrIntrinsicOp.Pow : IrIntrinsicOp.Atan2, type, arguments[0], arguments[1]);
@@ -47,7 +47,7 @@ internal sealed partial class VbNetLowerer {
         return Op(op, type, arguments[0]);
       case ("Microsoft.VisualBasic.Strings", "Len", 1) when first.IsString:
         return Op(IrIntrinsicOp.StrLength, IrType.I32, arguments[0]);
-      case ("Microsoft.VisualBasic.Strings", "AscW", 1) when call.Arguments[0].Value.Type?.SpecialType == SpecialType.System_Char:
+      case ("Microsoft.VisualBasic.Strings", "AscW", 1) when call.Arguments[0].Value.Type!.SpecialType == SpecialType.System_Char:
         return new IrConvert(IrType.I32, arguments[0]);
       case ("Microsoft.VisualBasic.Strings", "AscW", 1) when first.IsString:
         return new IrConvert(IrType.I32, Op(IrIntrinsicOp.StrCodeUnitAt, IrType.U16, arguments[0], new IrConst(IrType.I32, 0)));
