@@ -406,6 +406,30 @@ Both directions use one table:
   ends with `Resume Next` are a try around every following statement; `Err.Raise` and `Error` of 5, 6,
   9, 11, 13 or 91 throw the class of the number; any other number is refused with `PLY2646`.
 
+### Visual Basic .NET
+
+Visual Basic .NET has the exceptions of .NET: the frontend and the backend of the `vbnet` profiles map
+`Try`/`Catch … When`/`Finally`, `Throw` and `Throw` alone to the IR one to one, the classes being
+.NET's own ([backend](../architecture/VISUALBASIC-BACKEND.md#visual-basic-net),
+[frontend](../architecture/VISUALBASIC-FRONTEND.md#visual-basic-net)). An integer overflow is an
+`OverflowException` unless integer checks are removed; `\` and `Mod` by zero a `DivideByZeroException`.
+The dialect also keeps `Err`: `ErrProbe.vb` records, on the compiler and runtime of `dotnet-sdk`, the
+table of the dialect `vbnet` (`tests/fixtures/visualbasic/vbnet/ErrProbe.expected.txt`):
+
+| Exception | `Err.Number` |
+| --- | --- |
+| `DivideByZeroException` | 11 |
+| `OverflowException` | 6 |
+| `IndexOutOfRangeException` | 9 |
+| `InvalidCastException` | 13 |
+| `NullReferenceException` | 91 |
+| any other, such as `InvalidOperationException` | 5 |
+| `Err.Raise(n)` | n |
+
+`Err` keeps its number after a later statement that succeeds; `Err.Clear`, `Resume Next` and an
+executed `On Error` clear it; a `Catch` sets it to the number of the exception caught. The frontend
+refuses `On Error` and `Err` (`PLY2611`).
+
 ## Known differences
 
 - Visual Basic raises error 6 or 11 for a floating-point operation whose IEEE 754 result is an infinity

@@ -1,0 +1,38 @@
+id: LANGUAGES.visualbasic.vbnet-vb16.9
+title: Visual Basic 16.9 (Visual Basic .NET)
+version: 1
+status: draft
+owner: Hawkynt
+issue: "#1083"
+tests: []
+introducedIn: P5
+compatibility: none
+reviewedRevision: 0
+normative: ""
+spec:
+  kind: profile
+  language: LANGUAGES.visualbasic
+  languageVersion: Visual Basic 16.9
+  toolchain: dotnet-sdk
+  evaluationOrder: left-to-right
+  integerOverflow: {signed: trap, unsigned: trap}
+  divisionRounding: truncate
+  remainderSign: dividend
+  shiftAmount: masked
+  stringEncoding: utf-16
+  exceptions: structured
+  memoryModel: managed
+  defaultRuntime: dotnet-sdk
+  constructs:
+    - {construct: "SByte, Byte, Short, UShort, Integer, UInteger, Long, ULong, Single, Double, Boolean, Char, String", family: scalars, state: supported}
+    - {construct: "checked integer arithmetic and conversions (OverflowException), or wrapping under /removeintchecks; CInt rounding half to even; True as -1", family: scalars, state: supported}
+    - {construct: "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings", family: scalars, state: diagnosed, diagnostic: PLY2611}
+    - {construct: "If, Select Case with values, ranges and Is, For with Step, For Each over arrays and strings, Do, While, Exit, Continue", family: control, state: supported}
+    - {construct: "Try, Catch with When, Finally, Throw, rethrow", family: control, state: supported}
+    - {construct: "GoTo, On Error, Exit Try, Exit or Continue of an outer loop", family: control, state: diagnosed, diagnostic: PLY2611}
+    - {construct: "arrays by upper bound, ReDim, ReDim Preserve, array literals", family: memory, state: supported}
+    - {construct: "arrays of several dimensions, arrays of arrays", family: memory, state: diagnosed, diagnostic: PLY2611}
+    - {construct: "Function and Sub, ByVal, unassigned ByRef, Optional with a default", family: functions, state: supported}
+    - {construct: "ByRef parameters that are assigned, ParamArray, Property", family: functions, state: diagnosed, diagnostic: PLY2611}
+    - {construct: "Structure of fields, Enum, Const, module variables", family: types, state: supported}
+    - {construct: "Class, Interface, a Structure with members of its own", family: types, state: diagnosed, diagnostic: PLY2611}

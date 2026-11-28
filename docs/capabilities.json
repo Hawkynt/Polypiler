@@ -3699,6 +3699,4346 @@
       "fixtures": 0,
       "evidence": null,
       "limitations": []
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb10",
+      "to": "csharp",
+      "targetProfile": "net10.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb10",
+      "to": "csharp",
+      "targetProfile": "net2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb10",
+      "to": "csharp",
+      "targetProfile": "net3.5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb10",
+      "to": "csharp",
+      "targetProfile": "net4.6",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb10",
+      "to": "csharp",
+      "targetProfile": "net4.8",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb10",
+      "to": "csharp",
+      "targetProfile": "net8.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb10",
+      "to": "csharp",
+      "targetProfile": "netcoreapp3.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb10",
+      "to": "csharp",
+      "targetProfile": "netstandard2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb10",
+      "to": "csharp",
+      "targetProfile": "netstandard2.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb10",
+      "to": "javascript",
+      "targetProfile": "es2015",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb10",
+      "to": "javascript",
+      "targetProfile": "es2017",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb10",
+      "to": "javascript",
+      "targetProfile": "es2020",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb10",
+      "to": "javascript",
+      "targetProfile": "es2022",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb10",
+      "to": "javascript",
+      "targetProfile": "es5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb11",
+      "to": "csharp",
+      "targetProfile": "net10.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb11",
+      "to": "csharp",
+      "targetProfile": "net2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb11",
+      "to": "csharp",
+      "targetProfile": "net3.5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb11",
+      "to": "csharp",
+      "targetProfile": "net4.6",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb11",
+      "to": "csharp",
+      "targetProfile": "net4.8",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb11",
+      "to": "csharp",
+      "targetProfile": "net8.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb11",
+      "to": "csharp",
+      "targetProfile": "netcoreapp3.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb11",
+      "to": "csharp",
+      "targetProfile": "netstandard2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb11",
+      "to": "csharp",
+      "targetProfile": "netstandard2.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb11",
+      "to": "javascript",
+      "targetProfile": "es2015",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb11",
+      "to": "javascript",
+      "targetProfile": "es2017",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb11",
+      "to": "javascript",
+      "targetProfile": "es2020",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb11",
+      "to": "javascript",
+      "targetProfile": "es2022",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb11",
+      "to": "javascript",
+      "targetProfile": "es5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb12",
+      "to": "csharp",
+      "targetProfile": "net10.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb12",
+      "to": "csharp",
+      "targetProfile": "net2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb12",
+      "to": "csharp",
+      "targetProfile": "net3.5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb12",
+      "to": "csharp",
+      "targetProfile": "net4.6",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb12",
+      "to": "csharp",
+      "targetProfile": "net4.8",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb12",
+      "to": "csharp",
+      "targetProfile": "net8.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb12",
+      "to": "csharp",
+      "targetProfile": "netcoreapp3.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb12",
+      "to": "csharp",
+      "targetProfile": "netstandard2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb12",
+      "to": "csharp",
+      "targetProfile": "netstandard2.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb12",
+      "to": "javascript",
+      "targetProfile": "es2015",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb12",
+      "to": "javascript",
+      "targetProfile": "es2017",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb12",
+      "to": "javascript",
+      "targetProfile": "es2020",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb12",
+      "to": "javascript",
+      "targetProfile": "es2022",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb12",
+      "to": "javascript",
+      "targetProfile": "es5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb14",
+      "to": "csharp",
+      "targetProfile": "net10.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb14",
+      "to": "csharp",
+      "targetProfile": "net2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb14",
+      "to": "csharp",
+      "targetProfile": "net3.5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb14",
+      "to": "csharp",
+      "targetProfile": "net4.6",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb14",
+      "to": "csharp",
+      "targetProfile": "net4.8",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb14",
+      "to": "csharp",
+      "targetProfile": "net8.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb14",
+      "to": "csharp",
+      "targetProfile": "netcoreapp3.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb14",
+      "to": "csharp",
+      "targetProfile": "netstandard2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb14",
+      "to": "csharp",
+      "targetProfile": "netstandard2.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb14",
+      "to": "javascript",
+      "targetProfile": "es2015",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb14",
+      "to": "javascript",
+      "targetProfile": "es2017",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb14",
+      "to": "javascript",
+      "targetProfile": "es2020",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb14",
+      "to": "javascript",
+      "targetProfile": "es2022",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb14",
+      "to": "javascript",
+      "targetProfile": "es5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15",
+      "to": "csharp",
+      "targetProfile": "net10.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15",
+      "to": "csharp",
+      "targetProfile": "net2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15",
+      "to": "csharp",
+      "targetProfile": "net3.5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15",
+      "to": "csharp",
+      "targetProfile": "net4.6",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15",
+      "to": "csharp",
+      "targetProfile": "net4.8",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15",
+      "to": "csharp",
+      "targetProfile": "net8.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15",
+      "to": "csharp",
+      "targetProfile": "netcoreapp3.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15",
+      "to": "csharp",
+      "targetProfile": "netstandard2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15",
+      "to": "csharp",
+      "targetProfile": "netstandard2.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15",
+      "to": "javascript",
+      "targetProfile": "es2015",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15",
+      "to": "javascript",
+      "targetProfile": "es2017",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15",
+      "to": "javascript",
+      "targetProfile": "es2020",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15",
+      "to": "javascript",
+      "targetProfile": "es2022",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15",
+      "to": "javascript",
+      "targetProfile": "es5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15.3",
+      "to": "csharp",
+      "targetProfile": "net10.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15.3",
+      "to": "csharp",
+      "targetProfile": "net2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15.3",
+      "to": "csharp",
+      "targetProfile": "net3.5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15.3",
+      "to": "csharp",
+      "targetProfile": "net4.6",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15.3",
+      "to": "csharp",
+      "targetProfile": "net4.8",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15.3",
+      "to": "csharp",
+      "targetProfile": "net8.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15.3",
+      "to": "csharp",
+      "targetProfile": "netcoreapp3.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15.3",
+      "to": "csharp",
+      "targetProfile": "netstandard2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15.3",
+      "to": "csharp",
+      "targetProfile": "netstandard2.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15.3",
+      "to": "javascript",
+      "targetProfile": "es2015",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15.3",
+      "to": "javascript",
+      "targetProfile": "es2017",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15.3",
+      "to": "javascript",
+      "targetProfile": "es2020",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15.3",
+      "to": "javascript",
+      "targetProfile": "es2022",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15.3",
+      "to": "javascript",
+      "targetProfile": "es5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15.5",
+      "to": "csharp",
+      "targetProfile": "net10.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15.5",
+      "to": "csharp",
+      "targetProfile": "net2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15.5",
+      "to": "csharp",
+      "targetProfile": "net3.5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15.5",
+      "to": "csharp",
+      "targetProfile": "net4.6",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15.5",
+      "to": "csharp",
+      "targetProfile": "net4.8",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15.5",
+      "to": "csharp",
+      "targetProfile": "net8.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15.5",
+      "to": "csharp",
+      "targetProfile": "netcoreapp3.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15.5",
+      "to": "csharp",
+      "targetProfile": "netstandard2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15.5",
+      "to": "csharp",
+      "targetProfile": "netstandard2.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15.5",
+      "to": "javascript",
+      "targetProfile": "es2015",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15.5",
+      "to": "javascript",
+      "targetProfile": "es2017",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15.5",
+      "to": "javascript",
+      "targetProfile": "es2020",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15.5",
+      "to": "javascript",
+      "targetProfile": "es2022",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb15.5",
+      "to": "javascript",
+      "targetProfile": "es5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb16",
+      "to": "csharp",
+      "targetProfile": "net10.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb16",
+      "to": "csharp",
+      "targetProfile": "net2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb16",
+      "to": "csharp",
+      "targetProfile": "net3.5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb16",
+      "to": "csharp",
+      "targetProfile": "net4.6",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb16",
+      "to": "csharp",
+      "targetProfile": "net4.8",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb16",
+      "to": "csharp",
+      "targetProfile": "net8.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb16",
+      "to": "csharp",
+      "targetProfile": "netcoreapp3.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb16",
+      "to": "csharp",
+      "targetProfile": "netstandard2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb16",
+      "to": "csharp",
+      "targetProfile": "netstandard2.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb16",
+      "to": "javascript",
+      "targetProfile": "es2015",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb16",
+      "to": "javascript",
+      "targetProfile": "es2017",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb16",
+      "to": "javascript",
+      "targetProfile": "es2020",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb16",
+      "to": "javascript",
+      "targetProfile": "es2022",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb16",
+      "to": "javascript",
+      "targetProfile": "es5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb16.9",
+      "to": "csharp",
+      "targetProfile": "net10.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb16.9",
+      "to": "csharp",
+      "targetProfile": "net2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb16.9",
+      "to": "csharp",
+      "targetProfile": "net3.5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb16.9",
+      "to": "csharp",
+      "targetProfile": "net4.6",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb16.9",
+      "to": "csharp",
+      "targetProfile": "net4.8",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb16.9",
+      "to": "csharp",
+      "targetProfile": "net8.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb16.9",
+      "to": "csharp",
+      "targetProfile": "netcoreapp3.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb16.9",
+      "to": "csharp",
+      "targetProfile": "netstandard2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb16.9",
+      "to": "csharp",
+      "targetProfile": "netstandard2.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb16.9",
+      "to": "javascript",
+      "targetProfile": "es2015",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb16.9",
+      "to": "javascript",
+      "targetProfile": "es2017",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb16.9",
+      "to": "javascript",
+      "targetProfile": "es2020",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb16.9",
+      "to": "javascript",
+      "targetProfile": "es2022",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb16.9",
+      "to": "javascript",
+      "targetProfile": "es5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb9",
+      "to": "csharp",
+      "targetProfile": "net10.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb9",
+      "to": "csharp",
+      "targetProfile": "net2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb9",
+      "to": "csharp",
+      "targetProfile": "net3.5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb9",
+      "to": "csharp",
+      "targetProfile": "net4.6",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb9",
+      "to": "csharp",
+      "targetProfile": "net4.8",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb9",
+      "to": "csharp",
+      "targetProfile": "net8.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb9",
+      "to": "csharp",
+      "targetProfile": "netcoreapp3.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb9",
+      "to": "csharp",
+      "targetProfile": "netstandard2.0",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb9",
+      "to": "csharp",
+      "targetProfile": "netstandard2.1",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb9",
+      "to": "javascript",
+      "targetProfile": "es2015",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb9",
+      "to": "javascript",
+      "targetProfile": "es2017",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb9",
+      "to": "javascript",
+      "targetProfile": "es2020",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb9",
+      "to": "javascript",
+      "targetProfile": "es2022",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
+    },
+    {
+      "from": "visualbasic",
+      "sourceProfile": "vbnet-vb9",
+      "to": "javascript",
+      "targetProfile": "es5",
+      "state": "planned",
+      "fixtures": 0,
+      "evidence": null,
+      "limitations": [
+        {
+          "construct": "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "GoTo, On Error, Exit Try, Exit or Continue of an outer loop",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "arrays of several dimensions, arrays of arrays",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "ByRef parameters that are assigned, ParamArray, Property",
+          "diagnostic": "PLY2611"
+        },
+        {
+          "construct": "Class, Interface, a Structure with members of its own",
+          "diagnostic": "PLY2611"
+        }
+      ]
     }
   ]
 }

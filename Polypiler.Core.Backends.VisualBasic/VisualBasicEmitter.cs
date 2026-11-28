@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using Polypiler.Core.Backends.VisualBasic.Net;
 using Polypiler.Core.Backends.VisualBasic.Passes;
 using Polypiler.Core.Backends.VisualBasic.Printing;
 using Polypiler.Core.Backends.VisualBasic.Syntax;
@@ -60,6 +62,17 @@ public static partial class VisualBasicEmitter {
   /// <summary>The runtime the header names for the floating-point record, as <c>tooling/toolchains.lock</c> keys the oracle that runs the output.</summary>
   public const string Runtime = "libreoffice";
 
+  /// <summary>The runtime of a Visual Basic .NET profile, as <c>tooling/toolchains.lock</c> keys the SDK whose compiler and runtime run the output.</summary>
+  public const string NetRuntime = "dotnet-sdk";
+
+  /// <summary>The runtime of a profile: LibreOffice Basic for a classic dialect, the .NET SDK for Visual Basic .NET.</summary>
+  /// <param name="profile">The profile.</param>
+  /// <returns>The toolchain key.</returns>
+  public static string RuntimeOf(VisualBasicProfile profile) {
+    ArgumentNullException.ThrowIfNull(profile);
+    return profile.IsNet ? NetRuntime : Runtime;
+  }
+
   /// <summary>The run-time error number Visual Basic raises for each trap of the IR; any other trap raises 5.</summary>
   public static IReadOnlyDictionary<IrTrap, int> ErrorNumbers { get; } = new Dictionary<IrTrap, int> {
     [IrTrap.IntegerOverflow] = 6,
@@ -73,7 +86,8 @@ public static partial class VisualBasicEmitter {
 
   /// <summary>Every fixed helper of the backend a module can carry, by its name, with its licence and origin.</summary>
   public static IReadOnlyDictionary<string, (string Licence, string Origin)> HelperOrigins { get; }
-    = VisualBasicHelpers.Order.ToDictionary(name => name, _ => (EmittedHelper.OwnLicence, EmittedHelper.OriginOf(VisualBasicHelpers.Folder)), StringComparer.Ordinal);
+    = VisualBasicHelpers.Order.Concat(VbNetHelpers.Order).Distinct(StringComparer.Ordinal)
+      .ToDictionary(name => name, _ => (EmittedHelper.OwnLicence, EmittedHelper.OriginOf(VisualBasicHelpers.Folder)), StringComparer.Ordinal);
 
   /// <summary>The name of the file a module is written to: <c>&lt;module&gt;.bas</c>.</summary>
   /// <param name="module">The module.</param>
@@ -81,6 +95,38 @@ public static partial class VisualBasicEmitter {
   public static string FileName(IrModule module) {
     ArgumentNullException.ThrowIfNull(module);
     return VisualBasicNaming.Module(module.Name) + ".bas";
+  }
+
+  /// <summary>The name of the source file of a module in Visual Basic .NET: <c>&lt;module&gt;.vb</c>.</summary>
+  /// <param name="module">The module.</param>
+  /// <returns>The file name.</returns>
+  public static string NetFileName(IrModule module) {
+    ArgumentNullException.ThrowIfNull(module);
+    return VbNetNaming.Valid(module.Name, "Module") + ".vb";
+  }
+
+  /// <summary>
+  /// The project file of a module in Visual Basic .NET, <c>&lt;module&gt;.vbproj</c>: a library for the
+  /// profile's framework and language version, every option of the file stated, warnings errors, and
+  /// <c>RemoveIntegerChecks</c>, which the generated code needs for its wrapping arithmetic; for .NET
+  /// Standard the core of the Visual Basic runtime embedded, as that framework has none.
+  /// </summary>
+  /// <param name="profile">A Visual Basic .NET profile.</param>
+  /// <returns>The text of the project file.</returns>
+  /// <exception cref="ArgumentException">The profile is a classic one.</exception>
+  public static string ProjectFile(VisualBasicProfile profile) {
+    ArgumentNullException.ThrowIfNull(profile);
+    if (!profile.IsNet)
+      throw new ArgumentException($"The profile '{profile.Name}' is no Visual Basic .NET profile.", nameof(profile));
+
+    return "<Project Sdk=\"Microsoft.NET.Sdk\">\n\n  <PropertyGroup>\n"
+      + $"    <TargetFramework>{profile.Framework!.Moniker}</TargetFramework>\n    <LangVersion>{profile.LanguageVersion}</LangVersion>\n"
+      + "    <RootNamespace></RootNamespace>\n    <OptionExplicit>On</OptionExplicit>\n    <OptionStrict>On</OptionStrict>\n    <OptionInfer>On</OptionInfer>\n"
+      + "    <OptionCompare>Binary</OptionCompare>\n    <RemoveIntegerChecks>true</RemoveIntegerChecks>\n    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>\n"
+      + "    <Deterministic>true</Deterministic>\n"
+      // .NET Standard has no Visual Basic runtime, which a module's attribute needs: the compiler embeds its core.
+      + (profile.Framework.Name.StartsWith("netstandard", StringComparison.Ordinal) ? "    <VBRuntime>Embed</VBRuntime>\n" : "")
+      + "  </PropertyGroup>\n\n</Project>\n";
   }
 
   /// <summary>Emits a module for the default profile, printed as built.</summary>
@@ -108,9 +154,57 @@ public static partial class VisualBasicEmitter {
   /// <exception cref="ArgumentException">The module is ill-typed or cannot be written as Visual Basic.</exception>
   public static TargetEmission Emit(IrModule module, VisualBasicProfile profile, FloatMode mode, VisualBasicCapabilities? capabilities, TargetPassOptions passes) {
     ArgumentNullException.ThrowIfNull(module);
+    ArgumentNullException.ThrowIfNull(profile);
+    if (profile.IsNet)
+      return new(EmitNet(module, profile, mode, null), []);
+
     var (result, helpers) = Built(module, profile, mode, capabilities, passes);
     var text = VbPrinter.Print(result.Tree);
     return new([new GeneratedFile(FileName(module), text) { Helpers = Measured(result.Tree, helpers, text) }], result.Applications);
+  }
+
+  /// <summary>
+  /// Emits a module as Visual Basic .NET: the source file <c>&lt;module&gt;.vb</c> of one <c>Module</c>
+  /// and the project file <c>&lt;module&gt;.vbproj</c> that compiles it.
+  /// </summary>
+  /// <param name="module">A legalized module that <see cref="Check"/> accepts.</param>
+  /// <param name="profile">A Visual Basic .NET profile.</param>
+  /// <param name="mode">The floating-point mode the header records.</param>
+  /// <param name="capabilities">The table the constructs are chosen from; the standard one when <see langword="null"/>.</param>
+  /// <returns>The two files.</returns>
+  /// <exception cref="ArgumentException">The module is ill-typed or cannot be written as Visual Basic .NET.</exception>
+  public static IReadOnlyList<GeneratedFile> EmitNet(IrModule module, VisualBasicProfile profile, FloatMode mode, VbNetCapabilities? capabilities) {
+    var table = capabilities ?? VbNetCapabilities.Standard;
+    var (tree, helpers) = BuiltNet(module, profile, mode, table);
+    var text = VnPrinter.Print(tree, table.Has(VbNetCapabilities.ImplicitLineContinuation, profile));
+    var texts = tree.Members.OfType<VnMethod>().GroupBy(method => method.Name, StringComparer.Ordinal)
+      .ToDictionary(group => group.Key, group => VnPrinter.Print(group.First(), table.Has(VbNetCapabilities.ImplicitLineContinuation, profile)), StringComparer.Ordinal);
+    var measured = EmittedHelper.Measure([.. helpers.Select(helper => helper with { Text = texts.GetValueOrDefault(helper.Name, "") })], text);
+    var file = NetFileName(module);
+    return [new GeneratedFile(file, text) { Helpers = measured }, new GeneratedFile(Path.ChangeExtension(file, ".vbproj"), ProjectFile(profile))];
+  }
+
+  /// <summary>The syntax tree of a module in Visual Basic .NET: what <see cref="EmitNet"/> prints.</summary>
+  /// <param name="module">A legalized module that <see cref="Check"/> accepts.</param>
+  /// <param name="profile">A Visual Basic .NET profile.</param>
+  /// <param name="mode">The floating-point mode the header records.</param>
+  /// <param name="capabilities">The table the constructs are chosen from; the standard one when <see langword="null"/>.</param>
+  /// <returns>The tree.</returns>
+  /// <exception cref="ArgumentException">The module is ill-typed or cannot be written as Visual Basic .NET.</exception>
+  public static VnModule BuildNet(IrModule module, VisualBasicProfile profile, FloatMode mode, VbNetCapabilities? capabilities)
+    => BuiltNet(module, profile, mode, capabilities ?? VbNetCapabilities.Standard).Tree;
+
+  private static (VnModule Tree, IReadOnlyList<HelperText> Helpers) BuiltNet(IrModule module, VisualBasicProfile profile, FloatMode mode, VbNetCapabilities capabilities) {
+    ArgumentNullException.ThrowIfNull(module);
+    ArgumentNullException.ThrowIfNull(profile);
+    module = SequenceFusion.Run(module);
+    var problems = IrVerifier.Verify(module);
+    var writer = new VbNetWriter(profile, capabilities, mode);
+    var tree = problems.Count > 0 ? null : writer.Module(module);
+    if (problems.Concat(writer.Problems).FirstOrDefault() is { } problem)
+      throw new ArgumentException($"The module '{module.Name}' cannot be emitted: {problem.Message}.", nameof(module));
+
+    return (tree!, writer.Helpers);
   }
 
   /// <summary>The syntax tree of a module after the target passes the options let run: what <see cref="Emit(IrModule, VisualBasicProfile, FloatMode, VisualBasicCapabilities?, TargetPassOptions)"/> prints.</summary>
@@ -159,6 +253,12 @@ public static partial class VisualBasicEmitter {
     var problems = IrVerifier.Verify(module);
     if (problems.Count > 0)
       return problems;
+
+    if (profile.IsNet) {
+      var net = new VbNetWriter(profile, VbNetCapabilities.Standard, FloatMode.Accurate);
+      net.Module(module);
+      return net.Problems;
+    }
 
     var writer = new Writer(profile, capabilities ?? VisualBasicCapabilities.Standard, FloatMode.Accurate);
     writer.Module(module);
