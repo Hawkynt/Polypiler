@@ -108,6 +108,24 @@ public sealed class VariantBackendTests {
     Assert.That(nodes.Outcome(new PrototypeCall("Pass", [(object)(int)7, (short)1])), Does.Contain("InvalidCast").Or.Contain("cast"));
   }
 
+  [TestCase("Locale.bas", "Locale.cases.txt", "en-US")]
+  [TestCase("Locale.bas", "Locale.de-DE.cases.txt", "de-DE")]
+  [TestCase("CurrencyDate.bas", "CurrencyDate.cases.txt", "en-US")]
+  [TestCase("Bitwise.bas", "Bitwise.cases.txt", "en-US")]
+  [TestCase("Inference.bas", "Inference.cases.txt", "en-US")]
+  [Category("Slow")]
+  public void CSharp_RunsTheCaseFixtures(string fixture, string cases, string locale) {
+    VisualBasicLocale.TryParse(locale, out var parsed);
+    var module = ClassicCases.Import(fixture, cases, parsed);
+    var legalized = CSharpEmitter.Legalize(module, () => PrecomputedImplementations.Module, CSharpProfile.Default, FloatMode.Accurate);
+    var text = CSharpEmitter.Emit(legalized, CSharpProfile.Default).Single().Content;
+    var build = GeneratedCSharp.Compile(text, false);
+    for (var index = 0; index < ClassicCases.Lines(cases).Count; ++index) {
+      var call = new PrototypeCall(ClassicCases.Name(index), []);
+      Assert.That(build.Outcome(call), Is.EqualTo(PrototypeFixture.InterpretedOutcome(module, call)), call.Method);
+    }
+  }
+
   [TestCase("f64", IrBinaryOp.NotEqual, "double.IsNaN(x)")]
   [TestCase("f32", IrBinaryOp.NotEqual, "float.IsNaN(x)")]
   [TestCase("f64", IrBinaryOp.Equal, "!double.IsNaN(x)")]
@@ -123,7 +141,7 @@ public sealed class VariantBackendTests {
 
   [Test, Category("Slow")]
   public void CSharpHelpers_AreCSharp2ForNetFramework20() {
-    var text = $"public static class Helpers {{\n\n  {string.Join("\n  ", CSharpVariantHelpers.Tag.Lines("VariantTag"))}\n\n  {string.Join("\n  ", CSharpVariantHelpers.Payload.Lines("VariantPayload"))}\n\n}}\n";
+    var text = $"public static class Helpers {{\n\n  {string.Join("\n  ", CSharpVariantHelpers.Tag.Lines("VariantTag"))}\n\n  {string.Join("\n  ", CSharpVariantHelpers.Payload.Lines("VariantPayload"))}\n\n{CSharpCollectionClasses.VariantDate}\n}}\n";
     Assert.That(GeneratedCSharp.ComplaintsFor(text, "net2.0", "2"), Is.Empty, text);
   }
 

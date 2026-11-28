@@ -12,7 +12,7 @@ namespace Polypiler.Tests.Frontends.VisualBasic;
 
 /// <summary>
 /// A fixture of <c>tests/fixtures/visualbasic/classic</c> with its cases as functions of the module
-/// itself, <c>PlyCase0</c>, <c>PlyCase1</c>, …, each of which returns the value of its case through
+/// itself, <c>Probe0</c>, <c>Probe1</c>, …, each of which returns the value of its case through
 /// <c>CStr</c>, or <c>!</c> and the error number, as the oracle's driver prints it - so that the
 /// interpreter and every backend print what LibreOffice prints, in the locale of the import.
 /// </summary>
@@ -29,7 +29,7 @@ internal static class ClassicCases {
     => [.. File.ReadAllLines(Path.Combine(PrototypeFixture.RepositoryRoot, "docs", "adr", "evidence", "2600", file)).Where(line => line.Length > 0)];
 
   /// <summary>The name of the function of a case.</summary>
-  public static string Name(int index) => "PlyCase" + index.ToString(CultureInfo.InvariantCulture);
+  public static string Name(int index) => "Probe" + index.ToString(CultureInfo.InvariantCulture);
 
   /// <summary>The text of a fixture with a function per case after it.</summary>
   public static string Source(string fixture, IReadOnlyList<string> cases) {

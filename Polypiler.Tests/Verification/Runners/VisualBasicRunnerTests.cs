@@ -58,7 +58,9 @@ public sealed class VisualBasicRunnerTests {
     }));
     Assert.That(Encoding.UTF8.GetString(files[root + "basic/Standard/script.xlb"].Span), Does.Contain("library:name=\"M\"").And.Contain("library:name=\"PlyDriver\""));
     Assert.That(Encoding.UTF8.GetString(files[root + "basic/Standard/M.xba"].Span), Does.Contain("Option VBASupport 1"));
-    Assert.That(Encoding.UTF8.GetString(files[root + "registrymodifications.xcu"].Span), Does.Contain("ooSetupInstCompleted"));
+    Assert.That(Encoding.UTF8.GetString(files[root + "registrymodifications.xcu"].Span), Does.Contain("ooSetupInstCompleted").And.Contain("ooSetupSystemLocale").And.Contain("<value>en-US</value>"));
+    var german = VisualBasicRunner.Files(new Dictionary<string, string>(), "", "de-DE");
+    Assert.That(Encoding.UTF8.GetString(german[root + "registrymodifications.xcu"].Span), Does.Contain("<value>de-DE</value>"));
     Assert.That(Encoding.UTF8.GetString(VisualBasicRunner.Files(new Dictionary<string, string> { ["M"] = "x = a < b & \"c\"" }, "")[root + "basic/Standard/M.xba"].Span), Does.Contain("a &lt; b &amp; &quot;c&quot;"));
     Assert.That(() => VisualBasicRunner.Files(null!, ""), Throws.ArgumentNullException);
     Assert.That(() => VisualBasicRunner.Files(new Dictionary<string, string>(), null!), Throws.ArgumentNullException);
