@@ -151,3 +151,50 @@ passed by reference and assigned, `Err.Raise` of another number, arrays of `Stri
 multidimensional arrays and the functions it does not import (`Format`, `Str`, `UCase`, `Now`, `Date`,
 `Time`, `DateAdd`, `DateDiff`, `IsDate`, `CDec`, …). `PLY2648` is a name that names nothing or a type mismatch.
 `Err` is not cleared when a procedure ends - documented by VBA, not done by LibreOffice (ADR 2600).
+
+## Visual Basic .NET
+
+**Status:** implemented for the first verified subset ([#1083](https://github.com/Hawkynt/Polypiler/issues/1083),
+the VB.NET parts of [#1094](https://github.com/Hawkynt/Polypiler/issues/1094), [#1091](https://github.com/Hawkynt/Polypiler/issues/1091),
+[#1092](https://github.com/Hawkynt/Polypiler/issues/1092), [#1093](https://github.com/Hawkynt/Polypiler/issues/1093) and
+[#1095](https://github.com/Hawkynt/Polypiler/issues/1095)), checked against the Visual Basic compiler and
+runtime of the pinned `dotnet-sdk`.
+
+`polypiler translate <file>.vb --from visualbasic --to <target> --output <directory> [--vb-langversion 9..16.9] [--vb-removeintchecks]`
+imports one `Module` of a `.vb` file. Roslyn (`Microsoft.CodeAnalysis.VisualBasic`, MIT) parses and
+binds it in process - no compiler is started - with the options of a Visual Basic project: the
+language version (16.9 unless named), `Option Strict On`, `Option Explicit On`, `Option Infer On`,
+`Option Compare Binary` and integer checks on, which `--vb-removeintchecks` removes, as `/removeintchecks`
+does; the file's own `Option` statements override them, as in the compiler. A compiler error is
+`PLY2610`; a construct outside the subset `PLY2611`. The frontend lowers the bound operations
+(`IOperation`), which state every conversion Visual Basic inserts and whether an operation checks for
+overflow (`Polypiler.Core.Frontends.VisualBasic/Net/VbNetLowerer*.cs`):
+
+| Visual Basic .NET | IR |
+| --- | --- |
+| `SByte`, `Byte`, `Short`, `UShort`, `Integer`, `UInteger`, `Long`, `ULong`, `Single`, `Double`, `Boolean`, `Char`, `String` | `i8` to `u64`, `f32`, `f64`, `bool`, `u16` (a code unit), string |
+| `Structure` of fields, `New S With {.F = v}`, `Enum`, `Const`, module variables with their initializers in source order | struct, struct built in field order, the underlying integer, constant, global |
+| a local | declared at the procedure's start with its default value: a `Dim` without an initializer inside a loop keeps its value from the pass before, as Visual Basic gives a local the lifetime of the procedure |
+| `+ - *` of `Integer`, `Long` and their unsigned types | checked (`OverflowException`), or wrapping without integer checks |
+| `+ - *` of `Byte`, `SByte`, `Short`, `UShort` | 32-bit arithmetic converted back, checked or wrapping |
+| `\`, `Mod` | truncating division, remainder with the dividend's sign; `Mod` of floating point is `fmod` |
+| `/`, `^` | floating-point division, `Pow`, with the operands Visual Basic converted |
+| `CInt`, `CLng`, … of a floating-point number, also an implicit narrowing under `Option Strict Off` | rounded half to even, then converted: checked or, without integer checks, saturated |
+| a narrowing conversion of integers | checked, or wrapping without integer checks |
+| `CInt(True)`, `CByte(True)` | -1 of the target type: -1, 255 |
+| `And`, `Or`, `Xor` of `Boolean`s | both operands evaluated; `AndAlso`, `OrElse` short-circuit |
+| `<<`, `>>` | the count masked to the width of the left operand, also of a narrow one |
+| `=`, `<` of strings | by code unit (`Option Compare Text` is refused) |
+| `If`, `Select Case` | `If`; a `Select Case` of integer constants a switch, any other the clauses tested in order (`=`, `a To b`, `Is op v`) |
+| `For c = a To b Step s` | start, limit and step evaluated once; the step added after each pass, checked, so a counter past its type's largest value throws |
+| `For Each` over an array or a string, `Do While`/`Until`, `Loop While`/`Until`, `While`, `Exit`, `Continue` | loops; an `Exit` or `Continue` of a loop around the innermost one is refused |
+| `Try`, `Catch ex As T When c`, `Finally`, `Throw`, `Throw` alone | try with filters, throw, rethrow, for the exception classes of the library |
+| `ReDim [Preserve] a(n)` | a new array of n + 1 elements, the old ones copied |
+| `Math`, `Len`, `AscW`, `ChrW`, `Fix`, `Int`, `Substring`, `IndexOf` (of a `Char` or ordinal), `Contains`, `Replace`, `String.Join`, `ToString`, `Console.WriteLine` | the IR's operations; the text of a number in the invariant culture (caveat `vbnet-invariant-culture`) |
+
+A `String` variable that holds `Nothing` in Visual Basic holds the empty string in the IR, which every
+operation of the subset treats alike (caveat `vbnet-nothing-string`); `s Is Nothing` of a string is
+refused. Refused with `PLY2611`: `Decimal`, `Date`, `Object` and late binding, classes, a `Structure`
+with members of its own, arrays of several dimensions and of arrays, `GoTo`, `On Error`, `Exit Try`,
+`Static` locals, a `ByRef` parameter the procedure assigns, `ParamArray`, properties, and the functions
+of the runtime it does not import (`Left`, `Mid`, `InStr`, `Format`, …).

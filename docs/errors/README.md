@@ -306,6 +306,8 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY2602](PLY2602.md) | error | 3 (UnsupportedConstruct) | `VBScript call '<call>' is not supported` | #1133 |
 | [PLY2603](PLY2603.md) | error | 4 (InvalidSource) | `unresolved VBScript symbol '<symbol>'` | #1133 |
 | [PLY2604](PLY2604.md) | error | 4 (InvalidSource) | `invalid VBScript contract: <detail>` | #1133 |
+| [PLY2610](PLY2610.md) | error | 4 (InvalidSource) | `<BC id>: <the message of the Visual Basic compiler>` | #1083 |
+| [PLY2611](PLY2611.md) | error | 3 (UnsupportedConstruct) | `'<construct>' is not supported by the Visual Basic .NET frontend` | #1083 |
 | [PLY2645](PLY2645.md) | error | 4 (InvalidSource) | `the classic Visual Basic parser reports: line <n>: <detail>` | #1090 |
 | [PLY2646](PLY2646.md) | error | 3 (UnsupportedConstruct) | `'<construct>' is not supported by the classic Visual Basic profile` | #1090 |
 | [PLY2648](PLY2648.md) | error | 4 (InvalidSource) | `<what is not declared, or the operation and the type that do not fit>` | #1090 |
@@ -316,9 +318,12 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY2656](PLY2656.md) | error | 3 (UnsupportedConstruct) | `type '<type>' has no Visual Basic representation in profile '<profile>'` | #1088 |
 | [PLY2657](PLY2657.md) | error | 3 (UnsupportedConstruct) | `'<operation>' cannot be expressed in Visual Basic profile '<profile>'` | #1088 |
 | [PLY2658](PLY2658.md) | error | 3 (UnsupportedConstruct) | `exports '<first>' and '<second>' both map to the Visual Basic name '<name>'` | #1086 |
+| [PLY2690](PLY2690.md) | error | 6 (TargetBuildFailure) | `the Visual Basic compiler of dotnet-sdk rejected the project: <what the build printed>` | #1096 |
 | [PLY2691](PLY2691.md) | error | 6 (TargetBuildFailure) | `LibreOffice Basic did not answer (<outcome>): a module it cannot compile or an uncaught run-time error stops it at a dialog` | #1096 |
 | [PLY2692](PLY2692.md) | error | 7 (OracleFailure) | `the LibreOffice Basic driver exited with code <code>: <standard error>` | #1096 |
+| [PLY2693](PLY2693.md) | error | 7 (OracleFailure) | `the Visual Basic .NET driver exited with code <code> without its answer: <standard error>` | #1096 |
 | [PLY2695](PLY2695.md) | error | 7 (OracleFailure) | `<the driver answered another number of calls, or a line that is no answer>` | #1096 |
+| [PLY2696](PLY2696.md) | error | 7 (OracleFailure) | `the recorded dialect table differs from tests/fixtures/visualbasic/vbnet/ErrProbe.expected.txt at '<entry>'` | #1096 |
 
 ## PLY2800–PLY2899 · batch
 

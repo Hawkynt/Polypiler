@@ -146,6 +146,16 @@ written with its evidence file and the round trip, which writes VBA's rules out,
 values - the text of a number, which the round trip writes with the office's `CStr`, on the rows on
 which the office agrees.
 
+## Visual Basic .NET: strings and text
+
+The Visual Basic .NET frontend ([frontend](../architecture/VISUALBASIC-FRONTEND.md#visual-basic-net))
+records two caveats:
+
+| Caveat | Decision | What the imported code does |
+| --- | --- | --- |
+| `vbnet-invariant-culture` | fixed to the invariant culture | `CStr`, `ToString` and `&` of a number write it as the invariant culture does, where .NET writes it in the culture of the thread (`2,5` under de-DE) |
+| `vbnet-nothing-string` | `Nothing` is the empty string | a `String` that holds `Nothing` holds `""`: concatenation, `=`, `Len` and `Select Case` treat both alike in Visual Basic, `.Length` throws a `NullReferenceException` for `Nothing` and gives 0 for `""`; `s Is Nothing` is refused |
+
 ## Oracle differences
 
 These calls differ because the original runtime does something its own specification does not say,
