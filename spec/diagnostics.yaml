@@ -1786,12 +1786,12 @@ codes:
   - code: PLY1800
     severity: error
     exit: InvalidSource
-    title: Python syntax error or helper failure
-    message: "<python's exception class>: <python's message>"
+    title: Python syntax or compile-time error
+    message: "<CPython's exception class>: <CPython's message>"
     rule: python.syntax
     area: python
     owner: "#452"
-    surfaces: "standard error of polypiler translate --from python: a source CPython's ast module rejects, an interpreter that cannot be started, or a helper that speaks another wire format"
+    surfaces: "standard error of polypiler translate --from python, for a source CPython refuses - a tokenizer or parser error (SyntaxError, IndentationError, TabError), an error of its compile-time checks such as 'return' outside function or no binding for nonlocal, a construct of a later version than --python-version, an undecodable source - as the frontend's own tokenizer, parser and checks find it, with CPython's message; stops import"
   - code: PLY1801
     severity: error
     exit: UnsupportedConstruct

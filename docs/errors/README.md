@@ -255,7 +255,7 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 
 | Code | Severity | Exit code | Message | Owner |
 | --- | --- | --- | --- | --- |
-| [PLY1800](PLY1800.md) | error | 4 (InvalidSource) | `<python's exception class>: <python's message>` | #452 |
+| [PLY1800](PLY1800.md) | error | 4 (InvalidSource) | `<CPython's exception class>: <CPython's message>` | #452 |
 | [PLY1801](PLY1801.md) | error | 3 (UnsupportedConstruct) | `<reason>` | #452 |
 | [PLY1802](PLY1802.md) | error | 3 (UnsupportedConstruct) | `'<construct>' is not supported by the Python frontend` | #452 |
 | [PLY1803](PLY1803.md) | error | 3 (UnsupportedConstruct) | `<reason>` | #452 |

@@ -88,6 +88,15 @@ where the source has the construct:
 | `int32(x)` of a `float32`/`float64` | `go-float-to-int` | truncates, and saturates outside the type with a NaN becoming 0, where Go leaves the result to the implementation |
 | `x*y + z`, `z - x*y` of floating-point numbers | `go-fma-unfused` | rounds the product first, as Go does on amd64 and wherever the product is converted, where Go permits one fused rounding |
 
+## Python: parsing
+
+The Python frontend ([Python frontend](../architecture/PYTHON-FRONTEND.md)) tokenizes, parses and
+checks the source itself as CPython 3.14 does, for the version `--python-version` names; where its
+verdict, its tree or its message differs from CPython's it is a defect, which the Python layer looks
+for on CPython's whole library and on every string of its tests. A source given as bytes whose
+declared encoding the frontend has no decoder for (only UTF-8, Latin-1, ASCII, cp1252, KOI8-R,
+KOI8-U and ISO 8859-2, -5 and -15 are decoded) is refused by name rather than decoded otherwise.
+
 ## Oracle differences
 
 These calls differ because the original runtime does something its own specification does not say,
