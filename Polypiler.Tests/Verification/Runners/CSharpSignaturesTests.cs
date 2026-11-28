@@ -79,6 +79,7 @@ public sealed class CSharpSignaturesTests {
   [TestCase("public static int? F(int? a) => a;", "'int?'")]
   [TestCase("public static object F(object a) => a;", "'object'")]
   [TestCase("public static int F(System.Numerics.Complex a) => 0;", "'System.Numerics.Complex'")]
+  [TestCase("public static int F(Guid a) => 0;", "'System.Guid'")]
   [TestCase("public static int[,] F(int[,] a) => a;", "'int[*,*]'")]
   [TestCase("public static System.Collections.Generic.List<int> F(System.Collections.Generic.List<int> a) => a;", "List<int>")]
   [TestCase("public struct Empty { } public static int F(Empty a) => 0;", "without fields")]
