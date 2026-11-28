@@ -1,0 +1,30 @@
+42
+Long 32768
+40000
+Integer -1
+2147483648
+Integer 2
+String 8
+Boolean 11
+Null 1
+Empty 0
+Empty True 1 a True True Integer
+True True True Null
+a
+else
+!94
+Boolean Boolean Null Null
+Integer 165
+123457
+False True
+True True
+Integer|3|1
+Long|32768|0
+Null||
+5
+5
+Integer
+String
+Empty
+Double
+Null

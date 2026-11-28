@@ -1,0 +1,431 @@
+# Valid Go the frontend's checker must accept, covering every construct it models; "// const" lines
+# state the type and exact value of a package-level constant, which the Go layer compares with
+# go/types for every constant of every valid file. Written for this repository.
+-- constants --
+// want: valid
+// const big untyped int 4
+// const third untyped float 1/3
+// const exact untyped float 3/10
+// const typed float32 13421773/134217728
+// const hex untyped float 3/8
+// const r untyped rune 1114111
+// const s untyped string "a\tb\xffé"
+// const b untyped bool true
+// const neg untyped int -9
+// const mask uint8 240
+// const shifted untyped int -2
+// const tiny untyped float 1/202402253307310618352495346718917307049556649764142118356901358027430339567995346891960383701437124495187077864316811911389808737385793476867013399940738509921517424276566361364466907742093216341239767678472745068562007483424692698618103355649159556340810056512358769552333414615230502532186327508646006263307707741093494784
+// const nonzero untyped float 1/2
+// const integral untyped float 2
+// const lenOf int 3
+// const fromFloat int 2
+// const asString string "A"
+// const replaced string "�"
+// const minimum untyped int -1
+// const maximum untyped float 5/2
+package p
+
+const (
+	big      = 1 << 100 >> 98
+	third    = 1.0 / 3
+	exact    = 0.1 + 0.2
+	typed    float32 = 0.1
+	hex      = 0x1.8p-2
+	r        = '\U0010FFFF'
+	s        = "a\tb\xffé"
+	b        = 1 < 2
+	neg      = -1_0 + 0b1
+	mask     = ^uint8(0x0F)
+	shifted  = -3 >> 1
+	wide     = 1e2000
+	tiny     = 0x1p-1074
+	nonzero  = 0o1 / 2.0
+	integral = 4.0 / 2
+	lenOf    = len("abc")
+	fromFloat int = 2.0
+	asString = string(rune(65))
+	replaced = string(rune(-1))
+	minimum  = min(1, -1, 3)
+	maximum  = max(1, 2.5)
+)
+-- iota --
+// want: valid
+// const A Code 0
+// const B Code 1
+// const C Code 2
+// const KB untyped int 1024
+// const MB untyped int 1048576
+// const x untyped int 0
+// const y untyped int 10
+package p
+
+type Code int32
+
+const (
+	A Code = iota
+	B
+	C
+)
+
+const (
+	_  = iota
+	KB = 1 << (10 * iota)
+	MB
+)
+
+const x, y = iota, 10
+-- octal_and_runes --
+// want: valid
+// const legacy untyped int 15
+// const escaped untyped rune 10
+// const hexRune untyped rune 255
+// const octalRune untyped rune 8
+// const quote untyped rune 39
+// const raw untyped string "a\\nb"
+package p
+
+const (
+	legacy    = 017
+	escaped   = '\n'
+	hexRune   = '\xff'
+	octalRune = '\010'
+	quote     = '\''
+	raw       = `a\nb`
+)
+-- floats_typed --
+// want: valid
+// const f64 float64 1
+// const f32 float32 16777216
+// const divided untyped float 7/2
+// const huge float64 179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368
+package p
+
+const (
+	f64     float64 = 1
+	f32     float32 = 1 << 24
+	divided         = 7 / 2.0
+	huge    float64 = 1.7976931348623157e308
+)
+-- functions --
+// want: valid
+package p
+
+import (
+	"math"
+	"math/bits"
+)
+
+type Point struct {
+	X, Y int32
+	Tag  string `json:"tag"`
+}
+
+func (p Point) Sum() int32 { return p.X + p.Y }
+
+func (p *Point) Move(dx int32) { p.X += dx }
+
+type Stringer interface{ String() string }
+
+type Name string
+
+func (n Name) String() string { return string(n) }
+
+var _ Stringer = Name("x")
+var _ error = nil
+
+func pair() (int, string) { return 1, "a" }
+
+func named() (n int, err error) {
+	n = 2
+	return
+}
+
+func variadic(prefix string, values ...int) int {
+	total := len(prefix)
+	for _, v := range values {
+		total += v
+	}
+	return total
+}
+
+func Use() (int, uint) {
+	p := Point{X: 1, Y: 2}
+	p.Move(3)
+	q := &p
+	q.Move(1)
+	_ = q.X + p.Sum() + q.Sum()
+	f := p.Sum
+	_ = f()
+	a, s := pair()
+	_ = s
+	n, err := named()
+	_ = err
+	s2 := []int{1, 2}
+	total := variadic("x", 1, 2) + variadic("y", s2...) + variadic("z")
+	g := func(x int) int { return x + a + n }
+	_ = math.Sqrt(2) + math.Pi
+	return g(total), bits.UintSize
+}
+-- collections --
+// want: valid
+package p
+
+func Collections() int {
+	m := map[string]int{"a": 1, "b": 2}
+	m["c"] = 3
+	v, ok := m["a"]
+	if !ok {
+		delete(m, "a")
+	}
+	s := make([]int, 2, 10)
+	s = append(s, 1, 2)
+	s = append(s, s...)
+	b := append([]byte("x"), "yz"...)
+	n := copy(s, s[1:])
+	n += copy(b, "q")
+	arr := [...]int{2: 1, 5}
+	sl := arr[1:3:4]
+	p := &arr
+	_ = p[0] + len(p) + cap(sl)
+	var e []int
+	clear(m)
+	text := "héllo"
+	for i, r := range text {
+		_, _ = i, r
+	}
+	for k := range m {
+		_ = k
+	}
+	for i := range arr {
+		_ = i
+	}
+	for range 3 {
+	}
+	var z int
+	for z = range 4 {
+	}
+	_ = text[1:] + string(text[0]) + string([]rune(text))
+	matrix := [][]int{{1}, {2, 3}}
+	pts := []*struct{ a int }{{1}, {a: 2}}
+	return v + n + len(e) + len(matrix) + pts[0].a + z
+}
+-- control --
+// want: valid
+package p
+
+func Control(x int) int {
+	switch y := x * 2; y {
+	case 2, 4:
+		x++
+		fallthrough
+	case 6:
+		x--
+	default:
+		x += 3
+	}
+	switch {
+	case x > 10:
+		return 1
+	}
+outer:
+	for i := 0; i < 10; i++ {
+		for j := 0; j < 10; j++ {
+			if j == 3 {
+				continue outer
+			}
+			if i == 5 {
+				break outer
+			}
+		}
+	}
+	if x < 0 {
+		goto done
+	}
+	x = -x
+done:
+	defer func() { _ = recover() }()
+	go func() {}()
+	println(x, "x", 1.5)
+	print()
+	if x > 100 {
+		panic("big")
+	} else if x > 50 {
+		return 2
+	} else {
+		for {
+		}
+	}
+}
+-- terminating --
+// want: valid
+package p
+
+func A(x int) int {
+	switch x {
+	case 1:
+		return 1
+	default:
+		panic(x)
+	}
+}
+
+func B() int {
+	for {
+	}
+}
+
+func C(x bool) int {
+	if x {
+		return 1
+	} else {
+		return 2
+	}
+}
+
+func D() int {
+L:
+	goto L
+}
+
+func E() (r int) {
+	{
+		return
+	}
+}
+-- untyped_shifts --
+// want: valid
+package p
+
+func Shifts(n uint, s int8) (int64, uint8, bool) {
+	var a int64 = 1 << n
+	var b uint8 = 1<<n + 3
+	c := 1 << s
+	d := a<<n == 1<<n
+	e := int64(1) << 62
+	_ = c
+	return a + e, b, d
+}
+-- conversions --
+// want: valid
+package p
+
+type Celsius float64
+type Bytes []byte
+
+func Convert(x int, f float64, s string) (Celsius, Bytes, string, []rune, *[2]int, [2]int) {
+	c := Celsius(f) + Celsius(x)
+	b := Bytes(s)
+	t := string(b) + string(rune(x))
+	sl := []int{1, 2}
+	return c, b, t, []rune(s), (*[2]int)(sl), [2]int(sl)
+}
+-- interfaces --
+// want: valid
+package p
+
+type Shape interface {
+	Area() float64
+	Name() string
+}
+
+type Square struct{ side float64 }
+
+func (s Square) Area() float64 { return s.side * s.side }
+func (s *Square) Name() string { return "square" }
+
+func Describe(v any, sh Shape) (string, float64) {
+	_ = v == nil
+	_ = sh != nil
+	var x any = 1
+	_ = x
+	return sh.Name(), sh.Area()
+}
+
+var _ Shape = &Square{}
+-- new_and_pointers --
+// want: valid
+package p
+
+type Node struct {
+	next *Node
+	val  int
+}
+
+func Pointers() int {
+	n := new(Node)
+	p := new(42)
+	n.next = &Node{val: 1}
+	*p++
+	return n.next.val + *p
+}
+-- init_and_order --
+// want: valid
+package main
+
+var a = b + 1
+var b = f()
+
+func f() int { return 2 }
+
+func init() {}
+func init() {}
+
+func main() { _ = a }
+
+func even(n int) bool {
+	if n == 0 {
+		return true
+	}
+	return odd(n - 1)
+}
+
+func odd(n int) bool { return n != 0 && even(n-1) }
+-- local_declarations --
+// want: valid
+package p
+
+func Local() int {
+	const (
+		a = iota * 10
+		b
+	)
+	type pair struct{ x, y int }
+	type alias = pair
+	var v alias = pair{a, b}
+	var p, q = 1, 2
+	var r, ok = map[int]int{}[1]
+	_ = ok
+	return v.x + v.y + p + q + r
+}
+-- build_version --
+// want: valid
+//go:build go1.21 && linux
+
+package p
+
+func Loop() int {
+	t := 0
+	for i := 0; i < 3; i++ {
+		t += i
+	}
+	return min(t, 2)
+}
+-- blank_and_parens --
+// want: valid
+package p
+
+var _, _ = 1, 2
+
+func Paren(x *int) {
+	(*x) = 2
+	_ = (x)
+	(_) = 3
+}
+-- maps_struct_keys --
+// want: valid
+package p
+
+type K struct{ a, b int }
+
+var M = map[K]string{{1, 2}: "x", {3, 4}: "y"}
+var P = map[string]*K{"a": {1, 2}}

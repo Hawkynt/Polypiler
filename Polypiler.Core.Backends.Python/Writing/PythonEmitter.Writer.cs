@@ -231,6 +231,8 @@ public static partial class PythonEmitter {
           return new PyName("float");
         case { IsString: true }:
           return new PyName("str");
+        case { IsVariant: true }:
+          return new PyName("tuple");
         case { IsArray: true, Element: { } element }:
           return Generic("list", this.Annotation(element));
         case { IsList: true, Element: { } element }:

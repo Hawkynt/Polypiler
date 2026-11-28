@@ -132,7 +132,14 @@ public enum IrTypeKind {
   /// An exact integer of any magnitude, as Python's <c>int</c> is: its arithmetic never wraps and never
   /// overflows. What its operations mean is stated at <see cref="IrBigInts"/>.
   /// </summary>
-  BigInt
+  BigInt,
+
+  /// <summary>
+  /// A dynamically typed value: a tag (<see cref="IrVariantTag"/>) and a payload of the tag's type, as
+  /// Visual Basic's <c>Variant</c> and COM's <c>VARIANT</c> are. What its operations mean is stated at
+  /// <see cref="IrVariants"/>.
+  /// </summary>
+  Variant
 
 }
 
@@ -207,6 +214,12 @@ public sealed record IrType {
 
   /// <summary>Whether the type is the arbitrary-precision integer.</summary>
   public bool IsBigInt => this.Kind == IrTypeKind.BigInt;
+
+  /// <summary>The dynamic type, written <c>variant</c> (<see cref="IrVariants"/>).</summary>
+  public static IrType Variant { get; } = new(IrTypeKind.Variant, null);
+
+  /// <summary>Whether the type is the dynamic type.</summary>
+  public bool IsVariant => this.Kind == IrTypeKind.Variant;
 
   /// <summary>An immutable sequence of UTF-16 code units, written <c>str</c>: a reference, which may be <c>null</c> (#1370).</summary>
   public static IrType String { get; } = new(IrTypeKind.String, null);

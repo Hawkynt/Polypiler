@@ -47,6 +47,9 @@ public static class IrTree {
     IrAwait awaited => [awaited.Operand],
     IrAsync operation => operation.Arguments,
     IrForeignCall call => call.Arguments,
+    IrVariantOf { Value: { } value } => [value],
+    IrVariantTagOf tag => [tag.Value],
+    IrVariantValue value => [value.Value],
     _ => []
   };
 
@@ -143,6 +146,9 @@ public static class IrTree {
     IrAwait => new IrAwait(operands[0]),
     IrAsync operation => operation with { Arguments = operands },
     IrForeignCall call => call with { Arguments = operands },
+    IrVariantOf { Value: not null } made => made with { Value = operands[0] },
+    IrVariantTagOf => new IrVariantTagOf(operands[0]),
+    IrVariantValue value => value with { Value = operands[0] },
     _ => expression
   };
 

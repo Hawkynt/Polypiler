@@ -253,6 +253,9 @@ public static partial class IrInterpreter {
     if (type.IsOptional)
       return AcceptedOptional(type, value);
 
+    if (type.IsVariant)
+      return AcceptedVariant(value);
+
     // A string is a reference that may be null as an array is (#1370).
     if ((type.IsArray || type.IsString) && value is null)
       return NullReference.Value;
@@ -345,6 +348,7 @@ public static partial class IrInterpreter {
   private static object? ToHost(IrType type, object? value) => value switch {
     Settled settled => Settle(type, settled),
     not null when type.IsOptional => OptionalToHost(type, value),
+    Tagged variant => VariantToHost(variant),
     View view => ToArray(view),
     Record record => record.Fields.Select((field, index) => ToHost(type.StructType!.Fields[index].Type, field)).ToArray(),
     NullReference => null,
@@ -615,6 +619,8 @@ public static partial class IrInterpreter {
           return this.Step(step, frame);
         case IrNone or IrSome or IrIsNone or IrUnwrap or IrCoalesce or IrIsNull or IrBind:
           return this.Optional(expression, frame);
+        case IrVariantOf or IrVariantTagOf or IrVariantValue:
+          return this.Variant(expression, frame);
         case IrCollection operation:
           return this.Collection(operation, frame);
         case IrLambda or IrFunctionRef or IrBoundMethod or IrInvoke:
