@@ -7193,8 +7193,8 @@
     },
     {
       "path": "tests/fixtures/visualbasic/classic/golden/Inference.golden",
-      "sha256": "2881df658a06d8c261c5f6c9ae1d7d53210729f81aaca2bbd9da1934f7ab4c68",
-      "bytes": 116701
+      "sha256": "b2441cc5eb30313407ede034ecb5983f7726144d1a5373456274673eef8614d0",
+      "bytes": 119668
     },
     {
       "path": "tests/fixtures/visualbasic/classic/golden/Locale.golden",
