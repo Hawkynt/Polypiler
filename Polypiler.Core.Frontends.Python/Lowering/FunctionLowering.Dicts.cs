@@ -189,7 +189,7 @@ internal sealed partial class FunctionLowering {
       case "get" or "pop" when dict && arguments.Count is 1 or 2:
         var key = this.HeldKey(arguments[0], type);
         var value = type.Element!;
-        if (arguments.Count == 2 && !(arguments[1].Is("Constant") && arguments[1].Text("kind") == "none" && name == "get")) {
+        if (arguments.Count == 2 && !(arguments[1].Is("Constant") && arguments[1].ConstantKind == "none" && name == "get")) {
           var fallback = this.Value(arguments[1], value);
           if (PyTypes.Join(fallback.Type, value) != value)
             throw this.DictRefusal(call, $"{name} with a default of the type {fallback.Type} from a dict of {value} values");

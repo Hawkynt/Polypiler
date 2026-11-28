@@ -16,6 +16,7 @@ A request not decided yet is recorded under `pendingDecisions` in `policy.yaml`,
 | `GPL-3.0-or-later` | allowed | 2026-11-13 | same sentence | INFRA-LICENSES |
 | `GPL-2.0-only`, `AGPL-3.0-only`, `AGPL-3.0-or-later` | referenceOnly | 2026-11-13 | not covered by the sentence; kept as oracles only | INFRA-LICENSES |
 | `LGPL-2.1-only` | allowed | 2026-11-14 | the owner allows LGPL-2.1-only sources; weak copyleft like the other LGPL identifiers | Hawkynt |
+| `PSF-2.0`, `Unicode-3.0` | allowed | 2026-11-28 | the owner allows converting CPython (PSF-licensed) for the Python frontend; the Unicode Character Database tables it needs are permissive data | Hawkynt |
 
 ## Outputs
 

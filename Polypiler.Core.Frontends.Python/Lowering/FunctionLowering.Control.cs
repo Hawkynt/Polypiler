@@ -395,9 +395,9 @@ internal sealed partial class FunctionLowering {
         break;
       case "MatchSingleton":
         // True and False are compared by identity: they match a bool only; None matches an optional that holds none.
-        if (pattern.Text("kind") == "bool" && subject.Type.Kind == PyKind.Bool)
-          yield return pattern.Text("value") == "True" ? subject.Value : Not(subject.Value);
-        else if (pattern.Text("kind") == "none" && subject.Type.Kind == PyKind.Optional)
+        if (pattern.ConstantKind == "bool" && subject.Type.Kind == PyKind.Bool)
+          yield return pattern.Value is true ? subject.Value : Not(subject.Value);
+        else if (pattern.ConstantKind == "none" && subject.Type.Kind == PyKind.Optional)
           yield return this.IsNone(subject);
 
         break;

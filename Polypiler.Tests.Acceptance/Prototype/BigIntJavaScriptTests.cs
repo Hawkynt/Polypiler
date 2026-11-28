@@ -60,7 +60,7 @@ public sealed class BigIntJavaScriptTests {
     => this.Run(BigIntCases.Module(), [.. BigIntCases.Calls()], profile);
 
   /// <summary>
-  /// The hashes and generators of O0062, imported from their recorded tree and specialized: the
+  /// The hashes and generators of O0062, imported and specialized: the
   /// narrowed arithmetic of 32 bits on numbers, of 64 bits on BigInts cut to 64 bits, the rest exact.
   /// </summary>
   [Test]

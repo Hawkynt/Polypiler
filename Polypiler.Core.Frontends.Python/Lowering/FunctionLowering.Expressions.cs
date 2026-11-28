@@ -99,15 +99,15 @@ internal sealed partial class FunctionLowering {
 
   /// <summary>A constant; an integer of any magnitude; <c>None</c> is the none of the optional it goes to.</summary>
   private (IrExpr, PyType) Constant(PyNode node, PyType? expected) {
-    switch (node.Text("kind")) {
+    switch (node.ConstantKind) {
       case "bool":
-        return (Bool(node.Text("value") == "True"), PyType.Bool);
+        return (Bool(node.Value is true), PyType.Bool);
       case "float":
-        return (Float(Constants.Float(node.Text("value")!)), PyType.Float);
+        return (Float((double)node.Value!), PyType.Float);
       case "str":
         return (new IrStrConst(Constants.Text(node)), PyType.Str);
       case "bytes":
-        return (this.BytesConstant(System.Convert.FromHexString(node.Text("value")!)), PyType.Bytes);
+        return (this.BytesConstant((byte[])node.Value!), PyType.Bytes);
       case "none":
         return expected is { Kind: PyKind.Optional } ? (this.None(expected), expected) : (new IrConst(IrType.Void, 0), PyType.None);
       default:

@@ -1,1 +1,0 @@
-{"source":"Y = 1\n","dump":{"format":1,"module":{"_":"Module","body":[{"_":"Assign","line":1,"col":1,"endLine":1,"endCol":6,"targets":[{"_":"Name","line":1,"col":1,"endLine":1,"endCol":2,"id":"Y","ctx":{"_":"Store"}}],"value":{"_":"Constant","line":1,"col":5,"endLine":1,"endCol":6,"kind":"int","value":"1"}}],"type_ignores":[]}}}

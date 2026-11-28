@@ -5,7 +5,7 @@ using Polypiler.Core.IR;
 
 namespace Polypiler.Prototype.Testing;
 
-/// <summary>A source a test writes itself, imported from its recorded tree as <c>snippet.py</c>.</summary>
+/// <summary>A source a test writes itself, imported as <c>snippet.py</c>.</summary>
 internal static class PythonSnippet {
 
   /// <summary>Imports a snippet.</summary>

@@ -74,7 +74,7 @@ internal static class ExpressionTypes {
     PyType Inner(string field) => Of(expression.Node(field)!, scope);
     switch (expression.Kind) {
       case "Constant":
-        return expression.Text("kind") switch {
+        return expression.ConstantKind switch {
           "int" => PyType.Int,
           "float" => PyType.Float,
           "bool" => PyType.Bool,

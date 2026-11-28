@@ -11,7 +11,7 @@ using Polypiler.Prototype.Testing;
 namespace Polypiler.Tests.Optimize;
 
 /// <summary>
-/// O0062 on Python imported from its recorded tree: what is narrowed to a fixed width and what stays
+/// O0062 on imported Python: what is narrowed to a fixed width and what stays
 /// exact, the opt-report, and the interpreter's result before and after, which the expected values -
 /// printed by CPython 3.14 for the source - hold both to.
 /// </summary>

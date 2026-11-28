@@ -1,0 +1,85 @@
+Origin: https://www.python.org/ftp/python/3.14.8/Python-3.14.8.tar.xz
+Licence: PSF-2.0
+
+Polypiler.Core.Frontends.Python converts, from CPython 3.14.8, https://www.python.org, under the
+following licence:
+- Syntax/PyLexer.cs: the tokenizer of Parser/lexer/lexer.c (tok_nextc, tok_backup, lookahead,
+  verify_end_of_number, verify_identifier, tok_decimal_tail, tok_continuation_line, the prefix
+  checks, tok_get_normal_mode, set_ftstring_expr, tok_get_fstring_mode) and the token kinds of
+  Parser/token.c;
+- Syntax/PySource.cs: the source preparation of Parser/tokenizer/string_tokenizer.c and helpers.c
+  (translate_newlines, check_bom, get_coding_spec, get_normal_name, check_coding_spec, valid_utf8,
+  ensure_utf8);
+- Syntax/PyParser*.cs: the PEG grammar Grammar/python.gram rule by rule with its invalid_* rules,
+  the parser runtime of Parser/pegen.c (memoization, the second pass, new_identifier, number_token,
+  check_barry_as_flufl), the error reporting of Parser/pegen_errors.c and the actions of
+  Parser/action_helpers.c (make_arguments, set_expr_context, get_expr_name, get_invalid_target,
+  formatted_value, interpolation, joined_str, template_str, concatenate_strings,
+  setup_full_format_spec, checked_future_import and the other helpers);
+- Syntax/PyLiterals.cs: parsenumber of Parser/pegen.c and the string decoding of
+  Parser/string_parser.c with the unicode_escape and bytes escape decoders of Objects/;
+- Syntax/PyFuture.cs: Python/future.c;
+- Syntax/PyCompileCheck.cs: the symbol table of Python/symtable.c (its visitors, add_def, check_name,
+  the comprehension, annotation and type-parameter scopes, analyze_block and analyze_name) and the
+  checks of Python/codegen.c (return, yield, await, break and continue with the frame-block stack,
+  except*, starred targets, repeated keywords, patterns, static nesting, docstrings);
+- Syntax/PyUnicode.cs: the name lookup of Modules/unicodedata.c (the Hangul syllable names and the
+  derived name prefixes);
+- Ast/PyAst.cs: the node classes and their fields of Parser/Python.asdl.
+
+Summary of the changes: the C sources are restated in C# for the frontend's own node model
+(Ast/PyNode); the tokenizer reads a byte array instead of a stream, a raised error is an exception
+instead of an error indicator, left-recursive rules are grown as loops, and only the checks of the
+symbol table and the code generator are kept, not the code they generate.
+
+tests/fixtures/python/syntax holds source snippets taken from the tests of CPython's Lib/test, under
+the same licence.
+
+Copyright (c) 2001 Python Software Foundation; All Rights Reserved
+
+PYTHON SOFTWARE FOUNDATION LICENSE VERSION 2
+--------------------------------------------
+
+1. This LICENSE AGREEMENT is between the Python Software Foundation
+("PSF"), and the Individual or Organization ("Licensee") accessing and
+otherwise using this software ("Python") in source or binary form and
+its associated documentation.
+
+2. Subject to the terms and conditions of this License Agreement, PSF hereby
+grants Licensee a nonexclusive, royalty-free, world-wide license to reproduce,
+analyze, test, perform and/or display publicly, prepare derivative works,
+distribute, and otherwise use Python alone or in any derivative version,
+provided, however, that PSF's License Agreement and PSF's notice of copyright,
+i.e., "Copyright (c) 2001 Python Software Foundation; All Rights Reserved"
+are retained in Python alone or in any derivative version prepared by Licensee.
+
+3. In the event Licensee prepares a derivative work that is based on
+or incorporates Python or any part thereof, and wants to make
+the derivative work available to others as provided herein, then
+Licensee hereby agrees to include in any such work a brief summary of
+the changes made to Python.
+
+4. PSF is making Python available to Licensee on an "AS IS"
+basis.  PSF MAKES NO REPRESENTATIONS OR WARRANTIES, EXPRESS OR
+IMPLIED.  BY WAY OF EXAMPLE, BUT NOT LIMITATION, PSF MAKES NO AND
+DISCLAIMS ANY REPRESENTATION OR WARRANTY OF MERCHANTABILITY OR FITNESS
+FOR ANY PARTICULAR PURPOSE OR THAT THE USE OF PYTHON WILL NOT
+INFRINGE ANY THIRD PARTY RIGHTS.
+
+5. PSF SHALL NOT BE LIABLE TO LICENSEE OR ANY OTHER USERS OF PYTHON
+FOR ANY INCIDENTAL, SPECIAL, OR CONSEQUENTIAL DAMAGES OR LOSS AS
+A RESULT OF MODIFYING, DISTRIBUTING, OR OTHERWISE USING PYTHON,
+OR ANY DERIVATIVE THEREOF, EVEN IF ADVISED OF THE POSSIBILITY THEREOF.
+
+6. This License Agreement will automatically terminate upon a material
+breach of its terms and conditions.
+
+7. Nothing in this License Agreement shall be deemed to create any
+relationship of agency, partnership, or joint venture between PSF and
+Licensee.  This License Agreement does not grant permission to use PSF
+trademarks or trade name in a trademark sense to endorse or promote
+products or services of Licensee, or any third party.
+
+8. By copying, installing or otherwise using Python, Licensee
+agrees to be bound by the terms and conditions of this License
+Agreement.

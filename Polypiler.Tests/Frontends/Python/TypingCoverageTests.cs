@@ -10,9 +10,9 @@ namespace Polypiler.Tests.Frontends.Python;
 [TestFixture]
 public sealed class TypingCoverageTests {
 
-  /// <summary>Imports a snippet beside a module <c>helper</c> it imports, both from their recorded trees.</summary>
+  /// <summary>Imports a snippet beside a module <c>helper</c> it imports.</summary>
   private static PythonImportResult WithHelper(string source, string helper)
-    => PythonSnippet.Import(source, new PythonImportOptions { Modules = name => name == "helper" ? ("helper.py", helper, PythonFixture.Dump("helper.py", helper)) : null });
+    => PythonSnippet.Import(source, new PythonImportOptions { Modules = name => name == "helper" ? ("helper.py", helper) : null });
 
   /// <summary>What the interpreter does for a call of a function of a snippet imported beside <c>helper</c>.</summary>
   private static string RunWithHelper(string source, string helper, string function, object[] arguments) {
