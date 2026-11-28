@@ -420,7 +420,7 @@ public sealed class OptionContributionsTests {
     Assert.That(owners["--llvm-version"].Single(), Is.EqualTo("#860"));
     Assert.That(owners["--strategy"].Single(), Is.EqualTo("#286"));
     Assert.That(owners, Does.Not.ContainKey("--from"), "an identifier row names no option");
-    Assert.That(RegisteredOptionsDocument.Planned, Has.Count.EqualTo(15));
+    Assert.That(RegisteredOptionsDocument.Planned, Has.Count.EqualTo(16));
   }
 
   /// <summary>Test design 16: the committed <c>docs/cli/registered-options.md</c> is the document as generated.</summary>

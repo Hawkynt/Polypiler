@@ -12,31 +12,31 @@ dotnet run --project Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -- re
 
 ## Summary matrix
 
-| Construct | Category | JavaScript | C# | Python | Rust | Perl | Batch | MSIL | JVM | C++ | VBScript | Visual Basic (VB6/VBA, VB.NET) | Go |
-| --- | --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| [Operators, Bitwise & Checked Arithmetic](#operators-bitwise--checked-arithmetic) | Core Language | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| [Recursion](#recursion) | Control Flow & Functions | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| [Method & Constructor Overloading](#method--constructor-overloading) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY2656` | `PLY2150` |
-| [Structs & Value Records](#structs--value-records) | Types & Data | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| [Classes, Properties & Reference Records](#classes-properties--reference-records) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY2656` | `PLY2150` |
-| [Statics & Module State](#statics--module-state) | Core Language | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| [Inheritance, Virtual Dispatch & Interfaces](#inheritance-virtual-dispatch--interfaces) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY2656` | `PLY2150` |
-| [Generics](#generics) | Object Model | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY2656` | `PLY2150` |
-| [Lambdas & Closures](#lambdas--closures) | Functional | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY2657`/`PLY2656` | ✅ |
-| [Callbacks & Delegates](#callbacks--delegates) | Functional | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| [Enums & Nullable Optionals](#enums--nullable-optionals) | Types & Data | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY2656` | `PLY2150` |
-| [Collections](#collections) | Collections & Sequences | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY2657`/`PLY2656` | `PLY2151` |
-| [Iterators & Lazy Sequences](#iterators--lazy-sequences) | Collections & Sequences | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY2655` | `PLY2150` |
-| [LINQ](#linq) | Collections & Sequences | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| [Exceptions & Resource Scopes](#exceptions--resource-scopes) | Error Handling | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY2656` | `PLY2150` |
-| [Tasks & Async/Await](#tasks--asyncawait) | Concurrency & Asynchrony | ⚠️ 4/5 | ⚠️ 7/9 | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY2655`/`PLY2657` | `PLY2170` |
-| [Standard Output (Stdio)](#standard-output-stdio) | I/O & Interop | `PLY1152` | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | ⚠️ 10/14 | ✅ |
-| [Spans, Bit Permutations & Unsafe Pointers](#spans-bit-permutations--unsafe-pointers) | Low-Level & Performance | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY2657`/`PLY2656` | `PLY2151` |
-| [Native Interop (P/Invoke)](#native-interop-pinvoke) | I/O & Interop | `PLY1152` | ✅ | ✅ | ✅ | `PLY1751` | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | `PLY2650` | `PLY2657` | `PLY2170` |
-| [User-Defined Operator Overloading (Boundary)](#user-defined-operator-overloading-boundary) | Unsupported Boundaries | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
-| [Hardware SIMD Vectorization (Boundary)](#hardware-simd-vectorization-boundary) | Unsupported Boundaries | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
-| [Multithreading & Synchronization (Boundary)](#multithreading--synchronization-boundary) | Unsupported Boundaries | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
-| [File I/O (Boundary)](#file-io-boundary) | Unsupported Boundaries | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
+| Construct | Category | Static ratio | JavaScript | C# | Python | Rust | Perl | Batch | MSIL | JVM | C++ | VBScript | Visual Basic (VB6/VBA, VB.NET) | Go |
+| --- | --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| [Operators, Bitwise & Checked Arithmetic](#operators-bitwise--checked-arithmetic) | Core Language | 1.00 | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [Recursion](#recursion) | Control Flow & Functions | 1.00 | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [Method & Constructor Overloading](#method--constructor-overloading) | Object Model | 1.00 | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY2656` | `PLY2150` |
+| [Structs & Value Records](#structs--value-records) | Types & Data | 1.00 | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [Classes, Properties & Reference Records](#classes-properties--reference-records) | Object Model | 1.00 | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY2656` | `PLY2150` |
+| [Statics & Module State](#statics--module-state) | Core Language | 1.00 | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [Inheritance, Virtual Dispatch & Interfaces](#inheritance-virtual-dispatch--interfaces) | Object Model | 1.00 | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY2656` | `PLY2150` |
+| [Generics](#generics) | Object Model | 1.00 | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY2656` | `PLY2150` |
+| [Lambdas & Closures](#lambdas--closures) | Functional | 1.00 | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY2657`/`PLY2656` | ✅ |
+| [Callbacks & Delegates](#callbacks--delegates) | Functional | 1.00 | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [Enums & Nullable Optionals](#enums--nullable-optionals) | Types & Data | 1.00 | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY2656` | `PLY2150` |
+| [Collections](#collections) | Collections & Sequences | 1.00 | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY2657`/`PLY2656` | `PLY2151` |
+| [Iterators & Lazy Sequences](#iterators--lazy-sequences) | Collections & Sequences | 1.00 | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY2655` | `PLY2150` |
+| [LINQ](#linq) | Collections & Sequences | 1.00 | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| [Exceptions & Resource Scopes](#exceptions--resource-scopes) | Error Handling | 1.00 | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY2656` | `PLY2150` |
+| [Tasks & Async/Await](#tasks--asyncawait) | Concurrency & Asynchrony | 1.00 | ⚠️ 4/5 | ⚠️ 7/9 | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY2655`/`PLY2657` | `PLY2170` |
+| [Standard Output (Stdio)](#standard-output-stdio) | I/O & Interop | 1.00 | `PLY1152` | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | ⚠️ 10/14 | ✅ |
+| [Spans, Bit Permutations & Unsafe Pointers](#spans-bit-permutations--unsafe-pointers) | Low-Level & Performance | 1.00 | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ 1/2 | ✅ | ✅ | ✅ | ✅ | `PLY2657`/`PLY2656` | `PLY2151` |
+| [Native Interop (P/Invoke)](#native-interop-pinvoke) | I/O & Interop | 1.00 | `PLY1152` | ✅ | ✅ | ✅ | `PLY1751` | `PLY2850`/`PLY2851` | ✅ | ✅ | ✅ | `PLY2650` | `PLY2657` | `PLY2170` |
+| [User-Defined Operator Overloading (Boundary)](#user-defined-operator-overloading-boundary) | Unsupported Boundaries | — | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
+| [Hardware SIMD Vectorization (Boundary)](#hardware-simd-vectorization-boundary) | Unsupported Boundaries | — | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
+| [Multithreading & Synchronization (Boundary)](#multithreading--synchronization-boundary) | Unsupported Boundaries | — | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
+| [File I/O (Boundary)](#file-io-boundary) | Unsupported Boundaries | — | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` | `PLY1002` |
 
 ## Dialect support by backend
 

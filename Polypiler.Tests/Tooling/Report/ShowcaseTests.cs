@@ -293,6 +293,10 @@ public sealed class ShowcaseTests {
     Assert.That(markdown, Does.Contain("Refused dialects:"));
     Assert.That(markdown, Does.Contain("Frontend refusal (all backends & dialects)"));
     Assert.That(markdown, Does.Contain("Refused by:"));
+    Assert.That(markdown, Does.Contain("| Construct | Category | Static ratio |"), "the static ratio of each translation (#1590)");
+    Assert.That(markdown, Does.Contain("| Core | 1.00 |"), "a C# source is typed throughout");
+    Assert.That(markdown, Does.Contain("| Boundary | — |"), "a source the frontend refuses has no report");
+    Assert.That(ShowcaseGenerator.StaticRatio(this.At("missing.types.json")), Is.Null);
 
     // Second run reports unchanged
     var (exit2, out2, _) = this.RunCommand(runner, "--examples", "examples", "--out", "docs/out.md", "--polypiler", marker,
