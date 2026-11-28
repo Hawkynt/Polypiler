@@ -7177,6 +7177,46 @@
       "bytes": 1416
     },
     {
+      "path": "tests/fixtures/visualbasic/classic/golden/Bitwise.golden",
+      "sha256": "964cf0c5478688ff4f12a77cf78754bab542211423ff158363112308d3a30d92",
+      "bytes": 99579
+    },
+    {
+      "path": "tests/fixtures/visualbasic/classic/golden/ClassicProbe.golden",
+      "sha256": "b30e8a6de500d9b4aac4f2bcde320ba6a351ee9fd5ee7ce8f3b105620134f45d",
+      "bytes": 2110
+    },
+    {
+      "path": "tests/fixtures/visualbasic/classic/golden/CurrencyDate.golden",
+      "sha256": "a9e60f180490dec8d176e27b33521f751261fbe681885350d3b3e3cb5a555359",
+      "bytes": 106419
+    },
+    {
+      "path": "tests/fixtures/visualbasic/classic/golden/Inference.golden",
+      "sha256": "2881df658a06d8c261c5f6c9ae1d7d53210729f81aaca2bbd9da1934f7ab4c68",
+      "bytes": 116701
+    },
+    {
+      "path": "tests/fixtures/visualbasic/classic/golden/Locale.golden",
+      "sha256": "150180f7af4bbaf176672eff116f531afaad95d61829959c4d9cb9bfce8e12ff",
+      "bytes": 129766
+    },
+    {
+      "path": "tests/fixtures/visualbasic/classic/golden/Numeric.golden",
+      "sha256": "4c78d825ce65a509da8306a81fd3323bf46000b1ef07d2d52bc743c057a53361",
+      "bytes": 67898
+    },
+    {
+      "path": "tests/fixtures/visualbasic/classic/golden/Records.golden",
+      "sha256": "fbe46922df71d28925a47c1f1f93a41ccce3edc875b7598bd6ab298cdd1e7a79",
+      "bytes": 26064
+    },
+    {
+      "path": "tests/fixtures/visualbasic/classic/golden/Variants.golden",
+      "sha256": "843806fe74c73fd18a0176bbbc9b7d53f3dc6587d4b60d1e789cd2dbf1f2093b",
+      "bytes": 154658
+    },
+    {
       "path": "tests/vectors/float/THIRD-PARTY-NOTICE.CORE-MATH.txt",
       "sha256": "9b9eac96d0980bf1c20316e289818725eb9c2911286b026fdd388153e62b6a9e",
       "bytes": 1627

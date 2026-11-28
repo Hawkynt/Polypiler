@@ -1,0 +1,20 @@
+#### csharp exit 3 397
+ClassicProbe.bas(161,1): error PLY2646: 'Resume outside a handler that ends with it' is not supported by the classic Visual Basic profile
+ClassicProbe.bas(201,1): error PLY2646: 'the parameter 'v' of 'Increment', passed by reference and assigned - the IR passes values; declare it ByVal or return the value' is not supported by the classic Visual Basic profile
+polypiler: 2 error(s), 0 warning(s)
+#### javascript exit 3 397
+ClassicProbe.bas(161,1): error PLY2646: 'Resume outside a handler that ends with it' is not supported by the classic Visual Basic profile
+ClassicProbe.bas(201,1): error PLY2646: 'the parameter 'v' of 'Increment', passed by reference and assigned - the IR passes values; declare it ByVal or return the value' is not supported by the classic Visual Basic profile
+polypiler: 2 error(s), 0 warning(s)
+#### python exit 3 397
+ClassicProbe.bas(161,1): error PLY2646: 'Resume outside a handler that ends with it' is not supported by the classic Visual Basic profile
+ClassicProbe.bas(201,1): error PLY2646: 'the parameter 'v' of 'Increment', passed by reference and assigned - the IR passes values; declare it ByVal or return the value' is not supported by the classic Visual Basic profile
+polypiler: 2 error(s), 0 warning(s)
+#### visualbasic exit 3 397
+ClassicProbe.bas(161,1): error PLY2646: 'Resume outside a handler that ends with it' is not supported by the classic Visual Basic profile
+ClassicProbe.bas(201,1): error PLY2646: 'the parameter 'v' of 'Increment', passed by reference and assigned - the IR passes values; declare it ByVal or return the value' is not supported by the classic Visual Basic profile
+polypiler: 2 error(s), 0 warning(s)
+#### vba7-64 exit 3 397
+ClassicProbe.bas(161,1): error PLY2646: 'Resume outside a handler that ends with it' is not supported by the classic Visual Basic profile
+ClassicProbe.bas(201,1): error PLY2646: 'the parameter 'v' of 'Increment', passed by reference and assigned - the IR passes values; declare it ByVal or return the value' is not supported by the classic Visual Basic profile
+polypiler: 2 error(s), 0 warning(s)
