@@ -155,7 +155,12 @@ internal sealed partial class PerlLowerer {
           return null;
         var order = string.CompareOrdinal(left.Text, right.Text);
         return op == "cmp" ? new(PerlNumeric.Of((long)Math.Sign(order)), null, null) : new(null, null, op switch {
-          "eq" => order == 0, "ne" => order != 0, "lt" => order < 0, "gt" => order > 0, "le" => order <= 0, _ => order >= 0
+          "eq" => order == 0,
+          "ne" => order != 0,
+          "lt" => order < 0,
+          "gt" => order > 0,
+          "le" => order <= 0,
+          _ => order >= 0
         });
     }
     if (left.Number is not { } a || right.Number is not { } b)
@@ -206,7 +211,12 @@ internal sealed partial class PerlLowerer {
       case "<" or "<=" or ">" or ">=" or "==" or "!=":
         var compare = integral ? x.CompareTo(y) : a.Double.CompareTo(b.Double);
         return new(null, null, op switch {
-          "<" => compare < 0, "<=" => compare <= 0, ">" => compare > 0, ">=" => compare >= 0, "==" => compare == 0, _ => compare != 0
+          "<" => compare < 0,
+          "<=" => compare <= 0,
+          ">" => compare > 0,
+          ">=" => compare >= 0,
+          "==" => compare == 0,
+          _ => compare != 0
         });
       case "<=>":
         return new(PerlNumeric.Of((long)(integral ? x.CompareTo(y) : a.Double.CompareTo(b.Double))), null, null);
