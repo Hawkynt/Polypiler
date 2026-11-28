@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "fixture": "runner-javascript/add",
+  "provenance": {
+    "kind": "published",
+    "source": "fixture",
+    "detail": "F(2, 3) = 6, wrong on purpose",
+    "generatedBy": "hand"
+  },
+  "export": "F",
+  "signature": {
+    "parameters": [
+      {
+        "name": "a",
+        "type": "i32"
+      },
+      {
+        "name": "b",
+        "type": "i32"
+      }
+    ],
+    "result": "i32"
+  },
+  "vectors": [
+    {
+      "name": "wrong",
+      "input": {
+        "hex": "0200000003000000"
+      },
+      "expected": {
+        "hex": "06000000"
+      }
+    }
+  ]
+}

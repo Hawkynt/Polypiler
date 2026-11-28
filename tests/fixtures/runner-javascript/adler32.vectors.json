@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "fixture": "runner-javascript/adler32",
+  "provenance": {
+    "kind": "published",
+    "source": "fixture",
+    "detail": "Adler-32 of the ASCII bytes of Wikipedia is 0x11E60398 by RFC 1950; of no bytes 1",
+    "generatedBy": "hand"
+  },
+  "export": "adler32",
+  "signature": {
+    "parameters": [
+      {
+        "name": "data",
+        "type": "seq<u8>"
+      }
+    ],
+    "result": "u32"
+  },
+  "vectors": [
+    {
+      "name": "Wikipedia",
+      "input": {
+        "hex": "0900000057696b697065646961"
+      },
+      "expected": {
+        "hex": "9803e611"
+      }
+    },
+    {
+      "name": "empty",
+      "input": {
+        "hex": "00000000"
+      },
+      "expected": {
+        "hex": "01000000"
+      }
+    }
+  ]
+}
