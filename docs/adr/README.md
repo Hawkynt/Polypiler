@@ -23,6 +23,7 @@ Probe programs and recorded output a record measured live under `docs/adr/eviden
 | [0009](0009-structured-tree-ir.md) | The structured typed tree IR is the IR | accepted | — |
 | [0030](0030-cipher-source-licence.md) | Cipher source licence and its lowest pin | accepted | [#588](https://github.com/Hawkynt/Polypiler/issues/588) |
 | [0300](0300-static-types-first.md) | Static types first, dynamic last: one inference framework, semantics tables per language, `object` plus helpers before `dynamic` | accepted | [#1577](https://github.com/Hawkynt/Polypiler/issues/1577) |
+| [1000](1000-grammar-described-frontends.md) | Grammar-described frontends: our own PEG generator, overlays per dialect, hand lexers as token sources | accepted | [#1578](https://github.com/Hawkynt/Polypiler/issues/1578) |
 | [2600](2600-classic-visual-basic-oracle.md) | The oracle of classic Visual Basic: LibreOffice Basic in VBA mode | accepted | [#1097](https://github.com/Hawkynt/Polypiler/issues/1097) |
 
 Related: [documentation index](../README.md) · [IR and analysis contracts](../architecture/IR.md) · [compilation pipeline](../architecture/PIPELINE.md).

@@ -1,0 +1,95 @@
+# Go in PEG form, from The Go Programming Language Specification (Go 1.27), for the spike only.
+# Terminals: 'x' is the token spelled x; UPPER names are token kinds of the hand scanner.
+# Hooks: nolit(e) parses e where a composite literal may not follow a bare type name (control
+# clauses), lit(e) lifts that again inside brackets; ?litok is the predicate that reads it.
+
+SourceFile: PackageClause ';' (ImportDecl ';')* (TopLevelDecl ';')* EOF
+PackageClause: 'package' IDENT
+ImportDecl: 'import' (ImportSpec | '(' ImportItem* ')')
+ImportItem: ';' | ImportSpec (';' | &')')
+ImportSpec: ('.' | IDENT)? STRING
+
+TopLevelDecl: Declaration | FunctionDecl
+Declaration: ConstDecl | TypeDecl | VarDecl
+ConstDecl: 'const' (ConstSpec | '(' ConstItem* ')')
+ConstItem: ';' | ConstSpec (';' | &')')
+ConstSpec: IdentifierList (Type? ('=' ExpressionList)?)?
+IdentifierList: IDENT (',' IDENT)*
+TypeDecl: 'type' (TypeSpec | '(' TypeItem* ')')
+TypeItem: ';' | TypeSpec (';' | &')')
+TypeSpec: IDENT TypeParameters '='? Type | IDENT '='? Type
+TypeParameters: '[' TypeParamDecl (',' TypeParamDecl)* ','? ']'
+TypeParamDecl: IdentifierList TypeElem
+VarDecl: 'var' (VarSpec | '(' VarItem* ')')
+VarItem: ';' | VarSpec (';' | &')')
+VarSpec: IdentifierList (Type ('=' ExpressionList)? | '=' ExpressionList)
+FunctionDecl: 'func' Parameters? IDENT TypeParameters? Signature Block?
+
+Signature: Parameters Result?
+Result: Parameters | Type
+Parameters: '(' (ParameterDecl (',' ParameterDecl)* ','?)? ')'
+ParameterDecl: IDENT '...'? Type | '...'? Type
+
+(memo) Type: TypeName TypeArgs? | TypeLit | '(' Type ')'
+TypeName: IDENT ('.' IDENT)?
+TypeArgs: '[' Type (',' Type)* ','? ']'
+TypeLit: ArrayType | SliceType | StructType | PointerType | FunctionType | InterfaceType | MapType | ChannelType
+ArrayType: '[' ('...' | lit(Expression)) ']' Type
+SliceType: '[' ']' Type
+StructType: 'struct' '{' FieldItem* '}'
+FieldItem: ';' | FieldDecl (';' | &'}')
+FieldDecl: (IdentifierList Type | '*'? TypeName TypeArgs?) STRING?
+PointerType: '*' Type
+FunctionType: 'func' Signature
+InterfaceType: 'interface' '{' InterfaceItem* '}'
+InterfaceItem: ';' | InterfaceElem (';' | &'}')
+InterfaceElem: IDENT Signature | TypeElem
+TypeElem: TypeTerm ('|' TypeTerm)*
+TypeTerm: '~'? Type
+MapType: 'map' '[' Type ']' Type
+ChannelType: 'chan' '<-' Type | 'chan' Type | '<-' 'chan' Type
+
+Block: '{' lit(StatementList) '}'
+StatementList: StatementItem*
+StatementItem: ';' | Statement (';' | &'}' | &'case' | &'default')
+Statement: Declaration | LabeledStmt | GoStmt | ReturnStmt | BreakStmt | ContinueStmt | GotoStmt | FallthroughStmt | Block | IfStmt | SwitchStmt | SelectStmt | ForStmt | DeferStmt | SimpleStmt
+LabeledStmt: IDENT ':' Statement?
+GoStmt: 'go' Expression
+DeferStmt: 'defer' Expression
+ReturnStmt: 'return' ExpressionList?
+BreakStmt: 'break' IDENT?
+ContinueStmt: 'continue' IDENT?
+GotoStmt: 'goto' IDENT
+FallthroughStmt: 'fallthrough'
+(memo) SimpleStmt: ExpressionList (':=' ExpressionList | AssignOp ExpressionList | '=' ExpressionList | '++' | '--' | '<-' Expression)?
+AssignOp: '+=' | '-=' | '*=' | '/=' | '%=' | '&=' | '|=' | '^=' | '<<=' | '>>=' | '&^='
+IfStmt: 'if' nolit(IfHeader) Block ('else' (IfStmt | Block))?
+IfHeader: SimpleStmt ';' Expression | Expression
+SwitchStmt: 'switch' nolit(SwitchHeader) '{' CaseClause* '}'
+SwitchHeader: SimpleStmt? ';' SimpleStmt? | SimpleStmt?
+CaseClause: ('case' ExpressionList | 'default') ':' StatementList
+SelectStmt: 'select' '{' CommClause* '}'
+CommClause: ('case' SimpleStmt | 'default') ':' StatementList
+ForStmt: 'for' nolit(ForHeader)? Block
+ForHeader: RangeClause | SimpleStmt? ';' Expression? ';' SimpleStmt? | Expression
+RangeClause: (ExpressionList ('=' | ':='))? 'range' Expression
+
+ExpressionList: Expression (',' Expression)*
+(memo) Expression: UnaryExpr (BinaryOp UnaryExpr)*
+BinaryOp: '||' | '&&' | '==' | '!=' | '<' | '<=' | '>' | '>=' | '+' | '-' | '|' | '^' | '*' | '/' | '%' | '<<' | '>>' | '&' | '&^'
+UnaryExpr: UnaryOp UnaryExpr | PrimaryExpr
+UnaryOp: '+' | '-' | '!' | '^' | '*' | '&' | '<-' | '~'
+PrimaryExpr: Operand Suffix*
+Suffix: '.' IDENT | '.' '(' ('type' | Type) ')' | '[' lit(IndexOrSlice) ']' | '(' lit(Arguments) ')' | ?litok LiteralValue
+IndexOrSlice: Expression? ':' Expression? (':' Expression)? | Expression (',' Expression)* ','?
+Arguments: (Expression (',' Expression)* '...'? ','?)?
+Operand: BasicLit | IDENT | '(' lit(Expression) ')' | FunctionLit | CompositeLit | ArrayType | SliceType | StructType | MapType | ChannelType | InterfaceType
+CompositeLit: LiteralType LiteralValue
+LiteralType: ArrayType | SliceType | '[' '...' ']' Type | StructType | MapType
+BasicLit: INT | FLOAT | IMAG | CHAR | STRING
+FunctionLit: 'func' Signature Block?
+LiteralValue: '{' lit(ElementList)? '}'
+ElementList: Element (',' Element)* ','?
+Element: (Key ':')? Value
+Key: LiteralValue | Expression
+Value: LiteralValue | Expression
