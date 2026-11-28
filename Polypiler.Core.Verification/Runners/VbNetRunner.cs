@@ -120,8 +120,14 @@ public sealed class VbNetRunner {
       + $"    <LangVersion>{languageVersion}</LangVersion>\n    <RootNamespace></RootNamespace>\n    <StartupObject>PlyDriver</StartupObject>\n"
       + "    <OptionExplicit>On</OptionExplicit>\n    <OptionStrict>On</OptionStrict>\n    <OptionInfer>On</OptionInfer>\n    <OptionCompare>Binary</OptionCompare>\n"
       + $"    <RemoveIntegerChecks>{(removeIntegerChecks ? "true" : "false")}</RemoveIntegerChecks>\n    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>\n"
-      + "    <Deterministic>true</Deterministic>\n  </PropertyGroup>\n</Project>\n";
+      + "    <Deterministic>true</Deterministic>\n    <NuGetAudit>false</NuGetAudit>\n  </PropertyGroup>\n</Project>\n";
   }
+
+  /// <summary>
+  /// The NuGet configuration of a run, without a package source: the driver references no package, so
+  /// the restore needs none and runs without the network, as the sandbox has none.
+  /// </summary>
+  public const string OfflineFeed = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<configuration>\n  <packageSources>\n    <clear />\n  </packageSources>\n</configuration>\n";
 
   /// <summary>The build that makes the driver, then the command that runs it.</summary>
   public static (ProcessSpec Build, ProcessSpec Run) Commands { get; } = (
@@ -145,10 +151,12 @@ public sealed class VbNetRunner {
     var files = sources.ToDictionary(pair => pair.Key, pair => (ReadOnlyMemory<byte>)Encoding.UTF8.GetBytes(pair.Value), StringComparer.Ordinal);
     files[DriverModule + ".vb"] = Encoding.UTF8.GetBytes(Driver(cases));
     files[DriverModule + ".vbproj"] = Encoding.UTF8.GetBytes(Project(languageVersion, removeIntegerChecks));
+    files["NuGet.config"] = Encoding.UTF8.GetBytes(OfflineFeed);
     var limits = new RunLimits(WallTime, RunLimits.Default.MemoryBytes, RunLimits.Default.OutputBytes, RunLimits.Default.Processes);
     var result = await this._runner.RunAsync(new RunPlan(files, [Commands.Build], Commands.Run, limits, TrustLevel.Trusted), cancellationToken).ConfigureAwait(false);
     if (result.Outcome == RunOutcome.BuildFailed)
-      return new(null, [Diagnostic.Create(VbNetRunnerDiagnostics.Rejected, null, (Encoding.UTF8.GetString(result.Stdout.Span) + Encoding.UTF8.GetString(result.Stderr.Span)).Trim())]);
+      return new(null, [Diagnostic.Create(VbNetRunnerDiagnostics.Rejected, null,
+        string.Join("\n", result.Diagnostics.Select(diagnostic => $"{diagnostic.Message} {diagnostic.Cause}".Trim()).Append(Encoding.UTF8.GetString(result.Stdout.Span)).Append(Encoding.UTF8.GetString(result.Stderr.Span))).Trim())]);
     if (result.Outcome != RunOutcome.Completed)
       return new(null, result.Diagnostics);
 
