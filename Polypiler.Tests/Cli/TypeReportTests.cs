@@ -52,6 +52,7 @@ public sealed class TypeReportTests {
     Assert.That(summary.GetProperty("certainty").GetProperty("proven").GetInt32(), Is.EqualTo(3));
     Assert.That(summary.GetProperty("certainty").GetProperty("dynamic").GetInt32(), Is.EqualTo(1));
     Assert.That(summary.GetProperty("staticRatio").GetRawText(), Is.EqualTo("0.75"));
+    Assert.That(TypeReport.Places(module, VisualBasicFrontend.Semantics).Single(place => place.Name == "v").Reason, Is.EqualTo("never assigned nor read"));
     var variant = JsonDocument.Parse(json).RootElement.GetProperty("functions")[0].GetProperty("variants")[0];
     Assert.That(variant.GetProperty("name").GetString(), Is.EqualTo("v"));
     Assert.That(variant.GetProperty("reason").GetString(), Does.Contain("no semantics table"));

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
+using Polypiler.Core.Analysis.Dynamic;
 using Polypiler.Core.Frontends.VisualBasic;
 using Polypiler.Core.IR;
 using Polypiler.Core.Optimize.Specialize;
@@ -160,6 +161,58 @@ public sealed class DeDynamicizeTreeTests {
     var arguments = new object[][] { [new IrVariant(IrVariantTag.F64, 2.0), IrVariant.Empty], [new IrVariant(IrVariantTag.F64, 2.0), IrVariant.Null], [IrVariant.Null, IrVariant.Empty], [new IrVariant(IrVariantTag.I16, (short)1), new IrVariant(IrVariantTag.I16, (short)4)] };
     foreach (var argument in arguments)
       Assert.That(IrInterpreter.Call(typed, "T", argument), Is.EqualTo(IrInterpreter.Call(module, "T", argument)));
+  }
+
+  /// <summary>Visual Basic's table with an expansion that calls a function no module has.</summary>
+  private sealed class MissingHelper : IDynamicSemantics {
+
+    private static readonly IDynamicSemantics _table = VisualBasicFrontend.Semantics;
+
+    public string Language => _table.Language;
+
+    public IJoinPolicy Joins => _table.Joins;
+
+    public DynamicType Result(DynamicOperation operation, DynamicType left, DynamicType right) => _table.Result(operation, left, right);
+
+    public DynamicTrap Trap(DynamicOperation operation, DynamicType left, DynamicType right) => _table.Trap(operation, left, right);
+
+    public IrExpr? Expand(DynamicOperation operation, IrExpr left, DynamicType leftType, IrExpr? right, DynamicType rightType)
+      => _table.Expand(operation, left, leftType, right, rightType) is { } expanded ? new IrCall("Missing", expanded.Type, [expanded]) : null;
+
+    public DynamicCall? Classify(IrExpr expression) => _table.Classify(expression);
+
+    public bool IsHelper(string function) => _table.IsHelper(function);
+
+    public string Name(DynamicExact element) => _table.Name(element);
+
+  }
+
+  [Test]
+  public void AnExpansionThatCallsAMissingFunction_KeepsTheHelper() {
+    var module = Module(new IrFunction("T", true, IrType.Variant, [], [], new IrBlock([new IrReturn(Times(Double(2), Double(3)))])));
+    var typed = DeDynamicize.Run(module, new MissingHelper(), DeDynamicizeOptions.Default);
+    Assert.That(IrVerifier.Verify(typed), Is.Empty);
+    Assert.That(IrTree.Nodes(typed.Functions.Single(function => function.Name == "T").Body).OfType<IrCall>().Select(call => call.Function), Is.EqualTo(new[] { "PlyVarArith" }));
+  }
+
+  [Test]
+  public void StatementsThatLeave_EndTheWalk_AndTestsInEitherOrderNarrow() {
+    var i = new IrLocal("i", IrType.I32);
+    var body = new IrBlock([
+      new IrDeclare(V, Double(1)),
+      new IrDeclare(i, new IrConst(IrType.I32, 0)),
+      new IrFor(new IrBinary(IrBinaryOp.Less, R(i), new IrConst(IrType.I32, 2)), new IrBlock([new IrAssign(V, Times(R(V), Double(2)))]),
+        new IrBlock([new IrExprStmt(new IrStep(R(i), true, false, false))])) { PerIteration = [i] },
+      new IrIf(new IrBinary(IrBinaryOp.Equal, new IrConst(IrType.I32, (long)IrVariantTag.F64), new IrVariantTagOf(R(W))),
+        new IrBlock([new IrReturn(Times(R(W), R(V)))]), null),
+      new IrIf(new IrBinary(IrBinaryOp.Equal, new IrVariantTagOf(R(W)), new IrConst(IrType.I32, 99)), new IrBlock([new IrReturn(R(W))]), null),
+      new IrReturn(R(V))
+    ]);
+    var module = Module(new IrFunction("T", true, IrType.Variant, [W], [V, i], body));
+    var typed = Typed(module);
+    Assert.That(IrTree.Nodes(((IrIf)typed.Functions.Single(function => function.Name == "T").Body.Statements[3]).Then).OfType<IrCall>().Select(call => call.Function), Is.EqualTo(new[] { "PlyCheckD" }), "a constant first is a tag test too");
+    foreach (var argument in new[] { new IrVariant(IrVariantTag.F64, 1.5), new IrVariant(IrVariantTag.I16, (short)3) })
+      Assert.That(IrInterpreter.Call(typed, "T", [argument]), Is.EqualTo(IrInterpreter.Call(module, "T", [argument])));
   }
 
   [Test]

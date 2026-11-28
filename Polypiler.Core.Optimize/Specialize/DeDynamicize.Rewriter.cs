@@ -50,7 +50,7 @@ public static partial class DeDynamicize {
         string? reason = null;
         if (local.Type.IsVariant && !this.Retyped.ContainsKey(local))
           reason = this._escaping.Contains(local) ? "captured, bound or written where the analysis does not follow it"
-            : this._reasons.GetValueOrDefault(local) ?? (fact.Type is DynamicOptional { Missing: not DynamicMissing.None } ? "read where it may still be missing" : "holds more than one type");
+            : this._reasons.GetValueOrDefault(local) ?? (fact.Type is DynamicNothing ? "never assigned nor read" : fact.Type is DynamicOptional { Missing: not DynamicMissing.None } ? "read where it may still be missing" : "holds more than one type");
         yield return new(name, local.Name, DynamicPlaceKind.Local, fact.Type is DynamicVariant ? this._domain.Unknown : fact, reason);
       }
 

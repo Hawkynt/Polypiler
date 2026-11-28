@@ -198,6 +198,24 @@ public sealed class DynamicTypeTests {
   }
 
   [Test]
+  public void Elements_EqualOnlyElementsOfTheirKind() {
+    var shape = (DynamicShape)S(("x", E(IrType.I32)));
+    var union = (DynamicUnion)DynamicType.Union(Vb, E(IrType.I32), E(IrType.String));
+    var nominal = (DynamicNominal)DynamicType.Nominal(_point);
+    Assert.That(shape.Equals(null) || union.Equals(null) || nominal.Equals(null), Is.False);
+    Assert.That(shape.Equals((DynamicShape)S(("x", E(IrType.F64)))), Is.False);
+    Assert.That(shape.Equals((DynamicShape)S(("y", E(IrType.I32)))), Is.False);
+    Assert.That(shape.Equals((DynamicShape)S(("x", E(IrType.I32)), ("y", E(IrType.I32)))), Is.False);
+    Assert.That(union.Equals((DynamicUnion)DynamicType.Union(Vb, E(IrType.I32), E(IrType.F64))), Is.False);
+    Assert.That(nominal.Equals((DynamicNominal)DynamicType.Nominal(Point())), Is.False, "nominal: another declaration of the same name");
+    Assert.That(shape.GetHashCode(), Is.EqualTo(S(("x", E(IrType.I32))).GetHashCode()));
+    Assert.That(nominal.GetHashCode(), Is.EqualTo(DynamicType.Nominal(_point).GetHashCode()));
+    Assert.That(shape.Depth, Is.EqualTo(1));
+    Assert.That(S().Depth, Is.EqualTo(1), "a shape without fields");
+    Assert.That(DynamicType.Optional(shape, DynamicMissing.Null).Depth + union.Depth, Is.EqualTo(1));
+  }
+
+  [Test]
   public void Levels_AreTheAdrs() {
     DynamicType[] elements = [DynamicType.Nothing, E(IrType.I32), DynamicType.Nominal(_point), S(("x", E(IrType.I32))),
       DynamicType.Optional(E(IrType.I32), DynamicMissing.Null), DynamicType.Union(Vb, E(IrType.I32), E(IrType.String)), DynamicType.Variant];

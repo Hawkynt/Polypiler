@@ -331,8 +331,7 @@ public sealed record DynamicNominal : DynamicType {
     IrStructType type => IrType.Struct(type),
     IrClassType type => IrType.Object(type),
     IrInterfaceType type => IrType.Object(type),
-    IrEnumType type => type.Type,
-    _ => null
+    _ => ((IrEnumType)this.Declaration).Type
   };
 
   /// <inheritdoc/>

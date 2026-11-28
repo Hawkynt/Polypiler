@@ -126,6 +126,21 @@ public sealed class VisualBasicSemanticsTests {
   }
 
   [Test]
+  public void Names_AreVisualBasicsKinds_AndHelpersItsPlyFunctions() {
+    Assert.That(Table.Name((DynamicExact)E(IrType.I32)), Is.EqualTo("Long"));
+    Assert.That(Table.Name((DynamicExact)E(IrType.I64, IrVariantTag.Currency)), Is.EqualTo("Currency"));
+    Assert.That(Table.Name((DynamicExact)E(IrType.F64, IrVariantTag.Date)), Is.EqualTo("Date"));
+    Assert.That(Table.Name((DynamicExact)E(IrType.U32)), Is.EqualTo("u32"), "a type Visual Basic has no kind of");
+    Assert.That(Table.IsHelper("PlyVarArith") && Table.IsHelper("PlyCheckD"), Is.True);
+    Assert.That(Table.IsHelper("Plywood") || Table.IsHelper("Ply") || Table.IsHelper("Add"), Is.False);
+    Assert.That(() => Table.Name(null!), Throws.ArgumentNullException);
+    Assert.That(() => Table.IsHelper(null!), Throws.ArgumentNullException);
+    var colour = new IrEnumType("Colour", IrType.I32, [new("Red", 0)]);
+    Assert.That(Table.Result(DynamicOperation.Add, E(IrType.Enum(colour)), E(IrType.I32)), Is.EqualTo(DynamicType.Variant), "an enum is no kind of Visual Basic's");
+    Assert.That(Table.Result(DynamicOperation.Add, E(IrType.Enum(new IrEnumType("Small", IrType.I16, [new("A", 0)]))), E(IrType.I32)), Is.EqualTo(DynamicType.Variant));
+  }
+
+  [Test]
   public void Traps_NameVisualBasicsErrors() {
     Assert.That(Table.Trap(DynamicOperation.Divide, E(IrType.I32), E(IrType.I32)), Is.EqualTo(DynamicTrap.Error(11)));
     Assert.That(Table.Trap(DynamicOperation.IntegerDivide, E(IrType.I32), E(IrType.I32)), Is.EqualTo(DynamicTrap.Error(11)));
