@@ -30,7 +30,7 @@ public static partial class DeDynamicize {
       };
     }
 
-    private IrLocal Local(IrLocal local) => this.Retyped.TryGetValue(local, out var typed) ? typed.Local : local;
+    private IrLocal Local(IrLocal local) => this.Retyped.TryGetValue(local, out var typed) ? typed.Local : this.Unioned.TryGetValue(local, out var union) ? union.Local : local;
 
     /// <summary>What a walk on the places of the function found: every parameter, local and result.</summary>
     public IEnumerable<DynamicPlace> Places(string name) {
@@ -44,11 +44,12 @@ public static partial class DeDynamicize {
 
       foreach (var local in this.Function.Locals.Where(local => !this.Function.Parameters.Contains(local))) {
         var fact = this.Retyped.TryGetValue(local, out var typed) ? DynamicFact.Proven(typed.Type)
+          : this.Unioned.TryGetValue(local, out var union) ? DynamicFact.Proven(union.Type)
           : !local.Type.IsVariant ? Declared(local.Type)
           : this._escaping.Contains(local) ? this._domain.Unknown
           : this._reaching.TryGetValue(local, out var read) ? read : this._assigned.GetValueOrDefault(local, this._domain.Unreachable);
         string? reason = null;
-        if (local.Type.IsVariant && !this.Retyped.ContainsKey(local))
+        if (local.Type.IsVariant && !this.Retyped.ContainsKey(local) && !this.Unioned.ContainsKey(local))
           reason = this._escaping.Contains(local) ? "captured, bound or written where the analysis does not follow it"
             : this._reasons.GetValueOrDefault(local) ?? (fact.Type is DynamicNothing ? "never assigned nor read" : fact.Type is DynamicOptional { Missing: not DynamicMissing.None } ? "read where it may still be missing" : "holds more than one type");
         yield return new(name, local.Name, DynamicPlaceKind.Local, fact.Type is DynamicVariant ? this._domain.Unknown : fact, reason);
@@ -81,6 +82,13 @@ public static partial class DeDynamicize {
           // A dead store: no read sees it; its value is evaluated for its effects alone.
           var effect = this.Rewritten(assign.Value, state);
           return IrShape.IsSideEffectFree(effect) && IrShape.IsTrapFree(effect) ? new IrBlock([]) { Origins = assign.Origins } : new IrExprStmt(effect) { Origins = assign.Origins };
+        case IrAssign assign when this.Unioned.TryGetValue(assign.Local, out var union):
+          if (this.Member(assign.Value, state, union.Type) is { } stored)
+            return assign with { Local = union.Local, Value = stored };
+          var lost = this.Rewritten(assign.Value, state);
+          return IrShape.IsSideEffectFree(lost) && IrShape.IsTrapFree(lost) ? new IrBlock([]) { Origins = assign.Origins } : new IrExprStmt(lost) { Origins = assign.Origins };
+        case IrDeclare declare when this.Unioned.TryGetValue(declare.Local, out var union):
+          return declare with { Local = union.Local, Initializer = declare.Initializer is null ? null : this.Member(declare.Initializer, state, union.Type) };
         case IrDeclare declare when this.Retyped.TryGetValue(declare.Local, out var typed):
           return declare with {
             Local = typed.Local,
@@ -119,6 +127,29 @@ public static partial class DeDynamicize {
     private bool Stores(IrExpr value, DynamicState<IrLocal>? state, DynamicExact type)
       => state is null || this.Eval(value, state).Type.Plain == type;
 
+    /// <summary>
+    /// A value of a local that is a closed union, from an expression of the dynamic type proven of one
+    /// of its members: that member made of the payload; <see langword="null"/> for a value of none of
+    /// them, which no read sees.
+    /// </summary>
+    private IrUnionOf? Member(IrExpr value, DynamicState<IrLocal>? state, DynamicUnion union) {
+      if (state is null || this.Eval(value, state).Type.Plain is not DynamicExact member || !union.Members.Contains(member))
+        return null;
+      var type = union.ToIrType()!;
+      return new IrUnionOf(type, type.UnionType!.Members.ToList().IndexOf(member.Type), this.Unboxed(value, state, member));
+    }
+
+    /// <summary>A read of a local that is a closed union where a variant is expected: the box of the member it holds, chosen by its tag.</summary>
+    private static IrExpr Boxed(IrLocal local, DynamicUnion union) {
+      var type = local.Type.UnionType!;
+      IrExpr Box(int index) => new IrVariantOf(union.Members.OfType<DynamicExact>().Single(member => member.Type == type.Members[index]).BoxTag!.Value,
+        new IrUnionValue(new IrLocalRef(local), index) { IsTested = true });
+      var boxed = Box(type.Members.Count - 1);
+      for (var index = type.Members.Count - 2; index >= 0; --index)
+        boxed = new IrConditional(new IrBinary(IrBinaryOp.Equal, new IrUnionTagOf(new IrLocalRef(local)), new IrConst(IrType.I32, index)), Box(index), boxed);
+      return boxed;
+    }
+
     /// <summary>A value of a typed local, parameter or result from an expression of the dynamic type: the payload of its box, which the facts prove of the tag.</summary>
     private IrExpr Unboxed(IrExpr value, DynamicState<IrLocal>? state, DynamicExact type) {
       var rewritten = this.Rewritten(value, state);
@@ -144,6 +175,8 @@ public static partial class DeDynamicize {
       switch (rebuilt) {
         case IrLocalRef reference when this.Retyped.TryGetValue(reference.Local, out var typed):
           return new IrVariantOf(typed.Type.BoxTag!.Value, new IrLocalRef(typed.Local)) { Origins = reference.Origins };
+        case IrLocalRef reference when this.Unioned.TryGetValue(reference.Local, out var union):
+          return Boxed(union.Local, union.Type);
         case IrVariantValue { Value: IrVariantOf { Value: { } payload } box } value when box.Tag == value.Tag:
           return payload;
         case IrVariantValue { IsTested: false } value when state is not null && expression is IrVariantValue original

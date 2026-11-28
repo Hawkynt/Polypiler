@@ -108,6 +108,9 @@ folded. Across the module a call whose variant arguments are all proven exact ca
 function for that signature (#1564's budgets: four clones, twelve rounds). Places it cannot follow -
 captured by a lambda, bound inside an expression, written by a statement it does not model - stay
 variants; a budget exceeded leaves a place dynamic and never refuses a program.
+With `DeDynamicizeOptions.Unions` on, a local proven to hold one of two to four exact types of distinct
+IR types becomes their closed union (#1589, [unions](unions.md)) instead of a variant; the option
+stays off until the backends write unions.
 `DeDynamicize.Typing` gives the same findings without rewriting the module, for a frontend that writes
 them with its own lowering: classic Visual Basic does (#1591), so its typed output is byte for byte
 what its former inference wrote.

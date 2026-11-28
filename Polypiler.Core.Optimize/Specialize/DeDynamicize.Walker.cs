@@ -88,6 +88,9 @@ public static partial class DeDynamicize {
     /// <summary>The locals and parameters the walk types: each with its new local and its exact element.</summary>
     private Dictionary<IrLocal, (IrLocal Local, DynamicExact Type)> Retyped { get; } = [];
 
+    /// <summary>The locals the walk makes closed unions (#1589): each with its new local and the union of exact elements it holds.</summary>
+    private Dictionary<IrLocal, (IrLocal Local, DynamicUnion Type)> Unioned { get; } = [];
+
     /// <summary>The type the function or clone returns.</summary>
     private IrType ReturnType { get; set; } = IrType.Void;
 
@@ -136,6 +139,11 @@ public static partial class DeDynamicize {
         if (fact is { IsStatic: true, Type.Plain: DynamicExact { BoxTag: not null } exact }
             && values.All(value => value.Plain == exact || DynamicType.Meet(value.Plain, exact, this._domain.Policy) is DynamicNothing))
           this.Retyped[local] = (local with { Type = exact.Type }, exact);
+        else if (this._program.Options.Unions && fact is { IsStatic: true, Type.Plain: DynamicUnion union } && union.ToIrType() is { } type
+            && union.Members.All(member => member is DynamicExact { BoxTag: not null })
+            && values.All(value => union.Members.Contains(value.Plain) || DynamicType.Meet(value.Plain, union, this._domain.Policy) is DynamicNothing))
+          // A local of two to four exact types, each value it is assigned one of them, is their union.
+          this.Unioned[local] = (local with { Type = type }, union);
       }
 
       if (this.Signature is { } signature)

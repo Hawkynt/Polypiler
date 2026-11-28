@@ -18,6 +18,12 @@ public sealed record DeDynamicizeOptions {
   /// <summary>The most clones of one function; a call of another signature calls the dynamic function.</summary>
   public int MostClones { get; init; } = 4;
 
+  /// <summary>
+  /// Whether a local proven to hold one of two to four exact types becomes a closed union of them
+  /// (#1589, ADR 0300 level 5) instead of staying a variant: for a target that writes unions.
+  /// </summary>
+  public bool Unions { get; init; }
+
 }
 
 /// <summary>What a place of the module was found to hold, for the static-typing report (ADR 0300 decision 7).</summary>

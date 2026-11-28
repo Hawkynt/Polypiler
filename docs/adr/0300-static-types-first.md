@@ -171,6 +171,12 @@ Where this record is silent, the implementation of epic #1579 decided:
   dynamic, analyses it and lowers it again with that typing, so that every typed operation is its own
   lowering of the type and the output equals that of its former inference byte for byte; the
   rewriting pass (`DeDynamicize.Run`) stays for the frontends that leave the typing to the pipeline.
+- **Closed unions of locals** (#1589) are made by the rewrite where `DeDynamicizeOptions.Unions` is on:
+  a local every read of which sees two to four exact types that are distinct types of the IR, and
+  every value assigned it one of them, is their `union<…>`; an assignment makes the member, a read
+  where a variant is expected boxes the member the tag names. A Visual Basic `Double` and `Date` are
+  both `f64` and so no union. The option is off by default and in the command line while no backend
+  writes unions (#1596, #1598 to #1604); parameters and results of clones stay exact or variant.
 - **Refinement** follows tests of the tag of a local, through conversions, `And`, `Or`, `Not` and a
   switch on the tag; a test of a copy of the tag (Visual Basic's `Select Case VarType(v)`) is not
   followed yet.
