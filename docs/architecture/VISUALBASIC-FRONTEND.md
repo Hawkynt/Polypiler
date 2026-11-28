@@ -142,6 +142,21 @@ and one never called keeps its declared signature. A clone whose lowering is ref
 typed parameters keep the arithmetic of a `Variant`: `Inc(CInt(32767))` of `Inc = x + 1` is
 `Long 32768`, not error 6.
 
+## The shared framework (ADR 0300)
+
+`VisualBasicImportOptions.Inference` chooses who types the `Variant`s. `Frontend`, the default, is the
+inference above. `Framework` lowers every `Variant` local and parameter dynamic - the kinds are still
+followed, but only to choose the helpers and the refusals - names `visualbasic` as the module's
+`DynamicSemantics`, and leaves the typing to the shared de-dynamicization with the table
+`VisualBasicFrontend.Semantics` (#1584 to #1587). A `Variant` that holds only an array stays the
+array its syntax states, as the IR's dynamic type carries none yet. On the fixtures of #1556 and #1564
+the framework computes every case LibreOffice printed, makes the frontend's clones with their
+signatures and types every local the frontend types, but for the counter of a `For` loop over a
+`Variant`, which needs the range of its bounds; making `Framework` the default and removing the
+inference above is #1591. The comparison found one defect of the frontend's clones: a `ByVal`
+parameter the body assigns another kind is typed by its calls (`G(CDbl(1))` of `a = a & "!"` raises a
+type mismatch where Visual Basic returns `"1!"`); the framework leaves such a parameter dynamic.
+
 ## What is refused
 
 `PLY2646` names the `Variant` constructs above, the text of a `Date`, a `For` loop over a `Currency` or

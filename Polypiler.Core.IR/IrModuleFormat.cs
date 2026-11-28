@@ -43,6 +43,9 @@ public static partial class IrModuleFormat {
   /// <summary>The byte that opens the table of sources after the end of a module that declares any (<see cref="IrModule.Sources"/>).</summary>
   private const byte SourcesTable = 0xFD;
 
+  /// <summary>The byte before the language of the semantics table of a module that names one (<see cref="IrModule.DynamicSemantics"/>), after the table of sources.</summary>
+  private const byte SemanticsTable = 0xFC;
+
   /// <summary>The kinds of origin, as the byte before each origin says.</summary>
   private enum OriginKind : byte {
     Span, Address, Synthetic
@@ -62,7 +65,8 @@ public static partial class IrModuleFormat {
     Await, Async,
     ForeignCall, LastError,
     BigConst, WriteLine,
-    VariantOf, VariantTagOf, VariantValue
+    VariantOf, VariantTagOf, VariantValue,
+    UnionOf, UnionTagOf, UnionValue
   }
 
   /// <summary>The kinds of declaration, as the byte after the name of a declaration says.</summary>
@@ -251,17 +255,21 @@ public static partial class IrModuleFormat {
       if (module.Initializer is not null)
         writer.Write(module.Initializer);
 
-      if (module.Sources.Count == 0)
-        return;
+      if (module.Sources.Count > 0) {
+        writer.Write(SourcesTable);
+        this.Count(module.Sources.Count);
+        foreach (var source in module.Sources) {
+          this.Text(source.Repository);
+          this.Text(source.Commit);
+          this.Text(source.Path);
+          this.Text(source.Sha256);
+          this.Text(source.Dialect);
+        }
+      }
 
-      writer.Write(SourcesTable);
-      this.Count(module.Sources.Count);
-      foreach (var source in module.Sources) {
-        this.Text(source.Repository);
-        this.Text(source.Commit);
-        this.Text(source.Path);
-        this.Text(source.Sha256);
-        this.Text(source.Dialect);
+      if (module.DynamicSemantics is { } language) {
+        writer.Write(SemanticsTable);
+        writer.Write(language);
       }
     }
 
@@ -595,6 +603,9 @@ public static partial class IrModuleFormat {
           this.Types(type.Signature!.Parameters);
           this.Type(type.Signature.Result);
           break;
+        case IrTypeKind.Union:
+          this.Types(type.UnionType!.Members);
+          break;
         case IrTypeKind.Sequence:
           this.Type(type.Element!);
           writer.Write(type.Restartable);
@@ -797,6 +808,9 @@ public static partial class IrModuleFormat {
       IrVariantOf => Tag.VariantOf,
       IrVariantTagOf => Tag.VariantTagOf,
       IrVariantValue => Tag.VariantValue,
+      IrUnionOf => Tag.UnionOf,
+      IrUnionTagOf => Tag.UnionTagOf,
+      IrUnionValue => Tag.UnionValue,
       _ => throw new ArgumentException($"The expression {expression.GetType().Name} has no form in bytes.", nameof(module))
     };
 
@@ -1011,6 +1025,18 @@ public static partial class IrModuleFormat {
           this.Node(value.Value);
           writer.Write(value.IsTested);
           break;
+        case IrUnionOf made:
+          this.Count(made.Member);
+          this.Node(made.Value);
+          break;
+        case IrUnionTagOf tag:
+          this.Node(tag.Value);
+          break;
+        case IrUnionValue value:
+          this.Count(value.Member);
+          this.Node(value.Value);
+          writer.Write(value.IsTested);
+          break;
         default:
           var invocation = (IrInvoke)expression;
           this.Node(invocation.Callee);
@@ -1202,8 +1228,23 @@ public static partial class IrModuleFormat {
       return new IrModule(name, functions, constants) {
         Types = [.. this._declarations.Take(owned)], Globals = [.. this._globals], Caveats = caveats, ForeignFunctions = this.ForeignFunctions(),
         Initializer = reader.ReadBoolean() ? reader.ReadString() : null,
-        Sources = this.Sources()
+        Sources = this.Sources(),
+        DynamicSemantics = this.Semantics()
       };
+    }
+
+    /// <summary>The language of the semantics table, when the bytes go on with one; any other byte is left for the check of the end.</summary>
+    private string? Semantics() {
+      var stream = reader.BaseStream;
+      if (stream.Position == stream.Length)
+        return null;
+
+      if (reader.ReadByte() != SemanticsTable) {
+        --stream.Position;
+        return null;
+      }
+
+      return reader.ReadString();
     }
 
     /// <summary>The table of sources, when the bytes go on with one; any other byte is left for the check of the end.</summary>
@@ -1418,6 +1459,7 @@ public static partial class IrModuleFormat {
         IrTypeKind.Async => IrType.Async(this.Type(), reader.ReadBoolean()),
         IrTypeKind.BigInt => IrType.BigInt,
         IrTypeKind.Variant => IrType.Variant,
+        IrTypeKind.Union => IrType.Union([.. this.Types()]),
         < IrTypeKind.Array => _primitives[(int)kind],
         _ => throw new InvalidDataException($"{(int)kind} is no kind of type.")
       };
@@ -1500,12 +1542,12 @@ public static partial class IrModuleFormat {
         return Of(this._nodes, index, "node") as T ?? throw new InvalidDataException($"The node {index} is no {typeof(T).Name}.");
       }
 
-      if (tag > Tag.VariantValue)
+      if (tag > Tag.UnionValue)
         throw new InvalidDataException($"{(int)tag} is no kind of node.");
 
       var slot = this._nodes.Count;
       this._nodes.Add(null);
-      object node = tag >= Tag.Block && tag is not (Tag.ArraySequence or Tag.Sequence or Tag.Await or Tag.Async or Tag.ForeignCall or Tag.LastError or Tag.BigConst or Tag.VariantOf or Tag.VariantTagOf or Tag.VariantValue) ? this.Statement(tag) : this.Expression(tag);
+      object node = tag >= Tag.Block && tag is not (Tag.ArraySequence or Tag.Sequence or Tag.Await or Tag.Async or Tag.ForeignCall or Tag.LastError or Tag.BigConst or Tag.VariantOf or Tag.VariantTagOf or Tag.VariantValue or Tag.UnionOf or Tag.UnionTagOf or Tag.UnionValue) ? this.Statement(tag) : this.Expression(tag);
       if (origins is not null)
         node = node is IrExpr expression ? expression with { Origins = origins } : (IrStmt)node with { Origins = origins };
 
@@ -1566,9 +1608,17 @@ public static partial class IrModuleFormat {
         Tag.VariantOf => new IrVariantOf(this.Enum<IrVariantTag>(), this.OptionalNode<IrExpr>()),
         Tag.VariantTagOf => new IrVariantTagOf(this.Node<IrExpr>()),
         Tag.VariantValue => this.VariantValue(),
+        Tag.UnionOf => new IrUnionOf(type, this.Count(), this.Node<IrExpr>()),
+        Tag.UnionTagOf => new IrUnionTagOf(this.Node<IrExpr>()),
+        Tag.UnionValue => this.UnionValue(),
         _ => new IrInvoke(type, this.Node<IrExpr>(), this.Nodes<IrExpr>())
       };
       return expression.Type == type ? expression : expression with { Type = type };
+    }
+
+    private IrUnionValue UnionValue() {
+      var member = this.Count();
+      return new IrUnionValue(this.Node<IrExpr>(), member) { IsTested = reader.ReadBoolean() };
     }
 
     private IrVariantValue VariantValue() {

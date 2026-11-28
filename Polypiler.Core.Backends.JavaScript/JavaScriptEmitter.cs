@@ -117,6 +117,8 @@ public static partial class JavaScriptEmitter {
     var table = capabilities ?? JavaScriptCapabilities.Standard;
     module = SequenceFusion.Run(module);
     var problems = IrVerifier.Verify(module);
+    if (problems.Count == 0 && Unions(module) is { } union)
+      problems = [union];
     var writer = new Writer(profile, table, mode) { Naming = problems.Count > 0 ? new([], new HashSet<string>(), true) : Named(module, profile, table, mode) };
     var program = problems.Count > 0 ? null : writer.Module(module);
     if (problems.Concat(writer.Problems).FirstOrDefault() is { } problem)
@@ -158,6 +160,8 @@ public static partial class JavaScriptEmitter {
     var problems = IrVerifier.Verify(module);
     if (problems.Count > 0)
       return problems;
+    if (Unions(module) is { } union)
+      return [union];
 
     var writer = new Writer(profile, capabilities ?? JavaScriptCapabilities.Standard);
     writer.Module(module);
@@ -175,6 +179,10 @@ public static partial class JavaScriptEmitter {
     var table = capabilities ?? JavaScriptCapabilities.Standard;
     return [.. JavaScriptHelpers.Sources(name => table.Has(name, profile))];
   }
+
+  /// <summary>The refusal of a module that uses a closed tagged union, which the backend has no lowering for yet (#1598); <see langword="null"/> for any other module.</summary>
+  private static Diagnostic? Unions(IrModule module)
+    => IrUnions.Uses(module) ? Diagnostic.Create(InexpressibleDescriptor, null, "a closed tagged union has no JavaScript form yet") : null;
 
   /// <summary>The typed array that stores the elements of an array type, which is also the name of its capability.</summary>
   private static string Storage(IrType element) => element.Kind switch {

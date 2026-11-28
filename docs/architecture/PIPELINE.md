@@ -31,6 +31,14 @@ flowchart TB
 
 These are **conceptual stages**, not necessarily separate serialized IR formats. Facts may flow back into earlier passes; iterative passes must converge or stop at a deterministic budget with conservative fallback. The [IR contracts](IR.md) define the representation boundaries and [ADR 0009](../adr/0009-structured-tree-ir.md) the tree IR and its legality checks; [semantic recovery](SEMANTIC-RECOVERY.md) explains recognition and proof obligations.
 
+Two passes run on every translation before the optional ones, at every optimization level: the
+specialization of Python's arbitrary-precision integer (O0062) and the de-dynamicization of
+[ADR 0300](../adr/0300-static-types-first.md), which types the variants of a module that names its
+language's semantics table (`IrModule.DynamicSemantics`) - within each function, on the tag tests of
+its branches and across the module by clones per call-site signature - and leaves every other module
+as it is. `translate --type-report <path|->` writes what the translation made of every place, by the
+lattice level and certainty of its type, with the static ratio (`spec/schemas/type-report.schema.json`).
+
 ## Detailed phases
 
 | Phase | Receives | Produces | Must preserve |

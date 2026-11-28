@@ -327,6 +327,7 @@ public static class IrGenerics {
   private static Func<IrType, IrType> Substitution(Dictionary<IrTypeDeclaration, IrType> map) {
     IrType Type(IrType type) => type.Declaration is { } declared && map.TryGetValue(declared, out var argument) ? argument
       : type.Signature is { } signature ? IrType.Function(new IrFunctionType([.. signature.Parameters.Select(Type)], Type(signature.Result)))
+      : type.UnionType is { } union ? IrType.Union([.. union.Members.Select(Type)])
       : type.Element is { } element ? type.Kind switch {
         IrTypeKind.Span => IrType.Span(Type(element)),
         IrTypeKind.ReadOnlySpan => IrType.ReadOnlySpan(Type(element)),
@@ -530,6 +531,9 @@ public static class IrGenerics {
         IrVariantOf made => made with { Value = made.Value is null ? null : this.Expression(made.Value) },
         IrVariantTagOf tag => new IrVariantTagOf(this.Expression(tag.Value)),
         IrVariantValue value => value with { Value = this.Expression(value.Value) },
+        IrUnionOf made => new IrUnionOf(type(made.Union), made.Member, this.Expression(made.Value)),
+        IrUnionTagOf tag => new IrUnionTagOf(this.Expression(tag.Value)),
+        IrUnionValue value => new IrUnionValue(this.Expression(value.Value), value.Member) { IsTested = value.IsTested },
         IrBind bind => new IrBind(this.Local(bind.Local), this.Expression(bind.Value)),
         IrThrowExpression thrown => new IrThrowExpression(type(thrown.Type), this.Expression(thrown.Exception)),
         IrArraySequence sequence => new IrArraySequence(this.Expression(sequence.Array)),
