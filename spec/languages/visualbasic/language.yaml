@@ -1,5 +1,5 @@
 id: LANGUAGES.visualbasic
-title: Visual Basic (VB6 / VBA)
+title: Visual Basic (VB6 / VBA, Visual Basic .NET)
 version: 1
 status: draft
 owner: Hawkynt
@@ -12,6 +12,6 @@ normative: ""
 spec:
   kind: language
   identifier: visualbasic
-  displayName: Visual Basic (VB6 / VBA)
+  displayName: Visual Basic (VB6 / VBA, Visual Basic .NET)
   backlogCode: VB
   diagnosticBlock: 2600

@@ -33,6 +33,7 @@ using Polypiler.Core.Frontends.Rust;
 using Polypiler.Core.Frontends.Rust.Cargo;
 using Polypiler.Core.Frontends.VBScript;
 using Polypiler.Core.Frontends.VisualBasic;
+using Polypiler.Core.Frontends.VisualBasic.Net;
 using Polypiler.Core.IR;
 using Polypiler.Core.Backends.CSharp.Passes;
 using Polypiler.Core.Backends.JavaScript.Passes;
@@ -114,6 +115,8 @@ public sealed partial class TranslateCommand : ICliCommand {
   private const string VBScriptContractOption = "--vbscript-contract";
   private const string GoModuleOption = "--go-module";
   private const string VbLocaleOption = "--vb-locale";
+  private const string VbLanguageVersionOption = "--vb-langversion";
+  private const string VbRemoveIntegerChecksOption = "--vb-removeintchecks";
 
   /// <summary>The version of Python 3 a Python source is parsed for, such as <c>3.10</c>.</summary>
   private const string PythonVersionOption = "--python-version";
@@ -160,6 +163,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     [VBScriptContractOption] = "VBScript: file or inline contract line specifying parameter, return or field types",
     [GoModuleOption] = "Go: the module path go.mod declares, whose last element names the package",
     [VbLocaleOption] = "classic Visual Basic source: the regional settings it runs under, whose separators CStr writes and CDbl reads (default en-US)",
+    [VbLanguageVersionOption] = "Visual Basic .NET source (.vb): the language version it is compiled as, 9 to 16.9 (the default)",
+    [VbRemoveIntegerChecksOption] = "Visual Basic .NET source (.vb): integer arithmetic wraps instead of throwing an OverflowException, as /removeintchecks compiles it",
     [PythonVersionOption] = "Python source: the version of Python 3 the source is written for, 3.8 to 3.14 (the default); later constructs are syntax errors"
   };
 
@@ -192,7 +197,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     new("jvm", [new(Export, "<name>[,<name>...]")], ExportMisuse, null, ImportJvm),
     new("cpp", [], _ => null, ImportCpp),
     new("vbscript", [new(VBScriptContractOption, "<file-or-line>")], _ => null, ImportVBScript),
-    new("visualbasic", [new(VbLocaleOption, "<" + string.Join('|', VisualBasicLocale.All.Select(locale => locale.Name)) + ">")], VbLocaleMisuse, ImportVisualBasic),
+    new("visualbasic", [new(VbLocaleOption, "<" + string.Join('|', VisualBasicLocale.All.Select(locale => locale.Name)) + ">"), new(VbLanguageVersionOption, "<9..16.9>"), new(VbRemoveIntegerChecksOption, null)], VbLocaleMisuse, ImportVisualBasic),
     new("go", [], _ => null, ImportGo),
     new("kotlin", [], _ => null, ImportKotlin)
   ];
@@ -706,11 +711,13 @@ public sealed partial class TranslateCommand : ICliCommand {
     return (imported.Module, failure, []);
   }
 
-  /// <summary>Imports a classic Visual Basic (VB6 / VBA) standard module.</summary>
+  /// <summary>Imports a classic Visual Basic (VB6 / VBA) standard module, or a Visual Basic .NET source file, which a <c>.vb</c> file is.</summary>
   private static (IrModule? Module, int ExitCode, IReadOnlyList<ManifestMessage> Caveats) ImportVisualBasic(
     string file, string source, IReadOnlyDictionary<string, string> options, CliContext context) {
     VisualBasicLocale.TryParse(options.GetValueOrDefault(VbLocaleOption, VisualBasicLocale.Default.Name), out var locale);
-    var imported = VisualBasicFrontend.Import(file, source, new VisualBasicImportOptions { Locale = locale! });
+    var imported = IsVbNet(file)
+      ? VbNetFrontend.Import(file, source, new VbNetImportOptions { LanguageVersion = options.GetValueOrDefault(VbLanguageVersionOption, "16.9"), RemoveIntegerChecks = options.ContainsKey(VbRemoveIntegerChecksOption) })
+      : VisualBasicFrontend.Import(file, source, new VisualBasicImportOptions { Locale = locale! });
     foreach (var diagnostic in imported.Diagnostics)
       context.Report(diagnostic);
 
@@ -720,7 +727,12 @@ public sealed partial class TranslateCommand : ICliCommand {
 
   private static string? VbLocaleMisuse(IReadOnlyDictionary<string, string> options)
     => options.TryGetValue(VbLocaleOption, out var name) && !VisualBasicLocale.TryParse(name, out _)
-      ? $"unknown Visual Basic locale '{name}'; expected {string.Join(", ", VisualBasicLocale.All.Select(locale => locale.Name))}" : null;
+      ? $"unknown Visual Basic locale '{name}'; expected {string.Join(", ", VisualBasicLocale.All.Select(locale => locale.Name))}"
+      : options.TryGetValue(VbLanguageVersionOption, out var version) && !VbNetFrontend.IsLanguageVersion(version)
+      ? $"unknown Visual Basic language version '{version}'; expected 9 to 16.9" : null;
+
+  /// <summary>Whether a source file is Visual Basic .NET: a <c>.vb</c> file; any other is a classic module.</summary>
+  private static bool IsVbNet(string file) => file.EndsWith(".vb", StringComparison.OrdinalIgnoreCase);
 
   /// <summary>The text of a file a JavaScript module requires, or <see langword="null"/> when there is none.</summary>
   private static string? Required(string file) => File.Exists(file) ? File.ReadAllText(file) : null;
@@ -928,7 +940,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     (module, options, _, _) => VBScriptEmitter.EmitTarget(module, VBScriptProfileOf(options).Profile!),
     VBScriptProfile.Names);
 
-  /// <summary>The classic Visual Basic backend; <c>--profile</c> selects <c>visualbasic/vb6</c>, <c>visualbasic/vba6</c>, <c>visualbasic/vba7</c> or <c>visualbasic/vba7-64</c>.</summary>
+  /// <summary>The Visual Basic backend; <c>--profile</c> selects a classic dialect, <c>visualbasic/vb6</c> to <c>visualbasic/vba7-64</c>, or Visual Basic .NET, <c>vbnet/vb9</c> to <c>vbnet/vb16.9</c>, optionally with a framework after a slash.</summary>
   private static Backend VisualBasic(Func<IrModule> implementations) => new("visualbasic",
     VisualBasicEmitter.Runtime,
     options => VisualBasicProfileOf(options).Profile!.Name,
@@ -938,7 +950,8 @@ public sealed partial class TranslateCommand : ICliCommand {
     (module, options) => VisualBasicEmitter.Legalize(module, implementations, VisualBasicProfileOf(options).Profile!, FloatModeOf(options)),
     (module, options) => VisualBasicEmitter.Check(module, VisualBasicProfileOf(options).Profile!),
     (module, options, passes, _) => VisualBasicEmitter.Emit(module, VisualBasicProfileOf(options).Profile!, FloatModeOf(options), null, passes),
-    VisualBasicProfile.Names);
+    VisualBasicProfile.Names,
+    options => VisualBasicEmitter.RuntimeOf(VisualBasicProfileOf(options).Profile!));
 
   private static (VisualBasicProfile? Profile, string? Error) VisualBasicProfileOf(IReadOnlyDictionary<string, string> options) {
     VisualBasicProfile.TryParse(options.GetValueOrDefault(Profile), out var profile, out var error);

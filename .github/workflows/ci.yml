@@ -878,9 +878,11 @@ jobs:
           path: artifacts/
           if-no-files-found: ignore
 
-  # The classic Visual Basic layer (tooling/ci/layers/visualbasic.yaml, ADR 2600): LibreOffice at the
-  # version tooling/toolchains.lock pins, installed from the Debian packages of the Document Foundation's
-  # archive, runs the VB6 / VBA modules of the frontend and the backend headless as the oracle.
+  # The Visual Basic layer (tooling/ci/layers/visualbasic.yaml): LibreOffice at the version
+  # tooling/toolchains.lock pins, installed from the Debian packages of the Document Foundation's
+  # archive, runs the VB6 / VBA modules of the frontend and the backend headless as the oracle (ADR
+  # 2600); the Visual Basic compiler and runtime of the pinned dotnet-sdk, held to it by global.json as
+  # in layer-core, build and run the Visual Basic .NET of the frontend and the backend.
   layer-visualbasic:
     name: layer-visualbasic ${{ matrix.os }}
     strategy:
@@ -908,11 +910,17 @@ jobs:
         id: env
         run: |
           dotnet build Polypiler.Tooling/Polypiler.Tooling.csproj -c Release -warnaserror
-          $TOOLING ci env --layer visualbasic | tee -a "$GITHUB_OUTPUT"
+          $TOOLING ci env --layer visualbasic > "$RUNNER_TEMP/toolchains.env"
+          tee -a "$GITHUB_OUTPUT" < "$RUNNER_TEMP/toolchains.env"
+          sdk=$(sed -n 's/^dotnet-sdk=//p' "$RUNNER_TEMP/toolchains.env")
+          printf '{ "sdk": { "version": "%s", "rollForward": "disable" } }\n' "$sdk" > global.json
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
       - name: install libreoffice
         run: tooling/ci/visualbasic/install.sh "${{ steps.env.outputs.libreoffice }}"
       - name: toolchains
-        run: $TOOLING toolchains probe --only libreoffice
+        run: $TOOLING toolchains probe --only libreoffice,dotnet-sdk
       - name: build
         run: dotnet build Polypiler.Tests.Acceptance/Polypiler.Tests.Acceptance.csproj -c Release -warnaserror
       - name: test

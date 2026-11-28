@@ -44,6 +44,8 @@
     <Compile Include="..\Polypiler.Tests\Backends\Support\*.cs" LinkBase="Backends\Support" />
     <Compile Include="..\Polypiler.Tests\Backends\VisualBasic\VisualBasicFixtures.cs" LinkBase="Backends\VisualBasic" />
     <Compile Include="..\Polypiler.Tests\Frontends\VisualBasic\ClassicCases.cs" LinkBase="Frontends\VisualBasic" />
+    <Compile Include="..\Polypiler.Tests\Frontends\VisualBasic\VbNetCases.cs" LinkBase="Frontends\VisualBasic" />
+    <Compile Include="..\Polypiler.Tests\Backends\VisualBasic\VbNetFixtures.cs" LinkBase="Backends\VisualBasic" />
     <Compile Include="..\Polypiler.Tests\Frontends\JavaScript\Support\*.cs" LinkBase="Frontends\JavaScript\Support" />
     <Compile Include="..\Polypiler.Tests\Frontends\Python\Support\*.cs" LinkBase="Frontends\Python\Support" />
     <Compile Include="..\Polypiler.Tests\Frontends\Kotlin\Support\*.cs" LinkBase="Frontends\Kotlin\Support" />

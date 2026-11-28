@@ -3,7 +3,13 @@
   <PropertyGroup>
     <Version>0.1.0</Version>
     <IsPackable>false</IsPackable>
+    <!-- The compiler's own core library is handed to Roslyn from memory, which takes one pointer. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.VisualBasic" Version="5.3.0" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Polypiler.Core\Polypiler.Core.csproj" />
