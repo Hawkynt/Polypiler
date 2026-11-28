@@ -216,7 +216,8 @@ internal sealed partial class VbaLowerer {
     /// and a <c>Date</c> among them.
     /// </summary>
     private static IrExpr? Real(IrExpr? operand, DynamicExact? element) => element switch {
-      { Tag: not null } or null => null,
+      null => null,
+      { Tag: not null } => null,
       { Type.Kind: IrTypeKind.F64 } => operand,
       { Type.Kind: IrTypeKind.U8 or IrTypeKind.I16 or IrTypeKind.I32 or IrTypeKind.F32 } when !element.Type.IsEnum => new IrConvert(IrType.F64, operand!, IrConversion.Wrap),
       _ => null
