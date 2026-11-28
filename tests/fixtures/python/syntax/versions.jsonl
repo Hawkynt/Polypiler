@@ -1,0 +1,34 @@
+{"name": "walrus at 3.8", "version": 8, "source": "if (n := 10) > 5:\n    pass\n", "want": "valid"}
+{"name": "positional-only parameters at 3.8", "version": 8, "source": "def f(a, /, b):\n    pass\n", "want": "valid"}
+{"name": "lambda positional-only parameters at 3.8", "version": 8, "source": "f = lambda a, /: a\n", "want": "valid"}
+{"name": "match before 3.10", "version": 9, "source": "match x:\n    case 1:\n        pass\n", "want": "SyntaxError: Pattern matching is only supported in Python 3.10 and greater"}
+{"name": "match at 3.10", "version": 10, "source": "match x:\n    case 1:\n        pass\n", "want": "valid"}
+{"name": "match as a name before 3.10", "version": 9, "source": "match = 1\nmatch(x)\n", "want": "valid"}
+{"name": "except star before 3.11", "version": 10, "source": "try:\n    pass\nexcept* ValueError:\n    pass\n", "want": "SyntaxError: Exception groups are only supported in Python 3.11 and greater"}
+{"name": "except star at 3.11", "version": 11, "source": "try:\n    pass\nexcept* ValueError:\n    pass\n", "want": "valid"}
+{"name": "type alias before 3.12", "version": 11, "source": "type Point = tuple[float, float]\n", "want": "SyntaxError: Type statement is only supported in Python 3.12 and greater"}
+{"name": "type alias at 3.12", "version": 12, "source": "type Point = tuple[float, float]\n", "want": "valid"}
+{"name": "type as a name before 3.12", "version": 11, "source": "type = 1\nprint(type)\n", "want": "valid"}
+{"name": "generic function before 3.12", "version": 11, "source": "def first[T](items: list[T]) -> T:\n    return items[0]\n", "want": "SyntaxError: Type parameter lists are only supported in Python 3.12 and greater"}
+{"name": "generic function at 3.12", "version": 12, "source": "def first[T](items: list[T]) -> T:\n    return items[0]\n", "want": "valid"}
+{"name": "generic class before 3.12", "version": 11, "source": "class Box[T]:\n    pass\n", "want": "SyntaxError: Type parameter lists are only supported in Python 3.12 and greater"}
+{"name": "type parameter default before 3.13", "version": 12, "source": "class Box[T = int]:\n    pass\n", "want": "SyntaxError: Type parameter defaults are only supported in Python 3.13 and greater"}
+{"name": "type parameter default at 3.13", "version": 13, "source": "class Box[T = int]:\n    pass\n", "want": "valid"}
+{"name": "starred type parameter default before 3.13", "version": 12, "source": "class Box[*Ts = *tuple[int]]:\n    pass\n", "want": "SyntaxError: Type parameter defaults are only supported in Python 3.13 and greater"}
+{"name": "starred type parameter default at 3.13", "version": 13, "source": "class Box[*Ts = *tuple[int]]:\n    pass\n", "want": "valid"}
+{"name": "param spec default before 3.13", "version": 12, "source": "def f[**P = [int]]():\n    pass\n", "want": "SyntaxError: Type parameter defaults are only supported in Python 3.13 and greater"}
+{"name": "t-string before 3.14", "version": 13, "source": "x = t\"hello {name}\"\n", "want": "SyntaxError: t-strings are only supported in Python 3.14 and greater"}
+{"name": "t-string at 3.14", "version": 14, "source": "x = t\"hello {name!r:>10}\"\n", "want": "valid"}
+{"name": "except without parentheses before 3.14", "version": 13, "source": "try:\n    pass\nexcept ValueError, TypeError:\n    pass\n", "want": "SyntaxError: except expressions without parentheses are only supported in Python 3.14 and greater"}
+{"name": "except without parentheses at 3.14", "version": 14, "source": "try:\n    pass\nexcept ValueError, TypeError:\n    pass\n", "want": "valid"}
+{"name": "except star without parentheses before 3.14", "version": 13, "source": "try:\n    pass\nexcept* ValueError, TypeError:\n    pass\n", "want": "SyntaxError: except expressions without parentheses are only supported in Python 3.14 and greater"}
+{"name": "except star without parentheses at 3.14", "version": 14, "source": "try:\n    pass\nexcept* ValueError, TypeError:\n    pass\n", "want": "valid"}
+{"name": "nested f-string quotes at 3.8", "version": 8, "source": "x = f\"{'a' + f\"{b}\"}\"\n", "want": "valid"}
+{"name": "parenthesized context managers at 3.8", "version": 8, "source": "with (open(a) as f, open(b) as g):\n    pass\n", "want": "valid"}
+{"name": "async function at 3.8", "version": 8, "source": "async def f():\n    async with a as b:\n        pass\n    async for x in y:\n        pass\n    return await z\n", "want": "valid"}
+{"name": "matrix multiplication at 3.8", "version": 8, "source": "c = a @ b\nc @= d\n", "want": "valid"}
+{"name": "async comprehension at 3.8", "version": 8, "source": "async def f():\n    return [x async for x in y]\n", "want": "valid"}
+{"name": "annotated assignment at 3.8", "version": 8, "source": "x: int = 1\n(y): int\na.b: str\n", "want": "valid"}
+{"name": "underscores in numbers at 3.8", "version": 8, "source": "x = 1_000_000 + 0x_ff + 1_0.5_0j\n", "want": "valid"}
+{"name": "barry as FLUFL", "version": 14, "source": "from __future__ import barry_as_FLUFL\nx = 1 <> 2\n", "want": "valid"}
+{"name": "barry as FLUFL refuses not-equal", "version": 14, "source": "from __future__ import barry_as_FLUFL\nx = 1 != 2\n", "want": "SyntaxError: with Barry as BDFL, use '<>' instead of '!='"}

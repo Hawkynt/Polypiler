@@ -702,6 +702,8 @@ jobs:
   # at the versions tooling/toolchains.lock pins, installed by their setup actions and never taken from
   # the runner image, and the acceptance tests of the layer, which run the fixtures of
   # tests/fixtures/infra/ci/pyperl through the cross-language runner. No package comes from PyPI or CPAN.
+  # The Python frontend's parser is compared with CPython's ast and compile on the interpreter's whole
+  # library at every version of the frontend and on every string of Lib/test, which takes some minutes.
   layer-pyperl:
     name: layer-pyperl ${{ matrix.os }}
     strategy:
@@ -709,7 +711,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
+    timeout-minutes: 40
     permissions:
       contents: read
     env:
