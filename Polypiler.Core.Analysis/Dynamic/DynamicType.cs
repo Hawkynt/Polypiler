@@ -390,7 +390,8 @@ public sealed record DynamicOptional : DynamicType {
   public DynamicMissing Missing { get; }
 
   /// <inheritdoc/>
-  public override int Level => 4;
+  /// <remarks>An optional of a union is as dynamic as the union: level 5.</remarks>
+  public override int Level => Math.Max(4, this.Value.Level);
 
   /// <inheritdoc/>
   public override int Depth => this.Value.Depth;

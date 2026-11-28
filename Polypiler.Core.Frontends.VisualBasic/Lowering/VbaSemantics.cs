@@ -269,6 +269,19 @@ internal sealed partial class VbaLowerer {
       }
     }
 
+    /// <inheritdoc/>
+    /// <remarks>The helpers of the lowering are named <c>Ply</c> and a capital letter, as <c>PlyVarArith</c> and <c>PlyCheckD</c>.</remarks>
+    public bool IsHelper(string function) {
+      ArgumentNullException.ThrowIfNull(function);
+      return function.Length > 3 && function.StartsWith("Ply", StringComparison.Ordinal) && char.IsUpper(function[3]);
+    }
+
+    /// <inheritdoc/>
+    public string Name(DynamicExact element) {
+      ArgumentNullException.ThrowIfNull(element);
+      return Tags(element) is var tags && IsSingle(tags) ? Each(tags).Single().ToString() : element.Type.ToString();
+    }
+
     private static DynamicOperation Compared(IrBinaryOp op) => (DynamicOperation)((int)DynamicOperation.Equal + Array.IndexOf(_comparisonOps, op));
 
     private static readonly IrBinaryOp[] _comparisonOps = [IrBinaryOp.Equal, IrBinaryOp.NotEqual, IrBinaryOp.Less, IrBinaryOp.LessOrEqual, IrBinaryOp.Greater, IrBinaryOp.GreaterOrEqual];

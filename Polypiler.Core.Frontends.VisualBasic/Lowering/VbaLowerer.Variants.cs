@@ -16,7 +16,10 @@ namespace Polypiler.Core.Frontends.VisualBasic.Lowering;
 internal sealed partial class VbaLowerer {
 
   /// <summary>What the inference knows of the <c>Variant</c> locals of the procedure being lowered.</summary>
-  private sealed class Inference(HashSet<string> candidates) {
+  private sealed class Inference(HashSet<string> candidates, bool framework) {
+
+    /// <summary>Whether the shared framework types the locals: the kinds are still followed, for the helpers a lowering chooses, but no local is given a type.</summary>
+    public bool Framework { get; } = framework;
 
     /// <summary>The <c>Variant</c> locals.</summary>
     public HashSet<string> Candidates { get; } = candidates;
@@ -120,8 +123,10 @@ internal sealed partial class VbaLowerer {
     /// <summary>Gives a fixed type to every local assigned before every read whose assignments all have one scalar type.</summary>
     public void Decide() {
       this.Fixed.Clear();
+      // Under the shared framework only an array stays typed here: the IR's dynamic type carries no
+      // array yet, so a Variant that holds one is the array its syntax (Array, ReDim) states.
       foreach (var name in this.Candidates.Where(name => !this.MayBeEmpty.Contains(name) && !this.Demoted.Contains(name)))
-        if (TypeOf(this.Tags[name]) is { } type)
+        if (TypeOf(this.Tags[name]) is { } type && (!this.Framework || type.IsArray))
           this.Fixed[name] = type;
     }
 
@@ -141,7 +146,7 @@ internal sealed partial class VbaLowerer {
     if (candidates.Count == 0)
       return this.LowerProcedure(procedure, signature);
 
-    var inference = new Inference(candidates);
+    var inference = new Inference(candidates, this.Framework);
     this._inference = inference;
     try {
       this.Infer(procedure, signature, inference);

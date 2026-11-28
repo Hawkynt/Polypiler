@@ -43,6 +43,9 @@ public static partial class IrModuleFormat {
   /// <summary>The byte that opens the table of sources after the end of a module that declares any (<see cref="IrModule.Sources"/>).</summary>
   private const byte SourcesTable = 0xFD;
 
+  /// <summary>The byte before the language of the semantics table of a module that names one (<see cref="IrModule.DynamicSemantics"/>), after the table of sources.</summary>
+  private const byte SemanticsTable = 0xFC;
+
   /// <summary>The kinds of origin, as the byte before each origin says.</summary>
   private enum OriginKind : byte {
     Span, Address, Synthetic
@@ -252,17 +255,21 @@ public static partial class IrModuleFormat {
       if (module.Initializer is not null)
         writer.Write(module.Initializer);
 
-      if (module.Sources.Count == 0)
-        return;
+      if (module.Sources.Count > 0) {
+        writer.Write(SourcesTable);
+        this.Count(module.Sources.Count);
+        foreach (var source in module.Sources) {
+          this.Text(source.Repository);
+          this.Text(source.Commit);
+          this.Text(source.Path);
+          this.Text(source.Sha256);
+          this.Text(source.Dialect);
+        }
+      }
 
-      writer.Write(SourcesTable);
-      this.Count(module.Sources.Count);
-      foreach (var source in module.Sources) {
-        this.Text(source.Repository);
-        this.Text(source.Commit);
-        this.Text(source.Path);
-        this.Text(source.Sha256);
-        this.Text(source.Dialect);
+      if (module.DynamicSemantics is { } language) {
+        writer.Write(SemanticsTable);
+        writer.Write(language);
       }
     }
 
@@ -1221,8 +1228,23 @@ public static partial class IrModuleFormat {
       return new IrModule(name, functions, constants) {
         Types = [.. this._declarations.Take(owned)], Globals = [.. this._globals], Caveats = caveats, ForeignFunctions = this.ForeignFunctions(),
         Initializer = reader.ReadBoolean() ? reader.ReadString() : null,
-        Sources = this.Sources()
+        Sources = this.Sources(),
+        DynamicSemantics = this.Semantics()
       };
+    }
+
+    /// <summary>The language of the semantics table, when the bytes go on with one; any other byte is left for the check of the end.</summary>
+    private string? Semantics() {
+      var stream = reader.BaseStream;
+      if (stream.Position == stream.Length)
+        return null;
+
+      if (reader.ReadByte() != SemanticsTable) {
+        --stream.Position;
+        return null;
+      }
+
+      return reader.ReadString();
     }
 
     /// <summary>The table of sources, when the bytes go on with one; any other byte is left for the check of the end.</summary>

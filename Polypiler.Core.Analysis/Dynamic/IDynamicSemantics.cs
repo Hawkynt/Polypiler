@@ -164,4 +164,14 @@ public interface IDynamicSemantics {
   /// <returns>The operation with its operands, or <see langword="null"/>.</returns>
   DynamicCall? Classify(IrExpr expression);
 
+  /// <summary>Whether a function of the module is one of the language's helpers, its runtime: code the framework neither types nor reports.</summary>
+  /// <param name="function">The name of the function.</param>
+  /// <returns><see langword="true"/> for a helper.</returns>
+  bool IsHelper(string function);
+
+  /// <summary>The language's own name of an exact element, as the name of a clone spells it: Visual Basic's <c>Long</c> for an <c>i32</c>.</summary>
+  /// <param name="element">The element.</param>
+  /// <returns>The name.</returns>
+  string Name(DynamicExact element);
+
 }

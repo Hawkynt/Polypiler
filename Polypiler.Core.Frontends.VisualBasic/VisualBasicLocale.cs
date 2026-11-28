@@ -65,4 +65,22 @@ public sealed record VisualBasicImportOptions {
   /// <summary>The regional settings the module runs under; <see cref="VisualBasicLocale.Default"/> unless stated.</summary>
   public VisualBasicLocale Locale { get; init; } = VisualBasicLocale.Default;
 
+  /// <summary>Which inference types the <c>Variant</c>s of the module; the frontend's own unless stated.</summary>
+  public VisualBasicInference Inference { get; init; } = VisualBasicInference.Frontend;
+
+}
+
+/// <summary>Which inference types the <c>Variant</c> locals, parameters and results of a module (ADR 0300).</summary>
+public enum VisualBasicInference {
+
+  /// <summary>The frontend's own: a fixed point within each procedure (#1556) and clones across the module (#1564).</summary>
+  Frontend,
+
+  /// <summary>
+  /// The shared framework: every <c>Variant</c> is lowered dynamic, the module names Visual Basic's
+  /// semantics table, and the de-dynamicization types it (#1585 to #1587). The migration of #1591
+  /// makes this the default once its output equals the frontend's.
+  /// </summary>
+  Framework
+
 }
