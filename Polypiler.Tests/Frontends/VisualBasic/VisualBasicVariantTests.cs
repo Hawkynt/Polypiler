@@ -75,6 +75,7 @@ public sealed class VisualBasicVariantTests {
   [TestCase("Dim v\nIf F = 0 Then\nv = 1\nElse\nv = 2\nEnd If\nF = v", "i16")]
   [TestCase("Dim v\nSelect Case F\nCase 0\nv = 1\nCase Else\nv = 2\nEnd Select\nF = v", "i16")]
   [TestCase("Dim v, i As Integer\nFor i = 1 To 3\nv = i\nNext\nF = 0", "i16")]
+  [TestCase("Dim v\nv = CInt(1)\nv = v + 1\nF = v", "i16")]
   public void LocalOfOneType_BecomesThatType(string body, string type)
     => Assert.That(LocalType(Import(Function("Long", body)), "v").ToString(), Is.EqualTo(type));
 
@@ -82,7 +83,7 @@ public sealed class VisualBasicVariantTests {
   [TestCase("Dim v\nIf F = 0 Then v = 1\nF = v", "assigned in one branch only")]
   [TestCase("Dim v\nSelect Case F\nCase 0\nv = 1\nEnd Select\nF = v", "assigned in one case only")]
   [TestCase("Dim v\nv = 1\nv = \"a\"\nF = 0", "of two types")]
-  [TestCase("Dim v\nv = CInt(1)\nv = v + 1\nF = v", "promoted")]
+  [TestCase("Dim v\nv = CInt(32767)\nv = v + 1\nF = v", "promoted")]
   [TestCase("Dim v\nv = Null\nF = 0", "Null")]
   [TestCase("Dim v\nOn Error Resume Next\nv = 1\nF = v", "skipped by On Error Resume Next")]
   [TestCase("Dim v\nDo While F < 3\nF = F + 1\nv = 1\nLoop\nF = v", "assigned in a loop only")]
@@ -229,9 +230,15 @@ public sealed class VisualBasicVariantTests {
     Assert.That(LocalType(module, "i"), Is.EqualTo(IrType.I16));
     Assert.That(Run(module, "F"), Is.EqualTo("55"));
     Assert.That(LocalType(Import(Function("Long", "Dim i\nFor i = 1 To 32767\nNext")), "i"), Is.EqualTo(IrType.Variant));
-    Assert.That(LocalType(Import(Function("Long", "Dim i\nFor i = 1 To 10& Step 1\nNext")), "i"), Is.EqualTo(IrType.Variant));
+    // The counter is the start's Integer, stepped by Variant arithmetic: the ranges of the limit and the
+    // step prove that no step promotes it, whatever their types, and also where the body adds to it.
+    Assert.That(LocalType(Import(Function("Long", "Dim i\nFor i = 1 To 10& Step 1\nNext")), "i"), Is.EqualTo(IrType.I16));
     Assert.That(LocalType(Import(Function("Long", "Dim i\nFor i = 1! To 10\nNext")), "i"), Is.EqualTo(IrType.Variant));
-    Assert.That(LocalType(Import(Function("Long", "Dim i\nFor i = 1 To 10\ni = i + 1\nNext")), "i"), Is.EqualTo(IrType.Variant));
+    var stepped = Import(Function("Long", "Dim i\nFor i = 1 To 10\ni = i + 1\nF = F + i\nNext"));
+    Assert.That(LocalType(stepped, "i"), Is.EqualTo(IrType.I16));
+    Assert.That(Run(stepped, "F"), Is.EqualTo("30"));
+    Assert.That(LocalType(Import(Function("Long", "Dim i\nFor i = 1 To 10 Step 32767\nNext")), "i"), Is.EqualTo(IrType.Variant), "a step that may promote");
+    Assert.That(LocalType(Import(Function("Long", "Dim i\nFor i = 10 To 1 Step -1\nF = F + i\nNext")), "i"), Is.EqualTo(IrType.I16), "a negative step bounds it below");
   }
 
   [Test]
@@ -300,12 +307,29 @@ public sealed class VisualBasicVariantTests {
 
   [Test]
   public void Assignment_ThatTheInferenceMissedBeforeARefusal_DemotesTheLocal() {
-    // The lowering with every local dynamic refuses Left of a Variant, which a typed local lowers; the
-    // number assigned after it then makes the local dynamic, and the Left is refused as it is.
-    Assert.That(Refused(Function("Long", "Dim v\nv = \"abc\"\nF = Len(Left(v, 1))\nv = 5")), Does.Contain("Left of a Variant"));
+    // Left of a Variant is lowered for a typed local only; the number assigned after it is a store no
+    // read sees, so the local is the String every read of it sees, and the store is dropped.
+    var stored = Import(Function("Long", "Dim v\nv = \"abc\"\nF = Len(Left(v, 1))\nv = 5"));
+    Assert.That(LocalType(stored, "v"), Is.EqualTo(IrType.String));
+    Assert.That(Run(stored, "F"), Is.EqualTo("1"));
+    Assert.That(Refused(Function("Long", "Dim v\nv = \"abc\"\nIf F = 0 Then v = 5\nF = Len(Left(v, 1))")), Does.Contain("Left of a Variant"));
     var module = Import(Function("Long", "Dim v\nv = \"abc\"\nF = Len(Left(v, 2))"));
     Assert.That(LocalType(module, "v"), Is.EqualTo(IrType.String));
     Assert.That(Run(module, "F"), Is.EqualTo("2"));
+  }
+
+  [Test]
+  public void ALongLong_OfAVariant_IsTypedByTheFramework() {
+    var module = Import(Function("String", "Dim v\nv = 1^\nF = CStr(v)"));
+    Assert.That(LocalType(module, "v"), Is.EqualTo(IrType.I64));
+    Assert.That(Run(module, "F"), Is.EqualTo("1"));
+  }
+
+  [Test]
+  public void CodeAfterAnExit_IsLoweredWithoutTheFrameworksFacts() {
+    var module = Import("Option Explicit\nPrivate Function G(x)\nG = x\nEnd Function\nPublic Function F() As Long\nDim i\nF = G(CInt(1))\nExit Function\nFor i = 1 To 2\nF = G(i)\nNext\nEnd Function\n");
+    Assert.That(Run(module, "F"), Is.EqualTo("1"));
+    Assert.That(module.Functions.Select(function => function.Name), Has.Member("G"));
   }
 
   [Test]

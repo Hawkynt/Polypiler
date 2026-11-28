@@ -156,16 +156,33 @@ Where this record is silent, the implementation of epic #1579 decided:
   of their own. A table also recognises the calls of its helpers (`Classify`), names its helpers
   (`IsHelper`) and its kinds (`Name`, which names clones: `Add_Long_Long`).
 - **Typing a local.** A local is typed when every read of it sees one exact kind; an assignment of
-  another value reaches no read, so it is a dead store that keeps only its effects. Visual Basic's
-  `Long + Long` may promote to `Double`, so a `Long` accumulator stays a variant without range facts.
+  another value reaches no read, so it is a dead store that keeps only its effects. A local no read
+  sees has the one kind of everything assigned it but the language's initial value.
+- **Range facts** (#1591). An exact integer element carries a range where it says more than the type;
+  ranges join to the hull, meet to the intersection, and the widening at a loop's head drops one that
+  grew. The test of a counted loop (`DynamicOperation.LoopTest`) bounds the counter by the limit in
+  the direction of the step, and the Visual Basic table keeps `+ - *` of two integers of one kind each
+  in the kind they start in where the result's range fits it. So a `Variant` `For` counter over
+  constant bounds is proven of its start's kind; a `Long` accumulator still stays a variant, as its
+  range grows with every pass and is widened away - counting the passes is not done.
+- **A frontend may write the typing** (#1591). `DeDynamicize.Typing` gives, without rewriting the
+  module, what the analysis found for every function and clone: the typed locals, what each local holds
+  anywhere and at each loop's head, where each call goes, the result. Visual Basic lowers its module
+  dynamic, analyses it and lowers it again with that typing, so that every typed operation is its own
+  lowering of the type and the output equals that of its former inference byte for byte; the
+  rewriting pass (`DeDynamicize.Run`) stays for the frontends that leave the typing to the pipeline.
 - **Refinement** follows tests of the tag of a local, through conversions, `And`, `Or`, `Not` and a
   switch on the tag; a test of a copy of the tag (Visual Basic's `Select Case VarType(v)`) is not
   followed yet.
 - **The report** counts the places of the emitted module by the type each was given, the helpers of the
   language aside; a path it cannot write is the existing `PLY0005` with its exit code, as ADR 0003 has
   no code 74. The showcase shows the ratio per example.
-- **Visual Basic's migration** is the import option `VisualBasicInference.Framework`; it becomes the
-  default, and the frontend's fixed points go, once its output equals the frontend's (#1591).
+- **Visual Basic's migration** (#1591) is done: `VisualBasicInference.Framework`, the default, is the
+  framework's typing written by the frontend, whose fixed points within a procedure (#1556) and across
+  the module (#1564) are gone; `VisualBasicInference.Dynamic` leaves every `Variant` to the pipeline's
+  rewrite. The translations of every classic fixture are byte for byte those of the former inference
+  (`tests/fixtures/visualbasic/classic/golden`), but for the `ByVal` parameter the body assigns, which
+  that inference typed by its calls.
 
 ## Rejected options
 

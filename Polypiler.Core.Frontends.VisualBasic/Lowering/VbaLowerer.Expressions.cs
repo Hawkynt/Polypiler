@@ -88,7 +88,7 @@ internal sealed partial class VbaLowerer {
     if (this._globals.TryGetValue(name.Name, out var global))
       return Returned(new IrGlobalRef(global.Global), global.Type);
     if (this._procedures.TryGetValue(name.Name, out var signature) && signature.Returns is not null) {
-      var called = this.Call(ref signature, [], name.Line);
+      var called = this.Call(ref signature, [], name.Line, name);
       return Returned(called, signature);
     }
     if (this.Builtin(name.Name, [], name.Line) is { } builtin)
@@ -124,7 +124,7 @@ internal sealed partial class VbaLowerer {
       if (this._procedures.TryGetValue(name.Name, out var signature) || this._raw && this._helperSignatures.TryGetValue(name.Name, out signature)) {
         if (signature.Returns is null)
           throw this.Unresolved(call.Line, $"the Sub '{name.Name}' has no value");
-        var called = this.Call(ref signature, call.Arguments, call.Line);
+        var called = this.Call(ref signature, call.Arguments, call.Line, call);
         return Returned(called, signature);
       }
 
@@ -154,14 +154,15 @@ internal sealed partial class VbaLowerer {
   }
 
   /// <summary>The call of a procedure of the module: the arguments coerced to the parameters, an optional one left out given its default.</summary>
-  private IrCall Call(Signature signature, IReadOnlyList<VbaExpr> arguments, int line) => this.Call(ref signature, arguments, line);
+  private IrCall Call(Signature signature, IReadOnlyList<VbaExpr> arguments, int line, object site) => this.Call(ref signature, arguments, line, site);
 
   /// <summary>
-  /// The call of a procedure of the module, of the clone its arguments' kinds choose (#1564), which
-  /// <paramref name="signature"/> becomes: the arguments coerced to the parameters, an optional one
-  /// left out given its default.
+  /// The call of a procedure of the module, of the clone the framework sent it to (#1564, #1587),
+  /// which <paramref name="signature"/> becomes: the arguments coerced to the parameters, an optional
+  /// one left out given its default. <paramref name="site"/> is the node of the call, which tells the
+  /// call of the analysed module it was.
   /// </summary>
-  private IrCall Call(ref Signature signature, IReadOnlyList<VbaExpr> arguments, int line) {
+  private IrCall Call(ref Signature signature, IReadOnlyList<VbaExpr> arguments, int line, object site) {
     if (arguments.Count > signature.Parameters.Count)
       throw this.Unresolved(line, $"'{signature.Name}' takes {signature.Parameters.Count} arguments, not {arguments.Count}");
 
@@ -176,7 +177,7 @@ internal sealed partial class VbaLowerer {
         throw this.Unresolved(line, $"'{signature.Name}' needs the argument '{parameter.Name}'");
     }
 
-    signature = this.Specialised(signature, given);
+    signature = this.Planned(signature, site);
     var values = new List<IrExpr>();
     for (var index = 0; index < signature.Parameters.Count; ++index) {
       var parameter = signature.Parameters[index];
@@ -192,7 +193,8 @@ internal sealed partial class VbaLowerer {
 
     if (signature.Name.StartsWith("Ply", StringComparison.Ordinal) && this._helperSignatures.ContainsKey(signature.Name))
       this._usedHelpers.Add(signature.Name);
-    return new IrCall(signature.Name, signature.Returns?.Ir ?? IrType.Void, values);
+    var lowered = new IrCall(signature.Name, signature.Returns?.Ir ?? IrType.Void, values);
+    return signature.Source is null ? lowered : this.Site(site, lowered);
   }
 
   private VbaValue Unary(VbaUnary unary) {

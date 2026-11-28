@@ -12,7 +12,7 @@ namespace Polypiler.Tests.Optimize;
 
 /// <summary>
 /// The de-dynamicization (ADR 0300): Visual Basic modules lowered with every <c>Variant</c> dynamic
-/// (<see cref="VisualBasicInference.Framework"/>) and typed by the shared framework with the Visual
+/// (<see cref="VisualBasicInference.Dynamic"/>) and typed by the shared framework with the Visual
 /// Basic table - within a function (#1585), on tag tests (#1586) and across the module by clones
 /// (#1587) - each result verified and computed as the frontend's own typing computes it.
 /// </summary>
@@ -21,7 +21,7 @@ public sealed class DeDynamicizeTests {
 
   private static object? Run(IrModule module, string function, params object[] arguments) => IrInterpreter.Call(module, function, arguments);
 
-  private static IrModule Import(string source, VisualBasicInference inference = VisualBasicInference.Framework) {
+  private static IrModule Import(string source, VisualBasicInference inference = VisualBasicInference.Dynamic) {
     var result = VisualBasicFrontend.Import("Test.bas", source, new VisualBasicImportOptions { Inference = inference });
     Assert.That(result.Diagnostics, Is.Empty, string.Join("\n", result.Diagnostics));
     return result.Module!;
@@ -42,7 +42,7 @@ public sealed class DeDynamicizeTests {
 
   /// <summary>The source and every function of it returns the same in the frontend's typing and in the framework's.</summary>
   private static void SameResults(string source, IrModule typed, params (string Function, object[] Arguments)[] calls) {
-    var frontend = Import(source, VisualBasicInference.Frontend);
+    var frontend = Import(source, VisualBasicInference.Framework);
     foreach (var (function, arguments) in calls)
       Assert.That(Run(typed, function, arguments), Is.EqualTo(Run(frontend, function, arguments)), function);
   }
@@ -137,8 +137,8 @@ public sealed class DeDynamicizeTests {
     SameResults(source, result.Module, ("F", [true]), ("F", [false]));
   }
 
-  /// <summary>The fixtures of #1556 and #1564 lowered dynamic and typed by the framework: every case computes what LibreOffice printed, and every local the frontend types the framework types the same, but for the counters of For loops, which need the range of the bounds (#1591).</summary>
-  [TestCase("Variants", "Accumulate.i:i16;Joined.i:i16;Counted.ply1:variant;Counted.ply2:variant;Counted.ply3:variant")]
+  /// <summary>The fixtures of #1556 and #1564 lowered dynamic and typed by the rewrite of the framework: every case computes what LibreOffice printed, and every local the default import types the rewrite types the same, For counters included by the ranges of their bounds (#1591); the rewrite also types the temporaries of a For loop's bounds, which the frontend writes as Variants.</summary>
+  [TestCase("Variants", "Counted.ply1:variant;Counted.ply2:variant;Counted.ply3:variant")]
   [TestCase("Inference", "")]
   [TestCase("Numeric", "")]
   [TestCase("Bitwise", "")]
@@ -149,7 +149,7 @@ public sealed class DeDynamicizeTests {
     var expected = ClassicCases.Lines(fixture + ".expected.txt");
     var source = ClassicCases.Source(fixture + ".bas", cases);
     var frontend = VisualBasicFrontend.Import(fixture + ".bas", source).Module!;
-    var raw = VisualBasicFrontend.Import(fixture + ".bas", source, new VisualBasicImportOptions { Inference = VisualBasicInference.Framework }).Module!;
+    var raw = VisualBasicFrontend.Import(fixture + ".bas", source, new VisualBasicImportOptions { Inference = VisualBasicInference.Dynamic }).Module!;
     var typed = DeDynamicize.Run(raw, VisualBasicFrontend.Semantics, DeDynamicizeOptions.Default);
     Assert.That(IrVerifier.Verify(typed), Is.Empty);
     for (var index = 0; index < cases.Count; ++index)
@@ -298,7 +298,7 @@ public sealed class DeDynamicizeTests {
   [Test]
   public void RoundsBeyondTheBudget_LeaveEveryFunctionDynamic() {
     var module = ClassicCases.Import("Inference.bas", "Inference.cases.txt");
-    var raw = VisualBasicFrontend.Import("Inference.bas", ClassicCases.Source("Inference.bas", ClassicCases.Lines("Inference.cases.txt")), new VisualBasicImportOptions { Inference = VisualBasicInference.Framework }).Module!;
+    var raw = VisualBasicFrontend.Import("Inference.bas", ClassicCases.Source("Inference.bas", ClassicCases.Lines("Inference.cases.txt")), new VisualBasicImportOptions { Inference = VisualBasicInference.Dynamic }).Module!;
     var typed = DeDynamicize.Run(raw, VisualBasicFrontend.Semantics, new DeDynamicizeOptions { MostRounds = 1 });
     Assert.That(typed.Functions.Where(function => function.SpecialisedFrom is not null), Is.Empty);
     Assert.That(IrVerifier.Verify(typed), Is.Empty);
@@ -366,5 +366,61 @@ public sealed class DeDynamicizeTests {
     Assert.That(places.Single(place => place.Name == "b").Reason, Does.Contain("any type"));
     Assert.That(places.Single(place => place.Name == "a").Reason, Is.Null);
   }
+
+  #region The typing a frontend writes (#1591)
+
+  private static IReadOnlyList<DynamicFunctionTyping> Typing(string source) => DeDynamicize.Typing(Import(source), VisualBasicFrontend.Semantics, DeDynamicizeOptions.Default);
+
+  [Test]
+  public void Typing_SaysWhatTheWalkFound_FunctionByFunction() {
+    const string source = "Private Function Id(a)\nId = a\nEnd Function\nPublic Function F()\nDim i, s\nFor i = 1 To 3\ns = Id(i)\nNext\nF = s\nEnd Function\n";
+    var typing = Typing(source);
+    Assert.That(typing.Select(function => (function.Function, function.Name, function.Kept, function.Signature is null)), Is.EqualTo(new[] {
+      ("Id", "Id", false, true), ("Id", "Id", true, false), ("F", "F", true, true)
+    }));
+    var clone = typing[1];
+    Assert.That(clone.Signature!.Single()!.ToString(), Is.EqualTo("i16"));
+    Assert.That(clone.ReturnType, Is.EqualTo(IrType.I16));
+    Assert.That(clone.Returned.Type, Is.EqualTo(DynamicType.Exact(IrType.I16)), "without the range of the call");
+    var f = typing[2];
+    Assert.That(f.Typed.Keys.Select(local => local.Name), Has.Member("i").And.No.Member("s").And.No.Member("F"), "s and the result may still be Empty after the loop");
+    Assert.That(f.Calls.Values, Is.EqualTo(new[] { "Id" }), "the call goes to the clone that takes the procedure's name");
+    var head = f.Heads.Values.Single();
+    Assert.That(head.Single(pair => pair.Key.Name == "i").Value, Is.EqualTo(DynamicType.Exact(IrType.I16)), "without its range");
+    Assert.That(f.Holds.Single(pair => pair.Key.Name == "s").Value, Is.EqualTo(DynamicType.Optional(DynamicType.Exact(IrType.I16), DynamicMissing.Empty)));
+    Assert.That(DeDynamicize.Typing(Import("Public Function F(ByVal n As Long) As Long\nF = n\nEnd Function\n"), VisualBasicFrontend.Semantics, DeDynamicizeOptions.Default), Is.Empty);
+    Assert.That(() => DeDynamicize.Typing(null!, VisualBasicFrontend.Semantics, DeDynamicizeOptions.Default), Throws.ArgumentNullException);
+    Assert.That(() => DeDynamicize.Typing(Import(source), null!, DeDynamicizeOptions.Default), Throws.ArgumentNullException);
+    Assert.That(() => DeDynamicize.Typing(Import(source), VisualBasicFrontend.Semantics, null!), Throws.ArgumentNullException);
+  }
+
+  [Test]
+  public void Typing_OfAPlaceTheWalkDoesNotFollow_IsTheVariant() {
+    var typing = Typing("Public Function F(v)\nDim a\na = v\nF = a\nEnd Function\n").Single();
+    Assert.That(typing.Holds.Single(pair => pair.Key.Name == "a").Value, Is.EqualTo(DynamicType.Variant));
+    Assert.That(typing.Holds.Single(pair => pair.Key.Name == "v").Value, Is.EqualTo(DynamicType.Nothing), "a parameter the body does not assign");
+    Assert.That(typing.Returned.Certainty, Is.EqualTo(Certainty.Dynamic));
+  }
+
+  [TestCase("Dim i\nFor i = 1 To 10\nF = F + i\nNext", "i16", TestName = "ALoopTest_BoundsTheCounterAbove")]
+  [TestCase("Dim i\nFor i = 10 To 1 Step -1\nF = F + i\nNext", "i16", TestName = "ALoopTest_OfANegativeStep_BoundsItBelow")]
+  [TestCase("Dim i, s\ns = 1\nIf F > 0 Then s = -1\nFor i = 1 To 10 Step s\nNext", "variant", TestName = "ALoopTest_OfAStepOfEitherSign_BoundsNothing")]
+  [TestCase("Dim i\nFor i = 1 To 10.5\nNext", "variant", TestName = "ALoopTest_OfALimitThatIsNoInteger_BoundsNothing")]
+  [TestCase("Dim i\nFor i = 1 To 32767\nNext", "variant", TestName = "ALoopTest_WhoseLastStepPromotes_LeavesTheCounterAVariant")]
+  public void ALoopTest_NarrowsTheCounter(string body, string type) {
+    var source = "Public Function F() As Long\n" + body + "\nEnd Function\n";
+    var typed = Typed(source).Module;
+    Assert.That(TypeOf(typed, "F", "i").ToString(), Is.EqualTo(type));
+    SameResults(source, typed, ("F", []));
+  }
+
+  [Test]
+  public void ALoopTest_OfACounterOfTwoKinds_NarrowsEachMember() {
+    const string source = "Public Function F(ByVal c As Boolean) As Long\nDim i\nIf c Then i = CLng(1) Else i = CInt(1)\nDo While i <= 10\ni = i + 1\nF = F + 1\nLoop\nFor i = i To 20\nF = F + 1\nNext\nEnd Function\n";
+    var typed = Typed(source).Module;
+    SameResults(source, typed, ("F", [true]), ("F", [false]));
+  }
+
+  #endregion
 
 }

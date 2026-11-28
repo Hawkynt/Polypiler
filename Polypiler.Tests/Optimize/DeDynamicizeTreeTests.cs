@@ -34,7 +34,7 @@ public sealed class DeDynamicizeTreeTests {
   /// <summary>A module of the Visual Basic helpers with one more function, which the test builds.</summary>
   private static IrModule Module(IrFunction function) {
     var result = VisualBasicFrontend.Import("H.bas", "Public Function G(a, b)\nG = a * b + a\nEnd Function\nPublic Function H(ByVal x As Double) As Double\nH = x * x\nEnd Function\n",
-      new VisualBasicImportOptions { Inference = VisualBasicInference.Framework });
+      new VisualBasicImportOptions { Inference = VisualBasicInference.Dynamic });
     var module = result.Module! with { Functions = [.. result.Module!.Functions, function] };
     Assert.That(IrVerifier.Verify(module), Is.Empty);
     return module;

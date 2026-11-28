@@ -98,11 +98,17 @@ types the variants of a module that names its table. Within a function it carrie
 variant place through the tree - joined where branches meet, iterated at every loop head to a fixed
 point, at most 12 passes - and gives a local every read of which sees one exact kind that kind's type:
 `Dim s: s = CDbl(0): For i = 1 To 10: s = s + CDbl(i): Next` makes `s` an `f64` whose additions are
-typed. A `Long` accumulator stays a variant, as `Long + Long` may promote to `Double`. A test of a tag -
+typed. Exact integers carry the range the program proves (#1591): the test of a `For` loop bounds its
+counter by the limit, and `Integer + Integer` whose result's range fits an `Integer` stays one, so
+`For i = 1 To 10` over a `Variant` makes `i` an `i16`. A `Long` accumulator stays a variant, as
+`Long + Long` may promote to `Double` and its range grows with every pass. A test of a tag -
 `VarType(v) = vbDouble`, `IsNull(v)`, `IsEmpty(v)`, a switch on the tag - narrows each branch: there
 an operation of `v` is typed, a payload of it is read as tested, and a branch no value reaches is
 folded. Across the module a call whose variant arguments are all proven exact calls a clone of its
 function for that signature (#1564's budgets: four clones, twelve rounds). Places it cannot follow -
 captured by a lambda, bound inside an expression, written by a statement it does not model - stay
 variants; a budget exceeded leaves a place dynamic and never refuses a program.
+`DeDynamicize.Typing` gives the same findings without rewriting the module, for a frontend that writes
+them with its own lowering: classic Visual Basic does (#1591), so its typed output is byte for byte
+what its former inference wrote.
 `translate --type-report` counts what the translation made of every place (ADR 0300 decision 7).

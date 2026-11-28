@@ -1,78 +1,59 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Polypiler.Core.Analysis.Dynamic;
 using Polypiler.Core.Frontends.VisualBasic.Parsing;
 using Polypiler.Core.IR;
+using Polypiler.Core.Optimize.Specialize;
 
 namespace Polypiler.Core.Frontends.VisualBasic.Lowering;
 
 /// <summary>
-/// <c>Variant</c>: a local declared without a type or <c>As Variant</c> that only ever holds one
-/// type, and is assigned before every read, becomes a variable of that type; every other one, and
-/// every <c>Variant</c> parameter, result and module variable, is the IR's dynamic type, whose
-/// operators are the helpers of <see cref="VariantHelperSource"/>. The kinds each local may hold are
-/// found by lowering the procedure until they no longer grow (<see cref="Infer"/>).
+/// <c>Variant</c>: every local declared without a type or <c>As Variant</c>, every <c>Variant</c>
+/// parameter and result is typed by the shared framework (ADR 0300, #1591). The module is first
+/// lowered with every one of them dynamic, its operations the helpers of
+/// <see cref="VariantHelperSource"/>, which the framework's de-dynamicization analyses with the table
+/// of <see cref="Semantics"/>: what each local holds at every loop's head, which locals have one type,
+/// which calls go to a clone of their procedure for the types of their arguments. The module is then
+/// lowered again with that typing, so every typed operation is the one this lowering writes for its
+/// type. The lowering keeps no fixed point of its own: it follows the kinds of the values statement by
+/// statement, and takes those at a loop's head from the framework.
 /// </summary>
 internal sealed partial class VbaLowerer {
 
-  /// <summary>What the inference knows of the <c>Variant</c> locals of the procedure being lowered.</summary>
-  private sealed class Inference(HashSet<string> candidates, bool framework) {
-
-    /// <summary>Whether the shared framework types the locals: the kinds are still followed, for the helpers a lowering chooses, but no local is given a type.</summary>
-    public bool Framework { get; } = framework;
+  /// <summary>
+  /// The kinds the <c>Variant</c> locals of the procedure being lowered hold as its statements are
+  /// lowered: flow-sensitive within a pass, with the kinds at the head of every loop and the type of
+  /// every local the framework found given.
+  /// </summary>
+  private sealed class Inference(HashSet<string> candidates) {
 
     /// <summary>The <c>Variant</c> locals.</summary>
     public HashSet<string> Candidates { get; } = candidates;
 
-    /// <summary>The kinds each local may be assigned, as found so far.</summary>
-    public Dictionary<string, VbaTags> Tags { get; } = candidates.ToDictionary(name => name, _ => VbaTags.None, StringComparer.OrdinalIgnoreCase);
-
     /// <summary>The kinds seen assigned in the current lowering.</summary>
     public Dictionary<string, VbaTags> Seen { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>The locals lowered to a fixed type.</summary>
+    /// <summary>The locals lowered to a fixed type: an array its syntax states, or the type the framework found.</summary>
     public Dictionary<string, VbaType> Fixed { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>The locals a lowering found assigned a value of another type than the one they were given, which stay dynamic.</summary>
-    public HashSet<string> Demoted { get; } = new(StringComparer.OrdinalIgnoreCase);
-
-    /// <summary>The locals the current lowering found assigned a value of another type than their fixed one.</summary>
-    public HashSet<string> Violations { get; } = new(StringComparer.OrdinalIgnoreCase);
-
-    /// <summary>Whether the current lowering only collects kinds, every local dynamic.</summary>
-    public bool Dry { get; set; }
+    /// <summary>What each local may hold anywhere in the procedure, as the framework found it.</summary>
+    public Dictionary<string, VbaTags> Anywhere { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>The kinds each local holds at the statement being lowered: flow-sensitive, as the statements run.</summary>
-    public Dictionary<string, VbaTags> Current { get; private set; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, VbaTags> Current { get; private set; } = candidates.ToDictionary(name => name, _ => VbaTags.Empty, StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>The kinds each local holds at the head of each loop, kept from one lowering to the next until they no longer grow.</summary>
+    /// <summary>The kinds each local holds at the head of each loop, as the framework found them; none while the module is analysed.</summary>
     public Dictionary<VbaStatement, Dictionary<string, VbaTags>> Heads { get; } = new(ReferenceEqualityComparer.Instance);
 
-    /// <summary>Whether the current lowering grew the kinds at the head of a loop.</summary>
-    public bool HeadsGrew { get; set; }
-
-    /// <summary>The locals the current lowering read where they may still be <c>Empty</c>.</summary>
+    /// <summary>The locals read where they may still be <c>Empty</c>.</summary>
     public HashSet<string> ReadEmpty { get; } = new(StringComparer.OrdinalIgnoreCase);
-
-    /// <summary>The locals read where they may still be <c>Empty</c> in the last lowering of the inference.</summary>
-    public HashSet<string> MayBeEmpty { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>The states at the <c>Exit</c> statements of the loops being lowered, innermost last.</summary>
     public Stack<Dictionary<string, VbaTags>> Exits { get; } = new();
 
     /// <summary>Whether an assignment may be skipped, under <c>On Error Resume Next</c>: it adds to what the local holds.</summary>
     public bool Weak { get; set; }
-
-    /// <summary>Starts a lowering: every local is <c>Empty</c>.</summary>
-    public void Begin() {
-      this.Seen.Clear();
-      this.Violations.Clear();
-      this.ReadEmpty.Clear();
-      this.Exits.Clear();
-      this.HeadsGrew = false;
-      this.Weak = false;
-      this.Current = this.Candidates.ToDictionary(name => name, _ => VbaTags.Empty, StringComparer.OrdinalIgnoreCase);
-    }
 
     public void See(string name, VbaTags tags) {
       this.Seen[name] = this.Seen.GetValueOrDefault(name) | tags;
@@ -95,21 +76,7 @@ internal sealed partial class VbaLowerer {
     /// <summary>Whatever a local may hold anywhere: where a handler starts, after any statement of the code it guards.</summary>
     public void Havoc() {
       foreach (var name in this.Candidates)
-        this.Current[name] |= this.Tags[name] | this.Seen.GetValueOrDefault(name) | VbaTags.Empty;
-    }
-
-    /// <summary>Adds what the lowering saw to what is known; whether that grew.</summary>
-    public bool Merge() {
-      var grown = false;
-      foreach (var (name, tags) in this.Seen) {
-        var known = this.Tags[name];
-        if ((known | tags) != known) {
-          this.Tags[name] = known | tags;
-          grown = true;
-        }
-      }
-
-      return grown;
+        this.Current[name] |= this.Anywhere.GetValueOrDefault(name) | this.Seen.GetValueOrDefault(name) | VbaTags.Empty;
     }
 
     /// <summary>The kinds a read of a dynamic local gives where it is read.</summary>
@@ -120,90 +87,181 @@ internal sealed partial class VbaLowerer {
       return tags;
     }
 
-    /// <summary>Gives a fixed type to every local assigned before every read whose assignments all have one scalar type.</summary>
-    public void Decide() {
-      this.Fixed.Clear();
-      // Under the shared framework only an array stays typed here: the IR's dynamic type carries no
-      // array yet, so a Variant that holds one is the array its syntax (Array, ReDim) states.
-      foreach (var name in this.Candidates.Where(name => !this.MayBeEmpty.Contains(name) && !this.Demoted.Contains(name)))
-        if (TypeOf(this.Tags[name]) is { } type && (!this.Framework || type.IsArray))
-          this.Fixed[name] = type;
-    }
+  }
+
+  /// <summary>How far the typing of the module is: analysed with every <c>Variant</c> dynamic, or lowered with what the framework found.</summary>
+  private enum Phase {
+
+    /// <summary>The module has no <c>Variant</c>, or it is lowered dynamic with nothing found yet.</summary>
+    None,
+
+    /// <summary>Lowered with every <c>Variant</c> dynamic for the framework: a refusal that depends on the kinds a value may hold is no refusal yet.</summary>
+    Analysing,
+
+    /// <summary>Lowered with the framework's typing: the kinds at the loops' heads, the typed locals and the clones.</summary>
+    Writing
 
   }
+
+  private Phase _phase;
+
+  /// <summary>Whether the typing written is the framework's whole typing, or only the kinds at the loops' heads, every <c>Variant</c> staying dynamic (<see cref="VisualBasicInference.Dynamic"/>).</summary>
+  private bool _writeTypes = true;
+
+  /// <summary>The arrays each procedure's <c>Variant</c> locals hold, by the syntax that makes them (<c>Array</c>, <c>ReDim</c>): the IR's dynamic type carries no array.</summary>
+  private readonly Dictionary<string, Dictionary<string, VbaType>> _arrays = new(StringComparer.OrdinalIgnoreCase);
+
+  /// <summary>The kinds each procedure's <c>Variant</c> locals were seen assigned when it was analysed.</summary>
+  private readonly Dictionary<string, Dictionary<string, VbaTags>> _analysedSeen = new(StringComparer.OrdinalIgnoreCase);
+
+  /// <summary>The IR loop each loop of a procedure became when it was analysed.</summary>
+  private readonly Dictionary<string, Dictionary<VbaStatement, IrStmt>> _loopsOf = new(StringComparer.OrdinalIgnoreCase);
+
+  /// <summary>The IR call each call of a procedure became when it was analysed, by the node of the call.</summary>
+  private readonly Dictionary<string, Dictionary<object, IrCall>> _sitesOf = new(StringComparer.OrdinalIgnoreCase);
+
+  /// <summary>The framework's typing of every function and clone of the module, by the name it has in the output.</summary>
+  private readonly Dictionary<string, DynamicFunctionTyping> _typings = new(StringComparer.OrdinalIgnoreCase);
+
+  /// <summary>The procedures every call of which goes to a clone, which the module does not keep unless a clone is refused, with their typing.</summary>
+  private readonly Dictionary<string, DynamicFunctionTyping> _dropped = new(StringComparer.OrdinalIgnoreCase);
+
+  /// <summary>The clones whose lowering was refused, whose calls go to the procedure itself.</summary>
+  private readonly HashSet<string> _failed = new(StringComparer.OrdinalIgnoreCase);
+
+  /// <summary>The typing of the function or clone being lowered.</summary>
+  private DynamicFunctionTyping? _typing;
 
   private Inference? _inference;
 
-  /// <summary>
-  /// A procedure, lowered with the types its <c>Variant</c> locals were inferred to have: the kinds
-  /// each may hold are collected with every one of them dynamic until they no longer grow; then those
-  /// with one kind and no read before an assignment get that type, and the procedure is lowered again
-  /// until every assignment of such a local is of its type.
-  /// </summary>
-  private IrFunction Procedure(VbaProcedure procedure, Signature signature) {
-    this._lastReturns = null;
-    var candidates = this._raw ? [] : Candidates(procedure, signature);
-    if (candidates.Count == 0)
-      return this.LowerProcedure(procedure, signature);
+  /// <summary>The kinds an element of the framework allows, as the lowering follows them: a value of which nothing is known holds what a parameter may, and a <c>Currency</c> or a <c>LongLong</c> where the procedure was seen to assign one.</summary>
+  private static VbaTags KindsOf(DynamicType type, VbaTags seen)
+    => type is DynamicVariant ? VbaTags.Any | (seen & (VbaTags.Currency | VbaTags.LongLong)) : Semantics.Tags(type);
 
-    var inference = new Inference(candidates, this.Framework);
+  /// <summary>The type of an exact element of the framework.</summary>
+  private static VbaType TypeOf(DynamicExact exact) => TypeOf(Semantics.Tags(exact))!;
+
+  /// <summary>
+  /// A procedure, lowered with the typing of the phase: the kinds of its <c>Variant</c> locals
+  /// followed as its statements run, those at each loop's head and the type of each local the
+  /// framework found, and its arrays.
+  /// </summary>
+  private IrFunction Procedure(VbaProcedure procedure, Signature signature, DynamicFunctionTyping? typing) {
+    var candidates = this._raw ? [] : Candidates(procedure, signature);
+    this._typing = typing;
+    var inference = candidates.Count == 0 ? null : new Inference(candidates);
     this._inference = inference;
     try {
-      this.Infer(procedure, signature, inference);
-      // The lowering with the types given checks them: a local of a fixed type assigned another one,
-      // or read where it may still be Empty, and kinds the inference had not seen, lower it again.
-      while (true) {
-        var helpers = this._usedHelpers.ToList();
-        var err = this._err;
-        inference.Begin();
-        var function = this.LowerProcedure(procedure, signature);
-        var grown = inference.Merge() | inference.HeadsGrew;
-        var empty = inference.ReadEmpty.Where(inference.Fixed.ContainsKey).ToList();
-        if (!grown && inference.Violations.Count == 0 && empty.Count == 0) {
-          this._lastReturns = signature.DeclaredVariantResult && inference.Fixed.TryGetValue(procedure.Name, out var fixedResult) ? fixedResult : signature.Returns;
-          return function;
-        }
-
-        inference.Demoted.UnionWith(inference.Violations);
-        inference.MayBeEmpty.UnionWith(inference.ReadEmpty);
-        inference.Decide();
-        this._usedHelpers.Clear();
-        this._usedHelpers.UnionWith(helpers);
-        this._err = err;
-      }
+      if (inference is not null)
+        this.Prepare(procedure, inference, typing);
+      return this.LowerProcedure(procedure, signature);
     } finally {
+      // What was seen up to a refusal still tells the arrays apart.
+      if (this._phase == Phase.Analysing && inference is not null)
+        this._analysedSeen[procedure.Name] = new(inference.Seen, StringComparer.OrdinalIgnoreCase);
       this._inference = null;
+      this._typing = null;
     }
   }
 
-  /// <summary>Lowers the procedure with every <c>Variant</c> local dynamic until the kinds assigned to them no longer grow.</summary>
-  private void Infer(VbaProcedure procedure, Signature signature, Inference inference) {
+  /// <summary>Gives the inference of a procedure its arrays and, when the module is written, the framework's typing.</summary>
+  private void Prepare(VbaProcedure procedure, Inference inference, DynamicFunctionTyping? typing) {
+    foreach (var (name, type) in this._arrays.GetValueOrDefault(procedure.Name, []))
+      inference.Fixed[name] = type;
+    if (this._phase != Phase.Writing || typing is null)
+      return;
+
+    var seen = this._analysedSeen.GetValueOrDefault(procedure.Name, []);
+    VbaTags Kinds(DynamicType type, string name) => KindsOf(type, seen.GetValueOrDefault(name));
+    if (this._writeTypes)
+      foreach (var (local, exact) in typing.Typed.Where(pair => inference.Candidates.Contains(pair.Key.Name)))
+        inference.Fixed.TryAdd(local.Name, TypeOf(exact));
+    foreach (var (local, holds) in typing.Holds.Where(pair => inference.Candidates.Contains(pair.Key.Name)))
+      inference.Anywhere[local.Name] = Kinds(holds, local.Name);
+    foreach (var (loop, statement) in this._loopsOf.GetValueOrDefault(procedure.Name, []))
+      if (typing.Heads.TryGetValue(statement, out var head))
+        inference.Heads[loop] = head.Where(pair => inference.Candidates.Contains(pair.Key.Name)).ToDictionary(pair => pair.Key.Name, pair => Kinds(pair.Value, pair.Key.Name), StringComparer.OrdinalIgnoreCase);
+  }
+
+  /// <summary>
+  /// The procedures of the module, typed by the framework: lowered with every <c>Variant</c> dynamic -
+  /// a second time with the arrays the first found where it found any - analysed, and lowered with
+  /// the typing found. A module without <c>Variant</c>s is lowered once.
+  /// </summary>
+  private List<IrFunction> LowerAll(List<VbaProcedure> procedures) {
+    if (!procedures.Any(procedure => HasVariants(this._procedures[procedure.Name]) || Candidates(procedure, this._procedures[procedure.Name]).Count > 0))
+      return this.Reported(this.LowerRound(procedures));
+
     var helpers = this._usedHelpers.ToList();
     var err = this._err;
-    inference.Dry = true;
-    try {
-      // A lowering with every local dynamic may refuse what a local of a fixed type lowers: then what
-      // was seen up to the refusal decides, and the lowering with the types given checks it.
-      var refused = false;
-      do {
-        inference.Begin();
-        try {
-          this.LowerProcedure(procedure, signature);
-        } catch (VbaRefusal) {
-          refused = true;
-        }
-
-        inference.MayBeEmpty.Clear();
-        inference.MayBeEmpty.UnionWith(inference.ReadEmpty);
-      } while ((inference.Merge() | inference.HeadsGrew) && !refused);
-    } finally {
-      inference.Dry = false;
+    void Reset() {
       this._usedHelpers.Clear();
       this._usedHelpers.UnionWith(helpers);
       this._err = err;
     }
 
-    inference.Decide();
+    this._phase = Phase.Analysing;
+    var (functions, _) = this.LowerRound(procedures);
+    // The arrays the first lowering found; one read where it may still be Empty is none, and the
+    // lowering with the rest is the one the framework analyses.
+    if (this.FindArrays(procedures))
+      do {
+        this._readEmpty.Clear();
+        Reset();
+        (functions, _) = this.LowerRound(procedures);
+      } while (this.DropEmptyArrays());
+
+    var analysed = new IrModule("Analysed", functions) { Types = this._declarations, Globals = [.. this._globals.Values.Select(global => global.Global), .. this._err is { } global ? [global] : Array.Empty<IrGlobal>()] };
+    foreach (var typing in DeDynamicize.Typing(analysed, Semantics.Instance, DeDynamicizeOptions.Default))
+      if (typing.Kept || typing.Signature is not null)
+        this._typings[typing.Name] = typing;
+      else
+        this._dropped[typing.Name] = typing;
+    this._phase = Phase.Writing;
+    // A clone the lowering refuses is none: its calls go to the procedure itself, and the module is
+    // lowered once more - at most once per clone.
+    for (var failed = -1; ;) {
+      Reset();
+      failed = this._failed.Count;
+      var written = this.LowerRound(procedures);
+      if (this._failed.Count == failed)
+        return this.Reported(written);
+    }
+  }
+
+  /// <summary>The typing of a procedure itself, kept or not.</summary>
+  private DynamicFunctionTyping? RootTyping(string procedure)
+    => this._typings.TryGetValue(procedure, out var typing) && typing.Signature is null ? typing : this._dropped.GetValueOrDefault(procedure);
+
+  /// <summary>Drops the arrays read where they may still be <c>Empty</c>; whether there were any.</summary>
+  private bool DropEmptyArrays() {
+    var dropped = false;
+    foreach (var (procedure, arrays) in this._arrays)
+      foreach (var name in arrays.Keys.Where(name => this._readEmpty.Contains((procedure, name))).ToList())
+        dropped |= arrays.Remove(name);
+    return dropped;
+  }
+
+  /// <summary>The arrays the analysis found: a local that is only ever assigned arrays of <c>Variant</c>s from one lower bound, never read before; whether there are any.</summary>
+  private bool FindArrays(List<VbaProcedure> procedures) {
+    foreach (var procedure in procedures)
+      foreach (var (name, tags) in this._analysedSeen.GetValueOrDefault(procedure.Name, []))
+        if (TypeOf(tags) is { IsArray: true } array && !this._readEmpty.Contains((procedure.Name, name)))
+          (this._arrays.TryGetValue(procedure.Name, out var arrays) ? arrays : this._arrays[procedure.Name] = new(StringComparer.OrdinalIgnoreCase))[name] = array;
+    return this._arrays.Count > 0;
+  }
+
+  /// <summary>The locals of each procedure read where they may still be <c>Empty</c> when it was analysed.</summary>
+  private readonly HashSet<(string Procedure, string Name)> _readEmpty = new(new ReadEmptyComparer());
+
+  private sealed class ReadEmptyComparer : IEqualityComparer<(string Procedure, string Name)> {
+
+    public bool Equals((string Procedure, string Name) x, (string Procedure, string Name) y)
+      => StringComparer.OrdinalIgnoreCase.Equals(x.Procedure, y.Procedure) && StringComparer.OrdinalIgnoreCase.Equals(x.Name, y.Name);
+
+    public int GetHashCode((string Procedure, string Name) obj)
+      => HashCode.Combine(StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Procedure), StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Name));
+
   }
 
   /// <summary>The locals a procedure declares as <c>Variant</c>, explicitly or by giving no type, and its result where it is declared so.</summary>
@@ -217,11 +275,11 @@ internal sealed partial class VbaLowerer {
     return names;
   }
 
-  /// <summary>The type of a local declared <c>Variant</c>: the fixed one the inference gave it, or the dynamic type.</summary>
+  /// <summary>The type of a local declared <c>Variant</c>: the fixed one it was given, or the dynamic type.</summary>
   private (VbaType Type, VbaTags Tags) VariantLocal(string name) {
     // Every Variant local of a procedure is a candidate of its inference.
     var inference = this._inference!;
-    if (!inference.Dry && inference.Fixed.TryGetValue(name, out var type))
+    if (inference.Fixed.TryGetValue(name, out var type))
       return (type, TagOf(type.Kind));
     return (VbaType.Variant, VbaTags.Empty);
   }
@@ -234,7 +292,15 @@ internal sealed partial class VbaLowerer {
     if (this._inference is not { } inference || !inference.Candidates.Contains(name))
       return null;
     var tags = inference.Read(name);
+    if (this._phase == Phase.Analysing && (tags & VbaTags.Empty) != VbaTags.None)
+      this._readEmpty.Add((this._procedure, name));
     return type.IsVariant ? tags : null;
+  }
+
+  /// <summary>A refusal of what a <c>Variant</c> may hold: while the module is analysed it is none, for the typing found may avoid it.</summary>
+  private void RefuseVariant(int line, string what) {
+    if (this._phase != Phase.Analysing)
+      throw this.Unsupported(line, what);
   }
 
   #region Flow
@@ -252,7 +318,7 @@ internal sealed partial class VbaLowerer {
       inference.Restore(Inference.Join(states.OfType<Dictionary<string, VbaTags>>()));
   }
 
-  /// <summary>Enters a loop: the state at its head joins the state before it with the one its body ended in the last time.</summary>
+  /// <summary>Enters a loop: the state at its head joins the state before it with what the framework found there.</summary>
   private void EnterLoop(VbaStatement loop) {
     if (this._inference is not { } inference)
       return;
@@ -261,16 +327,19 @@ internal sealed partial class VbaLowerer {
     inference.Exits.Push(new(StringComparer.OrdinalIgnoreCase));
   }
 
-  /// <summary>Leaves a loop whose body has been lowered: its head keeps the union, the code after it starts from the head, the end of its body and every <c>Exit</c>.</summary>
+  /// <summary>Leaves a loop whose body has been lowered: the code after it starts from the head, the end of its body and every <c>Exit</c>.</summary>
   private void LeaveLoop(VbaStatement loop, Dictionary<string, VbaTags>? head) {
     if (this._inference is not { } inference || head is null)
       return;
     var exits = inference.Exits.Pop();
-    var joined = Inference.Join([head, inference.Current, exits]);
-    if (!inference.Heads.TryGetValue(loop, out var known) || joined.Any(pair => (known.GetValueOrDefault(pair.Key) | pair.Value) != known.GetValueOrDefault(pair.Key)))
-      inference.HeadsGrew = true;
-    inference.Heads[loop] = joined;
-    inference.Restore(joined);
+    inference.Restore(Inference.Join([head, inference.Current, exits]));
+  }
+
+  /// <summary>The IR loop a loop became, which the framework's facts at its head are found by.</summary>
+  private T Lowered<T>(VbaStatement loop, T lowered) where T : IrStmt {
+    if (this._phase == Phase.Analysing)
+      (this._loopsOf.TryGetValue(this._procedure, out var loops) ? loops : this._loopsOf[this._procedure] = new(ReferenceEqualityComparer.Instance))[loop] = lowered;
+    return lowered;
   }
 
   /// <summary>An <c>Exit For</c> or <c>Exit Do</c>: the state goes to the code after the loop.</summary>
@@ -284,19 +353,17 @@ internal sealed partial class VbaLowerer {
 
   #endregion
 
-  /// <summary>Records what a <c>Variant</c> local is assigned; whether it is one of a fixed type assigned another type, a violation.</summary>
+  /// <summary>
+  /// Records what a <c>Variant</c> local is assigned; whether it is one of a fixed type assigned a value
+  /// that holds none of its kind - a store the framework found no read sees, kept only for the effects
+  /// of its value.
+  /// </summary>
   private bool Record(string name, VbaValue value) {
     if (this._inference is not { } inference || !inference.Candidates.Contains(name))
       return false;
 
     inference.See(name, TagsOf(value));
-    // A dynamic value of exactly the local's kind converts to it exactly.
-    if (!inference.Fixed.TryGetValue(name, out var type) || inference.Dry
-        || (value.Promoted is null && (value.Type.IsVariant ? value.Tags == TagOf(type.Kind) : value.Type == type)))
-      return false;
-
-    inference.Violations.Add(name);
-    return true;
+    return inference.Fixed.TryGetValue(name, out var type) && !type.IsArray && (TagsOf(value) & TagOf(type.Kind)) == VbaTags.None;
   }
 
   #region Tags
@@ -408,8 +475,6 @@ internal sealed partial class VbaLowerer {
   /// <summary>A set of kinds as Visual Basic names them, for a diagnostic.</summary>
   private static string Names(VbaTags tags) => string.Join(" or ", Each(tags).Select(tag => tag.ToString()));
 
-  private VbaRefusal VariantRefusal(int line, string what) => this.Unsupported(line, what);
-
   #endregion
 
   #region Boxing
@@ -420,6 +485,10 @@ internal sealed partial class VbaLowerer {
       return value.Expr;
     if (value.Promoted is { } from)
       return this.HelperCall("PlyVarFromWide", value.Expr, I16(RankCode(from.Kind)));
+
+    // While the module is analysed, an array stands for no kind, and a LongLong is the IR's i64: the typing found decides.
+    if (this._phase == Phase.Analysing && value.Type.Kind is VbaKind.Array or VbaKind.LongLong)
+      return value.Type.Kind == VbaKind.LongLong ? new IrVariantOf(IrVariantTag.I64, value.Expr) : new IrVariantOf(IrVariantTag.Null, null);
 
     var tag = value.Type.Kind switch {
       VbaKind.Boolean => IrVariantTag.Bool,
@@ -483,10 +552,10 @@ internal sealed partial class VbaLowerer {
       return new(new IrIntrinsic(IrIntrinsicOp.StrConcat, IrType.String, [left.Expr, right.Expr]), VbaType.String) { Tags = VbaTags.String };
 
     if (((a | b) & VbaTags.LongLong) != VbaTags.None)
-      throw this.VariantRefusal(line, "the arithmetic of a Variant that holds a LongLong");
+      this.RefuseVariant(line, "the arithmetic of a Variant that holds a LongLong");
     var currency = ((a | b) & VbaTags.Currency) != VbaTags.None;
     if (currency && !typed && op is "^" or "\\" or "Mod")
-      throw this.VariantRefusal(line, $"'{op}' of a Variant that may hold a Currency");
+      this.RefuseVariant(line, $"'{op}' of a Variant that may hold a Currency");
 
     switch (op) {
       case "+" or "-" or "*":
@@ -580,7 +649,7 @@ internal sealed partial class VbaLowerer {
     var a = TagsOf(left);
     var b = TagsOf(right);
     if (((a | b) & VbaTags.Currency) != VbaTags.None && (a & b & VbaTags.Null) != VbaTags.None)
-      throw this.VariantRefusal(line, "'&' of two Variants that may be Null and may hold a Currency");
+      this.RefuseVariant(line, "'&' of two Variants that may be Null and may hold a Currency");
     if ((a & b & VbaTags.Null) != VbaTags.None) {
       return new(this.HelperCall("PlyVarConcat", this.Box(left, line), this.Box(right, line)), VbaType.Variant) { Tags = VbaTags.String | VbaTags.Null };
     }
@@ -599,16 +668,16 @@ internal sealed partial class VbaLowerer {
     var tags = TagsOf(operand);
     if (op == "Not") {
       if ((tags & VbaTags.LongLong) != VbaTags.None)
-        throw this.VariantRefusal(line, "Not of a Variant that may hold a LongLong");
+        this.RefuseVariant(line, "Not of a Variant that may hold a LongLong");
       if ((tags & VbaTags.Currency) != VbaTags.None)
-        throw this.VariantRefusal(line, "Not of a Variant that may hold a Currency");
+        this.RefuseVariant(line, "Not of a Variant that may hold a Currency");
       if ((tags & ~(VbaTags.Boolean | VbaTags.Null)) == VbaTags.None)
         return new(this.HelperCall("PlyVarNot", this.Box(operand, line)), VbaType.Variant) { Tags = tags };
       return new(this.HelperCall("PlyVarBitNot", this.Box(operand, line)), VbaType.Variant) { Tags = Each(tags).Aggregate(VbaTags.None, (kinds, tag) => kinds | BitwiseKind(tag)) };
     }
 
     if ((tags & VbaTags.LongLong) != VbaTags.None)
-      throw this.VariantRefusal(line, "the negation of a Variant that may hold a LongLong");
+      this.RefuseVariant(line, "the negation of a Variant that may hold a LongLong");
     if (!operand.Type.IsVariant && IsSingle(tags) && (tags & ~(VbaTags.Integral | VbaTags.Double)) == VbaTags.None) {
       var negated = new IrUnary(IrUnaryOp.Negate, this.ToFloat(operand, IrType.F64));
       return operand.Type.Kind == VbaKind.Double
@@ -634,9 +703,9 @@ internal sealed partial class VbaLowerer {
   private VbaValue VariantLogical(string op, VbaValue left, VbaValue right, int line) {
     var tags = TagsOf(left) | TagsOf(right);
     if ((tags & VbaTags.LongLong) != VbaTags.None)
-      throw this.VariantRefusal(line, $"{op} of a Variant that may hold a LongLong");
+      this.RefuseVariant(line, $"{op} of a Variant that may hold a LongLong");
     if ((tags & VbaTags.Currency) != VbaTags.None)
-      throw this.VariantRefusal(line, $"{op} of a Variant that may hold a Currency");
+      this.RefuseVariant(line, $"{op} of a Variant that may hold a Currency");
 
     if ((tags & ~(VbaTags.Boolean | VbaTags.Null)) == VbaTags.None && op is "And" or "Or" or "Xor") {
       var code = op == "And" ? 0 : op == "Or" ? 1 : 2;
@@ -670,7 +739,7 @@ internal sealed partial class VbaLowerer {
   /// <summary>A <c>Variant</c> as a condition: <c>Null</c> and <c>Empty</c> are false, a number is true when it is not zero, a string by <c>CBool</c>.</summary>
   private IrExpr VariantCondition(VbaValue value, int line) {
     if ((value.Tags & VbaTags.Currency) != VbaTags.None)
-      throw this.VariantRefusal(line, "a condition of a Variant that may hold a Currency");
+      this.RefuseVariant(line, "a condition of a Variant that may hold a Currency");
     return this.HelperCall("PlyVarIsTrue", value.Expr);
   }
 
@@ -789,7 +858,7 @@ internal sealed partial class VbaLowerer {
     var step = loop.Step is null ? new VbaValue(I16(1), VbaType.Integer) : this.Expression(loop.Step);
     var bounds = TagsOf(start) | TagsOf(end) | TagsOf(step);
     if ((bounds & (VbaTags.String | VbaTags.Null | VbaTags.Empty)) != VbaTags.None)
-      throw this.VariantRefusal(loop.Line, $"a For loop whose bounds may be a {Names(bounds & (VbaTags.String | VbaTags.Null | VbaTags.Empty))}");
+      this.RefuseVariant(loop.Line, $"a For loop whose bounds may be a {Names(bounds & (VbaTags.String | VbaTags.Null | VbaTags.Empty))}");
 
     var candidate = this._inference?.Candidates.Contains(loop.Variable) == true;
     if (candidate)
@@ -801,7 +870,7 @@ internal sealed partial class VbaLowerer {
     var head = this.Snapshot();
     var counterTags = candidate ? this._inference!.Read(loop.Variable) : VbaTags.Any;
     if ((counterTags & (VbaTags.String | VbaTags.Null | VbaTags.Empty)) != VbaTags.None)
-      throw this.VariantRefusal(loop.Line, $"a For loop whose Variant counter '{loop.Variable}' may hold a {Names(counterTags & (VbaTags.String | VbaTags.Null | VbaTags.Empty))}");
+      this.RefuseVariant(loop.Line, $"a For loop whose Variant counter '{loop.Variable}' may hold a {Names(counterTags & (VbaTags.String | VbaTags.Null | VbaTags.Empty))}");
 
     var condition = this.HelperCall("PlyVarForTest", new IrLocalRef(counter), new IrLocalRef(limit), new IrLocalRef(by));
     this._loops.Push("For");
@@ -811,13 +880,13 @@ internal sealed partial class VbaLowerer {
       // The step is added to what the body left in the counter, a String too, which the locale reads.
       var stepped = this._inference!.Read(loop.Variable);
       if ((stepped & VbaTags.String) != VbaTags.None)
-        throw this.VariantRefusal(loop.Line, $"a For loop whose Variant counter '{loop.Variable}' may hold a String");
+        this.RefuseVariant(loop.Line, $"a For loop whose Variant counter '{loop.Variable}' may hold a String");
       this.Record(loop.Variable, new(I16(0), VbaType.Variant) { Tags = Steady(start, end, step) is { } kind ? TagOf(kind) : ArithmeticTags("+", stepped, TagsOf(step)) });
     }
 
     this.LeaveLoop(loop, head);
     var advance = new IrAssign(counter, this.HelperCall("PlyVarArith", I16(0), new IrLocalRef(counter), new IrLocalRef(by)));
-    statements.Add(new IrFor(condition, new IrBlock(body), new IrBlock([advance])));
+    statements.Add(this.Lowered(loop, new IrFor(condition, new IrBlock(body), new IrBlock([advance]))));
     return statements;
   }
 

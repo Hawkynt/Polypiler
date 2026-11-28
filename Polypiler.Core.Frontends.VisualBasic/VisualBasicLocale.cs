@@ -65,22 +65,25 @@ public sealed record VisualBasicImportOptions {
   /// <summary>The regional settings the module runs under; <see cref="VisualBasicLocale.Default"/> unless stated.</summary>
   public VisualBasicLocale Locale { get; init; } = VisualBasicLocale.Default;
 
-  /// <summary>Which inference types the <c>Variant</c>s of the module; the frontend's own unless stated.</summary>
-  public VisualBasicInference Inference { get; init; } = VisualBasicInference.Frontend;
+  /// <summary>How the <c>Variant</c>s of the module are typed; by the framework's typing, written by the frontend, unless stated.</summary>
+  public VisualBasicInference Inference { get; init; } = VisualBasicInference.Framework;
 
 }
 
-/// <summary>Which inference types the <c>Variant</c> locals, parameters and results of a module (ADR 0300).</summary>
+/// <summary>How the <c>Variant</c> locals, parameters and results of a module are typed (ADR 0300, #1591).</summary>
 public enum VisualBasicInference {
 
-  /// <summary>The frontend's own: a fixed point within each procedure (#1556) and clones across the module (#1564).</summary>
-  Frontend,
+  /// <summary>
+  /// The shared framework's typing (#1585 to #1587), written by the frontend: the module is lowered
+  /// with every <c>Variant</c> dynamic and analysed, then lowered again with the locals, clones and
+  /// kinds the framework found, so that every typed operation is the frontend's own lowering of it.
+  /// </summary>
+  Framework,
 
   /// <summary>
-  /// The shared framework: every <c>Variant</c> is lowered dynamic, the module names Visual Basic's
-  /// semantics table, and the de-dynamicization types it (#1585 to #1587). The migration of #1591
-  /// makes this the default once its output equals the frontend's.
+  /// Every <c>Variant</c> stays dynamic and the module names Visual Basic's semantics table, which
+  /// the de-dynamicization of the pipeline then types by rewriting the module.
   /// </summary>
-  Framework
+  Dynamic
 
 }

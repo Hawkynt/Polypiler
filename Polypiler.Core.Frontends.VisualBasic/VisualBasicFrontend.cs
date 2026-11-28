@@ -74,7 +74,7 @@ public static class VisualBasicFrontend {
 
     var diagnostics = new List<Diagnostic>();
     options ??= new();
-    var module = new VbaLowerer(fileName, diagnostics, options.Locale) { Framework = options.Inference == VisualBasicInference.Framework }.Lower(parsed);
+    var module = new VbaLowerer(fileName, diagnostics, options.Locale) { Dynamic = options.Inference == VisualBasicInference.Dynamic }.Lower(parsed);
     if (diagnostics.Count > 0 || module is null)
       return new(null, diagnostics);
 

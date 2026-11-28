@@ -154,7 +154,7 @@ internal sealed partial class VbaLowerer {
       while (this._usedHelpers.Except(written).OrderBy(name => name, StringComparer.Ordinal).FirstOrDefault() is { } next) {
         written.Add(next);
         this._procedures[next] = this._helperSignatures[next];
-        functions.Add(this.Procedure(this._helperProcedures![next], this._helperSignatures[next]));
+        functions.Add(this.Procedure(this._helperProcedures![next], this._helperSignatures[next], null));
         this._procedures.Remove(next);
       }
     } catch (VbaRefusal refusal) {
@@ -179,7 +179,12 @@ internal sealed partial class VbaLowerer {
       || key.StartsWith("plyir", StringComparison.Ordinal);
     VbaValue Argument(int index) {
       var value = index < arguments.Count ? this.Expression(arguments[index]) : throw this.Unresolved(line, $"{name} needs {index + 1} arguments");
-      return value.Type.IsVariant && !aware ? throw this.Unsupported(line, $"{name} of a Variant") : value;
+      if (!value.Type.IsVariant || aware)
+        return value;
+      // While the module is analysed, a Variant of one kind stands for that kind: the typing found may give it.
+      if (this._phase == Phase.Analysing && TypeOf(value.Tags) is { IsArray: false } kind)
+        return new(this.Unbox(value, kind, line), kind);
+      throw this.Unsupported(line, $"{name} of a Variant");
     }
     void Arity(params int[] counts) {
       if (!counts.Contains(arguments.Count))

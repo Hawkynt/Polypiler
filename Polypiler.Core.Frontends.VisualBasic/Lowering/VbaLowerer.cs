@@ -63,11 +63,14 @@ internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnosti
   private IReadOnlyList<VbaDeclaration> _module = [];
 
   /// <summary>
-  /// Whether the shared framework types the <c>Variant</c>s (ADR 0300): every <c>Variant</c> local and
-  /// parameter is lowered dynamic, and the module names the table of <see cref="Semantics"/>, instead
-  /// of the lowering's own inference within a procedure and across the module.
+  /// Whether every <c>Variant</c> stays dynamic and the module names the table of
+  /// <see cref="Semantics"/>, for the de-dynamicization of the pipeline to type
+  /// (<see cref="VisualBasicInference.Dynamic"/>), instead of being written with the framework's typing.
   /// </summary>
-  public bool Framework { get; init; }
+  public bool Dynamic {
+    get => !this._writeTypes;
+    init => this._writeTypes = !value;
+  }
 
   public IrModule? Lower(VbaModule parsed) {
     this._module = parsed.Declarations;
@@ -95,7 +98,7 @@ internal sealed partial class VbaLowerer(string file, List<Diagnostic> diagnosti
     var globals = this._globals.Values.Select(global => global.Global).ToList();
     if (this._err is { } err)
       globals.Add(err);
-    return new IrModule(name, functions) { Types = this._declarations, Globals = globals, DynamicSemantics = this.Framework ? Semantics.Instance.Language : null };
+    return new IrModule(name, functions) { Types = this._declarations, Globals = globals, DynamicSemantics = this.Dynamic ? Semantics.Instance.Language : null };
   }
 
   #region Declarations

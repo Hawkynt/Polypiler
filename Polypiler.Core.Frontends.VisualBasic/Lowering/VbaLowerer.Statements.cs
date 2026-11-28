@@ -28,7 +28,6 @@ internal sealed partial class VbaLowerer {
   private void BeginProcedure(string name) {
     this._procedure = name;
     this._calls.Clear();
-    this._exitTags = VbaTags.None;
     this._locals.Clear();
     this._localConstants.Clear();
     this._declared.Clear();
@@ -107,12 +106,11 @@ internal sealed partial class VbaLowerer {
   /// <summary>The type the function returns, which its result is converted to.</summary>
   private VbaType? _returns;
 
-  /// <summary>The return of a function's result: a read of it, whose kinds the inference adds to those at the exits, converted to the type the function returns.</summary>
+  /// <summary>The return of a function's result: a read of it, converted to the type the function returns.</summary>
   private IrStmt Return() {
     var saved = this._pending;
     this._pending = [];
     var value = this.Name(new VbaName(this._procedure, "", 0));
-    this._exitTags |= TagsOf(value);
     var returned = this.Coerce(value, this._returns!, 0);
     var statements = this._pending;
     this._pending = saved;
@@ -394,9 +392,9 @@ internal sealed partial class VbaLowerer {
         if (variable.Global is not null && variable.Type.IsArray)
           throw this.Unsupported(line, $"the assignment of the module-level array '{name.Name}', which the IR's globals cannot replace");
         var assigned = this.Expression(value);
-        // A local given a fixed type and assigned another one is lowered again as a Variant.
+        // A store of another kind to a local the framework typed is one no read sees: only its effects stay.
         if (this.Record(name.Name, assigned))
-          return new IrBlock([]);
+          return Pure(assigned.Expr) ? new IrBlock([]) : new IrExprStmt(assigned.Expr);
         var coerced = this.Coerce(this.Copied(assigned), variable.Type, line);
         return variable.Local is { } local ? new IrAssign(local, coerced) : new IrGlobalAssign(variable.Global!, coerced);
       case VbaName name:
@@ -503,7 +501,7 @@ internal sealed partial class VbaLowerer {
 
     if (call.Target is VbaName name && this._procedures.TryGetValue(name.Name, out var signature)) {
       var arguments = call.Arguments.Select(argument => argument is VbaParenthesized parenthesized ? parenthesized.Inner : argument).ToList();
-      return [new IrExprStmt(this.Call(signature, arguments, call.Line))];
+      return [new IrExprStmt(this.Call(signature, arguments, call.Line, call))];
     }
 
     throw call.Target is VbaName unknown
@@ -612,7 +610,7 @@ internal sealed partial class VbaLowerer {
     var advance = variant
       ? [new IrAssign(counter, this.Arithmetic("+", type, current, by).Expr)]
       : this.Statement(new VbaAssign(new VbaName(loop.Variable, "", loop.Line), new VbaBinary(new VbaName(loop.Variable, "", loop.Line), "+", new VbaName(this.HoldName(step, type), "", loop.Line), loop.Line), loop.Line));
-    statements.Add(new IrFor(condition, new IrBlock(body), new IrBlock(advance)));
+    statements.Add(this.Lowered(loop, new IrFor(condition, new IrBlock(body), new IrBlock(advance))));
     return statements;
   }
 
@@ -630,7 +628,7 @@ internal sealed partial class VbaLowerer {
     this._loops.Pop();
     this.LeaveLoop(loop, head);
     if (loop.Condition is null)
-      return new IrWhile(new IrConst(IrType.Bool, 1), new IrBlock(body));
+      return this.Lowered(loop, new IrWhile(new IrConst(IrType.Bool, 1), new IrBlock(body)));
 
     var saved = this._pending;
     this._pending = [];
@@ -640,13 +638,13 @@ internal sealed partial class VbaLowerer {
     if (loop.Until)
       condition = new IrUnary(IrUnaryOp.LogicalNot, condition);
     if (needed.Count == 0)
-      return loop.PreTest ? new IrWhile(condition, new IrBlock(body)) : new IrDoWhile(new IrBlock(body), condition);
+      return this.Lowered<IrStmt>(loop, loop.PreTest ? new IrWhile(condition, new IrBlock(body)) : new IrDoWhile(new IrBlock(body), condition));
 
     // A test that needs statements is written into the loop, which it then leaves.
     var exit = new IrIf(new IrUnary(IrUnaryOp.LogicalNot, condition), new IrBlock([new IrBreak()]), null);
-    return loop.PreTest
+    return this.Lowered(loop, loop.PreTest
       ? new IrWhile(new IrConst(IrType.Bool, 1), new IrBlock([.. needed, exit, .. body]))
-      : new IrWhile(new IrConst(IrType.Bool, 1), new IrBlock([.. body, .. needed, exit]));
+      : new IrWhile(new IrConst(IrType.Bool, 1), new IrBlock([.. body, .. needed, exit])));
   }
 
   private IrStmt Exit(VbaExit exit) {

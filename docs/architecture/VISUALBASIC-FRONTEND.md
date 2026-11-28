@@ -5,7 +5,8 @@
 [#1094](https://github.com/Hawkynt/Polypiler/issues/1094), [#1091](https://github.com/Hawkynt/Polypiler/issues/1091),
 [#1092](https://github.com/Hawkynt/Polypiler/issues/1092), [#1093](https://github.com/Hawkynt/Polypiler/issues/1093) and
 [#1095](https://github.com/Hawkynt/Polypiler/issues/1095)), `Variant` ([#1556](https://github.com/Hawkynt/Polypiler/issues/1556)),
-its inference across the module ([#1564](https://github.com/Hawkynt/Polypiler/issues/1564)), the locale
+its inference across the module ([#1564](https://github.com/Hawkynt/Polypiler/issues/1564)), typed by the shared framework
+([#1591](https://github.com/Hawkynt/Polypiler/issues/1591), [ADR 0300](../adr/0300-static-types-first.md)), the locale
 ([#1565](https://github.com/Hawkynt/Polypiler/issues/1565)), `Currency` and `Date` ([#1566](https://github.com/Hawkynt/Polypiler/issues/1566))
 and bitwise `Variant`s and `Variant` arrays ([#1567](https://github.com/Hawkynt/Polypiler/issues/1567)), its oracle LibreOffice Basic in VBA mode
 ([ADR 2600](../adr/2600-classic-visual-basic-oracle.md)). Related: [classic Visual Basic backend](VISUALBASIC-BACKEND.md) ·
@@ -23,10 +24,9 @@ separator `CStr` writes and `CDbl` reads and whose digit group separator `CDbl` 
 flowchart LR
   S[.bas source] --> P[VbaParser: syntax tree]
   P --> D[Declarations: types, enums, constants, globals, signatures]
-  D --> R[Rounds over the call graph: clones per call signature, result types]
-  R --> I[Variant inference: kinds per local, flow-sensitive]
-  I --> L[VbaLowerer: procedures, error handling]
-  L --> R
+  D --> A[VbaLowerer: every Variant dynamic]
+  A --> F[DeDynamicize.Typing: typed locals, loop heads, clones]
+  F --> L[VbaLowerer: the typing written, procedures, error handling]
   L --> H[Helpers written in the subset, lowered raw]
   H --> V[IrVerifier]
   V --> M[IR module]
@@ -80,17 +80,26 @@ The built-in functions are lowered to helpers written in the subset itself and l
 
 ## Variant
 
-Every local declared without a type or `As Variant` is a candidate. The procedure is lowered with every
-candidate dynamic, collecting the kinds - `Empty`, `Null`, `Boolean`, `Byte`, `Integer`, `Long`,
-`LongLong`, `Single`, `Double`, `String` - each may hold, until they no longer grow. The kinds flow with
-the statements: an assignment replaces what the local held, the branches of an `If` or a `Select Case`
-join, a loop joins its head with the end of its body and every `Exit` until the head no longer grows,
-an assignment under `On Error Resume Next` only adds (it may be skipped), and a handler starts with
-whatever the code it guards may have assigned. A candidate whose assignments all have one scalar kind
-and which is never read where it may still be `Empty` is lowered as a local of that type; the
-lowering with the types given checks it, and a local assigned another type there, or read where it may
-be `Empty`, is lowered again as a dynamic one. `TypeName`, `VarType`, `IsEmpty` and `IsNull` of such a
-local are constants.
+Every local declared without a type or `As Variant` is a candidate; the shared framework types them
+([ADR 0300](../adr/0300-static-types-first.md), #1591). The module is first lowered with every candidate,
+`Variant` parameter and result dynamic, its operations the helpers below; the de-dynamicization
+(`DeDynamicize.Typing`, with the table `VisualBasicFrontend.Semantics`) analyses that module and finds
+what every local holds at the head of every loop, which locals hold one kind on every read, and which
+call goes to a clone. The module is then lowered again with that typing, so every typed operation is
+the one this lowering writes for its type; the frontend keeps no fixed point of its own. Within a
+lowering the kinds - `Empty`, `Null`, `Boolean`, `Byte`, `Integer`, `Long`, `LongLong`, `Single`,
+`Double`, `String`, `Currency`, `Date` - flow with the statements: an assignment replaces what the
+local held, the branches of an `If` or a `Select Case` join, a loop starts from its head as the
+framework found it and joins with every `Exit`, an assignment under `On Error Resume Next` only adds
+(it may be skipped), and a handler starts with whatever the code it guards may have assigned. A local
+every read of which sees one scalar kind, and which is never read where it may still be `Empty`, is a
+local of that type; a store of another kind to it is one no read sees, kept for the effects of its
+value alone. A local no read sees has the one kind of everything assigned it. `TypeName`, `VarType`,
+`IsEmpty` and `IsNull` of such a local are constants. A `Variant` that holds only arrays of one lower
+bound, never read where it may be `Empty`, is the array its syntax (`Array`, `ReDim`) states: the IR's
+dynamic type carries no array. While the module is analysed, a refusal that depends on the kinds a
+value may hold is no refusal yet, for the typing found may avoid it; the lowering with the typing
+refuses what is left.
 
 A local given a fixed type is still a `Variant` to its arithmetic: `+`, `-`, `*` and the negation of
 one-kind integer, `Boolean` and `Double` operands are computed exactly as a `Double` - exact for the
@@ -114,7 +123,7 @@ of the type (`PlyVarArith`, `PlyVarDiv`, `PlyVarIntDiv`, `PlyVarNeg`, `PlyVarPow
 | `Currency` and `Date` in a `Variant` | tags 6 and 7: `Currency` never promotes (error 6), a `Date` that leaves the dates a `Double`; a `Variant` that may hold a `Currency` uses the `…C` helpers (`PlyVarArithC`, `PlyVarDivC`, …), so a module without `Currency` carries no 64-bit integer |
 | a condition | `Null` and `Empty` are false |
 | assignment to a typed variable, `CInt`, `CStr`, … | `Empty` is 0, `""` or `False`; `Null` raises error 94 |
-| `For` over a counter | constant bounds whose last step still fits keep the counter in its type; otherwise the counter is dynamic and every step is `Variant` addition |
+| `For` over a counter | the counter starts in the start's kind and steps by `Variant` addition; where the ranges of the limit and the step prove that no step promotes it (the framework's range facts), it keeps its type, otherwise it is dynamic |
 
 Module variables of `Variant` may hold anything: they stay dynamic, and so does what a dynamic value
 from outside may hold - every kind but `Currency`, which a module only meets through its own `CCur`,
@@ -127,35 +136,31 @@ dynamic `Variant` holds raises error 13 when it runs; the text of a typed `Date`
 
 ## Variant parameters and results across the module
 
-Untyped and `As Variant` parameters and results are inferred from the calls of the whole module
-(`VbaLowerer.Specialisation.cs`). A call whose every `Variant` argument has one scalar kind calls a
-clone of the procedure whose parameters have those types - `Add(CLng(3), CLng(4))` calls
-`Add_Long_Long(a As Long, b As Long)` - at most four clones per procedure; a call of several kinds, or
-of a fifth signature, calls the procedure as it is declared. The result is a local of the procedure's
-inference: of one kind on every exit and never `Empty`, it gives the clone that return type. The module
-is lowered round after round, each with the clones and result types the round before found, until a
-round finds the same (recursion included; after twelve rounds every procedure is lowered as declared).
-A `Public` procedure keeps its declared signature, which the host calls, and gets clones for the
-module's own calls; a `Private` one called through one clone alone is that clone under its own name,
-and one never called keeps its declared signature. A clone whose lowering is refused - the text of a
-`Date` that its typed parameter would hold - leaves its calls to the procedure as declared. A clone's
-typed parameters keep the arithmetic of a `Variant`: `Inc(CInt(32767))` of `Inc = x + 1` is
+Untyped and `As Variant` parameters and results are typed from the calls of the whole module by the
+framework's specialisation (#1587): a call whose every `Variant` argument is proven of one scalar kind
+calls a clone of the procedure whose parameters have those types - `Add(CLng(3), CLng(4))` calls
+`Add_Long_Long(a As Long, b As Long)` - at most four clones per procedure, found in at most twelve
+rounds over the call graph; a call of several kinds, or of a fifth signature, calls the procedure as
+it is declared, and so does every call when the rounds do not settle. A parameter the body assigns is
+never typed by its calls: `G(CDbl(1))` of `a = a & "!"` is `"1!"`, as Visual Basic computes it. A clone's
+result of one kind on every exit and never `Empty` is of that type. A `Public` procedure keeps its
+declared signature, which the host calls, and gets clones for the module's own calls; a `Private` one
+whose calls all go to one clone is that clone under its own name, and one never called keeps its
+declared signature. A clone whose lowering is refused - the text of a `Date` that its typed parameter
+would hold - is none: its calls go to the procedure as declared, which the module then keeps. A
+clone's typed parameters keep the arithmetic of a `Variant`: `Inc(CInt(32767))` of `Inc = x + 1` is
 `Long 32768`, not error 6.
 
 ## The shared framework (ADR 0300)
 
-`VisualBasicImportOptions.Inference` chooses who types the `Variant`s. `Frontend`, the default, is the
-inference above. `Framework` lowers every `Variant` local and parameter dynamic - the kinds are still
-followed, but only to choose the helpers and the refusals - names `visualbasic` as the module's
-`DynamicSemantics`, and leaves the typing to the shared de-dynamicization with the table
-`VisualBasicFrontend.Semantics` (#1584 to #1587). A `Variant` that holds only an array stays the
-array its syntax states, as the IR's dynamic type carries none yet. On the fixtures of #1556 and #1564
-the framework computes every case LibreOffice printed, makes the frontend's clones with their
-signatures and types every local the frontend types, but for the counter of a `For` loop over a
-`Variant`, which needs the range of its bounds; making `Framework` the default and removing the
-inference above is #1591. The comparison found one defect of the frontend's clones: a `ByVal`
-parameter the body assigns another kind is typed by its calls (`G(CDbl(1))` of `a = a & "!"` raises a
-type mismatch where Visual Basic returns `"1!"`); the framework leaves such a parameter dynamic.
+`VisualBasicImportOptions.Inference` chooses how the framework's typing reaches the module.
+`Framework`, the default, is the typing above, written by the frontend: on every classic fixture the
+translations to C#, JavaScript, Python and Visual Basic are byte for byte those of the frontend's
+former inference (`tests/fixtures/visualbasic/classic/golden`, held by `VisualBasicTypingGoldenTests`),
+but for a `ByVal` parameter the body assigns, which that inference typed by its calls and so raised a
+type mismatch. `Dynamic` lowers every `Variant` dynamic, names `visualbasic` as the module's
+`DynamicSemantics`, and leaves the typing to the de-dynamicization of the pipeline, which rewrites the
+module; it types what the default types and also the temporaries of a `For` loop's bounds.
 
 ## What is refused
 
