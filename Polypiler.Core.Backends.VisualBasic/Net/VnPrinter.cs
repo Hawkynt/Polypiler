@@ -70,6 +70,7 @@ public static class VnPrinter {
     VnBinary binary => Binding(binary.Operator),
     VnUnary { Operator: "-" } => 10,
     VnUnary => 2,
+    VnTypeOf => 3,
     VnLiteral literal when literal.Text.StartsWith('-') => 10,
     _ => 12
   };
@@ -248,6 +249,8 @@ public static class VnPrinter {
         case VnBinary binary:
           var binding = Binding(binary.Operator);
           return this.Expression(binary.Left, binding) + " " + binary.Operator + " " + this.Expression(binary.Right, binding + 1);
+        case VnTypeOf test:
+          return $"TypeOf {this.Expression(test.Operand, 12)} Is {test.Type}";
         case VnTernary choice:
           return $"If({this.Expression(choice.Condition, Top)}, {this.Expression(choice.WhenTrue, Top)}, {this.Expression(choice.WhenFalse, Top)})";
         case VnNew created:

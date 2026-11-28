@@ -49,7 +49,7 @@ internal static class VbNetCases {
       Call("Triangle", 0), Call("Triangle", 1), Call("Triangle", 10), Call("FirstProduct", 0), Call("FirstProduct", 30), Call("FirstProduct", 1000),
       Call("Quotient", 0), Call("Quotient", 7), Call("Retried", 0), Call("Retried", 3), Call("Element", 0), Call("Element", 2), Call("Element", 3),
       Call("Element", -1), Call("Skipped", 0), Call("Skipped", 1), Call("Skipped", 5), Call("Skipped", -1), Call("Branched", 0), Call("Branched", 1),
-      Call("Branched", 5), Call("Raised", 1), Call("Raised", 2), Call("Raised", 3), Call("Twice", 0), Call("Twice", 2)
+      Call("Branched", 5), Call("Raised", 1), Call("Raised", 2), Call("Raised", 3), Call("CaughtNumber", 0), Call("CaughtNumber", 1), Call("CaughtNumber", 2), Call("CaughtNumber", 3), Call("Twice", 0), Call("Twice", 2)
     ],
     _ => [
       Call("Distance", 3, 4), Call("Distance", -3, 1000000000), Call("Darkness", true), Call("Darkness", false), Call("Squares", 4), Call("Squares", 0),

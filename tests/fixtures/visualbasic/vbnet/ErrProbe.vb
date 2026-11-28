@@ -74,4 +74,77 @@ Handler:
         Return -1
     End Function
 
+    Public Function ClearedAfterCatch() As Integer
+        Try
+            Fail("divide-by-zero")
+        Catch ex As DivideByZeroException
+        End Try
+        Return Err.Number
+    End Function
+
+    Private Sub Nested(ByVal kind As String)
+        Fail(kind)
+    End Sub
+
+    Public Function InCalledProcedure() As Integer
+        On Error Resume Next
+        Nested("index-out-of-range")
+        Return Err.Number
+    End Function
+
+    Private Sub Skipping()
+        On Error Resume Next
+        Fail("overflow")
+    End Sub
+
+    Public Function KeptAfterReturn() As Integer
+        Err.Clear()
+        Skipping()
+        Return Err.Number
+    End Function
+
+    Public Function ResumeNextInIfCondition() As Integer
+        Dim taken As Integer = 0
+        On Error Resume Next
+        If 1 \ zero > 0 Then
+            taken = 1
+        Else
+            taken = 2
+        End If
+        Return taken * 100 + Err.Number
+    End Function
+
+    Public Function ResumeNextInDoWhileCondition() As Integer
+        Dim passes As Integer = 0
+        On Error Resume Next
+        Do While 1 \ zero > passes
+            passes += 1
+            If passes > 2 Then Exit Do
+        Loop
+        Return passes * 100 + Err.Number
+    End Function
+
+    Public Function ResumeNextInSelectCase() As Integer
+        Dim taken As Integer = 0
+        On Error Resume Next
+        Select Case 1 \ zero
+            Case 0
+                taken = 1
+            Case Else
+                taken = 2
+        End Select
+        Return taken * 100 + Err.Number
+    End Function
+
+    Private Sub ResumeOutsideHandler()
+        On Error GoTo 0
+        Resume Next
+    End Sub
+
+    Public Function ResumeWithoutError() As Integer
+        On Error Resume Next
+        ResumeOutsideHandler()
+        Return Err.Number
+    End Function
+
 End Module

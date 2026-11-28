@@ -109,6 +109,29 @@ Fallback:
         Return Err.Number
     End Function
 
+    ' Err.Number in a Catch of Exception is the number of the exception's class, and 0 after the Catch.
+    Public Function CaughtNumber(ByVal kind As Integer) As Integer
+        Dim caught As Integer = 0
+        Dim divisor As Integer = kind - kind
+        Err.Clear()
+        Try
+            Select Case kind
+                Case 0
+                    zero = 1 \ divisor
+                Case 1
+                    Dim values() As Integer = {1}
+                    zero = values(kind)
+                Case 2
+                    Err.Raise(77)
+                Case Else
+                    Throw New InvalidOperationException()
+            End Select
+        Catch ex As Exception
+            caught = Err.Number
+        End Try
+        Return caught * 1000 + Err.Number
+    End Function
+
     ' An error in a handler goes to the caller, here a Try.
     Public Function Twice(ByVal d As Integer) As Integer
         Try

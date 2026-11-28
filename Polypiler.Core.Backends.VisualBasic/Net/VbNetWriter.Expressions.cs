@@ -40,6 +40,8 @@ internal sealed partial class VbNetWriter {
         return new VnNewArray(this.TypeName(created.Type.Element!), upper, []);
       case IrCall call:
         return new VnInvoke(new VnName(this.FunctionName(call.Function)), [.. call.Arguments.Select(this.Expression)]);
+      case IrTypeTest { Target.Declaration: IrClassType type } test:
+        return new VnTypeOf(this.Expression(test.Value), this.ClassName(type));
       case IrStep step:
         var stepKey = step.Type.IsFloat ? VbNetHelpers.Step(this.TypeName(step.Type))
           : step.Trap ? VbNetHelpers.StepChecked(this.TypeName(step.Type)) : this.Checks ? VbNetHelpers.StepWrapped(this.TypeName(step.Type)) : VbNetHelpers.Step(this.TypeName(step.Type));

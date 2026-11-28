@@ -488,12 +488,14 @@ internal sealed partial class VbNetLowerer {
         continue;
       }
 
-      var local = clause.ExceptionDeclarationOrExpression is IVariableDeclaratorOperation declarator ? this.Local(declarator.Symbol, declarator.Symbol.Type) : null;
+      var local = clause.ExceptionDeclarationOrExpression is IVariableDeclaratorOperation declarator ? this.Local(declarator.Symbol, declarator.Symbol.Type)
+        // Err.Number of a class with others below it is the class of the exception caught, which a variable holds.
+        : this._readsErr && NumberOf(type) is null ? new IrLocal("plyCaught" + (this._caught.Count + 1).ToString(CultureInfo.InvariantCulture), IrType.Object(type)) : null;
       if (local is not null)
         this._caught.Add(local);
       if (clause.ExceptionDeclarationOrExpression is not null and not IVariableDeclaratorOperation)
         this.Refuse(clause.Syntax, "a Catch into a variable declared elsewhere");
-      catches.Add(new IrCatch(type, local, clause.Filter is null ? null : this.Condition(clause.Filter), this.CatchBody(clause, type)));
+      catches.Add(new IrCatch(type, local, clause.Filter is null ? null : this.Condition(clause.Filter), this.CatchBody(clause, type, local)));
     }
 
     if (attempt.ExitLabel is { } exit && attempt.Descendants().OfType<IBranchOperation>().Any(branch => SymbolEqualityComparer.Default.Equals(branch.Target, exit)))

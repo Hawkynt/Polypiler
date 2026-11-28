@@ -142,8 +142,8 @@ internal sealed partial class VbNetLowerer {
               statements.Add(new IrAssign(handler!, I32(Index(label))));
             break;
           case ResumePiece resume:
-            // Resume outside a handler is Visual Basic's error 20, which no exception class of the IR stands for.
-            statements.Add(new IrIf(new IrUnary(IrUnaryOp.LogicalNot, new IrLocalRef(handling!)), new IrBlock([Throw(IrExceptionClass.InvalidOperationException)]), null));
+            // Resume outside a handler raises Visual Basic's error 20.
+            statements.Add(new IrIf(new IrUnary(IrUnaryOp.LogicalNot, new IrLocalRef(handling!)), new IrBlock([this.RaiseNumber(new IrConst(IrType.I32, 20))]), null));
             statements.Add(new IrAssign(handling!, new IrConst(IrType.Bool, 0)));
             statements.Add(this.SetErr(0));
             statements.Add(resume.Kind switch {
@@ -169,15 +169,15 @@ internal sealed partial class VbNetLowerer {
     if (trapping) {
       // An error with no handler on, or in the handler, goes to the caller; otherwise Err.Number is set
       // and the state is the next statement or the handler's.
-      List<IrStmt> Trap(int number) => [
+      List<IrStmt> Trap(IrClassType type, int number) => [
         new IrIf(new IrBinary(IrBinaryOp.LogicalOr, new IrBinary(IrBinaryOp.Equal, new IrLocalRef(mode!), I32(0)), new IrLocalRef(handling!)), new IrBlock([new IrRethrow()]), null),
-        this.SetErr(number),
+        .. this.SetErrFrom(type, number),
         new IrAssign(resumeAt!, new IrLocalRef(state)),
         new IrIf(new IrBinary(IrBinaryOp.Equal, new IrLocalRef(mode!), I32(1)),
           new IrBlock([new IrAssign(state, NextOf(state))]),
           new IrBlock([new IrAssign(handling!, new IrConst(IrType.Bool, 1)), new IrAssign(state, new IrLocalRef(handler!))]))
       ];
-      dispatch = new IrTry(new IrBlock([dispatch]), [.. _errors.Select(error => new IrCatch(error.Class, null, null, new IrBlock(Trap(error.Number))))], null);
+      dispatch = new IrTry(new IrBlock([dispatch]), [.. _errors.Select(error => new IrCatch(error.Class, null, null, new IrBlock(Trap(error.Class, error.Number))))], null);
     }
 
     var loop = new IrWhile(new IrBinary(IrBinaryOp.NotEqual, new IrLocalRef(state), I32(end)), new IrBlock([dispatch]));

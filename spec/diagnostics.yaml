@@ -2309,7 +2309,7 @@ codes:
     severity: error
     exit: OracleFailure
     title: vbnet error table differs
-    message: "the recorded dialect table differs from tests/fixtures/visualbasic/vbnet/ErrProbe.expected.txt at '<entry>'"
+    message: "the recorded dialect table differs from spec/languages/visualbasic/vbnet-errors.yaml at '<entry>'"
     rule: visualbasic.net.runner.table
     area: visualbasic
     owner: "#1096"

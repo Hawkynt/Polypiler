@@ -49,6 +49,11 @@ public sealed class VbNetJumpTests {
   [TestCase("Public Function F(ByVal n As Integer) As Integer\nTry\nReturn G(n)\nCatch ex As Exception\nReturn -1\nEnd Try\nEnd Function\nPrivate Function G(ByVal n As Integer) As Integer\nOn Error GoTo Handler\nIf n > 0 Then Resume Next\nReturn 1\nHandler:\nReturn 2\nEnd Function", 0, 1)]
   [TestCase("Public Function F(ByVal n As Integer) As Integer\nOn Error GoTo Handler\nzero = 10 \\ n\nExit Function\nHandler:\nF = Err.Number\nEnd Function", 0, 1)]
   [TestCase("Public Sub F(ByVal n As Integer)\nOn Error GoTo Handler\nzero = 10 \\ n\nExit Sub\nHandler:\nzero = Err.Number\nEnd Sub", 0, 1)]
+  [TestCase("Public Function F(ByVal n As Integer) As Integer\nOn Error Resume Next\nErr.Raise(1234)\nDim r As Integer = Err.Number\nErr.Raise(n)\nReturn r * 10000 + Err.Number\nEnd Function", 5, 6, 9, 11, 13, 91, 1234, 0)]
+  [TestCase("Public Function F(ByVal n As Integer) As Integer\nTry\nIf n > 0 Then Err.Raise(n + 1000)\nReturn 0\nCatch ex As Exception\nReturn -1\nEnd Try\nEnd Function", 0, 7)]
+  [TestCase("Public Function F(ByVal n As Integer) As Integer\nOn Error Resume Next\nH()\nIf n = 0 Then Throw New InvalidOperationException()\nReturn Err.Number\nEnd Function\nPrivate Sub H()\nTry\nErr.Raise(1234)\nCatch ex As Exception\nEnd Try\nEnd Sub", 0, 1)]
+  [TestCase("Public Function F(ByVal n As Integer) As Integer\nOn Error Resume Next\nG(n)\nReturn Err.Number\nEnd Function\nPrivate Sub G(ByVal n As Integer)\nIf n > 0 Then Resume Next\nEnd Sub", 0, 1)]
+  [TestCase("Public Function F(ByVal n As Integer) As Integer\nErr.Clear()\nTry\nIf n = 1 Then zero = Integer.MaxValue + n\nIf n = 2 Then Throw New ArithmeticException()\nzero = 1 \\ (n - n)\nCatch When n > 5\nReturn -1\nCatch ex As ArithmeticException\nReturn Err.Number\nEnd Try\nReturn -2\nEnd Function", 0, 1, 2, 7)]
   public void Procedure_ComputesWhatTheCompilerComputes(string members, params int[] arguments) {
     var source = Module(members);
     var module = Imported(source);
@@ -68,9 +73,9 @@ public sealed class VbNetJumpTests {
   [TestCase("Public Function F(ByVal n As Integer) As Integer\nTry\nIf n = 1 Then GoTo x\nCatch ex As OverflowException\nEnd Try\nx:\nReturn 0\nEnd Function", "out of a Try")]
   [TestCase("Public Function F(ByVal n As Integer) As Integer\nFor i As Integer = 0 To 3\nTry\nIf i = n Then Continue For\nCatch ex As OverflowException\nEnd Try\nNext\nIf n = 1 Then GoTo x\nx:\nReturn 0\nEnd Function", "out of a Try")]
   [TestCase("Public Function F(ByVal n As Integer) As Integer\nTry\nx:\nn += 1\nCatch ex As OverflowException\nEnd Try\nReturn n\nEnd Function", "inside a Try")]
-  [TestCase("Public Function F(ByVal n As Integer) As Integer\nOn Error Resume Next\nErr.Raise(1234)\nReturn 0\nEnd Function", "Err.Raise(1234)")]
+  [TestCase("Public Function F(ByVal n As Integer) As Integer\nOn Error Resume Next\nErr.Raise(1234, \"source\")\nReturn 0\nEnd Function", "Err.Raise(1234, \"source\")")]
   [TestCase("Public Function F(ByVal n As Integer) As String\nReturn Err.Description\nEnd Function", "Err")]
-  [TestCase("Public Function F(ByVal n As Integer) As Integer\nTry\nReturn 1\nCatch ex As ArithmeticException\nReturn Err.Number\nEnd Try\nEnd Function", "Catch of ArithmeticException")]
+  [TestCase("Public Function F(ByVal n As Integer) As Integer\nTry\nReturn 1\nCatch ex As System.IO.IOException\nReturn Err.Number\nEnd Try\nEnd Function", "IOException")]
   public void Construct_OutsideTheSubset_IsPly2611(string members, string construct) {
     var imported = VbNetFrontend.Import("M.vb", Module(members));
     Assert.That(imported.Module, Is.Null);

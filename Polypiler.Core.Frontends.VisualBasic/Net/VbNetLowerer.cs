@@ -26,6 +26,7 @@ internal sealed partial class VbNetLowerer(string file, VisualBasicCompilation c
   private readonly HashSet<string> _refused = new(StringComparer.Ordinal);
   private INamedTypeSymbol? _module;
   private bool _readsErr;
+  private bool _raisesAny;
 
   /// <summary>Whether the file compares strings as text, which the IR has no comparison of.</summary>
   private bool CompareText => tree.GetRoot().DescendantNodes().OfType<OptionStatementSyntax>().LastOrDefault(option => option.NameKeyword.IsKind(SyntaxKind.CompareKeyword)) is { } compare
@@ -47,6 +48,7 @@ internal sealed partial class VbNetLowerer(string file, VisualBasicCompilation c
 
     this._module = modules[0];
     this._readsErr = this.ReadsErr;
+    this._raisesAny = this.RaisesAnyNumber;
     foreach (var type in this.Types().Where(type => type.TypeKind != TypeKind.Module))
       if (type.TypeKind == TypeKind.Structure)
         this._structs[type] = new IrStructType(type.Name);
@@ -92,6 +94,8 @@ internal sealed partial class VbNetLowerer(string file, VisualBasicCompilation c
     }
 
     var functions = methods.Select(this.Function).ToList();
+    if (this._raised is { } raised)
+      globals.Insert(0, raised);
     if (this._err is { } err)
       globals.Insert(0, err);
     return new IrModule(this._module.Name, functions, []) {

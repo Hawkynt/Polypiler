@@ -78,10 +78,32 @@ public sealed class VbNetRunnerTests {
     => Assert.That(VbNetRunner.Read(text, calls, 1, "boom").Diagnostics.Single().Code, Is.EqualTo("PLY2693"));
 
   [Test]
-  public void Table_ReadsEntriesAndSkipsComments() {
-    var table = VbNetRunner.Table("# comment\r\nnumber:overflow=6\n\nKept=6\n");
+  public void Table_ReadsTheNumbersThenTheRules() {
+    var table = VbNetRunner.Table("# comment\r\ndialect: vbnet\nnumbers:\n  overflow: 6\nrules:\n  Kept: 6\n");
     Assert.That(table, Is.EqualTo(new[] { ("number:overflow", "6"), ("Kept", "6") }));
     Assert.That(() => VbNetRunner.Table(null!), Throws.ArgumentNullException);
+  }
+
+  [TestCase("numbers: [1\n", "no YAML")]
+  [TestCase("- 1\n", "no mapping")]
+  [TestCase("", "no mapping")]
+  [TestCase("numbers:\n  a: 1\n", "no mapping 'rules'")]
+  [TestCase("numbers: 1\nrules:\n  a: 1\n", "no mapping 'numbers'")]
+  [TestCase("numbers:\n  a: [1]\nrules:\n  b: 1\n", "'a' of 'numbers' is no number")]
+  public void Table_ThatIsNoTable_IsAFormatException(string text, string message)
+    => Assert.That(() => VbNetRunner.Table(text), Throws.TypeOf<System.FormatException>().With.Message.Contains(message));
+
+  /// <summary>The probes of <c>ErrProbe.vb</c>, compiled in memory and run on this .NET's Visual Basic runtime, give the committed table.</summary>
+  [Test]
+  public void ErrProbe_OnTheRunningRuntime_GivesTheCommittedTable() {
+    var root = Polypiler.Prototype.Testing.PrototypeFixture.RepositoryRoot;
+    var table = VbNetRunner.Table(System.IO.File.ReadAllText(System.IO.Path.Combine(root, VbNetRunner.TablePath)));
+    var probe = System.IO.File.ReadAllText(System.IO.Path.Combine(root, "tests", "fixtures", "visualbasic", "vbnet", "ErrProbe.vb"));
+    var assembly = Polypiler.Tests.Backends.VisualBasic.VbNetFixtures.Load(probe, removeIntegerChecks: false);
+    var recorded = table.Select(entry => entry.Key.StartsWith("number:", System.StringComparison.Ordinal)
+      ? Polypiler.Tests.Backends.VisualBasic.VbNetFixtures.Procedure(assembly, "NumberOf").Invoke(null, [entry.Key["number:".Length..]])
+      : Polypiler.Tests.Backends.VisualBasic.VbNetFixtures.Procedure(assembly, entry.Key).Invoke(null, [])).Select(value => System.Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture)!).ToList();
+    Assert.That(VbNetRunner.Compare(table, recorded), Is.Empty, string.Join(", ", table.Select((entry, index) => $"{entry.Key}={recorded[index]}")));
   }
 
   [Test]
