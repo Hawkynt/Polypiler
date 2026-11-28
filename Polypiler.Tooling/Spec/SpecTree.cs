@@ -22,9 +22,11 @@ public sealed class SpecTree {
 
   /// <summary>
   /// The file names that are checked data wherever they lie: <c>cost.yaml</c>, the cost profile beside a
-  /// target document, which the cost model's loader checks against <c>schemas/cost-profile.schema.json</c>.
+  /// target document, which the cost model's loader checks against <c>schemas/cost-profile.schema.json</c>;
+  /// <c>vbnet-errors.yaml</c>, the error table of the dialect <c>vbnet</c> beside the Visual Basic
+  /// language, which the Visual Basic .NET runner reads and the oracle checks against the runtime.
   /// </summary>
-  public static IReadOnlyList<string> DataFiles { get; } = ["cost.yaml"];
+  public static IReadOnlyList<string> DataFiles { get; } = ["cost.yaml", "vbnet-errors.yaml"];
 
   private SpecTree(string root, string repositoryRoot, IReadOnlyList<SpecDocument> documents, IReadOnlyList<Diagnostic> unreadable) {
     this.Root = root;

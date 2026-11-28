@@ -116,8 +116,9 @@ public static class VbNetFrontend {
 
     var diagnostics = new List<Diagnostic>();
     var module = new VbNetLowerer(path, compilation, tree, !options.RemoveIntegerChecks, diagnostics).Lower();
-    if (diagnostics.Count > 0 || module is null)
-      return new(null, diagnostics.Count > 0 ? diagnostics : [Unsupported.At("a file without one Module", path, 1, 1)]);
+    // A module is null only after a refusal.
+    if (module is null || diagnostics.Count > 0)
+      return new(null, diagnostics);
 
     var problems = IrVerifier.Verify(module);
     return problems.Count > 0 ? new(null, problems) : new(module, []);

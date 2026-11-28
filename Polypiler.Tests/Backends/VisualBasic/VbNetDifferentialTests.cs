@@ -15,14 +15,16 @@ namespace Polypiler.Tests.Backends.VisualBasic;
 [TestFixture]
 public sealed class VbNetDifferentialTests {
 
-  private static IEnumerable<string> Fixtures() => PrototypeFixture.Names;
+  private static IEnumerable<TestCaseData> Fixtures() => from fixture in PrototypeFixture.Names from removed in new[] { true, false } select new TestCaseData(fixture, removed);
 
+  /// <summary>Every fixture, in a project with <c>RemoveIntegerChecks</c> and in one with integer checks on.</summary>
   [TestCaseSource(nameof(Fixtures))]
-  public void PrototypeFixture_ComputesWhatTheInterpreterComputes(string fixture) {
+  public void PrototypeFixture_ComputesWhatTheInterpreterComputes(string fixture, bool removeIntegerChecks) {
     var imported = PrototypeFixture.Imported(fixture);
-    var translation = VbNetFixtures.Translate(imported);
+    var translation = VbNetFixtures.Translate(imported, VisualBasicProfile.VbNetLatest with { RemoveIntegerChecks = removeIntegerChecks });
     Assert.That(translation.Problems, Is.Empty, string.Join("\n", translation.Problems));
-    var assembly = VbNetFixtures.Load(translation.Source!);
+    Assert.That(translation.Project, Does.Contain($"<RemoveIntegerChecks>{(removeIntegerChecks ? "true" : "false")}</RemoveIntegerChecks>"));
+    var assembly = VbNetFixtures.Load(translation.Source!, removeIntegerChecks: removeIntegerChecks);
     // The IR has no character type: a char of C# is a UShort in Visual Basic, a code unit as in the IR.
     var calls = PrototypeFixture.Typed(fixture, PrototypeCases.For(fixture)).Select(call => call with { Arguments = [.. call.Arguments.Select(Unit)] });
     var mismatches = new List<string>();

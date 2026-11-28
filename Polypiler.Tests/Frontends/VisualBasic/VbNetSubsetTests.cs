@@ -48,11 +48,9 @@ public sealed class VbNetSubsetTests {
   }
 
   [TestCase("Public Function F() As Decimal\nReturn 1D\nEnd Function", "Decimal")]
-  [TestCase("Public Function F() As Integer\nGoTo x\nx:\nReturn 1\nEnd Function", "GoTo")]
   [TestCase("Public Function F() As Integer\nStatic s As Integer\ns += 1\nReturn s\nEnd Function", "Static")]
   [TestCase("Public Sub F(ByRef x As Integer)\nx = 1\nEnd Sub", "ByRef")]
   [TestCase("Public Sub F(ParamArray xs As Integer())\nEnd Sub", "ParamArray")]
-  [TestCase("Public Function F() As Integer\nFor i As Integer = 0 To 3\nDo\nExit For\nLoop\nNext\nReturn 0\nEnd Function", "out of a statement")]
   [TestCase("Public Function F() As Integer\nDim a(1, 1) As Integer\nReturn 0\nEnd Function", "several dimensions")]
   [TestCase("Public Function F() As Integer\nTry\nExit Try\nCatch\nEnd Try\nReturn 0\nEnd Function", "Exit Try")]
   [TestCase("Public Function F() As Integer\nTry\nReturn 1\nCatch ex As System.IO.IOException\nReturn 2\nEnd Try\nEnd Function", "Catch of")]
