@@ -75,6 +75,34 @@ public static class VbNetHelpers {
   /// <summary>The key of a step by one of a variable of a type, which wraps.</summary>
   public static string Step(string type) => "PlyStep:" + type;
 
+  /// <summary>The key of a step by one of a variable of an integer type, which wraps with integer checks on.</summary>
+  public static string StepWrapped(string type) => "PlyStepWrap:" + type;
+
+  /// <summary><c>PlyBits(x As Long) As ULong</c>: the two's complement bits of a number, which a conversion with integer checks on cannot give.</summary>
+  public const string Bits = "PlyBits";
+
+  /// <summary><c>PlyAddBits(x, y As ULong)</c>: the sum modulo 2^64, in halves that cannot overflow.</summary>
+  public const string AddBits = "PlyAddBits";
+
+  /// <summary><c>PlyMulBits(x, y As ULong)</c>: the product modulo 2^64, in halves that cannot overflow.</summary>
+  public const string MulBits = "PlyMulBits";
+
+  /// <summary>The key of <c>PlyWrap&lt;T&gt;(x As ULong)</c>: the low bits of x as a <c>T</c>, a signed one in two's complement.</summary>
+  public static string Wrap(string type) => "PlyWrap" + type;
+
+  /// <summary>The key of the wrapping sum, difference or product of a type of 32 or 64 bits, with integer checks on.</summary>
+  public static string Wrapping(IrBinaryOp op, string type) => op switch {
+    IrBinaryOp.Add => "PlyAddWrap:",
+    IrBinaryOp.Subtract => "PlySubWrap:",
+    _ => "PlyMulWrap:"
+  } + type;
+
+  /// <summary>The key of the wrapping negation of <c>Integer</c> or <c>Long</c>, with integer checks on.</summary>
+  public static string NegateWrapping(string type) => "PlyNegWrap:" + type;
+
+  /// <summary>The key of the logical right shift of <c>Integer</c> or <c>Long</c>, with integer checks on.</summary>
+  public static string ShiftRightUnsigned(string type) => "PlyShrU:" + type;
+
   /// <summary>The key of a step by one of a variable of a type, which throws an <c>OverflowException</c> outside it.</summary>
   public static string StepChecked(string type) => "PlyStepChk:" + type;
 
@@ -142,6 +170,15 @@ public static class VbNetHelpers {
     return name switch {
       "PlyAddChk" or "PlySubChk" or "PlyMulChk" or "PlyNegChk" => [Check(type)],
       "PlyStepChk" => IsWide(type) ? [Checked(IrBinaryOp.AddChecked, type), Checked(IrBinaryOp.SubtractChecked, type)] : [Check(type)],
+      "PlyStepWrap" => IsWide(type) ? [Wrapping(IrBinaryOp.Add, type), Wrapping(IrBinaryOp.Subtract, type)] : [Bits, Wrap(type)],
+      "PlyAddWrap" or "PlySubWrap" or "PlyMulWrap" or "PlyNegWrap" => type switch {
+        "Integer" => [Bits, Wrap(type)],
+        "UInteger" => name == "PlyAddWrap" || name == "PlyMulWrap" ? [Wrap(type)] : [Bits, Wrap(type)],
+        "Long" => [Bits, name == "PlyMulWrap" ? MulBits : AddBits, Wrap(type)],
+        _ => [name == "PlyMulWrap" ? MulBits : AddBits]
+      },
+      "PlyShrU" => [Bits, Wrap(type)],
+      MulBits => [AddBits],
       _ => []
     };
   }
@@ -160,6 +197,8 @@ public static class VbNetHelpers {
     foreach (var target in Integers) {
       var (low, high) = Bounds(target);
       var wide64 = target is "Long" or "ULong";
+      if (key == Wrap(target))
+        return [WrapDeclaration(target)];
       if (key == Check(target))
         return [Function(key, target, [P("x", "Decimal")],
           new VnIf(B(B(N("x"), "<", L(low + "D")), "OrElse", B(N("x"), ">", L(high + "D"))), [Overflow()], null),
@@ -182,12 +221,36 @@ public static class VbNetHelpers {
       case "PlyAddChk" or "PlySubChk" or "PlyMulChk":
         var op = name == "PlyAddChk" ? "+" : name == "PlySubChk" ? "-" : "*";
         return [Function(name, type, [P("a", type), P("b", type)], new VnReturn(Call(Check(type), B(Call("CDec", N("a")), op, Call("CDec", N("b"))))))];
+      case "PlyAddWrap" or "PlySubWrap" or "PlyMulWrap" or "PlyNegWrap":
+        return [WrappingDeclaration(name, type)];
+      case "PlyShrU":
+        // The count masked to the width, as the shift of the type masks it.
+        var width = type == "Integer" ? "31" : "63";
+        VnExpression bits = type == "Integer" ? B(Call(Bits, Call("CLng", N("x"))), "And", L("&HFFFFFFFFUL")) : Call(Bits, N("x"));
+        return [Function(name, type, [P("x", type), P("n", "Integer")], new VnReturn(Call(Wrap(type), B(bits, ">>", B(N("n"), "And", L(width))))))];
+      case Bits:
+        return [Function(name, "ULong", [P("x", "Long")],
+          new VnIf(B(N("x"), "<", L("0L")), [new VnReturn(B(Call("CULng", B(B(N("x"), "+", N("Long.MaxValue")), "+", L("1L"))), "+", L("9223372036854775808UL")))], null),
+          new VnReturn(Call("CULng", N("x"))))];
+      case AddBits:
+        return [Function(name, "ULong", [P("x", "ULong"), P("y", "ULong")],
+          new VnDim("lo", "ULong", B(B(N("x"), "And", L("&HFFFFFFFFUL")), "+", B(N("y"), "And", L("&HFFFFFFFFUL")))),
+          new VnDim("hi", "ULong", B(B(B(B(N("x"), ">>", L("32")), "+", B(N("y"), ">>", L("32"))), "+", B(N("lo"), ">>", L("32"))), "And", L("&HFFFFFFFFUL"))),
+          new VnReturn(B(B(N("hi"), "<<", L("32")), "Or", B(N("lo"), "And", L("&HFFFFFFFFUL")))))];
+      case MulBits:
+        return [Function(name, "ULong", [P("x", "ULong"), P("y", "ULong")],
+          new VnDim("x0", "ULong", B(N("x"), "And", L("&HFFFFFFFFUL"))),
+          new VnDim("y0", "ULong", B(N("y"), "And", L("&HFFFFFFFFUL"))),
+          new VnDim("cross", "ULong", B(B(B(N("x0"), "*", B(N("y"), ">>", L("32"))), "And", L("&HFFFFFFFFUL")), "+", B(B(B(N("x"), ">>", L("32")), "*", N("y0")), "And", L("&HFFFFFFFFUL")))),
+          new VnReturn(Call(AddBits, B(N("x0"), "*", N("y0")), B(B(N("cross"), "And", L("&HFFFFFFFFUL")), "<<", L("32")))))];
       case "PlyNegChk":
         return [Function(name, type, [P("a", type)], new VnReturn(Call(Check(type), new VnUnary("-", Call("CDec", N("a"))))))];
-      case "PlyStep" or "PlyStepChk":
-        VnExpression Next(string sign) => name == "PlyStepChk"
-          ? IsWide(type) ? Call(sign == "+" ? "PlyAddChk" : "PlySubChk", N("old"), One(type)) : Call(Check(type), B(Call("CDec", N("old")), sign, L("1D")))
-          : IsWide(type) || type is "Single" or "Double" ? B(N("old"), sign, One(type)) : Call(Conversion(type), B(Call("CInt", N("old")), sign, L("1")));
+      case "PlyStep" or "PlyStepChk" or "PlyStepWrap":
+        VnExpression Next(string sign) => name switch {
+          "PlyStepChk" => IsWide(type) ? Call(sign == "+" ? "PlyAddChk" : "PlySubChk", N("old"), One(type)) : Call(Check(type), B(Call("CDec", N("old")), sign, L("1D"))),
+          "PlyStepWrap" => IsWide(type) ? Call(sign == "+" ? "PlyAddWrap" : "PlySubWrap", N("old"), One(type)) : Call(Wrap(type), Call(Bits, Call("CLng", B(Call("CInt", N("old")), sign, L("1"))))),
+          _ => IsWide(type) || type is "Single" or "Double" ? B(N("old"), sign, One(type)) : Call(Conversion(type), B(Call("CInt", N("old")), sign, L("1")))
+        };
         return [Function(name, type, [P("x", type, true), P("up", "Boolean"), P("post", "Boolean")],
           new VnDim("old", type, N("x")),
           new VnIf(N("up"), [new VnAssign(N("x"), "=", Next("+"))], [new VnAssign(N("x"), "=", Next("-"))]),
@@ -232,10 +295,57 @@ public static class VbNetHelpers {
     }
   }
 
+  /// <summary><c>PlyWrap&lt;T&gt;</c>: the low bits of a <c>ULong</c> as the type, above the largest value of a signed one less 2^bits.</summary>
+  private static VnMethod WrapDeclaration(string type) {
+    VnParameter[] parameters = [new("x", "ULong", false)];
+    var (_, high) = Bounds(type);
+    var bits = type switch { "SByte" or "Byte" => 8, "Short" or "UShort" => 16, "Integer" or "UInteger" => 32, _ => 64 };
+    if (bits == 64)
+      return type == "ULong" ? Function(Wrap(type), type, parameters, new VnReturn(N("x")))
+        : Function(Wrap(type), type, parameters,
+          new VnIf(B(N("x"), ">", L("9223372036854775807UL")), [new VnReturn(B(B(Call("CLng", B(N("x"), "-", L("9223372036854775808UL"))), "-", L("9223372036854775807L")), "-", L("1L")))], null),
+          new VnReturn(Call("CLng", N("x"))));
+    var mask = (1UL << bits) - 1;
+    var low = new VnDim("u", "ULong", B(N("x"), "And", L("&H" + mask.ToString("X", System.Globalization.CultureInfo.InvariantCulture) + "UL")));
+    if (type is "Byte" or "UShort" or "UInteger")
+      return Function(Wrap(type), type, parameters, low, new VnReturn(Call(Conversion(type), N("u"))));
+    return Function(Wrap(type), type, parameters, low,
+      new VnIf(B(N("u"), ">", L(high + "UL")), [new VnReturn(Call(Conversion(type), B(Call("CLng", N("u")), "-", L((1L << bits).ToString(System.Globalization.CultureInfo.InvariantCulture) + "L"))))], null),
+      new VnReturn(Call(Conversion(type), N("u"))));
+  }
+
+  /// <summary>The wrapping sum, difference, product or negation of a type of 32 or 64 bits, with integer checks on: in a wider type, or in halves.</summary>
+  private static VnMethod WrappingDeclaration(string name, string type) {
+    VnExpression a = N("a"), b = N("b");
+    var op = name switch { "PlyAddWrap" => "+", "PlySubWrap" => "-", _ => "*" };
+    VnExpression Long(VnExpression x) => Call("CLng", x);
+    VnExpression Unsigned(VnExpression x) => Call("CULng", x);
+    // The bits of the difference x - y are x + (Not y) + 1.
+    VnExpression Combined(VnExpression x, VnExpression y) => name switch {
+      "PlyAddWrap" => Call(AddBits, x, y),
+      "PlySubWrap" => Call(AddBits, x, Call(AddBits, new VnUnary("Not", y), L("1UL"))),
+      "PlyMulWrap" => Call(MulBits, x, y),
+      _ => Call(AddBits, new VnUnary("Not", x), L("1UL"))
+    };
+    VnExpression result = (type, name) switch {
+      ("Integer", "PlyNegWrap") => Call(Wrap(type), Call(Bits, new VnUnary("-", Long(a)))),
+      ("Integer", _) => Call(Wrap(type), Call(Bits, B(Long(a), op, Long(b)))),
+      ("UInteger", "PlyNegWrap") => Call(Wrap(type), Call(Bits, new VnUnary("-", Long(a)))),
+      ("UInteger", "PlySubWrap") => Call(Wrap(type), Call(Bits, B(Long(a), "-", Long(b)))),
+      ("UInteger", _) => Call(Wrap(type), B(Unsigned(a), op, Unsigned(b))),
+      ("Long", "PlyNegWrap") => Call(Wrap(type), Combined(Call(Bits, a), L("0UL"))),
+      ("Long", _) => Call(Wrap(type), Combined(Call(Bits, a), Call(Bits, b))),
+      (_, "PlyNegWrap") => Combined(a, L("0UL")),
+      _ => Combined(a, b)
+    };
+    VnParameter[] parameters = name == "PlyNegWrap" ? [new("a", type, false)] : [new("a", type, false), new("b", type, false)];
+    return Function(name, type, parameters, new VnReturn(result));
+  }
+
   /// <summary>Every fixed helper name, in the order a module declares them.</summary>
   public static IReadOnlyList<string> Order { get; } = [
-    .. Integers.Select(Check), .. Integers.Select(Fix), .. Integers.Select(Saturate),
-    "PlyAddChk", "PlySubChk", "PlyMulChk", "PlyNegChk", "PlyStep", "PlyStepChk", "PlyIndex", Discard, Bind, Throw, Chr, RoundHalfUp, Min, Max, Clear, Fill, "PlyEquals"
+    .. Integers.Select(Check), .. Integers.Select(Fix), .. Integers.Select(Saturate), Bits, AddBits, MulBits, .. Integers.Select(Wrap),
+    "PlyAddChk", "PlySubChk", "PlyMulChk", "PlyNegChk", "PlyAddWrap", "PlySubWrap", "PlyMulWrap", "PlyNegWrap", "PlyShrU", "PlyStep", "PlyStepChk", "PlyStepWrap", "PlyIndex", Discard, Bind, Throw, Chr, RoundHalfUp, Min, Max, Clear, Fill, "PlyEquals"
   ];
 
 }

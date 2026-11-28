@@ -49,6 +49,13 @@ public sealed record VisualBasicProfile {
   public bool IsNet => this.LanguageVersion is not null;
 
   /// <summary>
+  /// Whether the project of a Visual Basic .NET profile is compiled with <c>RemoveIntegerChecks</c>, so
+  /// that its operators and conversion functions wrap (the default), or with integer checks on, so that
+  /// they throw an <c>OverflowException</c> and the wrapping arithmetic of the IR is written out.
+  /// </summary>
+  public bool RemoveIntegerChecks { get; init; } = true;
+
+  /// <summary>
   /// The name of the profile: <c>visualbasic/&lt;dialect&gt;</c>, or <c>vbnet/vb&lt;version&gt;</c> with
   /// <c>/&lt;framework&gt;</c> after it for a framework other than the default.
   /// </summary>

@@ -115,6 +115,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   private const string VbLocaleOption = "--vb-locale";
   private const string VbLanguageVersionOption = "--vb-langversion";
   private const string VbRemoveIntegerChecksOption = "--vb-removeintchecks";
+  private const string VbIntegerChecksOption = "--vb-integer-checks";
 
   /// <summary>The version of Python 3 a Python source is parsed for, such as <c>3.10</c>.</summary>
   private const string PythonVersionOption = "--python-version";
@@ -162,6 +163,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     [GoModuleOption] = "Go: the module path go.mod declares, whose last element names the package",
     [VbLocaleOption] = "classic Visual Basic source: the regional settings it runs under, whose separators CStr writes and CDbl reads (default en-US)",
     [VbLanguageVersionOption] = "Visual Basic .NET source (.vb): the language version it is compiled as, 9 to 16.9 (the default)",
+    [VbIntegerChecksOption] = "Visual Basic .NET target (vbnet/...): a project with integer checks on, its wrapping arithmetic written out, instead of RemoveIntegerChecks",
     [VbRemoveIntegerChecksOption] = "Visual Basic .NET source (.vb): integer arithmetic wraps instead of throwing an OverflowException, as /removeintchecks compiles it",
     [PythonVersionOption] = "Python source: the version of Python 3 the source is written for, 3.8 to 3.14 (the default); later constructs are syntax errors"
   };
@@ -930,7 +932,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     VisualBasicEmitter.Runtime,
     options => VisualBasicProfileOf(options).Profile!.Name,
     RuleTarget.Neutral,
-    [new(Profile, Choice(VisualBasicProfile.Names)), new(Float, FloatChoice)],
+    [new(Profile, Choice(VisualBasicProfile.Names)), new(Float, FloatChoice), new(VbIntegerChecksOption, null)],
     options => FloatMisuse(options) ?? VisualBasicProfileOf(options).Error,
     (module, options) => VisualBasicEmitter.Legalize(module, implementations, VisualBasicProfileOf(options).Profile!, FloatModeOf(options)),
     (module, options) => VisualBasicEmitter.Check(module, VisualBasicProfileOf(options).Profile!),
@@ -940,7 +942,9 @@ public sealed partial class TranslateCommand : ICliCommand {
 
   private static (VisualBasicProfile? Profile, string? Error) VisualBasicProfileOf(IReadOnlyDictionary<string, string> options) {
     VisualBasicProfile.TryParse(options.GetValueOrDefault(Profile), out var profile, out var error);
-    return (profile, error);
+    if (profile is null || !options.ContainsKey(VbIntegerChecksOption))
+      return (profile, error);
+    return profile.IsNet ? (profile with { RemoveIntegerChecks = false }, null) : (null, $"{VbIntegerChecksOption} needs a Visual Basic .NET profile, vbnet/vb9 to vbnet/vb16.9, not '{profile.Name}'");
   }
 
   private static (VBScriptProfile? Profile, string? Error) VBScriptProfileOf(IReadOnlyDictionary<string, string> options) {
