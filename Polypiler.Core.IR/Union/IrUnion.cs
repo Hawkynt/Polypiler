@@ -5,35 +5,27 @@ using System.Linq;
 namespace Polypiler.Core.IR;
 
 /// <summary>
-/// The members of a closed union type (<see cref="IrType.Union"/>), in their canonical order: by the
-/// name the IR writes each member with, ordinal. Two union types are one when their members are, so
-/// <c>union&lt;str, i32&gt;</c> and <c>union&lt;i32, str&gt;</c> are the same type, and a member is named
-/// by its index in that order.
+/// The members of a closed tagged union (<see cref="IrType.Union"/>), in their canonical order: sorted
+/// by the name of the type as the IR writes it, ordinally, so that <c>union&lt;str, i32&gt;</c> and
+/// <c>union&lt;i32, str&gt;</c> are one type and a member index means the same in every module. Two
+/// union types are equal when their members are. The members are kept as given otherwise, a member
+/// given twice as well, for the verifier to report (<see cref="IrUnions.Problems"/>).
 /// </summary>
 public sealed class IrUnionType : IEquatable<IrUnionType> {
 
-  /// <summary>The members of a union, in any order; the verifier, not this constructor, says whether they make a valid one.</summary>
-  /// <param name="members">The member types.</param>
-  /// <exception cref="ArgumentNullException"><paramref name="members"/> or one of them is <see langword="null"/>.</exception>
+  /// <summary>A union of member types.</summary>
+  /// <param name="members">The member types, in any order.</param>
+  /// <exception cref="ArgumentNullException">The members or one of them is <see langword="null"/>.</exception>
   public IrUnionType(IReadOnlyList<IrType> members) {
     ArgumentNullException.ThrowIfNull(members);
     foreach (var member in members)
       ArgumentNullException.ThrowIfNull(member, nameof(members));
+
     this.Members = [.. members.OrderBy(member => member.ToString(), StringComparer.Ordinal)];
   }
 
-  /// <summary>The member types, in canonical order.</summary>
+  /// <summary>The member types in their canonical order; a member's index is its tag.</summary>
   public IReadOnlyList<IrType> Members { get; }
-
-  /// <summary>The index of a member type, or -1 for a type that is none of them.</summary>
-  /// <param name="member">The type.</param>
-  /// <returns>The index.</returns>
-  public int IndexOf(IrType member) {
-    for (var index = 0; index < this.Members.Count; ++index)
-      if (this.Members[index] == member)
-        return index;
-    return -1;
-  }
 
   /// <inheritdoc/>
   public bool Equals(IrUnionType? other) => other is not null && this.Members.SequenceEqual(other.Members);
@@ -49,97 +41,103 @@ public sealed class IrUnionType : IEquatable<IrUnionType> {
 
 }
 
-/// <summary>A value of a union type made from the value of one member.</summary>
-/// <param name="Union">The union type.</param>
-/// <param name="Member">The index of the member, in canonical order.</param>
-/// <param name="Value">The value, of exactly the member's type.</param>
+/// <summary>A value of a closed tagged union made from one of its members.</summary>
+/// <param name="Union">The union type, which is the type of the node.</param>
+/// <param name="Member">The index of the member in the canonical order.</param>
+/// <param name="Value">The value, of the member's type.</param>
 public sealed record IrUnionOf(IrType Union, int Member, IrExpr Value) : IrExpr(Union);
 
-/// <summary>The tag of a value of a union type: the index of the member it holds, as an <c>i32</c>.</summary>
+/// <summary>The tag of a value of a closed tagged union: the index of the member it holds, as an <c>i32</c>.</summary>
 /// <param name="Value">The value, of a union type, evaluated once.</param>
 public sealed record IrUnionTagOf(IrExpr Value) : IrExpr(IrType.I32);
 
 /// <summary>
-/// The value of a member of a value of a union type. It traps with <see cref="IrTrap.InvalidCast"/>
-/// when the value holds another member.
+/// The payload of a value of a closed tagged union that holds one member. It traps with
+/// <see cref="IrTrap.InvalidCast"/> when the value holds another member.
 /// </summary>
 /// <param name="Value">The value, of a union type, evaluated once.</param>
 /// <param name="Member">The index of the member.</param>
-public sealed record IrUnionValue(IrExpr Value, int Member) : IrExpr(IrUnions.MemberType(Value.Type, Member)) {
+public sealed record IrUnionValue(IrExpr Value, int Member) : IrExpr(IrUnions.MemberType(Value.Type, Member) ?? IrType.Void) {
 
   /// <summary>
-  /// Whether the tag has been tested first, so that the value holds this member wherever the node is
-  /// evaluated; the trap cannot happen and a backend may read the member without a test.
+  /// Whether the frontend has tested the tag first, so that the value holds the member wherever this
+  /// node is evaluated. A backend may then read the payload without the test; the meaning is the
+  /// same, because the trap cannot happen.
   /// </summary>
   public bool IsTested { get; init; }
 
 }
 
-/// <summary>A value of a union type as it crosses the boundary of <see cref="IrInterpreter"/>: the index of its member and the member's value as a .NET value of its type.</summary>
+/// <summary>A value of a closed tagged union as it crosses the boundary of <see cref="IrInterpreter"/>: the member's index and the payload as a .NET value of the member's type.</summary>
 /// <param name="Member">The index of the member.</param>
-/// <param name="Value">The value of the member.</param>
+/// <param name="Value">The payload.</param>
 public sealed record IrUnion(int Member, object? Value);
 
 /// <summary>
-/// The rules of the closed union types (ADR 0300, level 5). A union has 2 to <see cref="MostMembers"/>
-/// distinct members, each a truth value, a number, a string, a struct, an object reference or an
-/// optional value; never the dynamic type, another union or <c>void</c>. <see cref="IrUnionOf"/> makes
-/// a value of one member, <see cref="IrUnionTagOf"/> reads which member it holds and
-/// <see cref="IrUnionValue"/> the member's value, which traps on another member. Nothing else operates
-/// on a union. Unlike a variant's tag, a union's tag is the index of a member of its own type, never a
-/// number of the COM <c>VARENUM</c>.
+/// The rules of the closed tagged unions (ADR 0300, level 5). A union type has two to four distinct
+/// members, each a scalar (a number or <c>bool</c>), a string, a struct, an object reference or an
+/// optional value; no variant, no union and no <c>void</c>. A value holds exactly one member:
+/// <see cref="IrUnionOf"/> makes one, <see cref="IrUnionTagOf"/> reads which member it holds and
+/// <see cref="IrUnionValue"/> its payload, which traps on another member. Two values of one union type
+/// are equal (<c>==</c>) when they hold the same member with equal payloads.
 /// </summary>
 public static class IrUnions {
 
-  /// <summary>The most members a union has.</summary>
-  public const int MostMembers = 4;
+  /// <summary>The fewest members of a union.</summary>
+  public const int MinMembers = 2;
 
-  /// <summary>The type of a member of a union type; <see cref="IrType.Void"/> for a type that is no union or an index outside it.</summary>
-  /// <param name="union">The union type.</param>
-  /// <param name="member">The index of the member.</param>
-  /// <returns>The member's type.</returns>
-  public static IrType MemberType(IrType union, int member) {
-    ArgumentNullException.ThrowIfNull(union);
-    return union.UnionType is { } members && member >= 0 && member < members.Members.Count ? members.Members[member] : IrType.Void;
-  }
+  /// <summary>The most members of a union.</summary>
+  public const int MaxMembers = 4;
 
-  /// <summary>Whether a type may be the member of a union: a truth value, a number, a string, a struct, an object reference or an optional value.</summary>
+  /// <summary>Whether a type may be a member of a union: a scalar, a string, a struct, an object reference or an optional value.</summary>
   /// <param name="type">The type.</param>
-  /// <returns><see langword="true"/> for a member type.</returns>
   public static bool IsMember(IrType type) {
     ArgumentNullException.ThrowIfNull(type);
-    return type == IrType.Bool || type.IsNumeric || type.IsString || type.IsStruct || type.IsObject || type.IsOptional;
+    return type.IsNumeric || type == IrType.Bool || type.IsString || type.IsStruct || type.IsObject || type.IsOptional;
   }
 
-  /// <summary>What makes a type invalid as a union, as the verifier words it, or <see langword="null"/> for a valid union.</summary>
-  /// <param name="union">The union type.</param>
-  /// <returns>The reason.</returns>
-  /// <exception cref="ArgumentException">The type is no union.</exception>
-  public static string? Problem(IrType union) {
-    ArgumentNullException.ThrowIfNull(union);
-    var members = (union.UnionType ?? throw new ArgumentException($"The type {union} is no union.", nameof(union))).Members;
-    if (members.Count is < 2 or > MostMembers)
-      return $"union of {members.Count} members";
-    if (members.FirstOrDefault(member => !IsMember(member)) is { } forbidden)
-      return $"union member {forbidden} not allowed";
-    var twice = members.GroupBy(member => member).FirstOrDefault(group => group.Count() > 1);
-    return twice is null ? null : $"union member {twice.Key} not allowed twice";
+  /// <summary>
+  /// What is wrong with a union type, as the verifier reports it: <c>union of &lt;n&gt; members</c> outside
+  /// two to four, and <c>union member &lt;t&gt; not allowed</c> for a member of another kind and for a
+  /// member given twice; none for a valid union or a type that is no union.
+  /// </summary>
+  /// <param name="type">The type.</param>
+  /// <returns>The reasons, in member order.</returns>
+  public static IReadOnlyList<string> Problems(IrType type) {
+    ArgumentNullException.ThrowIfNull(type);
+    if (type.UnionType is not { } union)
+      return [];
+
+    var problems = new List<string>();
+    if (union.Members.Count is < MinMembers or > MaxMembers)
+      problems.Add($"union of {union.Members.Count} members");
+
+    for (var index = 0; index < union.Members.Count; ++index) {
+      var member = union.Members[index];
+      if (!IsMember(member) || index > 0 && union.Members[index - 1] == member)
+        problems.Add($"union member {member} not allowed");
+    }
+
+    return problems;
   }
 
-  /// <summary>Whether a module uses a union type anywhere: in a signature, a local, a global or an expression.</summary>
-  /// <param name="module">The module.</param>
-  /// <returns><see langword="true"/> when a backend must be able to write it.</returns>
-  public static bool Uses(IrModule module) => Types(module).Count > 0;
+  /// <summary>The type of a member of a union type, or <see langword="null"/> when the type is no union or has no such member.</summary>
+  /// <param name="type">The union type.</param>
+  /// <param name="member">The index of the member.</param>
+  /// <returns>The member's type.</returns>
+  public static IrType? MemberType(IrType type, int member) {
+    ArgumentNullException.ThrowIfNull(type);
+    return type.UnionType is { } union && member >= 0 && member < union.Members.Count ? union.Members[member] : null;
+  }
 
-  /// <summary>The union types a module uses - in a signature, a local, a global or an expression - each once, in the order they are first met.</summary>
+  /// <summary>Whether a module uses a union anywhere: in a signature, a local, a global or an expression.</summary>
   /// <param name="module">The module.</param>
-  /// <returns>The types; empty when a backend need not write any.</returns>
-  public static IReadOnlyList<IrType> Types(IrModule module) {
+  /// <returns><see langword="true"/> when a backend must be able to write one.</returns>
+  public static bool Uses(IrModule module) {
     ArgumentNullException.ThrowIfNull(module);
-    return [.. module.Globals.Select(global => global.Type)
-      .Concat(module.Functions.SelectMany(function => function.Parameters.Concat(function.Locals).Select(local => local.Type).Prepend(function.ReturnType)
-        .Concat(IrTree.Nodes(function.Body).Select(node => node is IrUnionTagOf tag ? tag.Value.Type : node.Type))))
-      .Where(type => type.IsUnion).Distinct()];
+    return module.Globals.Any(global => global.Type.IsUnion)
+      || module.Functions.Any(function => function.ReturnType.IsUnion || function.Parameters.Concat(function.Locals).Any(local => local.Type.IsUnion)
+        || IrTree.Nodes(function.Body).Any(node => node.Type.IsUnion));
   }
 
 }

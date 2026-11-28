@@ -7,7 +7,7 @@ The IR is language-independent **without erasing source-language behavior**. Som
 ## Core data model
 
 - **Values and control:** typed expressions over named locals in structured statements (blocks, `if`, loops, `switch`, `break`/`continue`, `return`), explicit source locations. No SSA storage form; an analysis may derive an SSA view and map its results back to tree nodes.
-- **Semantic types:** sized integers, arbitrary precision when required, floats with format and rounding, fixed point, encoded values, structures, variants, functions, ownership and dynamic shapes.
+- **Semantic types:** sized integers, arbitrary precision when required, floats with format and rounding, fixed point, encoded values, structures, variants, closed tagged unions ([unions](../reference/unions.md)), functions, ownership and dynamic shapes.
 - **Memory:** allocations, address spaces, provenance, alias classes, byte/bit offsets, alignment, lifetime and storage identity.
 - **Effects:** per-function summaries (`IrEffects`) of writes/reads, potential faults, exceptions, synchronization, device I/O, external calls, stack/register/flag state and dynamic control flow.
 - **Iteration:** induction variables, access functions, strides, reductions, dependences, mutation and evaluation order.

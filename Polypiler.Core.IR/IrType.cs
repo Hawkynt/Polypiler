@@ -142,8 +142,8 @@ public enum IrTypeKind {
   Variant,
 
   /// <summary>
-  /// A closed tagged union of two to four member types (ADR 0300 level 5): a value is one member, which
-  /// its tag names. What its operations mean is stated at <see cref="IrUnions"/>.
+  /// A closed tagged union of two to four member types (<see cref="IrUnionType"/>): a value is one
+  /// member, with the member's index as its tag. What its operations mean is stated at <see cref="IrUnions"/>.
   /// </summary>
   Union
 
@@ -226,18 +226,6 @@ public sealed record IrType {
 
   /// <summary>Whether the type is the dynamic type.</summary>
   public bool IsVariant => this.Kind == IrTypeKind.Variant;
-
-  /// <summary>The closed union of member types, written <c>union&lt;i32, str&gt;</c> (<see cref="IrUnions"/>); the members are kept in their canonical order.</summary>
-  /// <param name="members">The member types, in any order.</param>
-  /// <returns>The union type.</returns>
-  /// <exception cref="System.ArgumentNullException"><paramref name="members"/> or one of them is <see langword="null"/>.</exception>
-  public static IrType Union(params IrType[] members) => new(IrTypeKind.Union, null) { UnionType = new IrUnionType(members) };
-
-  /// <summary>The members of a union type, otherwise <see langword="null"/>.</summary>
-  public IrUnionType? UnionType { get; private init; }
-
-  /// <summary>Whether the type is a closed union.</summary>
-  public bool IsUnion => this.Kind == IrTypeKind.Union;
 
   /// <summary>An immutable sequence of UTF-16 code units, written <c>str</c>: a reference, which may be <c>null</c> (#1370).</summary>
   public static IrType String { get; } = new(IrTypeKind.String, null);
@@ -422,6 +410,20 @@ public sealed record IrType {
   /// <summary>The signature of a function type, otherwise <see langword="null"/>.</summary>
   public IrFunctionType? Signature { get; private init; }
 
+  /// <summary>
+  /// The closed tagged union of member types, written <c>union&lt;i32, str&gt;</c>: the members in
+  /// their canonical order (<see cref="IrUnionType"/>), which the verifier checks (<see cref="IrUnions"/>).
+  /// </summary>
+  /// <param name="members">The member types, in any order.</param>
+  /// <returns>The union type.</returns>
+  public static IrType Union(params IrType[] members) => new(IrTypeKind.Union, null) { UnionType = new IrUnionType(members) };
+
+  /// <summary>The members of a union type, otherwise <see langword="null"/>.</summary>
+  public IrUnionType? UnionType { get; private init; }
+
+  /// <summary>Whether the type is a closed tagged union.</summary>
+  public bool IsUnion => this.Kind == IrTypeKind.Union;
+
   /// <summary>Whether the type is a function type, whose values may be <c>null</c>.</summary>
   public bool IsFunction => this.Kind == IrTypeKind.Function;
 
@@ -493,14 +495,15 @@ public sealed record IrType {
 
   /// <summary>
   /// Whether the type can be the type of a local: not void, an array only of numbers, of structs, of
-  /// strings or of the dynamic type, a view or a memory only of numbers, and a pointer only to a number or to <c>void</c>.
+  /// strings or of the dynamic type, a view or a memory only of numbers, a pointer only to a number or to <c>void</c>,
+  /// and a union, whose members the verifier checks with reasons of their own (<see cref="IrUnions.Problems"/>).
   /// </summary>
   public bool IsStorable => this.IsOptional ? this.Underlying!.IsOptionalValue
-    : this.IsUnion ? this.UnionType!.Members.All(member => member.IsStorable)
     : this.IsPointer ? this.Element!.IsNumeric || this.Element == Void
     : this.IsCollection ? IrCollections.IsElement(this)
     : this.IsLazySequence ? IrSequences.IsElement(this.Element!)
     : this.IsAsync ? false
+    : this.IsUnion ? true
     : this.Kind != IrTypeKind.Void && (this.Element is null || this.Element.IsNumeric || (!this.IsView && !this.IsMemory && (this.Element.IsStruct || this.Element.IsString || this.Element.IsFunction || (this.IsArray && this.Element.IsVariant))));
 
   /// <summary>The name of the type as the IR writes it, for example <c>i32</c>, <c>u8[]</c>, <c>str</c>, <c>i32?</c> or the name of a struct.</summary>

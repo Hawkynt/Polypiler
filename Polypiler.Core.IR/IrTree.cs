@@ -154,7 +154,7 @@ public static class IrTree {
     IrVariantValue value => value with { Value = operands[0] },
     IrUnionOf made => made with { Value = operands[0] },
     IrUnionTagOf => new IrUnionTagOf(operands[0]),
-    IrUnionValue value => value with { Value = operands[0] },
+    IrUnionValue value => new IrUnionValue(operands[0], value.Member) { IsTested = value.IsTested },
     _ => expression
   };
 

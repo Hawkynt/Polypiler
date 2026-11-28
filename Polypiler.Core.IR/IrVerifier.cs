@@ -102,10 +102,12 @@ public static partial class IrVerifier {
       this.Require(function.ReturnType.IsStorable || function.ReturnType == IrType.Void || (function.IsAsync && IrAsyncFunctions.IsResult(function.ReturnType.Element!)),
         $"the return type {function.ReturnType} is not a type of the IR");
       this.Declared(function.ReturnType);
+      this.UnionType(function.ReturnType);
       foreach (var parameter in function.Parameters) {
         this.Require(!OnHeap(parameter.Type), Stored);
         this.Require(parameter.Type.IsStorable, $"parameter '{parameter.Name}' has the type {parameter.Type}");
         this.Declared(parameter.Type);
+        this.UnionType(parameter.Type);
         this.Require(this._visible.Add(parameter), $"parameter '{parameter.Name}' is declared twice");
       }
 
@@ -113,6 +115,7 @@ public static partial class IrVerifier {
         this.Require(!OnHeap(local.Type), Stored);
         this.Require(local.Type.IsStorable, $"local '{local.Name}' has the type {local.Type}");
         this.Declared(local.Type);
+        this.UnionType(local.Type);
       }
 
       this.Block(function.Body);
@@ -129,14 +132,6 @@ public static partial class IrVerifier {
 
     /// <summary>A declared type - a struct, an enum, a class, or an array of one - is one the module declares.</summary>
     private void Declared(IrType type) {
-      if (type.UnionType is { } union) {
-        this.Require(IrUnions.Problem(type) is null, $"the type {type} is no union of the IR: {IrUnions.Problem(type)}");
-        foreach (var member in union.Members)
-          this.Declared(member);
-
-        return;
-      }
-
       if (type.IsCollection) {
         this.Declared(type.Element!);
         if (type.Key is { } key)
@@ -574,7 +569,7 @@ public static partial class IrVerifier {
     internal static bool InRange(IrConst constant) => constant.Type.Kind switch {
       IrTypeKind.Bool => constant.Value is 0 or 1,
       // An arbitrary-precision integer is a constant of its own node, IrBigConst.
-      IrTypeKind.BigInt or IrTypeKind.Variant or IrTypeKind.Void or IrTypeKind.Array or IrTypeKind.Struct or IrTypeKind.Span or IrTypeKind.ReadOnlySpan or IrTypeKind.Object or IrTypeKind.Optional or IrTypeKind.Function or IrTypeKind.Memory or IrTypeKind.ReadOnlyMemory => false,
+      IrTypeKind.BigInt or IrTypeKind.Variant or IrTypeKind.Union or IrTypeKind.Void or IrTypeKind.Array or IrTypeKind.Struct or IrTypeKind.Span or IrTypeKind.ReadOnlySpan or IrTypeKind.Object or IrTypeKind.Optional or IrTypeKind.Function or IrTypeKind.Memory or IrTypeKind.ReadOnlyMemory => false,
       IrTypeKind.F32 => constant.Value is >= int.MinValue and <= int.MaxValue,
       IrTypeKind.F64 => true,
       _ => constant.Type.IsLong || (constant.Value >= IrOperators.Minimum(constant.Type) && constant.Value <= IrOperators.Maximum(constant.Type))

@@ -1,38 +1,53 @@
-# Closed unions
+# Closed tagged unions
 
-The closed tagged union of the IR (#1582): a value that is one of two to four proven types, level 5
-of the lattice of [ADR 0300](../adr/0300-static-types-first.md). Where a [variant](variants.md) may
-hold anything, a union holds one of the members its type lists, so every backend can write it as its
-own sum type. A memory overlay - C's `union` - is another thing (#375).
-Related: [repository README](../../README.md) · [variants](variants.md) · [optional values](optional-values.md) ·
-[IR and analysis](../architecture/IR.md).
+A value proven to be one of a few types, such as a result that is a number or a string, has a type
+better than `variant`: a closed tagged union (#1582, ADR 0300 decision 2, level 5). The set of members
+is fixed, so every backend can write its own sum type (a C# tagged struct, a Rust `enum`, a TypeScript
+`A | B`) instead of `object`. Memory overlays in the style of a C `union` are another thing (#375). For a
+target without a sum type, O0236 (#471) lowers the union.
+Related: [repository README](../../README.md) · [ADR 0300, static types first](../adr/0300-static-types-first.md) · [variants](variants.md) ·
+[optional values](optional-values.md) · [IR and analysis](../architecture/IR.md).
 
 ## The model
 
-- **Type.** `IrType.Union(members)`, written `union<i32, str>`, `IrTypeKind.Union`. Its members are
-  kept in a canonical order - by the name the IR writes each with, ordinal - so `union<str, i32>` and
-  `union<i32, str>` are one type and a member is named by its index in that order
-  (`IrUnionType.Members`, `IrUnionType.IndexOf`).
-- **Members.** 2 to `IrUnions.MostMembers` = 4, each distinct, each a truth value, a number, a string,
-  a struct, an object reference or an optional value. The verifier refuses a union of fewer or more
-  members (`PLY0100` … `union of 1 members`), a variant, another union, `void`, an array or a
-  collection as a member (`union member variant not allowed`) and a member listed twice.
+- **Type.** `IrType.Union(members)`, written `union<i32, str>`, `IrTypeKind.Union`, with the members in
+  `IrType.UnionType` (`IrUnionType`).
+  - **Canonical order.** The members are sorted by their names as the IR writes them, ordinally. So
+    `union<str, i32>` and `union<i32, str>` are one type, and a member index means the same in every
+    module.
+  - **Equality.** Two union types are equal when their members are.
+  - **Where a union may appear.** A union is a local, a parameter, a result or a global.
+- **Members.**
+  - **Count.** A union has two to four distinct members (`IrUnions.MinMembers`, `IrUnions.MaxMembers`).
+  - **Allowed kinds.** A member is a scalar (a number or `bool`), a string, a struct, an object
+    reference or an optional value.
+  - **Refused.** A `variant`, a union, `void`, any other kind, and a member given twice.
+  - **Diagnostics.** The verifier reports `PLY0100` with the reason `union of <n> members` or
+    `union member <t> not allowed`, wherever the type is declared.
 - **Operations.**
-  - `IrUnionOf(union, member, value)` makes a value of the member with that index; `value` is of
-    exactly the member's type.
-  - `IrUnionTagOf(value)` is the index of the member the value holds, as an `i32`.
-  - `IrUnionValue(value, member)` is the member's value, and traps with `IrTrap.InvalidCast` when the
-    value holds another member. `IsTested` marks one whose tag has been tested first; a backend may
-    leave the test out. A tested member and the other two nodes never trap (`IrShape.IsTrapFreeNode`).
-- **No operators.** No arithmetic, comparison or conversion takes a union; code tests the tag and works
-  on members. A union's tag is the index of a member, never a COM `VARENUM` number.
-- **Boundary.** A value crosses the interpreter's boundary as an `IrUnion(member, value)`, the value a
-  .NET value of the member's type; one of another member index or value type is refused.
-- **Module format.** The type is its kind and its members; the three nodes are tags of their own after
-  the last older one, so every older layout reads as before.
+  - **`IrUnionOf(union, member, value)`** makes a value. `value` is exactly of the member's type.
+  - **`IrUnionTagOf(value)`** is the member index the value holds, as an `i32`.
+  - **`IrUnionValue(value, member)`** is the payload.
+    - It traps with `InvalidCast` when the value holds another member.
+    - `IsTested` says the frontend tested the tag first, so a backend may read the payload without the
+      test.
+  - **`==` and `!=`** compare two values of one union type. They are equal when both hold the same
+    member and the payloads are equal as `==` compares that member's type:
+    - a float as IEEE 754 does, so a NaN equals nothing;
+    - a string by its code units;
+    - an object by its identity;
+    - a struct field by field;
+    - an optional when both are none or both hold equal values.
+  - **Nothing else.** No other operator, conversion or constant takes a union.
+- **Interpreter boundary.** A union value crosses as `IrUnion(member, value)`, the payload as the
+  member's .NET value.
+- **Module format.** It appends the type kind `Union`, followed by its members, and the node tags
+  `UnionOf`, `UnionTagOf` and `UnionValue` after the last existing tag. Modules written before this
+  read unchanged.
 
-## In the backends
+## Backends
 
-No backend writes a union yet: each refuses it with its type diagnostic rather than a placeholder. The
-lowerings are #1596 (C#), #1598 (JavaScript), #1599 (Python), #1600 (Rust), #1601 (Go), #1602 (JVM),
-#1603 (C++) and #1604 (Visual Basic); #1589 infers the unions a program proves.
+No backend has a lowering yet (#1596, #1598–#1604). Each refuses a module that uses a union
+(`IrUnions.Uses`) with its own diagnostic instead of writing it wrongly. The JavaScript backend reports
+`PLY1152` "a closed tagged union has no JavaScript form yet"; the others refuse it where they refuse
+any type they do not know.

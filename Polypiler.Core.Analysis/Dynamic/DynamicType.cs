@@ -426,7 +426,7 @@ public sealed record DynamicUnion : DynamicType {
     if (types.Any(type => type is null))
       return null;
     var union = IrType.Union([.. types.OfType<IrType>()]);
-    return IrUnions.Problem(union) is null ? union : null;
+    return IrUnions.Problems(union).Count == 0 ? union : null;
   }
 
   /// <inheritdoc/>
