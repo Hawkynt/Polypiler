@@ -210,7 +210,7 @@ internal sealed partial class FunctionLowering {
   private (IrExpr, PyType) Slice(PyNode at, (IrExpr Value, PyType Type) container, PyNode slice) {
     var bounds = new List<IrExpr>();
     foreach (var field in new[] { "lower", "upper", "step" }) {
-      if (slice.Node(field) is not { } bound || (bound.Is("Constant") && bound.Text("kind") == "none")) {
+      if (slice.Node(field) is not { } bound || (bound.Is("Constant") && bound.ConstantKind == "none")) {
         bounds.Add(Bool(false));
         bounds.Add(Int(0));
         continue;
@@ -683,7 +683,7 @@ internal sealed partial class FunctionLowering {
 
   /// <summary>The function of a <c>key=</c> keyword, or <see langword="null"/> where there is none or it is <c>None</c>, which compares the elements themselves.</summary>
   private static PyNode? KeyFunction(IReadOnlyList<PyNode> keywords)
-    => keywords.FirstOrDefault(keyword => keyword.Text("arg") == "key")?.Node("value") is { } key && !(key.Is("Constant") && key.Text("kind") == "none") ? key : null;
+    => keywords.FirstOrDefault(keyword => keyword.Text("arg") == "key")?.Node("value") is { } key && !(key.Is("Constant") && key.ConstantKind == "none") ? key : null;
 
   /// <summary>Python's <c>a &lt; b</c> of two values of one type, for the helpers that compare elements and keys.</summary>
   private System.Func<IrExpr, IrExpr, IrExpr> LessThan(PyNode at, PyType type) => type.Kind switch {

@@ -78,8 +78,8 @@ internal sealed partial class FunctionLowering {
     if (keyword is null)
       return false;
 
-    return keyword.Is("Constant") && keyword.Text("kind") == "bool"
-      ? keyword.Text("value") == "True"
+    return keyword.Is("Constant") && keyword.ConstantKind == "bool"
+      ? keyword.Value is true
       : throw this.Unsupported(keyword, $"{name}= of a value other than True or False");
   }
 

@@ -112,10 +112,10 @@ internal sealed class ClassCollector(ModuleModel module, List<Diagnostic> diagno
 
       foreach (var keyword in decorator.Nodes("keywords")) {
         var value = keyword.Node("value")!;
-        if (!(value.Is("Constant") && value.Text("kind") == "bool"))
+        if (!(value.Is("Constant") && value.ConstantKind == "bool"))
           return (false, true, $"@dataclass({keyword.Text("arg")}=…) of a value other than True or False");
 
-        var on = value.Text("value") == "True";
+        var on = value.Value is true;
         switch (keyword.Text("arg")) {
           case "frozen":
             frozen = on;
@@ -126,7 +126,7 @@ internal sealed class ClassCollector(ModuleModel module, List<Diagnostic> diagno
           case "slots" or "init" or "repr" when keyword.Text("arg") != "init" || on:
             break;
           default:
-            return (false, true, $"@dataclass({keyword.Text("arg")}={value.Text("value")})");
+            return (false, true, $"@dataclass({keyword.Text("arg")}={(value.Value is true ? "True" : "False")})");
         }
       }
     }
@@ -167,7 +167,7 @@ internal sealed class ClassCollector(ModuleModel module, List<Diagnostic> diagno
   private bool Body(ClassModel type, PyNode statement) {
     var before = diagnostics.Count;
     foreach (var member in statement.Nodes("body")) {
-      if (member.Is("Expr") && member.Node("value") is { Kind: "Constant" } docstring && docstring.Text("kind") == "str")
+      if (member.Is("Expr") && member.Node("value") is { Kind: "Constant" } docstring && docstring.ConstantKind == "str")
         continue;
 
       if (member.Is("Pass"))

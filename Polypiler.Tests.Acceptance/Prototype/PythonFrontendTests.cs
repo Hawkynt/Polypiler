@@ -9,10 +9,10 @@ using Polypiler.Tests.Acceptance.Infra;
 namespace Polypiler.Tests.Acceptance.Prototype;
 
 /// <summary>
-/// The Python frontend with the pinned CPython: the recordings the unit tests compare with are what
-/// CPython does with the original sources, the recorded trees are what the helper prints today, and
-/// <c>polypiler translate --from python</c> parses through the interpreter, translates the fixtures
-/// and refuses what CPython or the subset refuses with the exit codes of the command.
+/// The Python frontend in the Python layer: the recordings the unit tests compare with are what the
+/// pinned CPython does with the original sources, and <c>polypiler translate --from python</c>, which
+/// parses with the frontend's own parser and starts no interpreter, translates the fixtures and
+/// refuses what CPython or the subset refuses with the exit codes of the command.
 /// </summary>
 [TestFixture, Layer("pyperl")]
 public sealed class PythonFrontendTests {
@@ -42,30 +42,16 @@ public sealed class PythonFrontendTests {
     Assert.That(PythonFixture.RecordedLines(fixture), Is.EqualTo(lines));
   }
 
-  /// <summary>Every recorded tree - of a fixture or of a snippet of the unit tests - is what the helper prints for its source today.</summary>
-  [Test, RequiresToolchain("python")]
-  public void RecordedTrees_AreWhatTheHelperPrints() {
-    var trees = PythonFixture.RecordedTrees().ToList();
-    Assert.That(trees, Is.Not.Empty);
-    foreach (var (path, source, dump) in trees) {
-      var (json, failure) = PythonFrontend.Dump("snippet.py", source);
-      Assert.That(json, Is.Not.Null, failure);
-      Assert.That(PythonFixture.Comparable(json!), Is.EqualTo(dump), path);
-    }
-  }
-
-  /// <summary>Every fixture imports through the interpreter exactly as from its recorded tree.</summary>
-  [TestCaseSource(nameof(Fixtures)), RequiresToolchain("python")]
-  public void Fixture_ImportsThroughCPythonAsFromItsRecordedTree(string fixture) {
-    // From the fixture's own path, as polypiler translate imports it: the modules it imports are found beside it.
-    var live = PythonFrontend.Import(PythonFixture.PathOf(fixture), PythonFixture.SourceOf(fixture));
-    Assert.That(live.Diagnostics, Is.Empty);
-    Assert.That(live.Python, Does.Match(@"^3\.\d+\.\d+$"));
-    Assert.That(Core.IR.IrModuleFormat.Write(live.Module!), Is.EqualTo(Core.IR.IrModuleFormat.Write(PythonFixture.Import(fixture))));
+  /// <summary>Every fixture imports from its own path, the modules it imports found beside it, as the unit tests import it.</summary>
+  [TestCaseSource(nameof(Fixtures))]
+  public void Fixture_ImportsFromItsPathAsInTheUnitTests(string fixture) {
+    var imported = PythonFrontend.Import(PythonFixture.PathOf(fixture), PythonFixture.SourceOf(fixture));
+    Assert.That(imported.Diagnostics, Is.Empty);
+    Assert.That(Core.IR.IrModuleFormat.Write(imported.Module!), Is.EqualTo(Core.IR.IrModuleFormat.Write(PythonFixture.Import(fixture))));
   }
 
   /// <summary>Each fixture translates with the executable into C# and JavaScript, with the caveats of the import as notes - an int is exact, which needs none.</summary>
-  [TestCaseSource(nameof(Fixtures)), RequiresToolchain("python")]
+  [TestCaseSource(nameof(Fixtures))]
   public void Fixture_TranslatesWithTheExecutable(string fixture) {
     foreach (var target in new[] { "csharp", "javascript" }) {
       var (exitCode, output) = Toolchain.RunPolypiler(this._directory, "translate", PythonFixture.PathOf(fixture), "--from", "python", "--to", target, "--output", "out-" + target);
@@ -76,7 +62,7 @@ public sealed class PythonFrontendTests {
   }
 
   /// <summary>Scenario: code python rejects is rejected, with python's message, exit code 4 and no output.</summary>
-  [Test, RequiresToolchain("python")]
+  [Test]
   public void SyntaxError_IsExitCode4WithPythonsMessage() {
     File.WriteAllText(Path.Combine(this._directory, "broken.py"), "def f(:\n");
     var (exitCode, output) = Toolchain.RunPolypiler(this._directory, "translate", "broken.py", "--from", "python", "--to", "csharp", "--output", "out");
@@ -86,7 +72,7 @@ public sealed class PythonFrontendTests {
   }
 
   /// <summary>Scenario: an unsupported numeric type is refused, exit code 3, the construct named.</summary>
-  [Test, RequiresToolchain("python")]
+  [Test]
   public void UnsupportedConstruct_IsExitCode3() {
     File.WriteAllText(Path.Combine(this._directory, "complex.py"), "def f(a: float) -> float:\n    return a + 2j\n");
     var (exitCode, output) = Toolchain.RunPolypiler(this._directory, "translate", "complex.py", "--from", "python", "--to", "javascript", "--output", "out");

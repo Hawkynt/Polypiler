@@ -265,7 +265,7 @@ internal sealed partial class FunctionLowering {
     if (this.Function.IsGenerator)
       return new IrYieldBreak();
 
-    if (value is null || (value.Is("Constant") && value.Text("kind") == "none"))
+    if (value is null || (value.Is("Constant") && value.ConstantKind == "none"))
       return new IrReturn(this.Function.Returns.Kind == PyKind.Optional ? this.None(this.Function.Returns) : null);
 
     var returned = this.Lower(value, this.Function.Returns);

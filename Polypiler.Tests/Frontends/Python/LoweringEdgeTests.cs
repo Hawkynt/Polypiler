@@ -3,7 +3,6 @@ using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using Polypiler.Core.Frontends.Python;
-using Polypiler.Core.Frontends.Python.AstDump;
 using Polypiler.Core.IR;
 using Polypiler.Prototype.Testing;
 
@@ -126,7 +125,7 @@ public sealed class LoweringEdgeTests {
   [TestCase("    from math import floor\n", "an import inside a function")]
   [TestCase("    class C:\n        pass\n", "error PLY1840: 'nested class C' is outside the first Python subset")]
   [TestCase("    type T = int\n", "statement 'type'")]
-  [TestCase("    nonlocal x\n", "error PLY1833: 'nonlocal x' is neither part of this import nor in the Python call map: no enclosing function binds 'x'")]
+  [TestCase("    nonlocal x\n", "error PLY1800: SyntaxError: name 'x' is parameter and nonlocal")]
   [TestCase("    match x:\n        case [z] as y:\n            pass\n", "match pattern '[z] as y' is not supported")]
   public void MoreUnsupportedStatements_AreRefused(string body, string diagnostic)
     => Assert.That(PythonSnippet.Refusals("def f(x: int) -> int:\n" + body + "    return 0\n"), Has.Some.Contains(diagnostic));
@@ -140,27 +139,11 @@ public sealed class LoweringEdgeTests {
   public void OtherModuleLevelIf_IsRefused(string statement)
     => Assert.That(PythonSnippet.Refusals("def f() -> int:\n    return 1\n\n" + statement), Has.Some.Contains("error PLY1810: statement 'module-level if"));
 
-  /// <summary>An interpreter that starts but does not run the helper is a refusal that carries what it said.</summary>
-  [Test]
-  public void InterpreterThatFails_IsRefusedWithPLY1800() {
-    var result = PythonFrontend.Import("f.py", "def f() -> int:\n    return 1\n", new PythonImportOptions { Interpreter = "dotnet" });
-    Assert.That(result.Module, Is.Null);
-    Assert.That(result.Diagnostics.Single().Code, Is.EqualTo(PythonFrontend.SyntaxError));
-    Assert.That(result.Diagnostics.Single().Message, Does.StartWith("dotnet exited with "));
-    Assert.That(PythonFrontend.Dump("f.py", "", "dotnet").Failure, Does.StartWith("dotnet exited with "));
-  }
-
-  /// <summary>The environment variable names the interpreter tried after the one the options name.</summary>
-  [Test, NonParallelizable]
-  public void EnvironmentVariable_NamesAnInterpreter() {
-    var saved = Environment.GetEnvironmentVariable(AstHelper.InterpreterVariable);
-    try {
-      Environment.SetEnvironmentVariable(AstHelper.InterpreterVariable, Path.Combine("opt", "python"));
-      Assert.That(AstHelper.Candidates(null), Is.EqualTo(new[] { Path.Combine("opt", "python"), "python3", "python" }));
-    } finally {
-      Environment.SetEnvironmentVariable(AstHelper.InterpreterVariable, saved);
-    }
-  }
+  /// <summary>The version the source is parsed for is one of the versions of the frontend.</summary>
+  [TestCase(PythonFrontend.MinimumVersion - 1)]
+  [TestCase(PythonFrontend.LatestVersion + 1)]
+  public void VersionOutsideTheFrontend_IsAnArgumentError(int version)
+    => Assert.That(() => PythonFrontend.Import("f.py", "x = 1\n", new PythonImportOptions { Version = version }), Throws.TypeOf<ArgumentOutOfRangeException>());
 
   /// <summary>The caveats describe what differs.</summary>
   [Test]
@@ -173,9 +156,9 @@ public sealed class LoweringEdgeTests {
   }
 
   /// <summary>The forms the parser accepts in a plain function but the subset does not: coroutine syntax, unpacking, slices in a tuple, odd loop targets, raising what is no exception.</summary>
-  [TestCase("await x", "error PLY1832: the function value 'f' escapes, or 'f' is a generator or coroutine; only direct calls, nested functions called by name and lambdas passed to the listed built-ins are imported (coroutines: #752)")]
-  [TestCase("async for y in a:\n        pass", "error PLY1810: statement 'async for' is not supported")]
-  [TestCase("b = [y async for y in a]", "(coroutines: #752)")]
+  [TestCase("await x", "error PLY1800: SyntaxError: 'await' outside async function")]
+  [TestCase("async for y in a:\n        pass", "error PLY1800: SyntaxError: 'async for' outside async function")]
+  [TestCase("b = [y async for y in a]", "error PLY1800: SyntaxError: asynchronous comprehension outside of an asynchronous function")]
   [TestCase("b = [*a]", "error PLY1820: sequence operation '*a in a display' is not supported")]
   [TestCase("b = a[1:2, 0]", "error PLY1821: slice form 'a[1:2, 0]' is not supported")]
   [TestCase("for a[0] in [1]:\n        pass", "error PLY1810: statement 'a loop variable other than names' is not supported")]
