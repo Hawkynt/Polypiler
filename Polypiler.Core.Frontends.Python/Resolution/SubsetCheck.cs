@@ -181,7 +181,6 @@ internal sealed class SubsetCheck(ModuleModel module, IReadOnlyDictionary<PyNode
 
   private static string Keyword(PyNode statement) => statement.Kind switch {
     "TypeAlias" => "type",
-    "AsyncFor" => "async for",
     _ => statement.Kind.ToLowerInvariant()
   };
 
@@ -440,9 +439,6 @@ internal sealed class SubsetCheck(ModuleModel module, IReadOnlyDictionary<PyNode
       case "Yield" or "YieldFrom":
         this.Refuse(expression, PythonFrontend.EscapingFunctionDescriptor, Escaping(this._function!.Name) + " (a yield used as a value: #760)");
         break;
-      case "Await":
-        this.Refuse(expression, PythonFrontend.EscapingFunctionDescriptor, Escaping(this._function!.Name) + " (coroutines: #752)");
-        break;
       case "JoinedStr" or "TemplateStr":
         this.Refuse(expression, PythonFrontend.UnsupportedStringDescriptor, "string operation 'f-string' is not supported by the Python frontend");
         break;
@@ -482,10 +478,8 @@ internal sealed class SubsetCheck(ModuleModel module, IReadOnlyDictionary<PyNode
   }
 
   private void Comprehension(PyNode comprehension) {
+    // await and async comprehensions compile only inside a coroutine, which is refused as a whole.
     foreach (var generator in comprehension.Nodes("generators")) {
-      if (generator.Number("is_async") == 1)
-        this.Refuse(generator, PythonFrontend.EscapingFunctionDescriptor, Escaping(this._function!.Name) + " (coroutines: #752)");
-
       this.Target(generator.Node("target")!, true);
       this.Expression(generator.Node("iter")!);
       foreach (var condition in generator.Nodes("ifs"))
