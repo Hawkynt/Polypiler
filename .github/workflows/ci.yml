@@ -702,6 +702,8 @@ jobs:
   # at the versions tooling/toolchains.lock pins, installed by their setup actions and never taken from
   # the runner image, and the acceptance tests of the layer, which run the fixtures of
   # tests/fixtures/infra/ci/pyperl through the cross-language runner. No package comes from PyPI or CPAN.
+  # The sources of the pinned perl distribution, checked against their SHA-256, are the input of the
+  # oracle of the Perl frontend's parser (PerlOracleTests); nothing of them is built or vendored.
   layer-pyperl:
     name: layer-pyperl ${{ matrix.os }}
     strategy:
@@ -709,7 +711,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
+    timeout-minutes: 30
     permissions:
       contents: read
     env:
@@ -742,6 +744,13 @@ jobs:
       - uses: shogo82148/actions-setup-perl@v1
         with:
           perl-version: ${{ steps.env.outputs.perl }}
+      - name: perl distribution
+        run: |
+          curl -sSfL -o "$RUNNER_TEMP/perl.tar.gz" "https://www.cpan.org/src/5.0/perl-${{ steps.env.outputs.perl }}.tar.gz"
+          echo "1137740985837b5cdf15f0cfab932279dcb4352f912fed6fc144e8b4f0823627  $RUNNER_TEMP/perl.tar.gz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/perl-dist"
+          tar xzf "$RUNNER_TEMP/perl.tar.gz" -C "$RUNNER_TEMP/perl-dist" --strip-components=1
+          echo "POLYPILER_PERL_DIST=$RUNNER_TEMP/perl-dist" >> "$GITHUB_ENV"
       - name: toolchains
         run: $TOOLING toolchains probe --only python,perl
       - name: build

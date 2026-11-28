@@ -1,201 +1,218 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
-using Polypiler.Core.Frontends.Perl.Parsing;
+using Polypiler.Core.Frontends.Perl.Ast;
 using Polypiler.Core.IR;
 
 namespace Polypiler.Core.Frontends.Perl.Lowering;
 
 internal sealed partial class PerlLowerer {
 
-  private static readonly HashSet<string> _indexedOps = new(StringComparer.Ordinal) {
-    "multideref", "aelem", "aelemfast", "helem"
+  private static bool IsIntConst(PerlExpr op, long value)
+    => op is PerlNumber { Value: { Kind: PerlNumericKind.Integer } n } && n.Integer == value;
+
+  private static readonly Dictionary<string, string> _compoundOps = new(StringComparer.Ordinal) {
+    ["+="] = "+", ["-="] = "-", ["*="] = "*", ["/="] = "/", ["%="] = "%", ["&="] = "&", ["|="] = "|", ["^="] = "^",
+    ["<<="] = "<<", [">>="] = ">>"
   };
 
-  private static readonly HashSet<string> _assignOps = new(StringComparer.Ordinal) {
-    "padsv_store", "padsv", "sassign", "aassign"
-  };
-
-  private static bool IsIntConst(PerlOp op, string value)
-    => op.Constant is { Kind: "integer" } c && c.Value == value;
-
-  private bool TryLowerAssignmentStatement(PerlOp node, List<IrStmt> statements) {
-    // 1. `my $x = EXPR;` (`padsv_store`) or `$x = EXPR;` (`sassign`)
-    if (node is { Name: "padsv_store", Children: [var rhs, ..] }) {
-      if (this._closureLocals.ContainsKey(node.Target))
-        throw this.Fail(PerlFrontend.EscapingClosure, this.LexicalName(node.Target), cause: "OBJ-CLOSURES");
-      if (rhs.Name == "anoncode") {
-        var lambda = this.LowerClosureExpr(rhs.Code!);
-        var local = this.DeclareLocal(this.LexicalName(node.Target), lambda.Type, node.Target);
-        this._closureLocals[node.Target] = lambda;
-        statements.Add(new IrDeclare(local, lambda));
+  private bool TryLowerAssignmentStatement(PerlExpr node, List<IrStmt> statements) {
+    switch (node) {
+      // `my $x;` / `my @a;` / `my %h;` / `my ($x, $y);`
+      case PerlDeclaration { Kind: PerlDeclarator.My or PerlDeclarator.State } declaration:
+        foreach (var variable in declaration.Variables.Where(v => v.Lexical is not null))
+          this.DeclareUninitialized(variable, statements);
         return true;
-      }
-      var val = this.LiftExpr(rhs);
-      this.EmitScalarAssign(node.Target, val, statements);
-      return true;
-    }
-
-    if (node is { Name: "aelemfastlex_store", Children: [var fastValOp, ..] }) {
-      var arr = this.LowerPadAvRead(node.Target);
-      var idx = new IrConst(IrType.I32, node.Private);
-      var val = this.LiftExpr(fastValOp);
-      if (arr.Type.IsList)
-        statements.Add(new IrExprStmt(new IrCollection(IrCollectionOp.ListSet, IrType.Void, [arr, idx, this.ToType(val, arr.Type.Element!)])));
-      else
-        statements.Add(new IrStore(arr, idx, this.ToType(val, arr.Type.Element!)));
-      return true;
-    }
-
-    if (node is { Name: "sassign", Children: [var valOp, var rawLhs] }) {
-      var lhsOp = rawLhs switch {
-        { Name: "null", Children: [var innerLhs] } => innerLhs,
-        { Name: "null", Children: [{ Name: "null", Children: [{ Name: "aelemfast" } fastLhs] }, { Name: "null", Children: [] }] } => fastLhs,
-        _ => rawLhs
-      };
-      // Check write to `$_[N]` -> PLY1730 (#436)
-      if (lhsOp.Name == "aelemfast" && lhsOp.Symbol == "_")
-        throw this.Fail(PerlFrontend.SubUnsupported, "writing to @_/argument aliasing");
-
-      // Check reassigning closure local -> PLY1732 (#436)
-      if (lhsOp is { Name: "padsv", Target: var t } && this._closureLocals.ContainsKey(t))
-        throw this.Fail(PerlFrontend.EscapingClosure, this.LexicalName(t), cause: "OBJ-CLOSURES");
-
-      // Assign to lexical `$x`
-      if (lhsOp is { Name: "padsv", Target: var slot }) {
-        var val = this.LiftExpr(valOp);
-        this.EmitScalarAssign(slot, val, statements);
+      case PerlDeclaration { Kind: PerlDeclarator.Our }:
         return true;
-      }
-
-      // Assign to `$_` (topic variable)
-      if (lhsOp is { Name: "gvsv", Symbol: "_" } && this._topicVar is not null) {
-        var val = this.LiftExpr(valOp);
-        statements.Add(new IrAssign(this._topicVar, this.ToType(val, this._topicVar.Type)));
-        return true;
-      }
-
-      // Assign to array/hash element (`multideref` / `aelem` / `helem`)
-      if (_indexedOps.Contains(lhsOp.Name)) {
-        this.LowerIndexedStore(lhsOp, this.LiftExpr(valOp), statements);
-        return true;
-      }
+      case PerlAssign { Operator: "=" } assign:
+        return this.LowerAssign(assign, statements);
+      case PerlAssign { Operator: ".=" } append:
+        return this.LowerAppend(append, statements);
+      case PerlAssign compound when _compoundOps.TryGetValue(compound.Operator, out var op):
+        return this.LowerCompoundAssign(compound, op, statements);
     }
-
-    // 2. Compound assignment (`$x += $y` where `OPf_STACKED` is set) or Perl's `OPpTARGET_MY` optimization (`$r = int(...)`, `$s1 = ... % 65521`)
-    if (IsNumericBinaryOp(node.Name) && (node.Flags & this._tree.Stacked) != 0 && node.Children.Length == 2) {
-      var targetOp = node.Children[0];
-      var val = this.LowerNumericBinary(node.Name, targetOp, node.Children[1]);
-      if (targetOp is { Name: "padsv", Target: var slot }) {
-        this.EmitScalarAssign(slot, val, statements);
-        return true;
-      }
-      if (targetOp.Name == "gvsv") {
-        statements.Add(new IrAssign(this._topicVar!, this.ToType(val, this._topicVar!.Type)));
-        return true;
-      }
-      if (_indexedOps.Contains(targetOp.Name)) {
-        this.LowerIndexedStore(targetOp, val, statements);
-        return true;
-      }
-    }
-    if ((node.Private & this._tree.TargetMy) != 0 && node.Target > 0 && this.LexicalSigil(node.Target) == '$' &&
-        !_assignOps.Contains(node.Name)) {
-      var val = this.LiftExpr(node);
-      this.EmitScalarAssign(node.Target, val, statements);
-      return true;
-    }
-
-    // 3. `my @a = (LIST);` / `my %h = (...);` (`aassign`)
-    if (node is { Name: "aassign", Children: [var rhsList, var lhsList] }) {
-      return this.LowerListAssign(rhsList, lhsList, statements);
-    }
-
-    // 4. Uninitialized `my $x;` / `my @a;` / `my %h;` (`padsv` / `padav` / `padhv` in void context)
-    if (node is { Name: "padsv", Target: var uSlot } && !this._variables.ContainsKey(uSlot)) {
-      var local = this.DeclareLocal(this.LexicalName(uSlot), IrType.Optional(IrType.I64), uSlot);
-      statements.Add(new IrDeclare(local, new IrNone(local.Type)));
-      return true;
-    }
-    if (node is { Name: "padav", Target: var aSlot } && !this._variables.ContainsKey(aSlot)) {
-      var local = this.DeclareLocal(this.LexicalName(aSlot), IrType.List(IrType.I64), aSlot);
-      statements.Add(new IrDeclare(local, new IrCollection(IrCollectionOp.ListNew, local.Type, [])));
-      return true;
-    }
-    if (node is { Name: "padhv", Target: var hSlot } && !this._variables.ContainsKey(hSlot)) {
-      var local = this.DeclareLocal(this.LexicalName(hSlot), IrType.Map(IrType.String, IrType.I64, MapOrder.Insertion), hSlot);
-      statements.Add(new IrDeclare(local, new IrCollection(IrCollectionOp.MapNew, local.Type, [])));
-      return true;
-    }
-
     return false;
   }
 
-  private void EmitScalarAssign(int slot, IrExpr val, List<IrStmt> statements) {
-    if (this._variables.TryGetValue(slot, out var existing)) {
+  private void DeclareUninitialized(PerlVariable variable, List<IrStmt> statements) {
+    if (this._variables.ContainsKey(variable.Lexical!))
+      return;
+    switch (variable.Sigil) {
+      case '$': {
+        var local = this.DeclareLocal(variable.Name, IrType.Optional(IrType.I64), variable.Lexical);
+        statements.Add(new IrDeclare(local, new IrNone(local.Type)));
+        break;
+      }
+      case '@': {
+        var local = this.DeclareLocal(variable.Name, IrType.List(IrType.I64), variable.Lexical);
+        statements.Add(new IrDeclare(local, new IrCollection(IrCollectionOp.ListNew, local.Type, [])));
+        break;
+      }
+      default: {
+        var local = this.DeclareLocal(variable.Name, IrType.Map(IrType.String, IrType.I64, MapOrder.Insertion), variable.Lexical);
+        statements.Add(new IrDeclare(local, new IrCollection(IrCollectionOp.MapNew, local.Type, [])));
+        break;
+      }
+    }
+  }
+
+  private bool LowerAssign(PerlAssign assign, List<IrStmt> statements) {
+    var target = assign.Target;
+    var value = assign.Value;
+
+    // `my $x = EXPR;`
+    if (target is PerlDeclaration { Parenthesized: false, Variables: [{ Sigil: '$', Lexical: { } slot } variable] } declaration) {
+      if (declaration.Kind == PerlDeclarator.Our)
+        throw this.Fail(PerlFrontend.MagicUnsupported, $"global scalar ${variable.Name}");
+      if (this._closureLocals.ContainsKey(slot))
+        throw this.Fail(PerlFrontend.EscapingClosure, variable.Name, cause: "OBJ-CLOSURES");
+      if (value is PerlAnonSub anon) {
+        var lambda = this.LowerClosureExpr(anon.Sub);
+        var local = this.DeclareLocal(variable.Name, lambda.Type, slot);
+        this._closureLocals[slot] = lambda;
+        statements.Add(new IrDeclare(local, lambda));
+        return true;
+      }
+      this.EmitScalarAssign(slot, variable.Name, this.LiftScalarValue(value), statements);
+      return true;
+    }
+
+    // `my @a = (...)`, `my %h = (...)`, `my ($x, $y) = (...)`, `($x, $y) = ...`, `@a = ...`, `%h = ...`
+    if (target is PerlDeclaration { Kind: PerlDeclarator.My or PerlDeclarator.State } listDeclaration)
+      return this.LowerListAssign(value, listDeclaration.Variables.Cast<PerlExpr>().ToList(), statements);
+    if (target is PerlList { Parenthesized: true } targetList)
+      return this.LowerListAssign(value, targetList.Items, statements);
+    if (target is PerlVariable { Sigil: '@' or '%', Lexical: not null } aggregate)
+      return this.LowerListAssign(value, [aggregate], statements);
+
+    // Write to `$_[N]` -> PLY1730 (#436)
+    if (target is PerlElement { Aggregate: PerlVariable { Sigil: '@', Name: "_" } })
+      throw this.Fail(PerlFrontend.SubUnsupported, "writing to @_/argument aliasing");
+
+    if (target is PerlVariable { Sigil: '$', Lexical: { Kind: not PerlDeclarator.Our } lexical } scalar) {
+      if (this._closureLocals.ContainsKey(lexical))
+        throw this.Fail(PerlFrontend.EscapingClosure, scalar.Name, cause: "OBJ-CLOSURES");
+      this.EmitScalarAssign(lexical, scalar.Name, this.LiftScalarValue(value), statements);
+      return true;
+    }
+
+    if (target is PerlVariable { Sigil: '$', Name: "_" } && this._topicVar is not null) {
+      var val = this.LiftScalarValue(value);
+      statements.Add(new IrAssign(this._topicVar, this.ToType(val, this._topicVar.Type)));
+      return true;
+    }
+
+    if (target is PerlElement element) {
+      this.LowerIndexedStore(element, this.LiftScalarValue(value), statements);
+      return true;
+    }
+    return false;
+  }
+
+  /// <summary>The value of the right side of a scalar assignment; an empty <c>[]</c> or <c>{}</c> is perl's empty anonymous aggregate.</summary>
+  private IrExpr LiftScalarValue(PerlExpr value) => this.LiftExpr(value, PerlWant.Scalar);
+
+  private bool LowerCompoundAssign(PerlAssign assign, string op, List<IrStmt> statements) {
+    var name = this.OpName(op);
+    var target = assign.Target;
+    var current = this.LiftExpr(target, PerlWant.Scalar);
+    var val = this.LowerNumericBinary(name, current, this.LiftExpr(assign.Value, PerlWant.Scalar));
+    return this.StoreBack(target, val, statements);
+  }
+
+  private bool LowerAppend(PerlAssign assign, List<IrStmt> statements) {
+    var current = this.LiftExpr(assign.Target, PerlWant.Scalar);
+    var parts = new List<IrExpr> { this.ToStringExpr(current) };
+    parts.AddRange(this.ConcatParts(assign.Value).Select(p => p is PerlString s ? (IrExpr)new IrStrConst(s.Value) : this.ToStringExpr(this.LiftExpr(p, PerlWant.Scalar))));
+    return this.StoreBack(assign.Target, new IrIntrinsic(IrIntrinsicOp.StrConcat, IrType.String, parts), statements);
+  }
+
+  private bool StoreBack(PerlExpr target, IrExpr val, List<IrStmt> statements) {
+    switch (target) {
+      case PerlVariable { Sigil: '$', Lexical: { Kind: not PerlDeclarator.Our } lexical } scalar:
+        this.EmitScalarAssign(lexical, scalar.Name, val, statements);
+        return true;
+      case PerlVariable { Sigil: '$', Name: "_" } when this._topicVar is not null:
+        statements.Add(new IrAssign(this._topicVar, this.ToType(val, this._topicVar.Type)));
+        return true;
+      case PerlElement element:
+        this.LowerIndexedStore(element, val, statements);
+        return true;
+    }
+    throw this.Fail(PerlFrontend.ScalarUnsupported, "compound assignment target");
+  }
+
+  private void EmitScalarAssign(PerlLexical slot, string name, IrExpr val, List<IrStmt> statements) {
+    if (this.TryLocal(slot, out var existing)) {
       statements.Add(new IrAssign(existing, this.ToType(val, existing.Type)));
       return;
     }
-    var local = this.DeclareLocal(this.LexicalName(slot), val.Type, slot);
+    var local = this.DeclareLocal(name, val.Type, slot);
     statements.Add(new IrDeclare(local, val));
   }
 
-  private bool LowerListAssign(PerlOp rhsList, PerlOp lhsList, List<IrStmt> statements) {
-    var rhsItems = StripMarks(UnwrapList(rhsList.Children));
-    var lhsItems = StripMarks(UnwrapList(lhsList.Children));
+  private static IReadOnlyList<PerlExpr> ListItems(PerlExpr value) => value switch {
+    PerlList list => list.Items,
+    PerlWords words => [.. words.Words.Select(w => new PerlString(w) { Line = value.Line })],
+    _ => [value]
+  };
 
-    // Single array target: `my @a = (1, 2, 3);`
-    if (lhsItems is [{ Name: "padav", Target: var arrSlot }]) {
-      var exprs = rhsItems.Select(this.LiftExpr).ToArray();
+  private bool LowerListAssign(PerlExpr rhsList, IReadOnlyList<PerlExpr> lhsItems, List<IrStmt> statements) {
+    var rhsItems = ListItems(rhsList);
+
+    // A single array target: `my @a = (1, 2, 3);`
+    if (lhsItems is [PerlVariable { Sigil: '@', Lexical: { } arrSlot } array]) {
+      var exprs = rhsItems.Select(e => this.LiftExpr(e, PerlWant.List)).ToArray();
       var elemType = exprs.Length > 0 ? exprs[0].Type : IrType.I64;
       var listType = IrType.List(elemType);
       var init = new IrCollection(IrCollectionOp.ListOf, listType, exprs.Select(e => this.ToType(e, elemType)).ToArray());
-      if (this._variables.TryGetValue(arrSlot, out var existing))
+      if (this.TryLocal(arrSlot, out var existing))
         statements.Add(new IrAssign(existing, init));
       else {
-        var local = this.DeclareLocal(this.LexicalName(arrSlot), listType, arrSlot);
+        var local = this.DeclareLocal(array.Name, listType, arrSlot);
         statements.Add(new IrDeclare(local, init));
       }
       return true;
     }
 
-    // Single hash target: `my %h = (a => 1, b => 2);`
-    if (lhsItems is [{ Name: "padhv", Target: var hashSlot }]) {
-      var pairs = rhsItems.Select(this.LiftExpr).ToArray();
+    // A single hash target: `my %h = (a => 1, b => 2);`
+    if (lhsItems is [PerlVariable { Sigil: '%', Lexical: { } hashSlot } hash]) {
+      var pairs = rhsItems.Select(e => this.LiftExpr(e, PerlWant.List)).ToArray();
       var valType = pairs.Length >= 2 ? pairs[1].Type : IrType.I64;
       var mapType = IrType.Map(IrType.String, valType, MapOrder.Insertion);
-      var local = this._variables.TryGetValue(hashSlot, out var ex)
-        ? ex
-        : this.DeclareLocal(this.LexicalName(hashSlot), mapType, hashSlot);
-      if (ex is null)
+      var existed = this.TryLocal(hashSlot, out var local);
+      if (!existed) {
+        local = this.DeclareLocal(hash.Name, mapType, hashSlot);
         statements.Add(new IrDeclare(local, new IrCollection(IrCollectionOp.MapNew, mapType, [])));
-      for (var i = 0; i + 1 < pairs.Length; i += 2) {
+      }
+      for (var i = 0; i + 1 < pairs.Length; i += 2)
         statements.Add(new IrExprStmt(new IrCollection(IrCollectionOp.MapPut, IrType.Void,
           [new IrLocalRef(local), pairs[i], this.ToType(pairs[i + 1], valType)])));
-      }
       return true;
     }
 
     // Parallel scalar assignment `my ($x, $y) = (E1, E2);`
-    if (lhsItems.All(l => l.Name == "padsv")) {
+    if (lhsItems.All(l => l is PerlVariable { Sigil: '$', Lexical: not null })) {
       var temps = new List<IrLocal>();
-      for (var i = 0; i < lhsItems.Length; ++i) {
-        var val = i < rhsItems.Length ? this.LiftExpr(rhsItems[i]) : new IrNone(IrType.Optional(IrType.I64));
+      for (var i = 0; i < lhsItems.Count; ++i) {
+        var val = i < rhsItems.Count ? this.LiftExpr(rhsItems[i], PerlWant.List) : new IrNone(IrType.Optional(IrType.I64));
         var t = this.TempLocal(val.Type, "_la");
         statements.Add(new IrDeclare(t, val));
         temps.Add(t);
       }
-      for (var i = 0; i < lhsItems.Length; ++i)
-        this.EmitScalarAssign(lhsItems[i].Target, new IrLocalRef(temps[i]), statements);
+      for (var i = 0; i < lhsItems.Count; ++i) {
+        var variable = (PerlVariable)lhsItems[i];
+        this.EmitScalarAssign(variable.Lexical!, variable.Name, new IrLocalRef(temps[i]), statements);
+      }
       return true;
     }
 
     return false;
   }
 
-  private IrExpr LowerScalarContext(PerlOp inner) {
-    var expr = this.LiftExpr(inner);
+  private IrExpr LowerScalarContext(PerlExpr inner) {
+    var expr = this.LiftExpr(inner, PerlWant.Scalar);
     if (expr.Type.IsList)
       return new IrCollection(IrCollectionOp.ListCount, IrType.I32, [expr]);
     if (expr.Type.IsArray)
@@ -205,77 +222,106 @@ internal sealed partial class PerlLowerer {
     return expr;
   }
 
-  private IrExpr LowerPadAvRead(int slot) {
-    if (!this._variables.TryGetValue(slot, out var local))
-      throw this.Fail(PerlFrontend.ArrayUnsupported, $"unknown array lexical slot {slot}");
+  private IrExpr LowerPadAvRead(PerlLexical lexical, string name) {
+    if (!this.TryLocal(lexical, out var local))
+      throw this.Fail(PerlFrontend.ArrayUnsupported, $"the array @{name} of an enclosing scope");
     return new IrLocalRef(local);
   }
 
-  private IrExpr LowerAnonList(PerlOp op) {
-    var items = StripMarks(op.Children).Select(this.LiftExpr).ToArray();
+  private IrExpr LowerAnonList(PerlAnonArray op) {
+    var items = op.Items.Select(e => this.LiftExpr(e, PerlWant.List)).ToArray();
     var elemType = items.Length > 0 ? items[0].Type : IrType.I64;
     var arrType = IrType.Array(elemType);
     return new IrIntrinsic(IrIntrinsicOp.ArrayOf, arrType, items.Select(e => this.ToType(e, elemType)).ToArray());
   }
 
-  private IrExpr LowerRefGen(PerlOp op) {
-    var kids = StripMarks(UnwrapList(op.Children));
-    if (kids is [{ Name: "gv" } or { Name: "rv2cv" }])
-      throw this.Fail(PerlFrontend.EscapingClosure, "\\&sub", cause: "OBJ-CLOSURES");
-    if (kids is [{ Name: "padav", Target: var aSlot }])
-      return this.LowerPadAvRead(aSlot);
-    if (kids is [{ Name: "padhv", Target: var hSlot }])
-      return this.LowerPadHvRead(hSlot);
-    if (kids is [{ Name: "padsv", Target: var sSlot }])
-      return this.LowerPadSvRead(sSlot);
-    throw this.Fail(PerlFrontend.ReferenceUnsupported, op.Name);
-  }
-
-  private IrExpr LowerScalarDeref(PerlOp op) {
-    var inner = op.Children.FirstOrDefault();
-    if (inner is { Name: "padsv", Target: var slot } && this._variables.TryGetValue(slot, out var local))
-      return new IrLocalRef(local);
-    throw this.Fail(PerlFrontend.ReferenceUnsupported, "symbolic or indirect scalar dereference");
-  }
-
-  private IrExpr LowerArrayDeref(PerlOp op) {
-    var inner = op.Children[0];
-    if (inner.Name == "padsv" && this._variables.TryGetValue(inner.Target, out var local)) {
-      if (op.Want == "scalar")
-        return local.Type.IsList
-          ? new IrCollection(IrCollectionOp.ListCount, IrType.I32, [new IrLocalRef(local)])
-          : new IrArrayLength(new IrLocalRef(local));
-      return new IrLocalRef(local);
+  private IrExpr LowerRefGen(PerlExpr operand) {
+    var inner = operand is PerlList { Parenthesized: true, Items: [var only] } ? only : operand;
+    switch (inner) {
+      case PerlCall { Ampersand: true, Arguments: null }:
+        throw this.Fail(PerlFrontend.EscapingClosure, "\\&sub", cause: "OBJ-CLOSURES");
+      case PerlVariable { Sigil: '@', Lexical: { } a } array:
+        return this.LowerPadAvRead(a, array.Name);
+      case PerlVariable { Sigil: '%', Lexical: { } h } hash:
+        return this.LowerPadHvRead(h, hash.Name);
+      case PerlVariable { Sigil: '$', Lexical: { } s }:
+        if (this.TryLocal(s, out var local))
+          return new IrLocalRef(local);
+        throw this.Fail(PerlFrontend.ScalarUnsupported, "reference to an undeclared scalar");
     }
-    if (inner.Name == "gv") {
-      if (inner.Symbol == "_")
-        throw this.Fail(PerlFrontend.SubUnsupported, "@_ outside parameter unpacking");
-      if (inner.Symbol is { } sym && _magicGlobals.Contains(sym))
-        throw this.Fail(PerlFrontend.MagicUnsupported, $"@{sym}");
-    }
-    throw this.Fail(PerlFrontend.ReferenceUnsupported, "array dereference");
+    throw this.Fail(PerlFrontend.ReferenceUnsupported, inner is PerlList ? "refgen" : "srefgen");
   }
 
-  private static PerlOp UnwrapArrayDeref(PerlOp op)
-    => op.Name == "rv2av" && op.Children.Length == 1 && op.Children[0].Name == "padsv" ? op.Children[0] : op;
+  private IrExpr LowerDeref(PerlDeref deref, PerlWant want) {
+    switch (deref.Sigil) {
+      case '$':
+        if (deref.Reference is PerlVariable { Sigil: '$', Lexical: { } lexical } && this.TryLocal(lexical, out var scalar))
+          return new IrLocalRef(scalar);
+        throw this.Fail(PerlFrontend.ReferenceUnsupported, "symbolic or indirect scalar dereference");
+      case '@':
+        if (deref.Reference is PerlVariable { Sigil: '$', Lexical: { } arrayRef } && this.TryLocal(arrayRef, out var local)) {
+          if (want == PerlWant.Scalar)
+            return local.Type.IsList
+              ? new IrCollection(IrCollectionOp.ListCount, IrType.I32, [new IrLocalRef(local)])
+              : new IrArrayLength(new IrLocalRef(local));
+          return new IrLocalRef(local);
+        }
+        throw this.Fail(PerlFrontend.ReferenceUnsupported, "array dereference");
+      case '%':
+        if (deref.Reference is PerlVariable { Sigil: '$', Lexical: { } hashRef } && this.TryLocal(hashRef, out var map))
+          return new IrLocalRef(map);
+        throw this.Fail(PerlFrontend.ReferenceUnsupported, "hash dereference");
+    }
+    throw this.Fail(PerlFrontend.ReferenceUnsupported, $"{deref.Sigil} dereference");
+  }
 
-  private IrExpr LowerLastIndex(PerlOp op) {
-    var arr = this.LiftExpr(UnwrapArrayDeref(op.Children[0]));
+  private IrExpr LowerLastIndex(PerlLastIndex op) {
+    var arr = op.Array is PerlDeref { Sigil: '@', Reference: PerlVariable { Sigil: '$' } reference }
+      ? this.LiftExpr(reference, PerlWant.Scalar)
+      : this.LiftExpr(op.Array, PerlWant.List);
     var len = arr.Type.IsList
       ? (IrExpr)new IrCollection(IrCollectionOp.ListCount, IrType.I32, [arr])
       : new IrArrayLength(arr);
     return new IrBinary(IrBinaryOp.Subtract, len, new IrConst(IrType.I32, 1));
   }
 
-  private IrExpr LowerArrayElemRead(PerlOp op) {
-    if (op.Name == "aelemfast_lex")
-      return this.BuildIndexedRead(this.LowerPadAvRead(op.Target), new IrConst(IrType.I32, op.Private));
-    if (op.Name == "aelemfast" && op.Symbol == "_")
-      return new IrLocalRef(this._argParams[op.Private]);
-    var arr = this.LiftExpr(UnwrapArrayDeref(op.Children[0]));
-    var idx = this.ToType(this.LiftExpr(op.Children[1]), IrType.I32);
-    return this.BuildIndexedRead(arr, idx);
+  // ---- elements ----
+
+  /// <summary>The aggregate an element reads: a lexical array or hash, or the reference a subscript chain or an expression gives.</summary>
+  private IrExpr LowerAggregate(PerlExpr aggregate) {
+    switch (aggregate) {
+      case PerlVariable { Sigil: '@', Lexical: { Kind: not PerlDeclarator.Our } a } array:
+        return this.LowerPadAvRead(a, array.Name);
+      case PerlVariable { Sigil: '%', Lexical: { Kind: not PerlDeclarator.Our } h } hash:
+        return this.LowerPadHvRead(h, hash.Name);
+      case PerlVariable { Sigil: '%' or '@' } global:
+        if (_magicGlobals.Contains(ShortName(global.Name)))
+          throw this.Fail(PerlFrontend.MagicUnsupported, $"%{ShortName(global.Name)}/@{ShortName(global.Name)}");
+        if (global is { Sigil: '@', Name: "_" })
+          throw this.Fail(PerlFrontend.SubUnsupported, "@_ outside parameter unpacking");
+        throw this.Fail(PerlFrontend.ReferenceUnsupported, "multideref target");
+      case PerlDeref { Sigil: '@' or '%', Reference: var reference }:
+        return this.LiftExpr(reference, PerlWant.Scalar);
+    }
+    throw this.Fail(PerlFrontend.ReferenceUnsupported, "multideref target");
   }
+
+  private IrExpr LowerElementRead(PerlElement element) {
+    if (this.TryLowerInsideOutRead(element, out var insideOut))
+      return insideOut;
+    if (element is { Hash: false, Aggregate: PerlVariable { Sigil: '@', Name: "_", Lexical: null }, Index: PerlNumber { Value.IsIntegral: true } argIndex }
+        && argIndex.Value.Integer >= 0 && argIndex.Value.Integer < this._argParams.Count)
+      return new IrLocalRef(this._argParams[(int)argIndex.Value.Integer]);
+    var current = this.LowerAggregate(element.Aggregate);
+    if (!element.Hash) {
+      var idx = this.ToType(this.LiftExpr(element.Index, PerlWant.Scalar), IrType.I32);
+      return this.BuildIndexedRead(current, idx);
+    }
+    return this.BuildHashRead(current, element.Index, IsSimpleKey(element.Index));
+  }
+
+  /// <summary>Whether perl reads a key without evaluating an expression (a constant or a plain scalar), which its multideref op does.</summary>
+  private static bool IsSimpleKey(PerlExpr key) => key is PerlString or PerlNumber or PerlVariable { Sigil: '$' };
 
   private IrExpr BuildIndexedRead(IrExpr arr, IrExpr idx) {
     if (arr.Type.IsList) {
@@ -293,147 +339,57 @@ internal sealed partial class PerlLowerer {
     throw this.Fail(PerlFrontend.ArrayUnsupported, $"indexing {arr.Type}");
   }
 
-  private IrExpr LowerMultiDerefRead(PerlOp op) {
-    if (this.TryLowerInsideOutRead(op, out var insideOut))
-      return insideOut;
-
-    var exprIdx = 0;
-    var exprKids = op.Children.Where(c => c.Name != "null" || c.Children.Length > 0).ToArray();
-    IrExpr? current = null;
-
-    foreach (var step in op.Deref!) {
-      if (step.Source is "padsv" or "padav" or "padhv")
-        current = this.LowerPadSvRead(step.Target);
-      else if (step.Source == "pop" && exprIdx < exprKids.Length)
-        current = this.LiftExpr(exprKids[exprIdx++]);
-      else if (step.Source == "gv" && step.Symbol is { } gsym && _magicGlobals.Contains(gsym))
-        throw this.Fail(PerlFrontend.MagicUnsupported, $"%{gsym}/@{gsym}");
-
-      if (current is null)
-        throw this.Fail(PerlFrontend.ReferenceUnsupported, "multideref target");
-
-      if (step.Kind == "array") {
-        var idx = this.ResolveDerefIndex(step, exprKids, ref exprIdx, wantInt: true);
-        current = this.BuildIndexedRead(current, this.ToType(idx, IrType.I32));
-      } else if (step.Kind == "hash") {
-        current = this.BuildHashRead(current, step, exprKids, ref exprIdx);
-      }
-    }
-
-    return current!;
-  }
-
-  private void LowerIndexedStore(PerlOp lhsOp, IrExpr value, List<IrStmt> statements) {
-    if (this.TryLowerInsideOutStore(lhsOp, value, statements))
+  private void LowerIndexedStore(PerlElement element, IrExpr value, List<IrStmt> statements) {
+    if (this.TryLowerInsideOutStore(element, value, statements))
       return;
-
-    if (lhsOp is { Name: "multideref", Deref: { Length: > 0 } steps }) {
-      var exprIdx = 0;
-      var exprKids = lhsOp.Children.Where(c => c.Name != "null").ToArray();
-      IrExpr? current = null;
-      for (var i = 0; i < steps.Length; ++i) {
-        var step = steps[i];
-        if (step.Source is "padsv" or "padav" or "padhv")
-          current = this.LowerPadSvRead(step.Target);
-        if (current is null)
-          throw this.Fail(PerlFrontend.ReferenceUnsupported, "multideref store target");
-
-        var isLast = i == steps.Length - 1;
-        if (step.Kind == "array") {
-          var idx = this.ToType(this.ResolveDerefIndex(step, exprKids, ref exprIdx, wantInt: true), IrType.I32);
-          if (!isLast) {
-            current = this.BuildIndexedRead(current, idx);
-          } else if (current.Type.IsList) {
-            statements.Add(new IrExprStmt(new IrCollection(IrCollectionOp.ListSet, IrType.Void, [current, idx, this.ToType(value, current.Type.Element!)])));
-          } else {
-            statements.Add(new IrStore(current, idx, this.ToType(value, current.Type.Element!)));
-          }
-        } else {
-          if (!isLast) {
-            current = this.BuildHashRead(current, step, exprKids, ref exprIdx);
-          } else {
-            this.EmitHashStore(current, step, exprKids, ref exprIdx, value, statements);
-          }
-        }
-      }
-      return;
-    }
-
-    if (lhsOp.Name is "aelem" or "aelemfast") {
-      var arr = this.LiftExpr(UnwrapArrayDeref(lhsOp.Children[0]));
-      var idx = this.ToType(this.LiftExpr(lhsOp.Children[1]), IrType.I32);
-      if (arr.Type.IsList)
-        statements.Add(new IrExprStmt(new IrCollection(IrCollectionOp.ListSet, IrType.Void, [arr, idx, this.ToType(value, arr.Type.Element!)])));
+    var current = this.LowerAggregate(element.Aggregate);
+    if (!element.Hash) {
+      var idx = this.ToType(this.LiftExpr(element.Index, PerlWant.Scalar), IrType.I32);
+      if (current.Type.IsList)
+        statements.Add(new IrExprStmt(new IrCollection(IrCollectionOp.ListSet, IrType.Void, [current, idx, this.ToType(value, current.Type.Element!)])));
+      else if (current.Type.IsArray)
+        statements.Add(new IrStore(current, idx, this.ToType(value, current.Type.Element!)));
       else
-        statements.Add(new IrStore(arr, idx, this.ToType(value, arr.Type.Element!)));
+        throw this.Fail(PerlFrontend.ArrayUnsupported, $"indexing {current.Type}");
       return;
     }
-
-    var hash = this.LiftExpr(lhsOp.Children[0]);
-    var key = this.LiftExpr(lhsOp.Children[1]);
-    this.EmitDirectHashStore(hash, key, value, statements);
+    this.EmitHashStore(current, element.Index, value, statements);
   }
 
-  private IrExpr ResolveDerefIndex(PerlDerefStep step, PerlOp[] exprKids, ref int exprIdx, bool wantInt) {
-    if (step.IndexKind == "const") {
-      if (wantInt && long.TryParse(step.IndexValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var iv))
-        return new IrConst(IrType.I32, iv);
-      return new IrStrConst(step.IndexValue ?? "");
-    }
-    if (step.IndexKind == "padsv")
-      return this.LowerPadSvRead(step.IndexTarget);
-    if (step.IndexKind == "gvsv")
-      return this.LowerGlobalScalarRead(step.IndexSymbol);
-    return this.LiftExpr(exprKids[exprIdx++]);
-  }
-
-  private IrExpr LowerListMutation(PerlOp op) {
-    var kids = StripMarks(op.Children);
-    if (kids.Length == 0)
+  private IrExpr LowerListMutation(PerlCall op) {
+    var kids = op.Arguments ?? [];
+    if (kids.Count == 0)
       throw this.Fail(PerlFrontend.ArrayUnsupported, op.Name);
-    var target = this.LiftExpr(kids[0]);
+    var target = this.LiftExpr(kids[0], PerlWant.List);
     if (!target.Type.IsList)
       throw this.Fail(PerlFrontend.ArrayUnsupported, $"{op.Name} on non-list {target.Type}");
 
     var elemType = target.Type.Element!;
-    if (op.Name == "push" && kids.Length >= 2)
-      return new IrCollection(IrCollectionOp.ListAdd, IrType.Void, [target, this.ToType(this.LiftExpr(kids[1]), elemType)]);
+    if (op.Name == "push" && kids.Count >= 2)
+      return new IrCollection(IrCollectionOp.ListAdd, IrType.Void, [target, this.ToType(this.LiftExpr(kids[1], PerlWant.List), elemType)]);
     if (op.Name == "pop")
       return new IrCollection(IrCollectionOp.ListRemoveLast, IrCollections.Absent(elemType)!, [target]);
-    if (op.Name == "unshift" && kids.Length >= 2)
-      return new IrCollection(IrCollectionOp.ListInsert, IrType.Void, [target, new IrConst(IrType.I32, 0), this.ToType(this.LiftExpr(kids[1]), elemType)]);
+    if (op.Name == "unshift" && kids.Count >= 2)
+      return new IrCollection(IrCollectionOp.ListInsert, IrType.Void, [target, new IrConst(IrType.I32, 0), this.ToType(this.LiftExpr(kids[1], PerlWant.List), elemType)]);
     if (op.Name == "shift")
       return new IrCollection(IrCollectionOp.ListRemoveAt, IrType.Void, [target, new IrConst(IrType.I32, 0)]);
 
     throw this.Fail(PerlFrontend.ArrayUnsupported, op.Name);
   }
 
-  private IrExpr LowerReverse(PerlOp op) {
-    if (op.Want == "scalar")
-      throw this.Fail(PerlFrontend.ArrayUnsupported, "reverse in scalar context");
-    throw this.Fail(PerlFrontend.ArrayUnsupported, "reverse");
-  }
-
-  private IrExpr LowerSort(PerlOp op) {
-    // Allow `sort keys %h` (#439), refuse plain string sort `sort @a` (#437 -> PLY1720).
-    if (op.Children.Any(c => c.Name == "keys"))
-      return this.LiftExpr(op.Children.First(c => c.Name == "keys"));
-    throw this.Fail(PerlFrontend.ArrayUnsupported, "sort without supported comparator");
-  }
-
-  private IrExpr LowerJoin(PerlOp op) {
-    var kids = StripMarks(op.Children);
-    if (kids.Length >= 2) {
-      var sep = this.LiftExpr(kids[0]);
+  private IrExpr LowerJoin(PerlCall op) {
+    var kids = op.Arguments ?? [];
+    if (kids.Count >= 2) {
+      var sep = this.LiftExpr(kids[0], PerlWant.Scalar);
       if (sep.Type == IrType.String) {
-        if (kids.Length == 2) {
-          var arr = this.LiftExpr(kids[1]);
+        if (kids.Count == 2) {
+          var arr = this.LiftExpr(kids[1], PerlWant.List);
           if (arr.Type == IrType.Array(IrType.String))
             return new IrIntrinsic(IrIntrinsicOp.StrJoin, IrType.String, [sep, arr]);
           if (arr.Type == IrType.List(IrType.String))
             return new IrIntrinsic(IrIntrinsicOp.StrJoin, IrType.String, [sep, new IrCollection(IrCollectionOp.ListCopyToArray, IrType.Array(IrType.String), [arr])]);
         }
-        var elems = kids[1..].Select(k => this.ToStringExpr(this.LiftExpr(k))).ToArray();
+        var elems = kids.Skip(1).Select(k => this.ToStringExpr(this.LiftExpr(k, PerlWant.List))).ToArray();
         var arrExpr = new IrIntrinsic(IrIntrinsicOp.ArrayOf, IrType.Array(IrType.String), elems);
         return new IrIntrinsic(IrIntrinsicOp.StrJoin, IrType.String, [sep, arrExpr]);
       }
@@ -441,8 +397,8 @@ internal sealed partial class PerlLowerer {
     throw this.Fail(PerlFrontend.ArrayUnsupported, "join");
   }
 
-  private IrExpr LowerLength(PerlOp op) {
-    var arg = this.LiftExpr(op.Children[0]);
+  private IrExpr LowerLength(PerlCall op) {
+    var arg = this.LiftExpr(op.Arguments![0], PerlWant.Scalar);
     if (arg.Type == IrType.String)
       return new IrIntrinsic(IrIntrinsicOp.StrLength, IrType.I32, [arg]);
     if (arg.Type.IsArray)
@@ -450,26 +406,48 @@ internal sealed partial class PerlLowerer {
     throw this.Fail(PerlFrontend.StringUnsupported, $"length on {arg.Type}");
   }
 
-  private IrExpr LowerConcat(PerlOp op) {
-    if (op.Name == "concat")
-      return new IrIntrinsic(IrIntrinsicOp.StrConcat, IrType.String, [this.ToStringExpr(this.LiftExpr(op.Children[0])), this.ToStringExpr(this.LiftExpr(op.Children[1]))]);
+  // ---- strings ----
 
-    var spec = op.Concat!;
-    var dynArgs = op.Children.Where(c => c.Name != "null").Select(this.LiftExpr).ToArray();
-    var parts = new List<IrExpr>();
-    var pos = 0;
-    var argIdx = 0;
-    foreach (var len in spec.Lengths) {
-      if (len > 0 && pos + len <= spec.Template.Length) {
-        parts.Add(new IrStrConst(spec.Template.Substring(pos, len)));
-        pos += len;
+  /// <summary>The parts a chain of <c>.</c> and interpolations concatenates, as perl's multiconcat op takes them: constants merged.</summary>
+  private List<PerlExpr> ConcatParts(PerlExpr expression) {
+    var parts = new List<PerlExpr>();
+    void Add(PerlExpr e) {
+      switch (e) {
+        case PerlBinary { Operator: "." } concat when this.Fold(concat) is null:
+          Add(concat.Left);
+          AddOperand(concat.Right);
+          return;
+        case PerlInterpolation interpolation:
+          foreach (var part in interpolation.Parts)
+            AddOperand(part);
+          return;
       }
-      if (argIdx < dynArgs.Length)
-        parts.Add(this.ToStringExpr(dynArgs[argIdx++]));
+      AddOperand(e);
     }
-    if (pos < spec.Template.Length)
-      parts.Add(new IrStrConst(spec.Template[pos..]));
-    return parts.Count == 1 ? parts[0] : new IrIntrinsic(IrIntrinsicOp.StrConcat, IrType.String, parts);
+    void AddOperand(PerlExpr e) {
+      if (e is PerlInterpolation nested) {
+        foreach (var part in nested.Parts)
+          AddOperand(part);
+        return;
+      }
+      var folded = this.Fold(e);
+      if (folded is not null && (folded.Text is not null || folded.Number is not null)) {
+        var text = folded.AsString();
+        if (parts.Count > 0 && parts[^1] is PerlString previous)
+          parts[^1] = new PerlString(previous.Value + text) { Line = previous.Line };
+        else
+          parts.Add(new PerlString(text) { Line = e.Line });
+        return;
+      }
+      parts.Add(e);
+    }
+    Add(expression);
+    return parts;
+  }
+
+  private IrExpr LowerConcatParts(List<PerlExpr> parts) {
+    var lowered = parts.Select(p => p is PerlString s ? this.LowerString(s.Value) : this.ToStringExpr(this.LiftExpr(p, PerlWant.Scalar))).ToList();
+    return lowered.Count == 1 ? lowered[0] : new IrIntrinsic(IrIntrinsicOp.StrConcat, IrType.String, lowered);
   }
 
   private IrExpr ToStringExpr(IrExpr expr)
@@ -477,53 +455,47 @@ internal sealed partial class PerlLowerer {
       : expr.Type.IsNumeric ? new IrIntrinsic(IrIntrinsicOp.FormatDotNet, IrType.String, [expr])
       : throw this.Fail(PerlFrontend.StringUnsupported, $"string conversion of {expr.Type}");
 
-  private IrExpr LowerRepeat(PerlOp op) {
-    var s = this.LiftExpr(op.Children[0]);
-    var n = this.ToType(this.LiftExpr(op.Children[1]), IrType.I32);
+  private IrExpr LowerRepeat(PerlBinary op) {
+    if (op.Left is PerlList { Parenthesized: true } || op.Left is PerlWords)
+      throw this.Fail(PerlFrontend.ArrayUnsupported, "repeat");
+    var s = this.LiftExpr(op.Left, PerlWant.Scalar);
+    var n = this.ToType(this.LiftExpr(op.Right, PerlWant.Scalar), IrType.I32);
     if (s.Type == IrType.String)
       return new IrIntrinsic(IrIntrinsicOp.StrRepeat, IrType.String, [s, n]);
     throw this.Fail(PerlFrontend.ArrayUnsupported, "repeat");
   }
 
-  private IrExpr LowerSubstr(PerlOp op) {
-    var kids = StripMarks(op.Children);
-    if (op.Name == "substr_left" && kids.Length == 2) {
-      var s = this.LiftExpr(kids[0]);
-      if (s.Type == IrType.String)
-        return new IrIntrinsic(IrIntrinsicOp.StrSubstring, IrType.String, [s, new IrConst(IrType.I32, 0), this.ToType(this.LiftExpr(kids[1]), IrType.I32)]);
-    }
-    if (kids.Length >= 4)
+  private IrExpr LowerSubstr(PerlCall op) {
+    var kids = op.Arguments ?? [];
+    if (kids.Count >= 4)
       throw this.Fail(PerlFrontend.StringUnsupported, "4-argument substr");
-    var str = this.LiftExpr(kids[0]);
-    var off = this.ToType(this.LiftExpr(kids[1]), IrType.I32);
+    if (kids.Count == 3 && IsIntConst(kids[1], 0)) {
+      var s = this.LiftExpr(kids[0], PerlWant.Scalar);
+      if (s.Type == IrType.String)
+        return new IrIntrinsic(IrIntrinsicOp.StrSubstring, IrType.String, [s, new IrConst(IrType.I32, 0), this.ToType(this.LiftExpr(kids[2], PerlWant.Scalar), IrType.I32)]);
+    }
+    var str = this.LiftExpr(kids[0], PerlWant.Scalar);
+    var off = this.ToType(this.LiftExpr(kids[1], PerlWant.Scalar), IrType.I32);
     if (str.Type == IrType.String) {
-      return kids.Length == 2
+      return kids.Count == 2
         ? new IrIntrinsic(IrIntrinsicOp.StrSubstring, IrType.String, [str, off])
-        : new IrIntrinsic(IrIntrinsicOp.StrSubstring, IrType.String, [str, off, this.ToType(this.LiftExpr(kids[2]), IrType.I32)]);
+        : new IrIntrinsic(IrIntrinsicOp.StrSubstring, IrType.String, [str, off, this.ToType(this.LiftExpr(kids[2], PerlWant.Scalar), IrType.I32)]);
     }
     throw this.Fail(PerlFrontend.StringUnsupported, "substr");
   }
 
-  private IrExpr LowerOrd(PerlOp op) {
+  private IrExpr LowerOrd(PerlCall op) {
     // Fast path: `ord(substr($bytes, $i, 1))` on a `u8[]` byte buffer (#437).
-    var argOp = op.Children[0];
-    if (argOp.Name == "null")
-      argOp = argOp.Children[0];
-    if (argOp.Name is "substr" or "substr_left") {
-      var skids = StripMarks(argOp.Children);
-      if (argOp.Name == "substr_left" && skids.Length == 2 && IsIntConst(skids[1], "1")) {
-        var buf = this.LiftExpr(skids[0]);
+    var argOp = op.Arguments![0];
+    if (argOp is PerlCall { Builtin: true, Name: "substr", Arguments: var skids }) {
+      if (skids is [var buffer, var start, var length] && IsIntConst(length, 1)) {
+        var buf = this.LiftExpr(buffer, PerlWant.Scalar);
         if (buf.Type == IrType.Array(IrType.U8))
-          return new IrConvert(IrType.I32, new IrArrayLoad(buf, new IrConst(IrType.I32, 0)));
-      }
-      if (skids.Length == 3 && IsIntConst(skids[2], "1")) {
-        var buf = this.LiftExpr(skids[0]);
-        if (buf.Type == IrType.Array(IrType.U8))
-          return new IrConvert(IrType.I32, new IrArrayLoad(buf, this.ToType(this.LiftExpr(skids[1]), IrType.I32)));
+          return new IrConvert(IrType.I32, new IrArrayLoad(buf, IsIntConst(start, 0) ? new IrConst(IrType.I32, 0) : this.ToType(this.LiftExpr(start, PerlWant.Scalar), IrType.I32)));
       }
     }
 
-    var s = this.LiftExpr(op.Children[0]);
+    var s = this.LiftExpr(argOp, PerlWant.Scalar);
     if (s.Type == IrType.String) {
       var len = new IrIntrinsic(IrIntrinsicOp.StrLength, IrType.I32, [s]);
       return new IrConditional(new IrBinary(IrBinaryOp.Equal, len, new IrConst(IrType.I32, 0)),
@@ -533,16 +505,16 @@ internal sealed partial class PerlLowerer {
     throw this.Fail(PerlFrontend.StringUnsupported, "ord");
   }
 
-  private IrExpr LowerChr(PerlOp op) {
-    var n = this.ToType(this.LiftExpr(op.Children[0]), IrType.U16);
+  private IrExpr LowerChr(PerlCall op) {
+    var n = this.ToType(this.LiftExpr(op.Arguments![0], PerlWant.Scalar), IrType.U16);
     return new IrIntrinsic(IrIntrinsicOp.StrFromCodeUnit, IrType.String, [n]);
   }
 
-  private IrExpr LowerVec(PerlOp op) {
-    var kids = StripMarks(op.Children);
-    if (kids.Length == 3 && IsIntConst(kids[2], "8")) {
-      var buf = this.LiftExpr(kids[0]);
-      var idx = this.ToType(this.LiftExpr(kids[1]), IrType.I32);
+  private IrExpr LowerVec(PerlCall op) {
+    var kids = op.Arguments ?? [];
+    if (kids.Count == 3 && IsIntConst(kids[2], 8)) {
+      var buf = this.LiftExpr(kids[0], PerlWant.Scalar);
+      var idx = this.ToType(this.LiftExpr(kids[1], PerlWant.Scalar), IrType.I32);
       if (buf.Type == IrType.Array(IrType.U8))
         return new IrArrayLoad(buf, idx);
       if (buf.Type == IrType.String)
@@ -551,16 +523,18 @@ internal sealed partial class PerlLowerer {
     throw this.Fail(PerlFrontend.StringUnsupported, "vec");
   }
 
-  private IrExpr LowerUnpack(PerlOp op) {
-    var kids = StripMarks(op.Children);
-    if (kids.Length < 2 || kids[0] is not { Name: "const", Constant: { Kind: "string", Value: var tmpl } })
+  private string? ConstantTemplate(PerlExpr expression) => this.Fold(expression)?.Text;
+
+  private IrExpr LowerUnpack(PerlCall op) {
+    var kids = op.Arguments ?? [];
+    if (kids.Count < 2 || this.ConstantTemplate(kids[0]) is not { } tmpl)
       throw this.Fail(PerlFrontend.PackTemplateUnsupported, "<dynamic>", "template must be a constant string");
 
     var items = PerlPackTemplate.Parse(tmpl, out var error);
     if (error is not null)
       throw this.Fail(PerlFrontend.PackTemplateUnsupported, tmpl, error);
 
-    var buf = this.LiftExpr(kids[1]);
+    var buf = this.LiftExpr(kids[1], PerlWant.Scalar);
     var first = items[0];
     if (first.Type == IrType.U8 && first.Count == -1 && buf.Type == IrType.Array(IrType.U8))
       return buf;
@@ -575,25 +549,25 @@ internal sealed partial class PerlLowerer {
     throw this.Fail(PerlFrontend.PackTemplateUnsupported, tmpl, "unsupported buffer type or multi-field unpack");
   }
 
-  private IrExpr LowerPack(PerlOp op) {
-    var kids = StripMarks(op.Children);
-    if (kids.Length < 1 || kids[0] is not { Name: "const", Constant: { Kind: "string", Value: var tmpl } })
+  private IrExpr LowerPack(PerlCall op) {
+    var kids = op.Arguments ?? [];
+    if (kids.Count < 1 || this.ConstantTemplate(kids[0]) is not { } tmpl)
       throw this.Fail(PerlFrontend.PackTemplateUnsupported, "<dynamic>", "template must be a constant string");
 
     var items = PerlPackTemplate.Parse(tmpl, out var error);
     if (error is not null)
       throw this.Fail(PerlFrontend.PackTemplateUnsupported, tmpl, error);
 
-    if (items is [{ Type.Kind: IrTypeKind.U8, Count: 1 }] && kids.Length == 2) {
-      var b = this.ToType(this.LiftExpr(kids[1]), IrType.U8);
+    if (items is [{ Type.Kind: IrTypeKind.U8, Count: 1 }] && kids.Count == 2) {
+      var b = this.ToType(this.LiftExpr(kids[1], PerlWant.List), IrType.U8);
       return new IrIntrinsic(IrIntrinsicOp.ArrayOf, IrType.Array(IrType.U8), [b]);
     }
     throw this.Fail(PerlFrontend.PackTemplateUnsupported, tmpl, "unsupported pack form");
   }
 
-  private IrExpr LowerStringCompare(string name, PerlOp leftOp, PerlOp rightOp) {
-    var l = this.ToStringExpr(this.LiftExpr(leftOp));
-    var r = this.ToStringExpr(this.LiftExpr(rightOp));
+  private IrExpr LowerStringCompare(string name, PerlExpr leftOp, PerlExpr rightOp) {
+    var l = this.ToStringExpr(this.LiftExpr(leftOp, PerlWant.Scalar));
+    var r = this.ToStringExpr(this.LiftExpr(rightOp, PerlWant.Scalar));
     if (name == "seq") return new IrIntrinsic(IrIntrinsicOp.StrEquals, IrType.Bool, [l, r]);
     if (name == "sne") return new IrUnary(IrUnaryOp.LogicalNot, new IrIntrinsic(IrIntrinsicOp.StrEquals, IrType.Bool, [l, r]));
     var cmp = new IrIntrinsic(IrIntrinsicOp.StrCompareOrdinal, IrType.I32, [l, r]);

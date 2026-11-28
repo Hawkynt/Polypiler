@@ -1,14 +1,11 @@
-using System;
-using System.IO;
 using System.Linq;
-using System.Text;
 using NUnit.Framework;
 using Polypiler.Core.Frontends.Perl;
 using Polypiler.Core.IR;
 
 namespace Polypiler.Tests.Frontends.Perl;
 
-/// <summary>Tests for the Perl scalar frontend (#438), op-tree helper errors and wire-format handling.</summary>
+/// <summary>Tests for the Perl scalar frontend (#438) and the diagnostics of the parser it runs first (#1561).</summary>
 [TestFixture]
 public sealed class PerlScalarFrontendTests {
 
@@ -69,26 +66,23 @@ public sealed class PerlScalarFrontendTests {
   }
 
   [Test]
-  public void BrokenDump_SyntaxError_AndMissingInterpreter_ReportPLY1700() {
-    var badJson = PerlFrontend.ImportDump("bad.pl", Encoding.UTF8.GetBytes("not json"));
-    Assert.That(badJson.Module, Is.Null);
-    Assert.That(badJson.Diagnostics.Select(d => d.Code), Is.EqualTo(new[] { "PLY1700" }));
-
-    var wrongWire = PerlFrontend.ImportDump("bad.pl", Encoding.UTF8.GetBytes("{\"wire\": 99}"));
-    Assert.That(wrongWire.Module, Is.Null);
-    Assert.That(wrongWire.Diagnostics.Select(d => d.Code), Is.EqualTo(new[] { "PLY1700" }));
-
+  public void SyntaxErrors_ArePLY1700_AndConstructsOutsideTheParser_ArePLY1701() {
     var syntaxErr = PerlFrontend.Import("bad.pl", "sub f { my $x = ; }");
     Assert.That(syntaxErr.Module, Is.Null);
-    Assert.That(syntaxErr.Diagnostics.Select(d => d.Code), Has.Some.EqualTo("PLY1700"));
+    Assert.That(syntaxErr.Diagnostics.Select(d => d.Code), Is.EqualTo(new[] { "PLY1700" }));
+    Assert.That(syntaxErr.Diagnostics[0].Message, Does.StartWith("Perl syntax error: "));
 
-    var missing = Path.Combine(Path.GetTempPath(), "no-such-perl-" + Guid.NewGuid().ToString("N"));
-    var noPerl = PerlFrontend.Import("f.pl", "sub f { return 1; }", new PerlImportOptions { Interpreter = missing });
-    Assert.That(noPerl.Module, Is.Null);
-    Assert.That(noPerl.Diagnostics.Select(d => d.Code), Has.Some.EqualTo("PLY1700"));
+    var unterminated = PerlFrontend.Import("bad.pl", "sub f {\n  return 'x;\n}\n");
+    Assert.That(unterminated.Diagnostics.Select(d => d.Code), Is.EqualTo(new[] { "PLY1700" }));
+    Assert.That(unterminated.Diagnostics[0].Line, Is.EqualTo(2));
 
-    Assert.That(PerlFrontend.ParserPath, Is.EqualTo("B/PolypilerDump.pm"));
-    Assert.That(PerlFrontend.ParserSource().Length, Is.GreaterThan(100));
+    var filter = PerlFrontend.Import("f.pl", "use Filter::Simple;\nsub f { return 1; }");
+    Assert.That(filter.Module, Is.Null);
+    Assert.That(filter.Diagnostics.Select(d => d.Code), Is.EqualTo(new[] { "PLY1701" }));
+    Assert.That(filter.Diagnostics[0].Message, Does.Contain("Filter::Simple"));
+
+    var format = PerlFrontend.Import("f.pl", "format STDOUT =\n.\nsub f { return 1; }");
+    Assert.That(format.Diagnostics.Select(d => d.Code), Is.EqualTo(new[] { "PLY1701" }));
   }
 
   [Test]
