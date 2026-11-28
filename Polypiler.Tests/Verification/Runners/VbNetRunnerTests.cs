@@ -119,6 +119,15 @@ public sealed class VbNetRunnerTests {
     Assert.That(execution.Diagnostics, Is.EqualTo(new[] { timeout }));
   }
 
+  /// <summary>The driver compiles warning-free beside a generated module, with the options of its project.</summary>
+  [Test]
+  public void Driver_CompilesBesideAGeneratedModule() {
+    var module = Backends.VisualBasic.VbNetFixtures.Translate(Polypiler.Prototype.Testing.PrototypeFixture.Imported("Statements")).Source!;
+    var driver = VbNetRunner.Driver([new("Sign(-5)"), new(["Dim a As Integer() = New Integer() {1, 2}"], "Clamp(a(0), 0, 10)"), new("Factorial(13)")]);
+    var assembly = Backends.VisualBasic.VbNetFixtures.Load(module + "\n" + driver.Replace("Option Strict On\nOption Explicit On\n", "", StringComparison.Ordinal));
+    Assert.That(assembly.GetType("PlyDriver"), Is.Not.Null);
+  }
+
   [Test]
   public void Execute_RefusesNullArguments() {
     var runner = new VbNetRunner(new Fake(_ => Result(RunOutcome.Completed, "")));
