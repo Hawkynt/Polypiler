@@ -1,0 +1,188 @@
+# The spike grammar of ADR 1000 (docs/adr/evidence/1000/go.pgram) in pegen's format, over the Go
+# frontend's scanner: the generator's test of a whole language. Only the memo flags moved behind the
+# rule names, where pegen writes them, the metas below were added, and the two rules whose one item
+# is optional return Dummy: in pegen's format an alternative of one optional item that is absent fails.
+@class GoSpikeParser
+@namespace "Polypiler.Tests.Syntax.Go"
+@using "Polypiler.Core.Frontends.Go.Syntax"
+@token_type GoSpikeToken
+@token_kind GoTokenKind
+@start SourceFile
+@hooks "nolit lit"
+@state "nolit lit"
+@unexplained "expected {token}"
+@tokens """
+EOF Eof
+IDENT Ident
+INT Int
+FLOAT Float
+IMAG Imag
+CHAR Char
+STRING String
+"""
+@literals """
++ Add
+- Sub
+* Mul
+/ Quo
+% Rem
+& And
+| Or
+^ Xor
+<< Shl
+>> Shr
+&^ AndNot
++= AddAssign
+-= SubAssign
+*= MulAssign
+/= QuoAssign
+%= RemAssign
+&= AndAssign
+|= OrAssign
+^= XorAssign
+<<= ShlAssign
+>>= ShrAssign
+&^= AndNotAssign
+&& LAnd
+|| LOr
+<- Arrow
+++ Inc
+-- Dec
+== Eql
+< Lss
+> Gtr
+= Assign
+! Not
+!= Neq
+<= Leq
+>= Geq
+:= Define
+... Ellipsis
+( LParen
+[ LBrack
+{ LBrace
+, Comma
+. Period
+) RParen
+] RBrack
+} RBrace
+; Semicolon
+: Colon
+~ Tilde
+break Break
+case Case
+chan Chan
+const Const
+continue Continue
+default Default
+defer Defer
+else Else
+fallthrough Fallthrough
+for For
+func Func
+go Go
+goto Goto
+if If
+import Import
+interface Interface
+map Map
+package Package
+range Range
+return Return
+select Select
+struct Struct
+switch Switch
+type Type
+var Var
+"""
+
+SourceFile: PackageClause ';' (ImportDecl ';')* (TopLevelDecl ';')* EOF
+PackageClause: 'package' IDENT
+ImportDecl: 'import' (ImportSpec | '(' ImportItem* ')')
+ImportItem: ';' | ImportSpec (';' | &')')
+ImportSpec: ('.' | IDENT)? STRING
+
+TopLevelDecl: Declaration | FunctionDecl
+Declaration: ConstDecl | TypeDecl | VarDecl
+ConstDecl: 'const' (ConstSpec | '(' ConstItem* ')')
+ConstItem: ';' | ConstSpec (';' | &')')
+ConstSpec: IdentifierList (Type? ('=' ExpressionList)?)?
+IdentifierList: IDENT (',' IDENT)*
+TypeDecl: 'type' (TypeSpec | '(' TypeItem* ')')
+TypeItem: ';' | TypeSpec (';' | &')')
+TypeSpec: IDENT TypeParameters '='? Type | IDENT '='? Type
+TypeParameters: '[' TypeParamDecl (',' TypeParamDecl)* ','? ']'
+TypeParamDecl: IdentifierList TypeElem
+VarDecl: 'var' (VarSpec | '(' VarItem* ')')
+VarItem: ';' | VarSpec (';' | &')')
+VarSpec: IdentifierList (Type ('=' ExpressionList)? | '=' ExpressionList)
+FunctionDecl: 'func' Parameters? IDENT TypeParameters? Signature Block?
+
+Signature: Parameters Result?
+Result: Parameters | Type
+Parameters: '(' (ParameterDecl (',' ParameterDecl)* ','?)? ')'
+ParameterDecl: IDENT '...'? Type | '...'? Type
+
+Type (memo): TypeName TypeArgs? | TypeLit | '(' Type ')'
+TypeName: IDENT ('.' IDENT)?
+TypeArgs: '[' Type (',' Type)* ','? ']'
+TypeLit: ArrayType | SliceType | StructType | PointerType | FunctionType | InterfaceType | MapType | ChannelType
+ArrayType: '[' ('...' | lit(Expression)) ']' Type
+SliceType: '[' ']' Type
+StructType: 'struct' '{' FieldItem* '}'
+FieldItem: ';' | FieldDecl (';' | &'}')
+FieldDecl: (IdentifierList Type | '*'? TypeName TypeArgs?) STRING?
+PointerType: '*' Type
+FunctionType: 'func' Signature
+InterfaceType: 'interface' '{' InterfaceItem* '}'
+InterfaceItem: ';' | InterfaceElem (';' | &'}')
+InterfaceElem: IDENT Signature | TypeElem
+TypeElem: TypeTerm ('|' TypeTerm)*
+TypeTerm: '~'? Type
+MapType: 'map' '[' Type ']' Type
+ChannelType: 'chan' '<-' Type | 'chan' Type | '<-' 'chan' Type
+
+Block: '{' lit(StatementList) '}'
+StatementList: StatementItem*
+StatementItem: ';' | Statement (';' | &'}' | &'case' | &'default')
+Statement: Declaration | LabeledStmt | GoStmt | ReturnStmt | BreakStmt | ContinueStmt | GotoStmt | FallthroughStmt | Block | IfStmt | SwitchStmt | SelectStmt | ForStmt | DeferStmt | SimpleStmt
+LabeledStmt: IDENT ':' Statement?
+GoStmt: 'go' Expression
+DeferStmt: 'defer' Expression
+ReturnStmt: 'return' ExpressionList?
+BreakStmt: 'break' IDENT?
+ContinueStmt: 'continue' IDENT?
+GotoStmt: 'goto' IDENT
+FallthroughStmt: 'fallthrough'
+SimpleStmt (memo): ExpressionList (':=' ExpressionList | AssignOp ExpressionList | '=' ExpressionList | '++' | '--' | '<-' Expression)?
+AssignOp: '+=' | '-=' | '*=' | '/=' | '%=' | '&=' | '|=' | '^=' | '<<=' | '>>=' | '&^='
+IfStmt: 'if' nolit(IfHeader) Block ('else' (IfStmt | Block))?
+IfHeader: SimpleStmt ';' Expression | Expression
+SwitchStmt: 'switch' nolit(SwitchHeader) '{' CaseClause* '}'
+SwitchHeader: SimpleStmt? ';' SimpleStmt? | SimpleStmt? { Dummy }
+CaseClause: ('case' ExpressionList | 'default') ':' StatementList
+SelectStmt: 'select' '{' CommClause* '}'
+CommClause: ('case' SimpleStmt | 'default') ':' StatementList
+ForStmt: 'for' nolit(ForHeader)? Block
+ForHeader: RangeClause | SimpleStmt? ';' Expression? ';' SimpleStmt? | Expression
+RangeClause: (ExpressionList ('=' | ':='))? 'range' Expression
+
+ExpressionList: Expression (',' Expression)*
+Expression (memo): UnaryExpr (BinaryOp UnaryExpr)*
+BinaryOp: '||' | '&&' | '==' | '!=' | '<' | '<=' | '>' | '>=' | '+' | '-' | '|' | '^' | '*' | '/' | '%' | '<<' | '>>' | '&' | '&^'
+UnaryExpr: UnaryOp UnaryExpr | PrimaryExpr
+UnaryOp: '+' | '-' | '!' | '^' | '*' | '&' | '<-' | '~'
+PrimaryExpr: Operand Suffix*
+Suffix: '.' IDENT | '.' '(' ('type' | Type) ')' | '[' lit(IndexOrSlice) ']' | '(' lit(Arguments) ')' | ?litok LiteralValue
+IndexOrSlice: Expression? ':' Expression? (':' Expression)? | Expression (',' Expression)* ','?
+Arguments: (Expression (',' Expression)* '...'? ','?)? { Dummy }
+Operand: BasicLit | IDENT | '(' lit(Expression) ')' | FunctionLit | CompositeLit | ArrayType | SliceType | StructType | MapType | ChannelType | InterfaceType
+CompositeLit: LiteralType LiteralValue
+LiteralType: ArrayType | SliceType | '[' '...' ']' Type | StructType | MapType
+BasicLit: INT | FLOAT | IMAG | CHAR | STRING
+FunctionLit: 'func' Signature Block?
+LiteralValue: '{' lit(ElementList)? '}'
+ElementList: Element (',' Element)* ','?
+Element: (Key ':')? Value
+Key: LiteralValue | Expression
+Value: LiteralValue | Expression

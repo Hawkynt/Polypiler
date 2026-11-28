@@ -156,6 +156,16 @@ public abstract class ParserBase<TToken, TKind> where TToken : class, IToken<TKi
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
   protected static bool Optional<T>(T? item) where T : class => true;
 
+  /// <summary>The value of a gather (<c>s.e+</c>): its first item in front of the rest (<c>_PyPegen_seq_insert_in_front</c>).</summary>
+  /// <typeparam name="T">The item type.</typeparam>
+  /// <param name="first">The first item.</param>
+  /// <param name="rest">The items after it, which the list becomes.</param>
+  protected static List<T> Gathered<T>(T first, List<T> rest) {
+    ArgumentNullException.ThrowIfNull(rest);
+    rest.Insert(0, first);
+    return rest;
+  }
+
   // ---------------------------------------------------------------------------------------------
   // Rules
 

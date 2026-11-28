@@ -69,6 +69,9 @@ public static class Program {
       output.WriteLine($"       {Name} {ImportBitPermCommand.Verb} {ImportBitPermCommand.Import} [--fixtures <dir>] [--out <dir>] [--check]");
       output.WriteLine($"       {Name} {RebuildCommand.Verb} check --output <dir> [--runs <n>] [--input <path>]... [--wall-time <seconds>] [--memory <MiB>] -- <toolchain key> <args>");
       output.WriteLine($"       {Name} {RebuildCommand.Verb} compare <first dir> <second dir>");
+      output.WriteLine($"       {Name} {GrammarCommand.Verb} generate <grammar> [--out <file.g.cs>] [--namespace <ns>] [--class <name>] [--profile <axis=value>]...");
+      output.WriteLine($"       {Name} {GrammarCommand.Verb} read <grammar> [--tokens <file>]");
+      output.WriteLine($"       {Name} {GrammarCommand.Verb} check [--root <dir>]");
       return Success;
     }
 
@@ -122,6 +125,8 @@ public static class Program {
       return CiCommand.Run(args[1..], output, error);
     if (args[0] == RebuildCommand.Verb)
       return new RebuildCommand().Run(args[1..], output, error);
+    if (args[0] == GrammarCommand.Verb)
+      return new GrammarCommand().Run(args[1..], output, error);
 
     error.WriteLine($"{Name}: unknown verb '{args[0]}'.");
     return UsageError;

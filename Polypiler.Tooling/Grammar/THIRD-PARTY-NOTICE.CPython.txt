@@ -1,0 +1,21 @@
+Origin: https://www.python.org/ftp/python/3.14.8/Python-3.14.8.tar.xz
+Licence: PSF-2.0
+
+Polypiler.Tooling/Grammar converts, from pegen (Tools/peg_generator/pegen of CPython 3.14.8), under
+the PSF License Agreement for Python, https://docs.python.org/3/license.html#psf-license:
+- GrammarReader.cs: the grammar format of metagrammar.gram (metas, rules, alternatives, items,
+  actions and annotations);
+- GrammarModel.cs: the grammar tree of grammar.py with its simple string forms;
+- GrammarChecker.cs: the checks of parser_generator.py (rule and variable names, dangling
+  references), NullableVisitor, InitialNamesVisitor, make_first_graph and compute_left_recursives,
+  and strongly_connected_components and find_cycles_in_scc of sccutils.py (which pegen adapted from
+  mypy, MIT);
+- ParserEmitter.cs: the shape of the code c_generator.py emits (artificial rules for groups, loops
+  and gathers, the alternatives of invalid rules, memoization, seed growing, cuts, lookaheads,
+  forced tokens and default actions).
+
+Summary of the changes: the Python is restated in C#; the emitter writes C# on
+Polypiler.Core.Syntax instead of C on pegen.c, and the reader adds hooks, predicates, guards and
+overlay directives (ADR 1000).
+
+Copyright (c) 2001 Python Software Foundation; All Rights Reserved.

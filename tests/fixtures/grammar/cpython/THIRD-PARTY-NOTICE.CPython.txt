@@ -1,0 +1,10 @@
+Origin: https://www.python.org/ftp/python/3.14.8/Python-3.14.8.tar.xz
+Licence: PSF-2.0
+
+python.gram and Tokens are Grammar/python.gram and Grammar/Tokens of CPython 3.14.8, copied
+unchanged. The grammar tests read python.gram as it is (ADR 1000, decision 2) and compare the
+left-recursive rules polypiler-tooling grammar read finds with those pegen reports
+(Tools/peg_generator, compute_left_recursives), recorded in GrammarCommandTests.
+
+Copyright (c) 2001 Python Software Foundation; All Rights Reserved. Distributed under the
+PSF License Agreement for Python, https://docs.python.org/3/license.html#psf-license.

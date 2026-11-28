@@ -195,6 +195,9 @@ public sealed class ParserBaseTests {
   public void TheMemo_IsKeyedByHookState() {
     var parser = new TestParser("1");
     Assert.That(parser.Tables, Is.Zero);
+    var stateOnly = new TestParser("1") { State = 3 };
+    stateOnly.Term();
+    Assert.That(stateOnly.Tables, Is.EqualTo(1));
     parser.Term();
     parser.Position = 0;
     parser.State = 1;
