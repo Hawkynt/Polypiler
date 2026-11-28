@@ -40,7 +40,7 @@ public sealed class IrNumberTextTests {
 
   [Test]
   public void Operations_AreTheConversions() {
-    Assert.That(NumberTextOperations.Operations, Has.Count.EqualTo(11));
+    Assert.That(NumberTextOperations.Operations, Has.Count.EqualTo(12));
     Assert.That(NumberTextOperations.Operations, Has.All.Matches<IrIntrinsicOp>(NumberTextOperations.IsNumberText));
     Assert.That(NumberTextOperations.IsNumberText(IrIntrinsicOp.StrConcat), Is.False);
     Assert.That(NumberTextOperations.Problem(new IrIntrinsic(IrIntrinsicOp.StrLength, IrType.I32, [Text("a")])), Is.Null);

@@ -474,15 +474,15 @@ public sealed record IrType {
   public bool IsArray => this.Kind == IrTypeKind.Array;
 
   /// <summary>
-  /// Whether the type can be the type of a local: not void, an array only of numbers, of structs or of
-  /// strings, a view or a memory only of numbers, and a pointer only to a number or to <c>void</c>.
+  /// Whether the type can be the type of a local: not void, an array only of numbers, of structs, of
+  /// strings or of the dynamic type, a view or a memory only of numbers, and a pointer only to a number or to <c>void</c>.
   /// </summary>
   public bool IsStorable => this.IsOptional ? this.Underlying!.IsOptionalValue
     : this.IsPointer ? this.Element!.IsNumeric || this.Element == Void
     : this.IsCollection ? IrCollections.IsElement(this)
     : this.IsLazySequence ? IrSequences.IsElement(this.Element!)
     : this.IsAsync ? false
-    : this.Kind != IrTypeKind.Void && (this.Element is null || this.Element.IsNumeric || (!this.IsView && !this.IsMemory && (this.Element.IsStruct || this.Element.IsString || this.Element.IsFunction)));
+    : this.Kind != IrTypeKind.Void && (this.Element is null || this.Element.IsNumeric || (!this.IsView && !this.IsMemory && (this.Element.IsStruct || this.Element.IsString || this.Element.IsFunction || (this.IsArray && this.Element.IsVariant))));
 
   /// <summary>The name of the type as the IR writes it, for example <c>i32</c>, <c>u8[]</c>, <c>str</c>, <c>i32?</c> or the name of a struct.</summary>
   public override string ToString()
