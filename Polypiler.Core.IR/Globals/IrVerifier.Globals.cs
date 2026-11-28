@@ -35,6 +35,8 @@ public static partial class IrVerifier {
       // A reference - an object, a collection - holds what the initializer of the module puts there (#1365).
       Require(global.Type.IsStorable && !element.IsStruct && !global.Type.IsView && !global.Type.IsMemory && (!element.IsObject || global.Type.IsObject || global.Type.IsCollection), $"a global of the type {global.Type}");
       Require(element.EnumType is not { } named || types.Declares(named), $"the type {element} is not among the types of the module");
+      foreach (var problem in IrUnions.Problems(global.Type))
+        Require(false, problem);
       if (global.Initializer is not { } initializer) {
         Require(!global.Type.IsArray && !global.Type.IsString, $"{(global.Type.IsArray ? "an array" : "a string")} global without an initializer");
       } else {
@@ -56,7 +58,7 @@ public static partial class IrVerifier {
 
   /// <summary>Whether a node may stand in the initializer of a global.</summary>
   private static bool IsStatic(IrExpr node, HashSet<string> impure) => node switch {
-    IrConst or IrStrConst or IrConstRef or IrGlobalRef or IrUnary or IrBinary or IrConvert or IrConditional or IrNewArray or IrVariantOf or IrVariantTagOf or IrVariantValue => true,
+    IrConst or IrStrConst or IrConstRef or IrGlobalRef or IrUnary or IrBinary or IrConvert or IrConditional or IrNewArray or IrVariantOf or IrVariantTagOf or IrVariantValue or IrUnionOf or IrUnionTagOf or IrUnionValue => true,
     IrIntrinsic intrinsic => intrinsic.Op == IrIntrinsicOp.ArrayOf || StringOperations.IsString(intrinsic.Op) || NumberTextOperations.IsNumberText(intrinsic.Op) || EnumOperations.IsEnum(intrinsic.Op)
       || RegexOperations.IsRegex(intrinsic.Op),
     // A new collection, empty or of static elements, observes nothing (#1365).

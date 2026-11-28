@@ -140,6 +140,33 @@ the dynamic type it now has, `variant`.
   semantics table over the framework: O0060 (#255) and O0061 (#254) for JavaScript, O0063 (#780) for
   Python, O0065 (#779) for Perl. O0062, `PyIntSpecialization`, stays the pass it is.
 
+## Decisions made in the implementation
+
+Where this record is silent, the implementation of epic #1579 decided:
+
+- **Canonical elements.** An optional is the outermost element: a union's members are of levels 1 to
+  3, and its missing values those of the optional around it; an optional of a union is of level 5.
+  An exact element carries the language's kind where two kinds share one IR type (Visual Basic's
+  `Currency` on an `i64`, `Date` on an `f64`). Shapes nested deeper than four widen to a variant.
+- **Unions in the IR.** The members of `union<…>` are kept in the ordinal order of the names the IR
+  writes them with, and a member is named by its index in that order; the tag of a union is that
+  index, never a COM number.
+- **The contract of a table.** `Expand` returns no expansion where the language's helper stays; a
+  unary operation passes `Nothing` as the second element; Visual Basic's `Eqv` and `Imp` are operations
+  of their own. A table also recognises the calls of its helpers (`Classify`), names its helpers
+  (`IsHelper`) and its kinds (`Name`, which names clones: `Add_Long_Long`).
+- **Typing a local.** A local is typed when every read of it sees one exact kind; an assignment of
+  another value reaches no read, so it is a dead store that keeps only its effects. Visual Basic's
+  `Long + Long` may promote to `Double`, so a `Long` accumulator stays a variant without range facts.
+- **Refinement** follows tests of the tag of a local, through conversions, `And`, `Or`, `Not` and a
+  switch on the tag; a test of a copy of the tag (Visual Basic's `Select Case VarType(v)`) is not
+  followed yet.
+- **The report** counts the places of the emitted module by the type each was given, the helpers of the
+  language aside; a path it cannot write is the existing `PLY0005` with its exit code, as ADR 0003 has
+  no code 74. The showcase shows the ratio per example.
+- **Visual Basic's migration** is the import option `VisualBasicInference.Framework`; it becomes the
+  default, and the frontend's fixed points go, once its output equals the frontend's (#1591).
+
 ## Rejected options
 
 - **Keep one inference per frontend.** Five fixed points of five strengths, a sixth for every new

@@ -1135,6 +1135,42 @@ codes:
     area: javascript
     owner: PROTOTYPE
     surfaces: standard error of polypiler translate --to javascript
+  - code: PLY1191
+    severity: error
+    exit: TargetBuildFailure
+    title: node rejected the input
+    message: "node rejected the input: <file>:<line>: SyntaxError: <text>"
+    rule: javascript.runner.compile
+    area: javascript
+    owner: "#234"
+    surfaces: the diagnostics of NodeRunner.Compile, after PLY0030, for a module node --check rejects
+  - code: PLY1192
+    severity: error
+    exit: OracleFailure
+    title: JavaScript driver crashed
+    message: "the JavaScript driver exited with code <code>: <standard error>"
+    rule: javascript.runner.crash
+    area: javascript
+    owner: "#234"
+    surfaces: the diagnostics of NodeRunner for a module that throws while it loads, an export that does not exist, an aborted engine, or a node --test run that printed no report
+  - code: PLY1194
+    severity: error
+    exit: SemanticMismatch
+    title: JavaScript call differs from its vector
+    message: "call <index>: expected <values>, actual <values>"
+    rule: javascript.runner.mismatch
+    area: javascript
+    owner: "#234"
+    surfaces: NodeRunner.Explain, after the PLY0051 or PLY0052 of each vector that failed
+  - code: PLY1195
+    severity: error
+    exit: OracleFailure
+    title: JavaScript driver protocol error
+    message: "<reason>"
+    rule: javascript.runner.protocol
+    area: javascript
+    owner: "#234"
+    surfaces: "the diagnostics of NodeRunner: driver output that is no image or trap line or has the wrong line count, output written by the function under test, an input image the driver cannot read, a program without an entry module"
   - code: PLY1400
     severity: error
     exit: InvalidSource

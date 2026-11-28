@@ -99,6 +99,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   private const string Opt = "--opt";
   private const string DisableOpt = "--disable-opt";
   private const string ExplainOpt = "--explain-opt";
+  private const string TypeReportOption = "--type-report";
   private const string Instantiate = "--instantiate";
   private const string Bind = "--bind";
   private const string RustVersion = "--rust-version";
@@ -138,6 +139,7 @@ public sealed partial class TranslateCommand : ICliCommand {
     [Opt] = "the optimization level",
     [DisableOpt] = "optimizations not to apply",
     [ExplainOpt] = "write every optimization applied to standard error",
+    [TypeReportOption] = "write how statically typed the translation is, as JSON, to a file or to standard output for -",
     [Export] = "JavaScript, MSIL and JVM: the functions or methods to translate",
     [ExplainTypes] = "JavaScript: write why every value has its type to standard output",
     [BatchDialectOption] = "Batch source: cmd.exe (the default) or MS-DOS 6.22 COMMAND.COM",
@@ -185,7 +187,7 @@ public sealed partial class TranslateCommand : ICliCommand {
   public string Description => "translate a source file into another language; a prototype for small subsets of its languages, see the README for the planned interface";
 
   /// <summary>The options of the pass pipeline, which every pair of languages takes.</summary>
-  private static readonly OptionSpec[] _pipeline = [new(Opt, "<none|default>"), new(DisableOpt, "<O####>[,<O####>...]"), new(ExplainOpt, null)];
+  private static readonly OptionSpec[] _pipeline = [new(Opt, "<none|default>"), new(DisableOpt, "<O####>[,<O####>...]"), new(ExplainOpt, null), new(TypeReportOption, "<path|->")];
 
   /// <summary>The source languages; another one is another entry.</summary>
   private static readonly Frontend[] _frontends = [
@@ -337,6 +339,8 @@ public sealed partial class TranslateCommand : ICliCommand {
       return Refuse(context, unused);
 
     var (optimized, applications) = Optimized(file, module, options, context, backend);
+    if (options.TryGetValue(TypeReportOption, out var report) && !WriteTypeReport(report, optimized, frontend.Name, context))
+      return (int)ExitCode.EnvironmentError;
     return Emit(optimized, options, context, backend, new Record(file, bytes, frontend.Name, caveats, applications, frontend.ImportBytes is not null));
   }
 
@@ -392,6 +396,9 @@ public sealed partial class TranslateCommand : ICliCommand {
     var disabled = options.TryGetValue(DisableOpt, out var list) ? list.Split(',').ToHashSet() : [];
     // The specialization of the arbitrary-precision integer is required: it runs at every level, --opt none too.
     var specialized = disabled.Contains(PyIntSpecialization.Id) ? new OptimizationResult(module, []) : PyIntSpecialization.Run(module);
+    // So is the de-dynamicization (ADR 0300), for a module whose variants a semantics table types.
+    if (specialized.Module.DynamicSemantics is { } language && _semantics.TryGetValue(language, out var table))
+      specialized = specialized with { Module = DeDynamicize.Run(specialized.Module, table, DeDynamicizeOptions.Default) };
     var result = Optimizer.Run(specialized.Module, new OptimizerOptions {
       Level = LevelOf(options)!.Value,
       Disabled = disabled,
@@ -408,6 +415,30 @@ public sealed partial class TranslateCommand : ICliCommand {
     }
 
     return (result.Module, applications);
+  }
+
+  /// <summary>The semantics tables of the dynamic languages, by the language a module names (<see cref="IrModule.DynamicSemantics"/>) and by the source language of the command.</summary>
+  private static readonly Dictionary<string, Polypiler.Core.Analysis.Dynamic.IDynamicSemantics> _semantics = new(StringComparer.Ordinal) {
+    [VisualBasicFrontend.Semantics.Language] = VisualBasicFrontend.Semantics
+  };
+
+  /// <summary>
+  /// Writes the static-typing report of a translation (ADR 0300 decision 7) to a file, or to standard
+  /// output for <c>-</c>; a path that cannot be written is <c>PLY0005</c>, and nothing is written then.
+  /// </summary>
+  private static bool WriteTypeReport(string path, IrModule module, string language, CliContext context) {
+    var json = TypeReport.Json(module, _semantics.GetValueOrDefault(module.DynamicSemantics ?? language));
+    if (path == "-") {
+      context.Output.Write(json);
+      return true;
+    }
+
+    try {
+      File.WriteAllText(context.Resolve(path), json, new UTF8Encoding(false));
+      return true;
+    } catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) {
+      return CliPaths.NotCreatable(path, exception.Message, context);
+    }
   }
 
   /// <summary>Checks a module and writes it in the target language into the output directory.</summary>
@@ -1135,7 +1166,8 @@ public sealed partial class TranslateCommand : ICliCommand {
   private static Manifest TranslationManifest(IrModule module, IReadOnlyDictionary<string, string> options, CliContext context, Backend backend, Record record, string output, IReadOnlyList<ManifestOutput> outputs, IReadOnlyList<EmittedHelper> helpers) {
     var input = InputPath(output, context.Resolve(record.File));
     List<string> command = ["translate", input, From, options[From], To, options[To], Output, "."];
-    foreach (var (name, value) in options.Where(option => !_required.Contains(option.Key)))
+    // The report of the static typing is no part of the output, and its path no path of it.
+    foreach (var (name, value) in options.Where(option => !_required.Contains(option.Key) && option.Key != TypeReportOption))
       command.AddRange(name is ExplainOpt or ExplainTypes or TypedArrays or AllowUnsafe ? [name] : [name, value]);
 
     command.AddRange(context.ContributedArguments);

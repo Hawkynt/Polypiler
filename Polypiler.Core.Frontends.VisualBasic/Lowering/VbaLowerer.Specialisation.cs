@@ -99,7 +99,7 @@ internal sealed partial class VbaLowerer {
   /// </summary>
   private List<IrFunction> LowerAll(List<VbaProcedure> procedures) {
     var roots = procedures.Select(procedure => this._procedures[procedure.Name]).Where(HasVariants).ToDictionary(signature => signature.Name, StringComparer.OrdinalIgnoreCase);
-    if (roots.Count == 0)
+    if (roots.Count == 0 || this.Framework)
       return this.Reported(this.LowerRound(procedures, null));
 
     var helpers = this._usedHelpers.ToList();

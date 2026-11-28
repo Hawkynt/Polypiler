@@ -30,6 +30,7 @@ default, allowed values, whether it is recorded and the normal spelling of its v
 | `--cpu`, `--entry`, `--load-address`, `--memory-map`, `--verify-emulator` | `recover`, `translate` | #880 | machine-code input and emulator selection |
 | `--target-triple` | `translate` | #851 | target triple an `llvm` output is compiled, linked and executed for (PRD §10) |
 | `--llvm-version` | `translate` | #860 | LLVM version an `llvm` input or output is held to (PRD §10: `--llvm-version pinned`) |
+| `--type-report` | `translate` | #1590 | a JSON report of how statically typed the translation is: places per lattice level and certainty, the static ratio, why each variant stays one |
 
 ## Registered options
 

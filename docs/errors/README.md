@@ -163,6 +163,10 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY1106](PLY1106.md) | error | 3 (UnsupportedConstruct) | `<reason>` | PROTOTYPE |
 | [PLY1107](PLY1107.md) | error | 3 (UnsupportedConstruct) | `a thrown value that is not an Error reaches <place>, which observes it` | #1323 |
 | [PLY1152](PLY1152.md) | error | 3 (UnsupportedConstruct) | `'<operation>' cannot be expressed in JavaScript profile '<profile>'` | PROTOTYPE |
+| [PLY1191](PLY1191.md) | error | 6 (TargetBuildFailure) | `node rejected the input: <file>:<line>: SyntaxError: <text>` | #234 |
+| [PLY1192](PLY1192.md) | error | 7 (OracleFailure) | `the JavaScript driver exited with code <code>: <standard error>` | #234 |
+| [PLY1194](PLY1194.md) | error | 5 (SemanticMismatch) | `call <index>: expected <values>, actual <values>` | #234 |
+| [PLY1195](PLY1195.md) | error | 7 (OracleFailure) | `<reason>` | #234 |
 
 ## PLY1400–PLY1499 · cpp
 

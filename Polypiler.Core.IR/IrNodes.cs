@@ -1267,6 +1267,12 @@ public sealed record IrFunction(
   /// <summary>The generic definition the function is one instantiation of; <see langword="null"/> for a function of its own.</summary>
   public IrGenericOrigin? Origin { get; init; }
 
+  /// <summary>
+  /// The function this one is a copy of, specialised to typed parameters for the calls that pass values
+  /// of those types (ADR 0300 decision 3); <see langword="null"/> for a function of its own.
+  /// </summary>
+  public string? SpecialisedFrom { get; init; }
+
   /// <summary>Whether the function is async: its result is an <see cref="IrTypeKind.Async"/>, which its body may <see cref="IrAwait"/> in (#1330).</summary>
   public bool IsAsync => this.ReturnType.IsAsync;
 
@@ -1315,6 +1321,13 @@ public sealed record IrModule(string Name, IReadOnlyList<IrFunction> Functions, 
   /// from, such as <c>cs-invariant-culture</c>, each once, which the header of a generated file names.
   /// </summary>
   public IReadOnlyList<string> Caveats { get; init; } = [];
+
+  /// <summary>
+  /// The language whose semantics table types the module's dynamic values (ADR 0300 decision 1), such
+  /// as <c>visualbasic</c>; <see langword="null"/> for a module whose variants are typed already, which
+  /// the de-dynamicization leaves as it is.
+  /// </summary>
+  public string? DynamicSemantics { get; init; }
 
   /// <summary>
   /// The function of the module that runs once when the module is loaded, after every global has its

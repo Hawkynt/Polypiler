@@ -25,11 +25,13 @@ public static class IrOperators {
   /// <param name="right">The type of the right operand.</param>
   /// <returns><see langword="true"/> when the operator applies.</returns>
   /// <remarks>
-  /// Two values of one enum are compared for equality and, of an enum of 32 or 64 bits, combined bit
+  /// Two values of one union are compared for equality only (<see cref="IrUnions"/>). Two values of one
+  /// enum are compared for equality and, of an enum of 32 or 64 bits, combined bit
   /// by bit, as their underlying values are; anything else is computed on the underlying type, which an
   /// enum converts to and from without a change.
   /// </remarks>
   public static bool Accepts(IrBinaryOp op, IrType left, IrType right) => left.IsBigInt ? IrBigInts.Accepts(op, right)
+    : left.IsUnion || right.IsUnion ? op is IrBinaryOp.Equal or IrBinaryOp.NotEqual && left == right
     : left.IsEnum || right.IsEnum
     ? right == left && (op is IrBinaryOp.Equal or IrBinaryOp.NotEqual || (op is IrBinaryOp.And or IrBinaryOp.Or or IrBinaryOp.Xor && left.IsWideInteger))
     : op switch {
