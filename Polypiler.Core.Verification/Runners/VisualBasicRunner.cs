@@ -137,11 +137,19 @@ public sealed class VisualBasicRunner {
     return text.ToString();
   }
 
-  /// <summary>The files of the run: the office's user profile with the modules and the driver as its <c>Standard</c> library.</summary>
+  /// <summary>The locale the office runs the modules under unless another is named: the separators of the invariant culture.</summary>
+  public const string DefaultLocale = "en-US";
+
+  /// <summary>
+  /// The files of the run: the office's user profile with the modules and the driver as its
+  /// <c>Standard</c> library, and the locale its settings name (<c>ooSetupSystemLocale</c>), which
+  /// decides the separators <c>CStr</c> writes and <c>CDbl</c> reads - stated, never the host's.
+  /// </summary>
   /// <param name="modules">The modules by name, as <c>.bas</c> text.</param>
   /// <param name="driver">The driver module's text.</param>
+  /// <param name="locale">The locale, such as <c>en-US</c> or <c>de-DE</c>.</param>
   /// <returns>The files by name relative to the working directory.</returns>
-  public static IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Files(IReadOnlyDictionary<string, string> modules, string driver) {
+  public static IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Files(IReadOnlyDictionary<string, string> modules, string driver, string locale = DefaultLocale) {
     ArgumentNullException.ThrowIfNull(modules);
     ArgumentNullException.ThrowIfNull(driver);
     const string doctype = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE {0} PUBLIC \"-//OpenOffice.org//DTD OfficeDocument 1.0//EN\" \"{1}\">\n";
@@ -151,7 +159,8 @@ public sealed class VisualBasicRunner {
     void Add(string path, string text) => files[ProfileFolder + "/" + path] = Encoding.UTF8.GetBytes(text);
     // The office takes a profile with this flag as one it set up itself and keeps the library in it.
     Add("registrymodifications.xcu", "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<oor:items xmlns:oor=\"http://openoffice.org/2001/registry\" xmlns:xs=\"http://www.w3.org/2001/XMLSchema\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n"
-      + "<item oor:path=\"/org.openoffice.Setup/Office\"><prop oor:name=\"ooSetupInstCompleted\" oor:op=\"fuse\"><value>true</value></prop></item>\n</oor:items>\n");
+      + "<item oor:path=\"/org.openoffice.Setup/Office\"><prop oor:name=\"ooSetupInstCompleted\" oor:op=\"fuse\"><value>true</value></prop></item>\n"
+      + "<item oor:path=\"/org.openoffice.Setup/L10N\"><prop oor:name=\"ooSetupSystemLocale\" oor:op=\"fuse\"><value>" + SecurityElement.Escape(locale) + "</value></prop></item>\n</oor:items>\n");
     foreach (var kind in new[] { "script", "dialog" })
       Add($"basic/{kind}.xlc", Head("library:libraries", "libraries.dtd") + "<library:libraries xmlns:library=\"http://openoffice.org/2000/library\" xmlns:xlink=\"http://www.w3.org/1999/xlink\">\n"
         + $" <library:library library:name=\"Standard\" xlink:href=\"$(USER)/basic/Standard/{kind}.xlb/\" xlink:type=\"simple\" library:link=\"false\"/>\n</library:libraries>\n");
@@ -176,10 +185,11 @@ public sealed class VisualBasicRunner {
   /// <param name="modules">The modules by name, as <c>.bas</c> text.</param>
   /// <param name="cases">The calls.</param>
   /// <param name="cancellationToken">Ends the run.</param>
+  /// <param name="locale">The locale the office runs under, <see cref="DefaultLocale"/> unless named.</param>
   /// <returns>The outcomes, or why there are none.</returns>
-  public async Task<VisualBasicExecution> ExecuteAsync(IReadOnlyDictionary<string, string> modules, IReadOnlyList<VisualBasicCase> cases, CancellationToken cancellationToken = default) {
+  public async Task<VisualBasicExecution> ExecuteAsync(IReadOnlyDictionary<string, string> modules, IReadOnlyList<VisualBasicCase> cases, CancellationToken cancellationToken = default, string locale = DefaultLocale) {
     ArgumentNullException.ThrowIfNull(cases);
-    var files = Files(modules, Driver(cases));
+    var files = Files(modules, Driver(cases), locale);
     var limits = new RunLimits(WallTime, RunLimits.Default.MemoryBytes, RunLimits.Default.OutputBytes, RunLimits.Default.Processes);
     var plan = new RunPlan(files, [], Command, limits, TrustLevel.Trusted) { Collect = [AnswerFile] };
     var result = await this._runner.RunAsync(plan, cancellationToken).ConfigureAwait(false);
