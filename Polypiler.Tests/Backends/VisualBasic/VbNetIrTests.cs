@@ -71,6 +71,14 @@ public sealed class VbNetIrTests {
   }
 
   [Test]
+  public void ConstructorOfAClassOfTheModule_IsRefusedNotACrash() {
+    var source = System.IO.File.ReadAllText(System.IO.Path.Combine(PrototypeFixture.RepositoryRoot, "docs", "showcase", "15-exceptions-and-using.cs"));
+    var translation = VbNetFixtures.Translate(PrototypeFixture.Import("Showcase.cs", source));
+    Assert.That(translation.Problems, Has.Some.Contains("PLY2656"));
+    Assert.That(translation.Problems, Has.Some.Contains("which the module does not define"));
+  }
+
+  [Test]
   public void CallOfAFunctionTheModuleDoesNotDefine_IsIllTyped() {
     var module = new IrModule("M", [new IrFunction("F", true, IrType.I32, [], [], new IrBlock([new IrReturn(new IrCall("Missing", IrType.I32, []))]))]);
     Assert.That(() => Emitted(module), Throws.ArgumentException.With.Message.Contains("'Missing' does not exist"));
