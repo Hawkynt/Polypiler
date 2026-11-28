@@ -40,8 +40,12 @@ internal sealed partial class VbNetWriter {
         return new VnNewArray(this.TypeName(created.Type.Element!), upper, []);
       case IrCall call:
         return new VnInvoke(new VnName(this.FunctionName(call.Function)), [.. call.Arguments.Select(this.Expression)]);
+      case IrTypeTest { Target.Declaration: IrClassType type } test:
+        return new VnTypeOf(this.Expression(test.Value), this.ClassName(type));
       case IrStep step:
-        return new VnInvoke(this.Helper(step.Trap && !step.Type.IsFloat ? VbNetHelpers.StepChecked(this.TypeName(step.Type)) : VbNetHelpers.Step(this.TypeName(step.Type))),
+        var stepKey = step.Type.IsFloat ? VbNetHelpers.Step(this.TypeName(step.Type))
+          : step.Trap ? VbNetHelpers.StepChecked(this.TypeName(step.Type)) : this.Checks ? VbNetHelpers.StepWrapped(this.TypeName(step.Type)) : VbNetHelpers.Step(this.TypeName(step.Type));
+        return new VnInvoke(this.Helper(stepKey),
           [this.Expression(step.Target), new VnLiteral(step.Increment ? "True" : "False"), new VnLiteral(step.Postfix ? "True" : "False")]);
       case IrStructNew created when created.Type.Declaration is IrStructType type && this._typeNames.ContainsKey(type):
         return new VnNew(this._typeNames[type], [.. created.Arguments.Select(this.Expression)]);
@@ -70,7 +74,7 @@ internal sealed partial class VbNetWriter {
     }
   }
 
-  /// <summary>The Visual Basic name of a function of the module.</summary>
+  /// <summary>The Visual Basic name of a function of the module; a member of a class, which the module cannot declare, is refused.</summary>
   private string FunctionName(string function) {
     if (this._functions.TryGetValue(function, out var name))
       return name;
@@ -156,7 +160,9 @@ internal sealed partial class VbNetWriter {
     var operand = this.Expression(unary.Operand);
     return unary.Op switch {
       IrUnaryOp.LogicalNot or IrUnaryOp.BitNot => new VnUnary("Not", operand),
+      IrUnaryOp.NegateChecked when this.Checks => new VnUnary("-", operand),
       IrUnaryOp.NegateChecked => new VnInvoke(this.Helper(VbNetHelpers.NegateChecked(this.TypeName(unary.Type))), [operand]),
+      IrUnaryOp.Negate when this.Checks && unary.Type.IsInteger => new VnInvoke(this.Helper(VbNetHelpers.NegateWrapping(this.TypeName(unary.Type))), [operand]),
       _ => new VnUnary("-", operand)
     };
   }
@@ -167,6 +173,13 @@ internal sealed partial class VbNetWriter {
     var type = binary.Left.Type;
     var name = this.TypeName(type);
     switch (binary.Op) {
+      // With integer checks on the operators trap, and the wrapping ones are written out.
+      case IrBinaryOp.AddChecked or IrBinaryOp.SubtractChecked or IrBinaryOp.MultiplyChecked when this.Checks:
+        return new VnBinary(left, binary.Op == IrBinaryOp.AddChecked ? "+" : binary.Op == IrBinaryOp.SubtractChecked ? "-" : "*", right);
+      case IrBinaryOp.Add or IrBinaryOp.Subtract or IrBinaryOp.Multiply when this.Checks && type.IsInteger:
+        return new VnInvoke(this.Helper(VbNetHelpers.Wrapping(binary.Op, name)), [left, right]);
+      case IrBinaryOp.ShiftRightLogical when type.IsSigned && this.Checks:
+        return new VnInvoke(this.Helper(VbNetHelpers.ShiftRightUnsigned(name)), [left, right]);
       case IrBinaryOp.AddChecked or IrBinaryOp.SubtractChecked or IrBinaryOp.MultiplyChecked:
         return new VnInvoke(this.Helper(VbNetHelpers.Checked(binary.Op, name)), [left, right]);
       case IrBinaryOp.Divide:
@@ -244,6 +257,9 @@ internal sealed partial class VbNetWriter {
       return Call(Conversion(to), value);
     if (contract == IrConversion.Trap)
       return new VnInvoke(this.Helper(VbNetHelpers.Check(Scalar(to)!)), [Call("CDec", value)]);
+    // With integer checks on the conversion functions trap: the low bits are taken from the value's two's complement.
+    if (this.Checks)
+      return new VnInvoke(this.Helper(VbNetHelpers.Wrap(Scalar(to)!)), [from.IsSigned ? new VnInvoke(this.Helper(VbNetHelpers.Bits), [Call("CLng", value)]) : Call("CULng", value)]);
 
     return from.IsSigned && !to.IsSigned && to.Bits > from.Bits
       ? Call(Conversion(to), Call(Conversion(Signed(to.Bits)), value))

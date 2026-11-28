@@ -56,6 +56,11 @@ public sealed record VnBinary(VnExpression Left, string Operator, VnExpression R
 /// <param name="WhenFalse">The value when it does not.</param>
 public sealed record VnTernary(VnExpression Condition, VnExpression WhenTrue, VnExpression WhenFalse) : VnExpression;
 
+/// <summary><c>TypeOf operand Is Type</c>: whether a reference holds an object of the type or one derived from it.</summary>
+/// <param name="Operand">The reference.</param>
+/// <param name="Type">The type.</param>
+public sealed record VnTypeOf(VnExpression Operand, string Type) : VnExpression;
+
 /// <summary><c>New Type(arguments)</c>.</summary>
 /// <param name="Type">The type.</param>
 /// <param name="Arguments">The arguments of the constructor.</param>

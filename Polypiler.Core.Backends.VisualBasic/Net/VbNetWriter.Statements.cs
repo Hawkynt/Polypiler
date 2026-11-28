@@ -155,7 +155,7 @@ internal sealed partial class VbNetWriter {
     switch (expression) {
       case IrCall or IrIntrinsic { Type.Kind: IrTypeKind.Void }:
         return new VnCallStatement(this.Expression(expression));
-      case IrStep { Trap: false, Target: IrLocalRef or IrGlobalRef, Type: var type } step when type.IsArithmetic:
+      case IrStep { Trap: false, Target: IrLocalRef or IrGlobalRef, Type: var type } step when type.IsFloat || type.IsArithmetic && !this.Checks:
         return new VnAssign(this.Expression(step.Target), step.Increment ? "+=" : "-=", Literal(type, type.IsFloat ? IrOperators.Bits(type, 1.0) : 1));
       case IrBind bind:
         return new VnAssign(new VnName(this.LocalName(bind.Local)), "=", this.Expression(bind.Value));

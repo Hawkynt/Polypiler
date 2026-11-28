@@ -29,7 +29,8 @@ spec:
     - {construct: "Decimal, Date, Object and late binding, Option Compare Text comparisons of strings", family: scalars, state: diagnosed, diagnostic: PLY2611}
     - {construct: "If, Select Case with values, ranges and Is, For with Step, For Each over arrays and strings, Do, While, Exit, Continue", family: control, state: supported}
     - {construct: "Try, Catch with When, Finally, Throw, rethrow", family: control, state: supported}
-    - {construct: "GoTo, On Error, Exit Try, Exit or Continue of an outer loop", family: control, state: diagnosed, diagnostic: PLY2611}
+    - {construct: "GoTo and labels, Exit or Continue of an outer loop, On Error GoTo, Resume Next, GoTo 0 and GoTo -1, Resume, Resume Next and Resume label, Err.Number, Err.Clear, Err.Raise", family: control, state: supported}
+    - {construct: "Exit Try, GoTo out of a Try, Err.Description and the other members of Err, Err.Raise with a source or description", family: control, state: diagnosed, diagnostic: PLY2611}
     - {construct: "arrays by upper bound, ReDim, ReDim Preserve, array literals", family: memory, state: supported}
     - {construct: "arrays of several dimensions, arrays of arrays", family: memory, state: diagnosed, diagnostic: PLY2611}
     - {construct: "Function and Sub, ByVal, unassigned ByRef, Optional with a default", family: functions, state: supported}

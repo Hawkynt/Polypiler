@@ -187,7 +187,8 @@ overflow (`Polypiler.Core.Frontends.VisualBasic/Net/VbNetLowerer*.cs`):
 | `=`, `<` of strings | by code unit (`Option Compare Text` is refused) |
 | `If`, `Select Case` | `If`; a `Select Case` of integer constants a switch, any other the clauses tested in order (`=`, `a To b`, `Is op v`) |
 | `For c = a To b Step s` | start, limit and step evaluated once; the step added after each pass, checked, so a counter past its type's largest value throws |
-| `For Each` over an array or a string, `Do While`/`Until`, `Loop While`/`Until`, `While`, `Exit`, `Continue` | loops; an `Exit` or `Continue` of a loop around the innermost one is refused |
+| `For Each` over an array or a string, `Do While`/`Until`, `Loop While`/`Until`, `While`, `Exit`, `Continue` | loops; an `Exit` or `Continue` of a loop around the innermost one makes the procedure a state machine (below) |
+| `GoTo`, labels, `On Error`, `Resume`, `Err` | the procedure as a state machine (below) |
 | `Try`, `Catch ex As T When c`, `Finally`, `Throw`, `Throw` alone | try with filters, throw, rethrow, for the exception classes of the library |
 | `ReDim [Preserve] a(n)` | a new array of n + 1 elements, the old ones copied |
 | `Math`, `Len`, `AscW`, `ChrW`, `Fix`, `Int`, `Substring`, `IndexOf` (of a `Char` or ordinal), `Contains`, `Replace`, `String.Join`, `ToString`, `Console.WriteLine` | the IR's operations; the text of a number in the invariant culture (caveat `vbnet-invariant-culture`) |
@@ -195,6 +196,32 @@ overflow (`Polypiler.Core.Frontends.VisualBasic/Net/VbNetLowerer*.cs`):
 A `String` variable that holds `Nothing` in Visual Basic holds the empty string in the IR, which every
 operation of the subset treats alike (caveat `vbnet-nothing-string`); `s Is Nothing` of a string is
 refused. Refused with `PLY2611`: `Decimal`, `Date`, `Object` and late binding, classes, a `Structure`
-with members of its own, arrays of several dimensions and of arrays, `GoTo`, `On Error`, `Exit Try`,
-`Static` locals, a `ByRef` parameter the procedure assigns, `ParamArray`, properties, and the functions
-of the runtime it does not import (`Left`, `Mid`, `InStr`, `Format`, …).
+with members of its own, arrays of several dimensions and of arrays, `Exit Try`, a `GoTo` or a label
+inside a `Try`, `Static` locals, a `ByRef` parameter the procedure assigns, `ParamArray`, properties,
+the members of `Err` but `Number`, `Clear` and `Raise(n)`, and the functions of the runtime it does
+not import (`Left`, `Mid`, `InStr`, `Format`, …).
+
+### Jumps and unstructured error handling
+
+A procedure with `GoTo`, a label, `On Error` or `Resume` - or one whose structured lowering meets an
+`Exit` or `Continue` of a statement around the innermost one - is lowered as a state machine
+(`Net/VbNetLowerer.Jumps.cs`): its statements flattened into sections between the labels, `If`, loops
+and `Select Case` into tests and jumps, a loop over a switch of the state, each jump an assignment of
+it. A `Try` stays structured inside it; a jump out of one is refused.
+
+Under `On Error` every statement is a section of its own and the loop's body a try. An error with no
+handler on, or inside the handler, goes to the caller; otherwise `Err.Number` is set from the class of
+the exception as the runtime maps it and execution goes on with the next statement (`On Error Resume
+Next`) or at the handler's label (`On Error GoTo label`). The next statement of an `If` or `Do While`
+whose condition failed is the first one inside it, of a `Select Case` whose value failed the one after
+`End Select`. `Resume` runs the statement that failed again, `Resume Next` the one after it, `Resume
+label` the label; each leaves the handler and clears `Err`, and outside a handler raises error 20.
+`On Error GoTo 0` turns the handler off, `On Error GoTo -1` leaves it; every `On Error` clears `Err`.
+`Err.Number` is a module variable, `Err.Clear` clears it, `Err.Raise(n)` throws the exception class of
+n (5, 6, 9, 11, 13, 91) or a plain `Exception` with n kept beside it, which the next trap reads. A
+`Catch` sets `Err.Number` where the file reads it - by `TypeOf` of the exception for a class with classes
+of other numbers below it, such as `Exception` - and clears it where it ends, as the compiler's code
+does. The numbers and the rules are the table of the dialect `vbnet`,
+[`spec/languages/visualbasic/vbnet-errors.yaml`](../../spec/languages/visualbasic/vbnet-errors.yaml),
+which `ErrProbe.vb` records on the runtime; the fixture `Jumps.vb` and the tests compare each case with
+the compiler.

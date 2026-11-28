@@ -108,7 +108,7 @@ public static partial class VisualBasicEmitter {
   /// <summary>
   /// The project file of a module in Visual Basic .NET, <c>&lt;module&gt;.vbproj</c>: a library for the
   /// profile's framework and language version, every option of the file stated, warnings errors, and
-  /// <c>RemoveIntegerChecks</c>, which the generated code needs for its wrapping arithmetic; for .NET
+  /// <c>RemoveIntegerChecks</c> as the profile has it, which the generated code is written for; for .NET
   /// Standard the core of the Visual Basic runtime embedded, as that framework has none.
   /// </summary>
   /// <param name="profile">A Visual Basic .NET profile.</param>
@@ -122,7 +122,7 @@ public static partial class VisualBasicEmitter {
     return "<Project Sdk=\"Microsoft.NET.Sdk\">\n\n  <PropertyGroup>\n"
       + $"    <TargetFramework>{profile.Framework!.Moniker}</TargetFramework>\n    <LangVersion>{profile.LanguageVersion}</LangVersion>\n"
       + "    <RootNamespace></RootNamespace>\n    <OptionExplicit>On</OptionExplicit>\n    <OptionStrict>On</OptionStrict>\n    <OptionInfer>On</OptionInfer>\n"
-      + "    <OptionCompare>Binary</OptionCompare>\n    <RemoveIntegerChecks>true</RemoveIntegerChecks>\n    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>\n"
+      + $"    <OptionCompare>Binary</OptionCompare>\n    <RemoveIntegerChecks>{(profile.RemoveIntegerChecks ? "true" : "false")}</RemoveIntegerChecks>\n    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>\n"
       + "    <Deterministic>true</Deterministic>\n"
       // .NET Standard has no Visual Basic runtime, which a module's attribute needs: the compiler embeds its core.
       + (profile.Framework.Name.StartsWith("netstandard", StringComparison.Ordinal) ? "    <VBRuntime>Embed</VBRuntime>\n" : "")
