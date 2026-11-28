@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace Polypiler.Core.IR;
 
 public static partial class IrInterpreter {
@@ -15,6 +17,29 @@ public static partial class IrInterpreter {
 
     return Accepted(payload, variant.Value) is { } accepted ? new Tagged(variant.Tag, accepted) : null;
   }
+
+  /// <summary>The value a new element of an array of the dynamic type holds: <c>Empty</c>.</summary>
+  private static readonly Tagged EmptyVariant = new(IrVariantTag.Empty, null);
+
+  /// <summary>An array of the dynamic type taken across the boundary: an <see cref="IrVariant"/> array whose every element is accepted, or <see langword="null"/> for a null reference.</summary>
+  private static object? AcceptedVariants(object? value) {
+    if (value is null)
+      return NullReference.Value;
+    if (value is not IrVariant[] variants)
+      return null;
+
+    var elements = new object[variants.Length];
+    for (var index = 0; index < variants.Length; ++index)
+      if (AcceptedVariant(variants[index]) is { } element)
+        elements[index] = element;
+      else
+        return null;
+
+    return elements;
+  }
+
+  /// <summary>An array of the dynamic type given back across the boundary as an <see cref="IrVariant"/> array.</summary>
+  private static IrVariant[] VariantsToHost(object[] elements) => [.. elements.Select(element => VariantToHost((Tagged)element))];
 
   /// <summary>A value of the dynamic type given back across the boundary, its payload as a .NET value of its tag's type.</summary>
   private static IrVariant VariantToHost(Tagged value)

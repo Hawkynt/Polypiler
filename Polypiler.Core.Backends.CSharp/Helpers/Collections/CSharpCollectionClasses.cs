@@ -44,6 +44,26 @@ public static class CSharpCollectionClasses {
   /// <summary>The name of <see cref="Uninitialized"/>.</summary>
   public const string UninitializedName = "Uninitialized";
 
+  /// <summary>The name of <see cref="VariantDate"/>.</summary>
+  public const string VariantDateName = "VariantDate";
+
+  /// <summary>
+  /// The box of a value of the dynamic type of the tag <c>Date</c>: its days since 1899-12-30 exactly
+  /// as the <c>double</c> they are, which <c>DateTime.FromOADate</c> would round to the millisecond,
+  /// and a type of its own, so that the tag is the type of the box as for every other tag.
+  /// </summary>
+  public const string VariantDate = """
+    public sealed class VariantDate {
+
+      public readonly double Value;
+
+      public VariantDate(double value) {
+        this.Value = value;
+      }
+
+    }
+    """;
+
   /// <summary>
   /// The type of the parameter of the constructors that run no code (#1388): a class whose constructor
   /// skips its base classes (<c>IrConstructor.SkipsBase</c>) reaches every base class through one of

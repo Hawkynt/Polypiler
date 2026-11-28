@@ -1085,7 +1085,17 @@ public enum IrIntrinsicOp {
   /// anywhere in the subject. Pattern and flags are string constants as ECMAScript writes them, within
   /// the subset <see cref="RegexOperations"/> converts.
   /// </summary>
-  RegexTest
+  RegexTest,
+
+  /// <summary>
+  /// <c>(f64 | f32, i32 separator) → str</c>: Visual Basic's conversion of a <c>Double</c> or a
+  /// <c>Single</c> to text ([MS-VBAL] §5.5.1.2.4, as <c>VarBstrFromR8</c> writes it): 15 (of an
+  /// <c>f64</c>) or 7 (of an <c>f32</c>) significant digits of the exact value, a tie to the even digit,
+  /// without trailing zeros; scientific notation <c>d.dddE±nn</c> where the exponent is below -4 or not
+  /// below the digits; <c>0</c> for both zeros, <c>1.#INF</c>, <c>-1.#INF</c>, <c>-1.#IND</c>; the
+  /// separator, a constant code unit, in place of the point (#1565, docs/reference/number-text.md).
+  /// </summary>
+  FormatVisualBasic
 
 }
 

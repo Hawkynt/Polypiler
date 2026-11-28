@@ -548,7 +548,7 @@ public sealed class CSharpCapabilitiesTests {
     string[] classes = [CSharpCollectionClasses.KeyedSlots, CSharpCollectionClasses.FloatKeys, CSharpCollectionClasses.SingleKeys];
     var text = $"public static class Helpers {{\n\n{string.Join("\n\n", helpers.Select(helper => "  " + string.Join("\n  ", helper.Lines(helper.Name))).Concat(classes))}\n\n}}\n";
     // The operations are helpers of the library now; what stays with the backend is the language and the runtime it stands in for.
-    Assert.That(helpers, Has.Count.EqualTo(49));
+    Assert.That(helpers, Has.Count.EqualTo(50));
     var span = $"public static class Helpers {{\n\n  {string.Join("\n  ", CSharpViewHelpers.StoreSpan.Lines("StoreSpan"))}\n\n}}\n";
     Assert.That(GeneratedCSharp.ComplaintsFor(span, "netstandard2.1", "8"), Is.Empty, span);
     var big = $"public static class Helpers {{\n\n  {string.Join("\n  ", CSharpBigIntegerHelpers.BigToDouble.Lines("BigToDouble"))}\n\n}}\n";

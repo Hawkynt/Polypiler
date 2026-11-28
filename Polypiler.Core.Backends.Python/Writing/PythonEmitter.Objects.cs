@@ -368,6 +368,7 @@ public static partial class PythonEmitter {
         : type == IrType.Bool ? new PyBool(false)
         : type.IsNumeric ? this.Zero(type.Integral)
         : type.IsMemory ? this.EmptyView(type)
+        : type.IsVariant ? new PyTuple([Integer(0, IrType.I32)])
         : new PyNone();
 
     /// <summary>

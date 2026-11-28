@@ -11,12 +11,12 @@ public static partial class JavaScriptEmitter {
     /// The nodes of the dynamic type, a pair <c>[tag, payload]</c> (<c>[0]</c> for <c>Empty</c>,
     /// <c>[1]</c> for <c>Null</c>): JavaScript's own values cannot tell an <c>i16</c> from an
     /// <c>f64</c>, which the tag does. The tag is the first element, a tested payload the second, an
-    /// untested one the helper <c>$variant</c>, which traps on another tag. A tag whose payload is 64
-    /// bits wide, a currency or a date has no form here.
+    /// untested one the helper <c>$variant</c>, which traps on another tag; a date is <c>[7, days]</c>. A
+    /// tag whose payload is 64 bits wide, a currency too, has no form here.
     /// </summary>
     private (JsExpression Node, bool Atomic) Variant(IrExpr expression) {
       var tag = expression switch { IrVariantOf made => made.Tag, IrVariantValue value => value.Tag, _ => IrVariantTag.Empty };
-      if (tag is IrVariantTag.Currency or IrVariantTag.Date or IrVariantTag.I64) {
+      if (tag is IrVariantTag.Currency or IrVariantTag.I64) {
         var what = $"a variant of the tag {tag}";
         if (this._refused.Add(what))
           this._problems.Add(InexpressibleDescriptor.At($"'{what}' cannot be expressed in JavaScript profile '{this._profile.LevelName}'"));

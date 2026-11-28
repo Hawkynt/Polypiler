@@ -42,7 +42,7 @@ public static class NumberTextOperations {
   public static IReadOnlyCollection<IrIntrinsicOp> Operations { get; } = [
     IrIntrinsicOp.FormatEcma, IrIntrinsicOp.FormatDotNet, IrIntrinsicOp.FormatBoolEcma, IrIntrinsicOp.FormatBoolDotNet, IrIntrinsicOp.FormatRadix,
     IrIntrinsicOp.FixedEcma, IrIntrinsicOp.FixedDotNet, IrIntrinsicOp.ParseNumberEcma, IrIntrinsicOp.ParseFloatEcma, IrIntrinsicOp.ParseIntEcma,
-    IrIntrinsicOp.ParseDotNet
+    IrIntrinsicOp.ParseDotNet, IrIntrinsicOp.FormatVisualBasic
   ];
 
   private static readonly HashSet<IrIntrinsicOp> _operations = [.. Operations];
@@ -67,6 +67,7 @@ public static class NumberTextOperations {
       IrIntrinsicOp.FixedEcma or IrIntrinsicOp.FixedDotNet => text && Are(type => type == IrType.F64, type => type == IrType.I32),
       IrIntrinsicOp.ParseNumberEcma or IrIntrinsicOp.ParseFloatEcma => result == IrType.F64 && Are(type => type.IsString),
       IrIntrinsicOp.ParseIntEcma => result == IrType.F64 && (Are(type => type.IsString) || Are(type => type.IsString, type => type == IrType.I32)),
+      IrIntrinsicOp.FormatVisualBasic => text && Are(type => type.IsFloat, type => type == IrType.I32),
       _ => result.IsNumeric && Are(type => type.IsString)
     };
   }
@@ -83,6 +84,8 @@ public static class NumberTextOperations {
       case IrIntrinsicOp.FixedEcma or IrIntrinsicOp.FixedDotNet when intrinsic.Arguments.Count == 2:
         var most = intrinsic.Op == IrIntrinsicOp.FixedEcma ? MaxEcmaDigits : MaxDotNetDigits;
         return DigitsOf(intrinsic) is null ? $"the digits of {intrinsic.Op} are not a constant from 0 to {most}" : null;
+      case IrIntrinsicOp.FormatVisualBasic when intrinsic.Arguments.Count == 2:
+        return SeparatorOf(intrinsic) is null ? $"the separator of {intrinsic.Op} is not a constant code unit" : null;
       case IrIntrinsicOp.FormatRadix when intrinsic.Arguments.Count == 5:
         return RadixOf(intrinsic) is null
           ? $"the radix of {intrinsic.Op} is not a constant 2, 8 or 16 (two's complement) or 2 to 36 (sign and magnitude) with constant padding from 0 to {MaxPadding}, case and mode"
@@ -99,6 +102,18 @@ public static class NumberTextOperations {
     var most = intrinsic.Op == IrIntrinsicOp.FixedEcma ? MaxEcmaDigits : MaxDotNetDigits;
     return intrinsic.Arguments[1] is IrConst { Value: var digits } && digits >= 0 && digits <= most ? (int)digits : null;
   }
+
+  /// <summary>The decimal separator of <see cref="IrIntrinsicOp.FormatVisualBasic"/>, or <see langword="null"/> when it is not a constant code unit other than 0.</summary>
+  /// <param name="intrinsic">A node of <see cref="IrIntrinsicOp.FormatVisualBasic"/>.</param>
+  /// <returns>The separator.</returns>
+  public static char? SeparatorOf(IrIntrinsic intrinsic)
+    => intrinsic.Arguments[1] is IrConst { Value: > 0 and <= char.MaxValue } separator ? (char)separator.Value : null;
+
+  /// <summary>A node of <see cref="IrIntrinsicOp.FormatVisualBasic"/>.</summary>
+  /// <param name="value">The number, an <c>f64</c> or an <c>f32</c>.</param>
+  /// <param name="separator">The decimal separator.</param>
+  /// <returns>The node.</returns>
+  public static IrIntrinsic VisualBasic(IrExpr value, char separator) => new(IrIntrinsicOp.FormatVisualBasic, IrType.String, [value, new IrConst(IrType.I32, separator)]);
 
   /// <summary>The radix, the padding, the case and the mode of a radix, or <see langword="null"/> when they are not constants within their bounds.</summary>
   /// <param name="intrinsic">A node of <see cref="IrIntrinsicOp.FormatRadix"/>.</param>
@@ -158,6 +173,8 @@ public static class NumberTextOperations {
         return ParseFloatEcma((string)arguments[0]);
       case IrIntrinsicOp.ParseIntEcma:
         return ParseIntEcma((string)arguments[0], arguments.Length == 1 ? 0 : (int)(long)arguments[1]);
+      case IrIntrinsicOp.FormatVisualBasic:
+        return arguments[0] is float binary32 ? FormatVisualBasic(binary32, SeparatorOf(intrinsic)!.Value) : FormatVisualBasic((double)arguments[0], SeparatorOf(intrinsic)!.Value);
       default:
         return ParseDotNet((string)arguments[0], intrinsic.Type);
     }
@@ -222,6 +239,66 @@ public static class NumberTextOperations {
   /// <param name="value">The number.</param>
   /// <returns>The text.</returns>
   public static string FormatDotNet(float value) => value.ToString(CultureInfo.InvariantCulture);
+
+  /// <summary>Visual Basic's text of a <c>Double</c>: 15 significant digits (<see cref="IrIntrinsicOp.FormatVisualBasic"/>).</summary>
+  /// <param name="value">The number.</param>
+  /// <param name="separator">The decimal separator.</param>
+  /// <returns>The text.</returns>
+  public static string FormatVisualBasic(double value, char separator) => VisualBasicText(value, 15, separator);
+
+  /// <summary>Visual Basic's text of a <c>Single</c>: 7 significant digits of its exact value.</summary>
+  /// <param name="value">The number.</param>
+  /// <param name="separator">The decimal separator.</param>
+  /// <returns>The text.</returns>
+  public static string FormatVisualBasic(float value, char separator) => VisualBasicText(value, 7, separator);
+
+  /// <summary>
+  /// The exact value of a number rounded to significant digits, a tie to the even digit, laid out as C's
+  /// <c>%.&lt;n&gt;G</c> lays it out - the rule of oleaut32's <c>VarBstrFromR8</c> ([MS-VBAL] §5.5.1.2.4).
+  /// </summary>
+  private static string VisualBasicText(double value, int precision, char separator) {
+    if (double.IsNaN(value))
+      return "-1.#IND";
+    if (double.IsInfinity(value))
+      return value > 0 ? "1.#INF" : "-1.#INF";
+    if (value == 0)
+      return "0";
+
+    var bits = BitConverter.DoubleToInt64Bits(value);
+    var exponent = (int)((bits >> 52) & 0x7FF);
+    var mantissa = (BigInteger)(bits & 0xFFFFFFFFFFFFFL);
+    if (exponent == 0)
+      exponent = 1;
+    else
+      mantissa += BigInteger.One << 52;
+
+    // value = digits · 10^scale exactly: mantissa · 2^shift, and 2^-n = 5^n / 10^n.
+    var shift = exponent - 1075;
+    var digits = (shift >= 0 ? mantissa << shift : mantissa * BigInteger.Pow(5, -shift)).ToString(CultureInfo.InvariantCulture);
+    var first = digits.Length - 1 + Math.Min(shift, 0);
+    if (digits.Length > precision) {
+      var kept = digits[..precision];
+      var rest = digits[precision..];
+      var up = rest[0] > '5' || (rest[0] == '5' && (rest.AsSpan(1).IndexOfAnyExcept('0') >= 0 || (kept[^1] - '0') % 2 == 1));
+      digits = (BigInteger.Parse(kept, CultureInfo.InvariantCulture) + (up ? 1 : 0)).ToString(CultureInfo.InvariantCulture);
+      if (digits.Length > precision) {
+        digits = digits[..precision];
+        ++first;
+      }
+    }
+
+    digits = digits.TrimEnd('0');
+    var sign = value < 0 ? "-" : "";
+    var point = separator.ToString();
+    if (first < -4 || first >= precision) {
+      var power = (first < 0 ? "E-" : "E+") + Math.Abs(first).ToString("00", CultureInfo.InvariantCulture);
+      return sign + digits[..1] + (digits.Length > 1 ? point + digits[1..] : "") + power;
+    }
+
+    if (first < 0)
+      return sign + "0" + point + new string('0', -first - 1) + digits;
+    return digits.Length <= first + 1 ? sign + digits + new string('0', first + 1 - digits.Length) : sign + digits[..(first + 1)] + point + digits[(first + 1)..];
+  }
 
   /// <summary>The digits of an integer in a radix, padded with zeros to a number of digits.</summary>
   /// <param name="value">The integer as the IR carries it.</param>

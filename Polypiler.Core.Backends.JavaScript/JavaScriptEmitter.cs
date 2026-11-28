@@ -255,6 +255,9 @@ public static partial class JavaScriptEmitter {
     private readonly Dictionary<string, IrLocal> _taken = [];
     private readonly Dictionary<IrLocal, string> _renamed = [];
 
+    /// <summary>What a name of a function the body calls stands for among the names taken: no local.</summary>
+    private static readonly IrLocal CalledFunction = new("function", IrType.Void);
+
     /// <summary>The names of the functions and constants of the module, which no renamed local may take.</summary>
     private readonly HashSet<string> _members = [];
 
@@ -458,7 +461,7 @@ public static partial class JavaScriptEmitter {
         case IrTypeKind.Bool:
           return "boolean";
         case IrTypeKind.Array:
-          return !type.Element!.IsStruct && !type.Element.IsString && !type.Element.IsFunction && this.Native(Storage(type.Element!)) ? Storage(type.Element!) : $"Array<{this.Describe(type.Element!)}>";
+          return !type.Element!.IsStruct && !type.Element.IsString && !type.Element.IsFunction && !type.Element.IsVariant && this.Native(Storage(type.Element!)) ? Storage(type.Element!) : $"Array<{this.Describe(type.Element!)}>";
         case IrTypeKind.String:
           return "string";
         case IrTypeKind.Function:
@@ -554,6 +557,10 @@ public static partial class JavaScriptEmitter {
       this._names.UnionWith(function.Parameters.Skip(skipped).Concat(function.Locals).Concat(IrTree.Nodes(function.Body).OfType<IrLambda>().SelectMany(lambda => lambda.Parameters.Concat(lambda.Locals))).Select(variable => this.Name(variable.Name)));
       foreach (var parameter in function.Parameters.Skip(skipped))
         this._taken[this.Name(parameter.Name)] = parameter;
+      // A local of the name of a function the body calls - a Visual Basic function's result, which
+      // its recursion calls - would hide that function: it takes a name of its own.
+      foreach (var called in IrTree.Nodes(function.Body).OfType<IrCall>().Select(call => this.Name(call.Function)).Where(this._members.Contains))
+        this._taken.TryAdd(called, CalledFunction);
 
       var parameters = function.Parameters.Skip(skipped).Select(parameter => this.Name(parameter.Name)).ToList();
       var statements = new List<JsStatement>();

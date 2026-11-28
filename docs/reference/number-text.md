@@ -33,6 +33,7 @@ culture or a runtime version.
 | `ParseFloatEcma` | `str → f64` | `parseFloat`: the longest prefix that is a sign and `Infinity` or a decimal literal; NaN without one |
 | `ParseIntEcma` | `(str) → f64`, `(str, i32 radix) → f64` | `parseInt`: a sign, `0x` without a radix or with 16, the longest run of digits; NaN without one or for a radix outside 2 to 36 |
 | `ParseDotNet` | `str → integer \| f64 \| f32` | `T.Parse(s, CultureInfo.InvariantCulture)`: an integer by `NumberStyles.Integer`, a float by `NumberStyles.Float \| NumberStyles.AllowThousands` (`1,000` is 1000), `Infinity` and `NaN` in any case; beyond the range ∞ |
+| `FormatVisualBasic` | `(f64 \| f32, i32 separator) → str` | Visual Basic's `CStr` ([MS-VBAL] 5.5.1.2.4, laid out as oleaut32's `VarBstrFromR8` with `%.15G`/`%.7G`, #1565): 15 (`f64`) or 7 (`f32`) significant digits of the exact value, a tie to the even digit, no trailing zeros; scientific `d.dddE±nn` (two exponent digits at least) where the exponent of the first digit is below -4 or not below the digits; `0` for ±0, `1.#INF`, `-1.#INF`, `-1.#IND`; the separator, a constant code unit, in place of the point |
 
 Every parse is correctly rounded. `ParseDotNet` traps `InvalidFormat` (new) on a malformed text and
 `IntegerOverflow` on an integer out of its type, the format first: `"99999999999x"` is
@@ -41,6 +42,9 @@ generated `FormatError`, a `RangeError` ([exceptions](exceptions.md)).
 
 The verifier checks the constants: the digits of a fixed notation within the bounds of its rule, and
 the radix, padding (0 to 99), case and mode of `FormatRadix`.
+
+Python writes `FormatVisualBasic` with `_ply_format_vb` over `float.as_integer_ratio`, Visual Basic with
+`CStr` normalised (`PlyFmtR8`), and every other backend refuses it.
 
 ## C# frontend
 
@@ -98,6 +102,7 @@ digits and does not round `Parse` correctly; a .NET Standard library may run on 
 | `FixedDotNet` | helper `NumberText` (the exact value, a tie to even) | `x.ToString("F2", CultureInfo.InvariantCulture)` |
 | `ParseDotNet` of an integer | `int.Parse(s, NumberStyles.Integer, CultureInfo.InvariantCulture)` | same |
 | `ParseDotNet` of `f64`, `f32` | helper `ParseText` (the grammar and the exact value) | `double.Parse(s, NumberStyles.Float \| NumberStyles.AllowThousands, CultureInfo.InvariantCulture)` |
+| `FormatVisualBasic` | helper `VisualBasicText` (the exact digits from the bits, a tie to even) | same |
 | `ParseNumberEcma`, `ParseFloatEcma`, `ParseIntEcma` | helper `ParseText` | same |
 
 `NumberText` finds the shortest digits with Ryu (Ulf Adams, Apache License 2.0), converted to
@@ -121,6 +126,7 @@ code it was derived from, with its licence, in its header.
 | `FixedDotNet` | helper `$fixedNet` (the exact digits by `$exact`, a tie to even, the sign of -0) | same | same |
 | `ParseNumberEcma`, `ParseFloatEcma`, `ParseIntEcma` | `Number(s)`, `parseFloat(s)`, `parseInt(s, r)` | same | same |
 | `ParseDotNet` | helpers `$parseNet` (the grammar, digits through `Number`, a float decided by the exact digits where it falls on a midpoint), `$parseNetInt`, `$parseNet64` | same | `$parseNet64` through `BigInt` |
+| `FormatVisualBasic` | helper `$fmtVb` over the exact digits of `$exact` | same | same |
 
 ## Checks
 

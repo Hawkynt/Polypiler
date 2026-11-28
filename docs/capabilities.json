@@ -3080,11 +3080,11 @@
       "evidence": null,
       "limitations": [
         {
-          "construct": "Variant whose text or number would depend on the locale, bitwise operators on integer Variants, Variant arrays",
+          "construct": "text of a Date, a Variant holding an array and another kind, LongLong in a Variant",
           "diagnostic": "PLY2646"
         },
         {
-          "construct": "Currency, Date, Decimal, Object, LongPtr",
+          "construct": "Decimal, Object, LongPtr",
           "diagnostic": "PLY2646"
         },
         {
@@ -3115,11 +3115,11 @@
       "evidence": null,
       "limitations": [
         {
-          "construct": "Variant whose text or number would depend on the locale, bitwise operators on integer Variants, Variant arrays",
+          "construct": "text of a Date, a Variant holding an array and another kind, LongLong in a Variant",
           "diagnostic": "PLY2646"
         },
         {
-          "construct": "Currency, Date, Decimal, Object, LongPtr",
+          "construct": "Decimal, Object, LongPtr",
           "diagnostic": "PLY2646"
         },
         {
@@ -3150,11 +3150,11 @@
       "evidence": null,
       "limitations": [
         {
-          "construct": "Variant whose text or number would depend on the locale, bitwise operators on integer Variants, Variant arrays",
+          "construct": "text of a Date, a Variant holding an array and another kind, LongLong in a Variant",
           "diagnostic": "PLY2646"
         },
         {
-          "construct": "Currency, Date, Decimal, Object, LongPtr",
+          "construct": "Decimal, Object, LongPtr",
           "diagnostic": "PLY2646"
         },
         {
@@ -3185,11 +3185,11 @@
       "evidence": null,
       "limitations": [
         {
-          "construct": "Variant whose text or number would depend on the locale, bitwise operators on integer Variants, Variant arrays",
+          "construct": "text of a Date, a Variant holding an array and another kind, LongLong in a Variant",
           "diagnostic": "PLY2646"
         },
         {
-          "construct": "Currency, Date, Decimal, Object, LongPtr",
+          "construct": "Decimal, Object, LongPtr",
           "diagnostic": "PLY2646"
         },
         {
@@ -3220,11 +3220,11 @@
       "evidence": null,
       "limitations": [
         {
-          "construct": "Variant whose text or number would depend on the locale, bitwise operators on integer Variants, Variant arrays",
+          "construct": "text of a Date, a Variant holding an array and another kind, LongLong in a Variant",
           "diagnostic": "PLY2646"
         },
         {
-          "construct": "Currency, Date, Decimal, Object, LongPtr",
+          "construct": "Decimal, Object, LongPtr",
           "diagnostic": "PLY2646"
         },
         {
@@ -3255,11 +3255,11 @@
       "evidence": null,
       "limitations": [
         {
-          "construct": "Variant whose text or number would depend on the locale, bitwise operators on integer Variants, Variant arrays",
+          "construct": "text of a Date, a Variant holding an array and another kind, LongLong in a Variant",
           "diagnostic": "PLY2646"
         },
         {
-          "construct": "Currency, Date, Decimal, Object, LongPtr",
+          "construct": "Decimal, Object, LongPtr",
           "diagnostic": "PLY2646"
         },
         {
@@ -3290,11 +3290,11 @@
       "evidence": null,
       "limitations": [
         {
-          "construct": "Variant whose text or number would depend on the locale, bitwise operators on integer Variants, Variant arrays",
+          "construct": "text of a Date, a Variant holding an array and another kind, LongLong in a Variant",
           "diagnostic": "PLY2646"
         },
         {
-          "construct": "Currency, Date, Decimal, Object, LongPtr",
+          "construct": "Decimal, Object, LongPtr",
           "diagnostic": "PLY2646"
         },
         {
@@ -3325,11 +3325,11 @@
       "evidence": null,
       "limitations": [
         {
-          "construct": "Variant whose text or number would depend on the locale, bitwise operators on integer Variants, Variant arrays",
+          "construct": "text of a Date, a Variant holding an array and another kind, LongLong in a Variant",
           "diagnostic": "PLY2646"
         },
         {
-          "construct": "Currency, Date, Decimal, Object, LongPtr",
+          "construct": "Decimal, Object, LongPtr",
           "diagnostic": "PLY2646"
         },
         {
@@ -3360,11 +3360,11 @@
       "evidence": null,
       "limitations": [
         {
-          "construct": "Variant whose text or number would depend on the locale, bitwise operators on integer Variants, Variant arrays",
+          "construct": "text of a Date, a Variant holding an array and another kind, LongLong in a Variant",
           "diagnostic": "PLY2646"
         },
         {
-          "construct": "Currency, Date, Decimal, Object, LongPtr",
+          "construct": "Decimal, Object, LongPtr",
           "diagnostic": "PLY2646"
         },
         {
@@ -3395,11 +3395,11 @@
       "evidence": null,
       "limitations": [
         {
-          "construct": "Variant whose text or number would depend on the locale, bitwise operators on integer Variants, Variant arrays",
+          "construct": "text of a Date, a Variant holding an array and another kind, LongLong in a Variant",
           "diagnostic": "PLY2646"
         },
         {
-          "construct": "Currency, Date, Decimal, Object, LongPtr",
+          "construct": "Decimal, Object, LongPtr",
           "diagnostic": "PLY2646"
         },
         {
@@ -3430,11 +3430,11 @@
       "evidence": null,
       "limitations": [
         {
-          "construct": "Variant whose text or number would depend on the locale, bitwise operators on integer Variants, Variant arrays",
+          "construct": "text of a Date, a Variant holding an array and another kind, LongLong in a Variant",
           "diagnostic": "PLY2646"
         },
         {
-          "construct": "Currency, Date, Decimal, Object, LongPtr",
+          "construct": "Decimal, Object, LongPtr",
           "diagnostic": "PLY2646"
         },
         {
@@ -3465,11 +3465,11 @@
       "evidence": null,
       "limitations": [
         {
-          "construct": "Variant whose text or number would depend on the locale, bitwise operators on integer Variants, Variant arrays",
+          "construct": "text of a Date, a Variant holding an array and another kind, LongLong in a Variant",
           "diagnostic": "PLY2646"
         },
         {
-          "construct": "Currency, Date, Decimal, Object, LongPtr",
+          "construct": "Decimal, Object, LongPtr",
           "diagnostic": "PLY2646"
         },
         {
@@ -3500,11 +3500,11 @@
       "evidence": null,
       "limitations": [
         {
-          "construct": "Variant whose text or number would depend on the locale, bitwise operators on integer Variants, Variant arrays",
+          "construct": "text of a Date, a Variant holding an array and another kind, LongLong in a Variant",
           "diagnostic": "PLY2646"
         },
         {
-          "construct": "Currency, Date, Decimal, Object, LongPtr",
+          "construct": "Decimal, Object, LongPtr",
           "diagnostic": "PLY2646"
         },
         {
@@ -3535,11 +3535,11 @@
       "evidence": null,
       "limitations": [
         {
-          "construct": "Variant whose text or number would depend on the locale, bitwise operators on integer Variants, Variant arrays",
+          "construct": "text of a Date, a Variant holding an array and another kind, LongLong in a Variant",
           "diagnostic": "PLY2646"
         },
         {
-          "construct": "Currency, Date, Decimal, Object, LongPtr",
+          "construct": "Decimal, Object, LongPtr",
           "diagnostic": "PLY2646"
         },
         {

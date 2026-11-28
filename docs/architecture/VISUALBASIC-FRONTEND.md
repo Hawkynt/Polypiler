@@ -4,12 +4,18 @@
 ([#1090](https://github.com/Hawkynt/Polypiler/issues/1090), with the classic parts of
 [#1094](https://github.com/Hawkynt/Polypiler/issues/1094), [#1091](https://github.com/Hawkynt/Polypiler/issues/1091),
 [#1092](https://github.com/Hawkynt/Polypiler/issues/1092), [#1093](https://github.com/Hawkynt/Polypiler/issues/1093) and
-[#1095](https://github.com/Hawkynt/Polypiler/issues/1095)) and `Variant` ([#1556](https://github.com/Hawkynt/Polypiler/issues/1556)), its oracle LibreOffice Basic in VBA mode
+[#1095](https://github.com/Hawkynt/Polypiler/issues/1095)), `Variant` ([#1556](https://github.com/Hawkynt/Polypiler/issues/1556)),
+its inference across the module ([#1564](https://github.com/Hawkynt/Polypiler/issues/1564)), the locale
+([#1565](https://github.com/Hawkynt/Polypiler/issues/1565)), `Currency` and `Date` ([#1566](https://github.com/Hawkynt/Polypiler/issues/1566))
+and bitwise `Variant`s and `Variant` arrays ([#1567](https://github.com/Hawkynt/Polypiler/issues/1567)), its oracle LibreOffice Basic in VBA mode
 ([ADR 2600](../adr/2600-classic-visual-basic-oracle.md)). Related: [classic Visual Basic backend](VISUALBASIC-BACKEND.md) ·
 [import differences](../reference/import-differences.md) · [variants](../reference/variants.md).
 
-`polypiler translate <file>.bas --from visualbasic --to <target> --output <directory>` imports one
-standard module; its name is the `Attribute VB_Name`, or the file name.
+`polypiler translate <file>.bas --from visualbasic --to <target> --output <directory> [--vb-locale <locale>]`
+imports one standard module; its name is the `Attribute VB_Name`, or the file name. `--vb-locale`
+(`VisualBasicImportOptions.Locale`) states the regional settings the module runs under - `en-US`
+(the default, the separators of the invariant culture), `en-GB`, `de-DE` or `fr-FR` - whose decimal
+separator `CStr` writes and `CDbl` reads and whose digit group separator `CDbl` skips.
 
 ## Pipeline
 
@@ -17,8 +23,10 @@ standard module; its name is the `Attribute VB_Name`, or the file name.
 flowchart LR
   S[.bas source] --> P[VbaParser: syntax tree]
   P --> D[Declarations: types, enums, constants, globals, signatures]
-  D --> I[Variant inference: kinds per local, flow-sensitive]
+  D --> R[Rounds over the call graph: clones per call signature, result types]
+  R --> I[Variant inference: kinds per local, flow-sensitive]
   I --> L[VbaLowerer: procedures, error handling]
+  L --> R
   L --> H[Helpers written in the subset, lowered raw]
   H --> V[IrVerifier]
   V --> M[IR module]
@@ -38,6 +46,9 @@ operator precedence of 5.6.9. A syntax error is `PLY2645` with its line.
 | Visual Basic | IR |
 | --- | --- |
 | `Boolean`, `Byte`, `Integer`, `Long`, `LongLong`, `Single`, `Double`, `String` | `bool`, `u8`, `i16`, `i32`, `i64`, `f32`, `f64`, string |
+| `Currency`, `@` literals, `CCur` | `i64` of ten thousandths: exact `+ -`, the product of the ten thousandths divided by 10000 with a tie to even (`PlyCurMul`), `CCur` of a `Double` `x * 10000` rounded half to even (as `VarCyFromR8`), error 6 outside the 64 bits; with a `Single` or a `Double` `*` is a `Double`, `/` always |
+| `Date`, `#1/2/2000#`, `#2000-01-02 13:30#`, `CDate` | `f64` days since 1899-12-30, the time as the fraction (a day before the epoch minus its time); `Date ± number` a `Date`, `Date - Date` and `*`, `/` a `Double`, error 6 outside 100-01-01 … 9999-12-31 |
+| `DateSerial`, `TimeSerial`, `Year`, `Month`, `Day`, `Weekday`, `Hour`, `Minute`, `Second` | helpers over Howard Hinnant's `days_from_civil`/`civil_from_days` (years 0-29 are 2000-2029, 30-99 1930-1999; months and days normalised; error 5 outside the dates); the time rounded to the second |
 | `Type … End Type` | struct (no `String` or array fields, which the IR's records do not hold) |
 | `Enum` | `Long` constants |
 | `Const`, module variable | constant, global |
@@ -48,7 +59,9 @@ operator precedence of 5.6.9. A syntax error is `PLY2645` with its line.
 | `/`, `^`, floating-point `+ - *` | the IR's, checked by `PlyCheckD`/`PlyDivD`/`PlyPow`: error 6 for an infinite result, 11 for a zero divisor, 6 for 0/0 |
 | `\`, `Mod` | operands rounded half to even to integers, then truncating division and remainder |
 | `And`, `Or`, `Xor`, `Eqv`, `Imp`, `Not` | logical on two `Boolean`s, evaluating both operands; bitwise otherwise |
-| `&` | concatenation; an integer as `CStr` writes it |
+| `&`, `CStr`, a number assigned to a `String` | concatenation; an integer in decimal, a `Single`/`Double` by `FormatVisualBasic` (15 or 7 significant digits, `1E+20`, `1E-05`, the locale's decimal separator), a `Currency` with up to four decimals |
+| `CDbl`/`CSng`/`CLng`/… of a `String`, a `String` with a number, a `String` condition, `IsNumeric` | `PlyNumText`: blanks, a sign, digits with the locale's group separator, its decimal separator, an exponent after `E` or `D`, `&H`/`&O`, to the canonical text `ParseDotNet` reads exactly; error 13 for no number, 6 beyond the range; `"True"`/`"False"` as a `Boolean` |
+| `Val` | `PlyVal`: blanks anywhere, a point in every locale, the longest number at the start, `&H`/`&O` as `Integer`/`Long` bits, 0 without one |
 | `CInt`, `CLng`, `CByte`, implicit conversion | half to even, trapping outside the type |
 | `For … Step` | the end and the step evaluated once; the counter's step traps after the last pass, as Visual Basic's does |
 | `Select Case` | the value once, then an `If` chain over the clauses |
@@ -59,6 +72,8 @@ operator precedence of 5.6.9. A syntax error is `PLY2645` with its line.
 | any other `Variant`, untyped or `As Variant` parameters, results and module variables | the dynamic type `variant` ([variants](../reference/variants.md)) |
 | `Empty`, `Null`, `CVar` | `IrVariantOf` |
 | `IsEmpty`, `IsNull`, `VarType`, `TypeName`, `IsNumeric` | the tag of a dynamic value; a constant for a typed one |
+| `Dim a(…)`, `Dim a()` of `Variant`, `Array(…)`, `IsArray` | an array of the dynamic type (`variant[]`), elements `Empty` when made; `Array(…)` from `Option Base`; a `Variant` local only ever assigned an array becomes that array |
+| untyped or `Variant` parameters and results called with one kind each | clones per call signature (below) |
 
 The built-in functions are lowered to helpers written in the subset itself and lowered with it (`PlyLeft`,
 `PlyMid`, `PlyInStr`, …); a module carries those it calls.
@@ -95,23 +110,44 @@ of the type (`PlyVarArith`, `PlyVarDiv`, `PlyVarIntDiv`, `PlyVarNeg`, `PlyVarPow
 | `\`, `Mod` | operands rounded half to even to integers; the result in the narrower type, promoted like `+` |
 | `=`, `<`, … | numbers by value, strings by code unit, a number below a string, `Empty` as 0 or `""` |
 | `And`, `Or`, `Xor`, `Not` | on `Boolean` and `Null`, three-valued: `Null And False` is `False`, `Null Or True` is `True` |
+| `And`, `Or`, `Xor`, `Eqv`, `Imp`, `Not` of other kinds | bitwise in the effective type of [MS-VBAL] 5.6.9.8 (`PlyVarBits`): `Byte` of two `Byte`s, `Boolean` of two `Boolean`s, `Integer` of `Byte`/`Boolean`/`Integer`/`Empty`, `Long` of anything else rounded half to even; with `Null`: `0 And Null` is 0, `x Or Null` is x for x ≠ 0, `x Imp Null` is `Not x` but for -1, `Null Imp y` is y for y ≠ 0, everything else `Null` |
+| `Currency` and `Date` in a `Variant` | tags 6 and 7: `Currency` never promotes (error 6), a `Date` that leaves the dates a `Double`; a `Variant` that may hold a `Currency` uses the `…C` helpers (`PlyVarArithC`, `PlyVarDivC`, …), so a module without `Currency` carries no 64-bit integer |
 | a condition | `Null` and `Empty` are false |
 | assignment to a typed variable, `CInt`, `CStr`, … | `Empty` is 0, `""` or `False`; `Null` raises error 94 |
 | `For` over a counter | constant bounds whose last step still fits keep the counter in its type; otherwise the counter is dynamic and every step is `Variant` addition |
 
-Parameters, results and module variables of `Variant` may hold anything: they stay dynamic. Two
-operations depend on the locale, which the frontend does not model, and are refused where the kinds
-say they can happen: the text of a `Single` or `Double` (`CStr`, `&`, assignment to a `String`), and a
-`String` that meets a number (arithmetic, a comparison with a typed value, a typed conversion, a
-condition, `IsNumeric`). So are the bitwise operators on integer `Variant`s, `Eqv` and `Imp`, a
-`LongLong` in a dynamic `Variant`, a built-in function other than the conversions and the ones above
-applied to a dynamic `Variant`, `Debug.Print` of one that may be `Null`, and `Variant` arrays and fields.
+Module variables of `Variant` may hold anything: they stay dynamic, and so does what a dynamic value
+from outside may hold - every kind but `Currency`, which a module only meets through its own `CCur`,
+`@` literals and `Currency` variables (a `Currency` the host passes in a dynamic `Variant` raises error 13).
+Refused where the kinds say it can happen: a `LongLong` in a dynamic `Variant`, `^`, `\`, `Mod`, the
+bitwise operators and a condition of one that may hold a `Currency`, a built-in function other than the
+conversions and the ones above applied to a dynamic `Variant`, `Debug.Print` of one that may be `Null`,
+a `Variant` that may hold an array and another kind, and `Variant` fields. The text of a `Date` that a
+dynamic `Variant` holds raises error 13 when it runs; the text of a typed `Date` is refused.
+
+## Variant parameters and results across the module
+
+Untyped and `As Variant` parameters and results are inferred from the calls of the whole module
+(`VbaLowerer.Specialisation.cs`). A call whose every `Variant` argument has one scalar kind calls a
+clone of the procedure whose parameters have those types - `Add(CLng(3), CLng(4))` calls
+`Add_Long_Long(a As Long, b As Long)` - at most four clones per procedure; a call of several kinds, or
+of a fifth signature, calls the procedure as it is declared. The result is a local of the procedure's
+inference: of one kind on every exit and never `Empty`, it gives the clone that return type. The module
+is lowered round after round, each with the clones and result types the round before found, until a
+round finds the same (recursion included; after twelve rounds every procedure is lowered as declared).
+A `Public` procedure keeps its declared signature, which the host calls, and gets clones for the
+module's own calls; a `Private` one called through one clone alone is that clone under its own name,
+and one never called keeps its declared signature. A clone whose lowering is refused - the text of a
+`Date` that its typed parameter would hold - leaves its calls to the procedure as declared. A clone's
+typed parameters keep the arithmetic of a `Variant`: `Inc(CInt(32767))` of `Inc = x + 1` is
+`Long 32768`, not error 6.
 
 ## What is refused
 
-`PLY2646` names the `Variant` constructs above, `Currency`, `Date`, `Decimal`, `Object`, `LongPtr`, fixed-length strings,
-class modules and `Property`, `Declare`, `Static`, `GoSub`/`Return`, `GoTo`, `With`, `For Each`, `Set`,
-`ParamArray`, a parameter passed by reference and assigned, `Err.Raise` of another number, arrays of
-`String` or `Boolean`, multidimensional arrays and the functions that depend on the locale (`CStr` of a
-floating-point number, `Val`, `Format`, `UCase`). `PLY2648` is a name that names nothing or a type mismatch.
+`PLY2646` names the `Variant` constructs above, the text of a `Date`, a `For` loop over a `Currency` or
+`Date` counter, `Decimal`, `Object`, `LongPtr`, fixed-length strings, class modules and `Property`,
+`Declare`, `Static`, `GoSub`/`Return`, `GoTo`, `With`, `For Each`, `Set`, `ParamArray`, a parameter
+passed by reference and assigned, `Err.Raise` of another number, arrays of `String` or `Boolean`,
+multidimensional arrays and the functions it does not import (`Format`, `Str`, `UCase`, `Now`, `Date`,
+`Time`, `DateAdd`, `DateDiff`, `IsDate`, `CDec`, …). `PLY2648` is a name that names nothing or a type mismatch.
 `Err` is not cleared when a procedure ends - documented by VBA, not done by LibreOffice (ADR 2600).

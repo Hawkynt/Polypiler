@@ -143,6 +143,43 @@ internal static partial class JavaScriptHelpers {
         return { digits: digits, scale: e < 0 ? e : 0 };
       }
       """),
+    Same("$fmtVb", """
+      function $fmtVb(x, p, s) {
+        if (x !== x) return "-1.#IND";
+        if (x === Infinity || x === -Infinity) return x < 0 ? "-1.#INF" : "1.#INF";
+        if (x === 0) return "0";
+        @const exact = $exact(x < 0 ? -x : x);
+        @let digits = exact.digits;
+        @let first = digits.length - 1 + exact.scale;
+        if (digits.length > p) {
+          @let rest = false;
+          for (@let k = p + 1; k < digits.length && !rest; ++k) rest = digits.charAt(k) !== "0";
+          @let up = digits.charAt(p) > "5" || digits.charAt(p) === "5" && (rest || +digits.charAt(p - 1) % 2 === 1);
+          digits = digits.substring(0, p);
+          for (@let k = p - 1; up && k >= 0; --k) {
+            up = digits.charAt(k) === "9";
+            digits = digits.substring(0, k) + (up ? 0 : +digits.charAt(k) + 1) + digits.substring(k + 1);
+          }
+          if (up) {
+            digits = "1" + digits.substring(0, p - 1);
+            ++first;
+          }
+        }
+        while (digits.length > 1 && digits.charAt(digits.length - 1) === "0") digits = digits.substring(0, digits.length - 1);
+        @const sign = x < 0 ? "-" : "";
+        if (first < -4 || first >= p) {
+          @const m = first < 0 ? -first : first;
+          return sign + digits.charAt(0) + (digits.length > 1 ? s + digits.substring(1) : "") + (first < 0 ? "E-" : "E+") + (m < 10 ? "0" : "") + m;
+        }
+        if (first < 0) {
+          @let zeros = "";
+          for (@let k = 1; k < -first; ++k) zeros += "0";
+          return sign + "0" + s + zeros + digits;
+        }
+        while (digits.length < first + 1) digits += "0";
+        return sign + digits.substring(0, first + 1) + (digits.length > first + 1 ? s + digits.substring(first + 1) : "");
+      }
+      """),
     Same("$fixedNet", """
       function $fixedNet(x, d) {
         if (x !== x) return "NaN";

@@ -1,0 +1,15 @@
+Integer 8
+Integer 14
+Integer 6
+Integer -7
+Integer -5
+Integer -13
+Byte 8 Byte 55
+Long 128 Byte 55
+Long 0 Byte 55
+Integer|Null|Integer
+Null|Integer|Null
+IntegerStringNull20
+String 2 1 True
+Double 2.5 3 Empty
+!9

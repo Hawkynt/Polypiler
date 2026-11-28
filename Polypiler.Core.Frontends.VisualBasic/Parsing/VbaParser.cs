@@ -32,7 +32,41 @@ internal sealed class VbaUnsupportedException(int line, string construct) : Exce
 /// </summary>
 internal static class VbaParser {
 
-  private enum Kind { Name, Integer, Float, String, Symbol, End }
+  private enum Kind { Name, Integer, Float, String, Symbol, End, Date }
+
+  /// <summary>
+  /// A date literal ([MS-VBAL] §3.3.3): <c>#m/d/yyyy#</c> or <c>#yyyy-mm-dd#</c>, each with an optional
+  /// time <c>h:mm[:ss] [AM|PM]</c>, or a time alone; a year of two digits is 2000-2029 or 1930-1999.
+  /// </summary>
+  private static readonly System.Text.RegularExpressions.Regex _date = new(
+    @"\G#\s*(?:(?:(?<m>\d{1,2})/(?<d>\d{1,2})/(?<y>\d{1,4})|(?<y>\d{4})-(?<m>\d{1,2})-(?<d>\d{1,2}))\s*)?(?:(?<h>\d{1,2}):(?<n>\d{1,2})(?::(?<s>\d{1,2}))?\s*(?<p>[AaPp][Mm])?\s*)?#",
+    System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+  /// <summary>The value of a date literal at a position of a line, or <see langword="null"/> where none starts there.</summary>
+  private static (double Value, int Length)? DateLiteral(string line, int at, int number) {
+    var match = _date.Match(line, at);
+    if (!match.Success || (!match.Groups["y"].Success && !match.Groups["h"].Success))
+      return null;
+
+    int Part(string name, int otherwise) => match.Groups[name].Success ? int.Parse(match.Groups[name].Value, CultureInfo.InvariantCulture) : otherwise;
+    var year = Part("y", 1899);
+    if (match.Groups["y"].Success && match.Groups["y"].Value.Length <= 2)
+      year += year < 30 ? 2000 : 1900;
+    var (month, day) = (Part("m", 12), Part("d", 30));
+    var (hour, minute, second) = (Part("h", 0), Part("n", 0), Part("s", 0));
+    if (match.Groups["p"].Success) {
+      if (hour is < 1 or > 12)
+        throw new VbaSyntaxException(number, $"the date literal {match.Value} has no hour of the 12-hour clock");
+      hour = hour % 12 + (char.ToUpperInvariant(match.Groups["p"].Value[0]) == 'P' ? 12 : 0);
+    }
+
+    if (year is < 100 or > 9999 || month is < 1 or > 12 || day < 1 || day > DateTime.DaysInMonth(year, month) || hour > 23 || minute > 59 || second > 59)
+      throw new VbaSyntaxException(number, $"the date literal {match.Value} names no date");
+
+    var days = (new DateTime(year, month, day) - new DateTime(1899, 12, 30)).Days;
+    var time = (hour * 3600 + minute * 60 + second) / 86400.0;
+    return (days < 0 ? days - time : days + time, match.Length);
+  }
 
   private sealed record Token(Kind Kind, string Text, int Line) {
 
@@ -98,6 +132,12 @@ internal static class VbaParser {
           var suffix = at < line.Length && line[at] is '%' or '&' or '^' or '!' or '#' or '$' or '@' && !(at + 1 < line.Length && char.IsAsciiLetterOrDigit(line[at + 1]) && line[at] is '!' or '&')
             ? line[at++].ToString() : "";
           tokens.Add(new(Kind.Name, word, number) { Suffix = suffix });
+          continue;
+        }
+
+        if (c == '#' && DateLiteral(line, at, number) is { } date) {
+          tokens.Add(new(Kind.Date, line.Substring(at, date.Length), number) { Float = date.Value });
+          at += date.Length;
           continue;
         }
 
@@ -959,6 +999,9 @@ internal static class VbaParser {
         case Kind.String:
           ++this._at;
           return new VbaString(token.Text, token.Line);
+        case Kind.Date:
+          ++this._at;
+          return new VbaDate(token.Float, token.Line);
         case Kind.Name when token.Is("True") || token.Is("False"):
           ++this._at;
           return new VbaBoolean(token.Is("True"), token.Line);

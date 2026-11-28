@@ -87,7 +87,7 @@ flowchart LR
 | integer to `f32` | `float(x)` up to 24 bits, `_ply_f32_of_int(x)` beyond, which rounds once rather than through a double |
 | float to integer | `_ply_f2i_sat` (NaN to 0, saturating) or `_ply_f2i_trap` (`OverflowError`) |
 | `FloatBits`, `BitsFloat` | `struct.unpack("<q", struct.pack("<d", x))[0]` and the reverse |
-| `variant`, the dynamic type ([variants](../reference/variants.md)) | a tuple `(tag, payload)`, `(0,)` and `(1,)` for `Empty` and `Null`; the tag `v[0]`, a tested payload `v[1]`, an untested one `_ply_variant(v, tag)`, which raises the `InvalidCastError` |
+| `variant`, the dynamic type ([variants](../reference/variants.md)) | a tuple `(tag, payload)`, `(0,)` and `(1,)` for `Empty` and `Null`, `(6, ten thousandths)` and `(7, days)`, lists of them, new elements `(0,)`; the tag `v[0]`, a tested payload `v[1]`, an untested one `_ply_variant(v, tag)`, which raises the `InvalidCastError` |
 | `bigint`, the arbitrary-precision integer | Python's `int`: its operators, `//` and `%` of a dividend that is not negative by a positive constant, `<<` and `>>` by a constant; `_ply_big_div` and `_ply_big_rem` (truncating), `_ply_big_shl` and `_ply_big_shr` (a count of any sign), `_ply_big_float` (an infinity where `float()` raises), `_ply_float_big` (`OverflowError` for a NaN and an infinity); to a fixed width the mask and sign-wrap or `_ply_checked` |
 | `HighWord`, `JoinWords` (the limbs of O0075) | `(x >> 32) & 0xFFFFFFFF`; `(high << 32) \| low` sign-wrapped to `i64` |
 | square root, floor, ceiling, truncation, the roundings, sign, IEEE minimum and maximum | helpers that keep -0 and NaN as IEEE 754 does; `abs` |

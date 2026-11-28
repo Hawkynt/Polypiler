@@ -40,7 +40,7 @@ public sealed class IrNumberTextTests {
 
   [Test]
   public void Operations_AreTheConversions() {
-    Assert.That(NumberTextOperations.Operations, Has.Count.EqualTo(11));
+    Assert.That(NumberTextOperations.Operations, Has.Count.EqualTo(12));
     Assert.That(NumberTextOperations.Operations, Has.All.Matches<IrIntrinsicOp>(NumberTextOperations.IsNumberText));
     Assert.That(NumberTextOperations.IsNumberText(IrIntrinsicOp.StrConcat), Is.False);
     Assert.That(NumberTextOperations.Problem(new IrIntrinsic(IrIntrinsicOp.StrLength, IrType.I32, [Text("a")])), Is.Null);
@@ -71,6 +71,49 @@ public sealed class IrNumberTextTests {
     Assert.That(Problems(radix with { Arguments = [Text("1"), I32(16), I32(0), new IrConst(IrType.Bool, 0), I32(1)] }), Has.Some.Contains("FormatRadix"));
     Assert.That(Problems(radix), Is.Empty);
     Assert.That(Problems(new IrIntrinsic(IrIntrinsicOp.ParseIntEcma, IrType.F64, [Text("1"), I32(36)])), Is.Empty);
+  }
+
+  /// <summary>Visual Basic's text of a number (#1565): 15 or 7 significant digits, a tie to even, the layout of <c>%G</c>, the separator.</summary>
+  [TestCase(1.0 / 3, '.', "0.333333333333333")]
+  [TestCase(1e20, '.', "1E+20")]
+  [TestCase(1e15, '.', "1E+15")]
+  [TestCase(1e14, '.', "100000000000000")]
+  [TestCase(123456789012345.0, '.', "123456789012345")]
+  [TestCase(123456789012344.5, '.', "123456789012344")]
+  [TestCase(123456789012345.5, '.', "123456789012346")]
+  [TestCase(999999999999999.5, '.', "1E+15")]
+  [TestCase(0.0001, '.', "0.0001")]
+  [TestCase(0.00001, '.', "1E-05")]
+  [TestCase(-2.5, ',', "-2,5")]
+  [TestCase(1.5e-100, ',', "1,5E-100")]
+  [TestCase(0.1 + 0.2, '.', "0.3")]
+  [TestCase(-0.0, '.', "0")]
+  [TestCase(double.PositiveInfinity, '.', "1.#INF")]
+  [TestCase(double.NegativeInfinity, '.', "-1.#INF")]
+  [TestCase(double.NaN, '.', "-1.#IND")]
+  [TestCase(5e-324, '.', "4.94065645841247E-324")]
+  public void FormatVisualBasic_OfADouble_HasFifteenDigits(double value, char separator, string expected) {
+    Assert.That(NumberTextOperations.FormatVisualBasic(value, separator), Is.EqualTo(expected));
+    Assert.That(Evaluated(NumberTextOperations.VisualBasic(F64(value), separator)), Is.EqualTo(expected));
+  }
+
+  [TestCase(1f / 3, "0.3333333")]
+  [TestCase(1e7f, "1E+07")]
+  [TestCase(1234567f, "1234567")]
+  [TestCase(0.1f, "0.1")]
+  [TestCase(9999999.5f, "1E+07")]
+  public void FormatVisualBasic_OfASingle_HasSevenDigits(float value, string expected) {
+    Assert.That(NumberTextOperations.FormatVisualBasic(value, '.'), Is.EqualTo(expected));
+    Assert.That(Evaluated(NumberTextOperations.VisualBasic(new IrConst(IrType.F32, IrOperators.Bits(IrType.F32, value)), '.')), Is.EqualTo(expected));
+  }
+
+  [Test]
+  public void FormatVisualBasic_TakesAConstantSeparatorOfAFloat() {
+    Assert.That(Problems(new IrIntrinsic(IrIntrinsicOp.FormatVisualBasic, _str, [F64(1), new IrBinary(IrBinaryOp.Add, I32(44), I32(0))])), Has.Some.Contains("the separator of FormatVisualBasic is not a constant code unit"));
+    Assert.That(Problems(new IrIntrinsic(IrIntrinsicOp.FormatVisualBasic, _str, [F64(1), I32(0)])), Has.Some.Contains("the separator"));
+    Assert.That(Problems(new IrIntrinsic(IrIntrinsicOp.FormatVisualBasic, _str, [F64(1), I32(65536)])), Has.Some.Contains("the separator"));
+    Assert.That(Problems(new IrIntrinsic(IrIntrinsicOp.FormatVisualBasic, _str, [I32(1), I32(46)])), Has.Some.Contains("FormatVisualBasic"));
+    Assert.That(Problems(NumberTextOperations.VisualBasic(F64(1), '.')), Is.Empty);
   }
 
   /// <summary>Test design 4: the layout thresholds of both rules, the zeros, NaN, the infinities and the extremes.</summary>
