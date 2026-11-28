@@ -384,6 +384,21 @@ and never assert on real elapsed time in a unit test: the harness's tests script
 format, the metrics and how to add an in-process benchmark to `Polypiler.Benchmarks` are in
 [docs/benchmarks/README.md](docs/benchmarks/README.md).
 
+### Generated parsers
+
+A parser generated from a grammar (`*.pgram`, [grammars](docs/architecture/GRAMMARS.md)) is committed
+beside its grammar as `<class>.g.cs` and is never edited by hand: change the grammar, then regenerate
+and commit both together.
+
+```bash
+dotnet run --project Polypiler.Tooling -c Release -- grammar generate <path/to/grammar.pgram>
+dotnet run --project Polypiler.Tooling -c Release -- grammar check     # every generated file is its grammar's output
+```
+
+The CI job `grammar drift` runs `grammar check` and fails on a generated file that differs from its
+grammar's output, is missing or has no grammar; it compares with LF line endings, so a CRLF checkout
+passes.
+
 ## Commit conventions
 
 - One concern per commit, with a descriptive body.

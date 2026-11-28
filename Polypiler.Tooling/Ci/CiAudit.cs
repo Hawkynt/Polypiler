@@ -55,6 +55,12 @@ public static class CiAudit {
       problems.AddRange(CheckCategory(category, workflow, tests));
 
     problems.AddRange(AdrNumbering.Check(root));
+    if (workflow.Job(GrammarDriftJob) is not { } drift || !drift.Steps.Any(step => step.Run.Contains("grammar check", StringComparison.Ordinal))) {
+      var generated = Grammars(root).FirstOrDefault(file => Grammar.GrammarGenerator.IsGenerated(File.ReadAllText(file)));
+      if (generated is not null)
+        problems.Add(CiDiagnostics.InconsistentWith(
+          $"{Path.GetRelativePath(root, generated).Replace('\\', '/')} generates a parser, but no step of job '{GrammarDriftJob}' in {WorkflowFile.RepositoryPath} runs 'grammar check'"));
+    }
 
     var lines = layers.Select(layer => {
       var count = tests.Count(test => test.Layers.Contains(TestEntry.LayerPrefix + layer.Name));
@@ -62,6 +68,15 @@ public static class CiAudit {
     });
     return new([.. lines], categories.Count, problems);
   }
+
+  /// <summary>The job that holds every committed generated parser to its grammar (ADR 1000, #1607).</summary>
+  public const string GrammarDriftJob = "grammar-drift";
+
+  /// <summary>Every grammar file below a root, outside build output and version control.</summary>
+  private static IEnumerable<string> Grammars(string root)
+    => Directory.EnumerateFiles(root, "*.pgram", SearchOption.AllDirectories)
+      .Where(file => !Path.GetRelativePath(root, file).Split(Path.DirectorySeparatorChar).Any(part => part is "bin" or "obj" or ".git"))
+      .Order(StringComparer.Ordinal);
 
   private static HashSet<string> LockKeys(string root) {
     try {
