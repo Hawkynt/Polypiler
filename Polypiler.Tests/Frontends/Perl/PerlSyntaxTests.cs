@@ -78,7 +78,6 @@ public sealed class PerlSyntaxTests {
   [TestCase("scalar(@a)", "@a")]
   [TestCase("wantarray ? 1 : 0", "(cond_expr wantarray 1 0)")]
   [TestCase("CORE::length $a", "(length $a)")]
-  [TestCase("not", "not")]
   public void NamedUnaryAndListOperators_TakeTheirOperands(string expression, string shape)
     => Assert.That(Shape(expression), Is.EqualTo(shape));
 
@@ -572,7 +571,7 @@ public sealed class PerlSyntaxTests {
   [TestCase("my (@a, , $b);")]
   [TestCase("our $VERSION = '1.0'; our ($A, $B);")]
   [TestCase("goto &f; goto LABEL; goto $x; goto sub { };")]
-  [TestCase("last; next; redo; last LABEL; next(); dump;")]
+  [TestCase("last; next; redo; last LABEL; next(); CORE::dump;")]
   [TestCase("return; return 1, 2; return wantarray ? 1 : 2;")]
   [TestCase("do 'file.pl'; eval 'code'; eval; require Foo; require 5.006; require 'x.pl';")]
   [TestCase("my $x = defined &f; my $y = exists $h{a}; delete local $h{b}; undef $x; undef;")]

@@ -446,7 +446,7 @@ internal sealed class PerlLexer {
 
   private PerlToken ReadAggregateSigil(int start, char sigil) {
     var c = this.At(start + 1);
-    if (sigil == '*' && c == '$' && !(IsIdentifierStart(this.At(start + 2), this._host.Utf8) || this.At(start + 2) is '{' or '$' or ':'))
+    if (sigil == '*' && c == '$' && !(IsIdentifierStart(this.At(start + 2), this._host.Utf8) || "{$:".Contains(this.At(start + 2))))
       return this.Make(PerlTokenKind.Variable, "$", start, start + 2) with { Sigil = '*' };
     if (c is ' ' or '\t' or '\n' && this.SkippedSigilSpace(start + 1) is var named && named > start + 1)
       return this.ReadSpacedSigil(start, sigil, named);
@@ -518,7 +518,7 @@ internal sealed class PerlLexer {
         ++end;
       return this.Make(PerlTokenKind.Variable, this._text.Value[i..end], start, end) with { Sigil = sigil };
     }
-    if (c == '^' && (char.IsAsciiLetterUpper(this.At(i + 1)) || this.At(i + 1) is '[' or ']' or '\\' or '^' or '_' or '?'))
+    if (c == '^' && (char.IsAsciiLetterUpper(this.At(i + 1)) || "[]\\^_?".Contains(this.At(i + 1))))
       return this.Make(PerlTokenKind.Variable, "^" + this.At(i + 1), start, i + 2) with { Sigil = sigil };
     if (sigil is '$' or '*' && c == '\'' && this._host.ApostropheSeparates && IsIdentifierStart(this.At(i + 1), this._host.Utf8)) {
       var end = this.ScanIdentifier(i + 1);
@@ -526,9 +526,9 @@ internal sealed class PerlLexer {
     }
     if (sigil is '$' or '*' && c != '\0' && "&`'+_./\\,;!?@<>()[]-:%=~^|\"0".Contains(c))
       return this.Make(PerlTokenKind.Variable, c.ToString(), start, i + 1) with { Sigil = sigil };
-    if (sigil == '@' && c is '_' or '-' or '+' or ':' or '?' or '!' or ';' or '.' or ',')
+    if (sigil == '@' && "_-+:?!;.,".Contains(c))
       return this.Make(PerlTokenKind.Variable, c.ToString(), start, i + 1) with { Sigil = sigil };
-    if (sigil == '%' && c is '+' or '-' or '!' or '^' or ':')
+    if (sigil == '%' && "+-!^:".Contains(c))
       return c == '^' && char.IsAsciiLetterUpper(this.At(i + 1))
         ? this.Make(PerlTokenKind.Variable, "^" + this.At(i + 1), start, i + 2) with { Sigil = sigil }
         : this.Make(PerlTokenKind.Variable, c.ToString(), start, i + 1) with { Sigil = sigil };
@@ -588,15 +588,45 @@ internal sealed class PerlLexer {
       }
     }
     var flagsEnd = after;
-    if (kind != PerlTokenKind.Quote)
+    if (kind == PerlTokenKind.Transliterate) {
+      while ("cdsr".Contains(this.At(flagsEnd)))
+        ++flagsEnd;
+    } else if (kind != PerlTokenKind.Quote) {
       while (char.IsAsciiLetter(this.At(flagsEnd)))
         ++flagsEnd;
+      this.CheckPatternFlags(keyword, this._text.Value[after..flagsEnd], start);
+    }
     return this.Make(kind, this._text.Value[start..flagsEnd], start, flagsEnd) with {
       Keyword = keyword,
       Body = body,
       Replacement = replacement,
       Flags = this._text.Value[after..flagsEnd]
     };
+  }
+
+  /// <summary>The modifiers perl knows for a match (<c>m//</c> and <c>//</c>), <c>qr//</c> and <c>s///</c> (perlop, "Regexp Quote-Like Operators").</summary>
+  private static string PatternFlags(string keyword) => keyword switch {
+    "qr" => "msixxpodualn",
+    "s" => "msixxpodualngcer",
+    _ => "msixxpodualngc"
+  };
+
+  /// <summary>Refuses the modifiers perl refuses: an unknown letter, two charsets, <c>/a</c> thrice, <c>/l</c>, <c>/u</c> or <c>/d</c> twice.</summary>
+  private void CheckPatternFlags(string keyword, string flags, int start) {
+    var known = PatternFlags(keyword);
+    char? charset = null;
+    var count = 0;
+    foreach (var c in flags) {
+      if (!known.Contains(c))
+        throw this.Error($"Unknown regexp modifier \"/{c}\"", start);
+      if (!"alud".Contains(c))
+        continue;
+      if (charset is { } other && other != c)
+        throw this.Error($"Regexp modifiers \"/{other}\" and \"/{c}\" are mutually exclusive", start);
+      charset = c;
+      if (++count > (c == 'a' ? 2 : 1))
+        throw this.Error(c == 'a' ? "Regexp modifier \"/a\" may appear a maximum of twice" : $"Regexp modifier \"/{c}\" may not appear twice", start);
+    }
   }
 
   private static bool IsOpening(char c) => c is '(' or '[' or '{' or '<';
@@ -686,7 +716,7 @@ internal sealed class PerlLexer {
     var spaced = i;
     while (this.At(spaced) is ' ' or '\t')
       ++spaced;
-    if (spaced > i && this.At(spaced) is '"' or '\'' or '`')
+    if (spaced > i && "\"'`".Contains(this.At(spaced)))
       i = spaced;
     var c = this.At(i);
     string terminator;
@@ -770,14 +800,18 @@ internal sealed class PerlLexer {
 
   public static bool IsIdentifierStart(char c, bool utf8) => char.IsAsciiLetter(c) || c == '_' || utf8 && c > 0x7F && IsUnicodeStart(c);
 
-  private static bool IsUnicodeStart(char c) => char.GetUnicodeCategory(c) is System.Globalization.UnicodeCategory.UppercaseLetter
-    or System.Globalization.UnicodeCategory.LowercaseLetter or System.Globalization.UnicodeCategory.TitlecaseLetter
-    or System.Globalization.UnicodeCategory.ModifierLetter or System.Globalization.UnicodeCategory.OtherLetter
-    or System.Globalization.UnicodeCategory.LetterNumber || char.IsSurrogate(c);
+  /// <summary>The categories that start an identifier under <c>use utf8</c>: the letters and the letter numbers (XID_Start).</summary>
+  private const int _unicodeStart = 1 << (int)UnicodeCategory.UppercaseLetter | 1 << (int)UnicodeCategory.LowercaseLetter
+    | 1 << (int)UnicodeCategory.TitlecaseLetter | 1 << (int)UnicodeCategory.ModifierLetter | 1 << (int)UnicodeCategory.OtherLetter
+    | 1 << (int)UnicodeCategory.LetterNumber;
 
-  private static bool IsUnicodeContinue(char c) => IsUnicodeStart(c) || char.GetUnicodeCategory(c) is System.Globalization.UnicodeCategory.NonSpacingMark
-    or System.Globalization.UnicodeCategory.SpacingCombiningMark or System.Globalization.UnicodeCategory.DecimalDigitNumber
-    or System.Globalization.UnicodeCategory.ConnectorPunctuation;
+  /// <summary>The categories that continue one besides those (XID_Continue): marks, digits and connectors.</summary>
+  private const int _unicodeContinue = _unicodeStart | 1 << (int)UnicodeCategory.NonSpacingMark | 1 << (int)UnicodeCategory.SpacingCombiningMark
+    | 1 << (int)UnicodeCategory.DecimalDigitNumber | 1 << (int)UnicodeCategory.ConnectorPunctuation;
+
+  private static bool IsUnicodeStart(char c) => (1 << (int)char.GetUnicodeCategory(c) & _unicodeStart) != 0 || char.IsSurrogate(c);
+
+  private static bool IsUnicodeContinue(char c) => (1 << (int)char.GetUnicodeCategory(c) & _unicodeContinue) != 0 || char.IsSurrogate(c);
 
   public static bool IsWordChar(char c) => char.IsAsciiLetterOrDigit(c) || c == '_';
 

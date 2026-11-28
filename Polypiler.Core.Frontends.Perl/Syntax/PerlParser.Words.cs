@@ -86,13 +86,17 @@ internal sealed partial class PerlParser {
         return this.ParseEval(line);
       case "return":
         return new PerlJump("return", null, this.CanStartTerm(this.PeekTerm()) ? this.ParseCommaList() : null) { Line = line };
-      case "last" or "next" or "redo" or "dump":
+      case "dump":
+        throw this.Error("dump() must be written as CORE::dump() as of Perl 5.30", line);
+      case "last" or "next" or "redo":
         return this.ParseLoopJump(name, line);
       case "goto":
         return new PerlJump("goto", null, this.ParseGotoTarget()) { Line = line };
       case "not":
-        return new PerlUnary("not", this.CanStartTerm(this.PeekTerm()) ? this.ParseCommaList() : null) { Line = line };
-      case "if" or "unless" or "while" or "until" or "foreach" or "for" or "else" or "elsif" or "continue" or "package" or "use" or "no" or "format":
+        if (!this.CanStartTerm(this.PeekTerm()))
+          throw this.Unexpected(this.PeekTerm(), "an operand of not");
+        return new PerlUnary("not", this.ParseCommaList()) { Line = line };
+      case "if" or "unless" or "while" or "until" or "foreach" or "for" or "else" or "elsif" or "package" or "use" or "no" or "format":
         throw this.Error($"unexpected '{name}'", line);
     }
     return null;
@@ -212,9 +216,6 @@ internal sealed partial class PerlParser {
         return new PerlCall(name, this.ParseUnaryArguments(name)) { Line = line, Builtin = true, Parenthesized = this._lastParenthesized };
       case "split" or "chomp" or "chop" or "select" or "return" or "local":
         return new PerlCall(name, this.ParseListArguments()) { Line = line, Builtin = true, Parenthesized = this._lastParenthesized };
-      case "__SUB__" or "__CLASS__" or "break" or "continue" or "wait" or "time" or "times" or "wantarray" or "fork" or "getppid" or "getlogin":
-        this.SkipEmptyParens();
-        return new PerlCall(name, []) { Line = line, Builtin = true };
       case "given" or "when" or "default" or "try" or "catch" or "finally" or "defer" or "class" or "field" or "method" or "ADJUST" or "isa"
         or "__DATA__" or "__END__" or "format":
         throw this.Error($"unexpected '{name}'", line);
@@ -239,13 +240,10 @@ internal sealed partial class PerlParser {
     }
   }
 
+  /// <summary>The arguments of a builtin with the empty prototype: none, with an optional <c>()</c>.</summary>
   private List<PerlExpr> ParseTermArguments() {
     this._lastParenthesized = false;
-    if (this._lexer.At(this._lexer.SkipSpace(this._lexer.Position)) == '(') {
-      this.NextTerm();
-      this._lastParenthesized = true;
-      return this.ParseParenArguments();
-    }
+    this.SkipEmptyParens();
     return [];
   }
 
@@ -294,6 +292,8 @@ internal sealed partial class PerlParser {
 
   /// <summary><c>print</c>, <c>printf</c>, <c>say</c>, <c>exec</c>, <c>system</c>: an optional file handle, then a list.</summary>
   private PerlExpr ParsePrintLike(string name, int line) {
+    if (name is "print" or "printf" or "say")
+      this.CheckCommaAfterWord("filehandle", line);
     var parenthesized = false;
     if (this.PeekTerm().Is("(")) {
       this.NextTerm();
@@ -320,6 +320,26 @@ internal sealed partial class PerlParser {
     return new PerlCall(name, arguments) { Line = line, Builtin = true, Handle = handle, Parenthesized = parenthesized };
   }
 
+  /// <summary>
+  /// Refuses a comma after the word that follows <c>print</c>, <c>printf</c>, <c>say</c> or <c>sort</c> (perl's
+  /// <c>checkcomma</c>): such a word is a filehandle or a sort sub unless it is a keyword or a known sub.
+  /// </summary>
+  private void CheckCommaAfterWord(string what, int line) {
+    var start = this._lexer.SkipSpace(this._lexer.Position);
+    if (this._lexer.At(start) == '(')
+      start = this._lexer.SkipSpace(start + 1);
+    if (!PerlLexer.IsIdentifierStart(this._lexer.At(start), this._scope.Utf8))
+      return;
+    var end = start;
+    while (PerlLexer.IsWordChar(this._lexer.At(end), this._scope.Utf8))
+      ++end;
+    if (this._lexer.At(this._lexer.SkipSpace(end)) != ',')
+      return;
+    var word = this._lexer.Text.Value[start..end];
+    if (!PerlBuiltins.IsBuiltin(word) && !_statementKeywords.Contains(word) && !this.IsKnownSub(word))
+      throw this.Error($"No comma allowed after {what}", line);
+  }
+
   private bool IsHandleWord(PerlToken token) {
     if (PerlBuiltins.IsBuiltin(token.Text) && this.IsActiveBuiltin(token.Text, false) || this.IsKnownSub(token.Text) || token.Text.StartsWith("CORE::", StringComparison.Ordinal))
       return false;
@@ -327,11 +347,11 @@ internal sealed partial class PerlParser {
     var c = this._lexer.At(after);
     if (c is ';' or ')' or '\0' or '}')
       return IsUpperIdentifier(token.Text);
-    if (c is '(' or ',' or '=' or '.' or '?' or ':' or '[' or '{' || c == '-' && this._lexer.At(after + 1) == '>')
+    if ("(,=.?:[{".Contains(c) || c == '-' && this._lexer.At(after + 1) == '>')
       return false;
     if (after == token.End)
       return false;
-    return c is '"' or '\'' or '`' or '$' or '@' or '\\' or '<' or '-' or '+' or '%' or '&' || char.IsAsciiLetterOrDigit(c) || c == '_';
+    return "\"'`$@\\<-+%&".Contains(c) || char.IsAsciiLetterOrDigit(c) || c == '_';
   }
 
   private static bool IsUpperIdentifier(string text) {
@@ -355,7 +375,7 @@ internal sealed partial class PerlParser {
     if (char.IsAsciiDigit(c))
       return true;
     if (c == '<')
-      return c1 == '<' ? PerlLexer.IsIdentifierStart(this._lexer.At(after + 2), false) || this._lexer.At(after + 2) is '"' or '\'' or '~' : c1 is '$' or '>' || PerlLexer.IsIdentifierStart(c1, false);
+      return c1 == '<' ? PerlLexer.IsIdentifierStart(this._lexer.At(after + 2), false) || "\"'~".Contains(this._lexer.At(after + 2)) : c1 is '$' or '>' || PerlLexer.IsIdentifierStart(c1, false);
     if (PerlLexer.IsIdentifierStart(c, this._scope.Utf8)) {
       var wordEnd = this._lexer.ScanIdentifier(after);
       var word = this._lexer.Text.Value[after..wordEnd];
@@ -366,6 +386,8 @@ internal sealed partial class PerlParser {
 
   /// <summary><c>sort</c>, <c>map</c>, <c>grep</c> (and <c>any</c>/<c>all</c>): a block or a sub (sort), or a first expression and a comma.</summary>
   private PerlExpr ParseListWithBlock(string name, int line) {
+    if (name == "sort")
+      this.CheckCommaAfterWord("subroutine name", line);
     var parenthesized = false;
     if (this.PeekTerm().Is("(")) {
       this.NextTerm();
@@ -409,7 +431,7 @@ internal sealed partial class PerlParser {
     if (after == position)
       return false;
     var c = this._lexer.At(after);
-    return c is '$' or '@' or '(' or '%' or '"' or '\'' || char.IsAsciiDigit(c) || PerlLexer.IsIdentifierStart(c, this._scope.Utf8) && !(c == 'x' && !PerlLexer.IsWordChar(this._lexer.At(after + 1)));
+    return "$@(%\"'".Contains(c) || char.IsAsciiDigit(c) || PerlLexer.IsIdentifierStart(c, this._scope.Utf8) && !(c == 'x' && !PerlLexer.IsWordChar(this._lexer.At(after + 1)));
   }
 
   // ---- user subs and barewords ----
@@ -549,7 +571,7 @@ internal sealed partial class PerlParser {
     var c = this._lexer.At(after);
     if (c is '(' or ';' or ')' or ',' or '}' or '\0')
       return true;
-    return after > token.End && (c is '$' or '@' or '"' or '\'' || char.IsAsciiDigit(c) || PerlLexer.IsIdentifierStart(c, this._scope.Utf8) && !this.IsOperatorAfterBareword(c, after));
+    return after > token.End && ("$@\"'".Contains(c) || char.IsAsciiDigit(c) || PerlLexer.IsIdentifierStart(c, this._scope.Utf8) && !this.IsOperatorAfterBareword(c, after));
   }
 
   /// <summary>Whether what follows a bareword is an operator perl would read as one after a word it does not know as a sub.</summary>
@@ -562,7 +584,7 @@ internal sealed partial class PerlParser {
         return true;
       case '~' when c1 == '~':
         return true;
-      case '<' when c1 is '=' or '<' && this._lexer.At(at + 2) is not ('"' or '\'' or '~') && !PerlLexer.IsIdentifierStart(this._lexer.At(at + 2), false):
+      case '<' when c1 is '=' or '<' && !"\"'~".Contains(this._lexer.At(at + 2)) && !PerlLexer.IsIdentifierStart(this._lexer.At(at + 2), false):
         return true;
       case '&' when c1 == '&':
         return true;
@@ -604,7 +626,7 @@ internal sealed partial class PerlParser {
       quoted = true;
     } else if (c == 'q' && !PerlLexer.IsWordChar(this._lexer.At(t + 1)) || c == 'q' && this._lexer.At(t + 1) is 'q' && !PerlLexer.IsWordChar(this._lexer.At(t + 2))) {
       var open = this._lexer.SkipSpace(t + (this._lexer.At(t + 1) == 'q' ? 2 : 1));
-      if (this._lexer.At(open) is not ('=' or ',' or '\0' or '}')) {
+      if (!"=,\0}".Contains(this._lexer.At(open))) {
         try {
           var (_, end) = this._lexer.ScanDelimited(open);
           t = end;

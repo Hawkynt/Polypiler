@@ -604,11 +604,17 @@ internal sealed partial class PerlParser : IPerlLexerHost {
   private static bool IsConstantSub(PerlSub sub)
     => sub.Prototype == "" && sub.Body!.Statements is [PerlExpressionStatement { Modifier: null, Expression: var value }] && IsConstantExpression(value);
 
+  /// <summary>The binary operators perl does not fold even between constants: matches, the logical operators and the ranges.</summary>
+  private static readonly HashSet<string> _unfoldedOperators = new(StringComparer.Ordinal) { "=~", "!~", "&&", "||", "//", "and", "or", "xor", "..", "..." };
+
+  /// <summary>The unary operators perl folds.</summary>
+  private static readonly HashSet<string> _foldedUnaryOperators = new(StringComparer.Ordinal) { "-", "!", "~" };
+
   private static bool IsConstantExpression(PerlExpr expression) => expression switch {
     PerlNumber or PerlString => true,
     PerlCall { Name: "undef", Arguments.Count: 0 } => true,
-    PerlUnary { Operator: "-" or "!" or "~", Operand: { } operand } => IsConstantExpression(operand),
-    PerlBinary { Operator: not ("=~" or "!~" or "&&" or "||" or "//" or "and" or "or" or "xor" or ".." or "..."), Left: var left, Right: var right } => IsConstantExpression(left) && IsConstantExpression(right),
+    PerlUnary { Operand: { } operand } unary when _foldedUnaryOperators.Contains(unary.Operator) => IsConstantExpression(operand),
+    PerlBinary binary when !_unfoldedOperators.Contains(binary.Operator) => IsConstantExpression(binary.Left) && IsConstantExpression(binary.Right),
     PerlList { Items: [var only], Parenthesized: true } => IsConstantExpression(only),
     _ => false
   };
@@ -692,10 +698,9 @@ internal sealed partial class PerlParser : IPerlLexerHost {
         var placeholder = new PerlParameter(null, sigil, null, null) { Line = placeholderLine };
         if (follow == '=') {
           this._lexer.Position = this._lexer.SkipSpace(at + 1) + 1;
-          if (!this.PeekTerm().Is(",") && !this.PeekTerm().Is(")"))
-            placeholder = placeholder with { DefaultOperator = "=", Default = this.ParseAssignment() };
+          placeholder = placeholder with { DefaultOperator = "=", Default = this.PeekTerm().Is(",") || this.PeekTerm().Is(")") ? null : this.ParseAssignment() };
         }
-        parameters.Add(placeholder);
+        this.AddParameter(parameters, placeholder);
         if (!this.AcceptOperator(","))
           break;
         this.SkipRawCommas();
@@ -710,8 +715,6 @@ internal sealed partial class PerlParser : IPerlLexerHost {
         parameter = new PerlParameter(variable, token.Sigil, null, null) { Line = line };
       } else if (token.Is("$") || token.Is("@") || token.Is("%") || token.Kind == PerlTokenKind.Cast && token.Text is "$" or "@" or "%") {
         parameter = new PerlParameter(null, token.Text[0], null, null) { Line = line };
-      } else if (token.Kind == PerlTokenKind.Variable && token.Sigil == '$' && token.Text == "$") {
-        parameter = new PerlParameter(null, '$', null, null) { Line = line };
       } else {
         throw this.Unexpected(token, "a signature parameter");
       }
@@ -724,7 +727,7 @@ internal sealed partial class PerlParser : IPerlLexerHost {
           value = this.ParseAssignment();
         parameter = parameter with { DefaultOperator = op, Default = value };
       }
-      parameters.Add(parameter);
+      this.AddParameter(parameters, parameter);
       this.Introduce();
       if (!this.AcceptOperator(","))
         break;
@@ -732,6 +735,15 @@ internal sealed partial class PerlParser : IPerlLexerHost {
     }
     this.ExpectOperator(")");
     return parameters;
+  }
+
+  /// <summary>Adds a parameter in the order perl requires: mandatory before optional, the slurpy one last and alone.</summary>
+  private void AddParameter(List<PerlParameter> parameters, PerlParameter parameter) {
+    if (parameters.Count > 0 && parameters[^1].Sigil != '$')
+      throw this.Error(parameter.Sigil == '$' ? "Slurpy parameter not last" : "Multiple slurpy parameters not allowed", parameter.Line);
+    if (parameter.Sigil == '$' && parameter.DefaultOperator is null && parameters.Exists(p => p.DefaultOperator is not null))
+      throw this.Error("Mandatory parameter follows optional parameter", parameter.Line);
+    parameters.Add(parameter);
   }
 
   private void SkipRawCommas() {

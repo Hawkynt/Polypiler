@@ -58,7 +58,7 @@ internal sealed partial class PerlParser {
     if (token.IsWord("not")) {
       this.NextTerm();
       if (!this.CanStartTerm(this.PeekTerm()))
-        return new PerlUnary("not", null) { Line = token.Line };
+        throw this.Unexpected(this.PeekTerm(), "an operand of not");
       return new PerlUnary("not", this.ParseLowNot()) { Line = token.Line };
     }
     return this.ParseCommaList();

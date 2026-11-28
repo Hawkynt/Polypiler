@@ -282,10 +282,14 @@ internal sealed partial class PerlParser {
         if (close < 0)
           throw this.Error("Missing right brace on \\o{}", line);
         var octal = value[(i + 3)..close].Trim();
+        if (octal.Length == 0)
+          throw this.Error("Empty \\o{}", line);
         var code = 0;
-        foreach (var d in octal)
-          if (d is >= '0' and <= '7')
-            code = code * 8 + (d - '0');
+        foreach (var d in octal) {
+          if (d is < '0' or > '7')
+            break;
+          code = code * 8 + (d - '0');
+        }
         AppendCode(literal, code);
         return close + 1;
       }
@@ -488,9 +492,11 @@ internal sealed partial class PerlParser {
   }
 
   private bool IsElementSubscript(string value, int open, bool pattern) {
+    if (pattern && open + 1 < value.Length && value[open + 1] is ']' or '^')
+      return false;
     var close = Matching(value, open);
     if (close < 0)
-      return pattern ? false : throw this.Error("Missing right curly or square bracket within string", this._lexer.Line);
+      throw this.Error($"Missing right curly or square bracket within {(pattern ? "pattern" : "string")}", this._lexer.Line);
     if (!pattern)
       return true;
     var inner = value[(open + 1)..close].Trim();
@@ -512,17 +518,38 @@ internal sealed partial class PerlParser {
     return true;
   }
 
+  /// <summary>Whether a <c>{</c> after a variable subscripts it: in a pattern always, unless it is a quantifier.</summary>
   private bool IsHashSubscript(string value, int open, bool pattern) {
-    var close = Matching(value, open);
-    if (close < 0)
-      return pattern ? false : throw this.Error("Missing right curly or square bracket within string", this._lexer.Line);
-    if (!pattern)
-      return true;
-    var inner = value[(open + 1)..close];
-    var comma = inner.IndexOf(',');
-    var lower = comma < 0 ? inner : inner[..comma];
-    var upper = comma < 0 ? "" : inner[(comma + 1)..];
-    return !(lower.Length > 0 && IsAllDigitsOrEmpty(lower) && IsAllDigitsOrEmpty(upper) || lower.Length == 0 && comma >= 0);
+    if (pattern && IsQuantifier(value, open))
+      return false;
+    if (Matching(value, open) < 0)
+      throw this.Error($"Missing right curly or square bracket within {(pattern ? "pattern" : "string")}", this._lexer.Line);
+    return true;
+  }
+
+  /// <summary>Whether a <c>{</c> starts a quantifier as perl's <c>regcurly</c> reads one: <c>{n}</c>, <c>{n,}</c>, <c>{n,m}</c> or <c>{,m}</c>, blanks allowed inside.</summary>
+  private static bool IsQuantifier(string value, int open) {
+    var i = SkipBlanks(value, open + 1);
+    var digits = i;
+    while (i < value.Length && char.IsAsciiDigit(value[i]))
+      ++i;
+    var bound = i > digits;
+    i = SkipBlanks(value, i);
+    if (i < value.Length && value[i] == ',') {
+      i = SkipBlanks(value, i + 1);
+      digits = i;
+      while (i < value.Length && char.IsAsciiDigit(value[i]))
+        ++i;
+      bound |= i > digits;
+      i = SkipBlanks(value, i);
+    }
+    return bound && i < value.Length && value[i] == '}';
+  }
+
+  private static int SkipBlanks(string value, int i) {
+    while (i < value.Length && value[i] is ' ' or '\t')
+      ++i;
+    return i;
   }
 
   private (PerlExpr Index, int End) SubscriptContent(PerlText text, int open, bool hash, int line) {
