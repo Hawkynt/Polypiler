@@ -91,3 +91,62 @@ every jump out of a try puts the enclosing handler in force again. A throw of a 
 - `VisualBasicOracleTests` (layer `visualbasic`): the prototype fixtures translated from C# print, on
   LibreOffice, what the IR interpreter computes for the same calls; the classic fixtures print their
   documented values after the round trip through the IR; Adler-32 and CRC-32 give their published values.
+
+## Visual Basic .NET
+
+**Status:** implemented for the first verified subset ([#1082](https://github.com/Hawkynt/Polypiler/issues/1082),
+the VB.NET parts of [#1088](https://github.com/Hawkynt/Polypiler/issues/1088), [#1085](https://github.com/Hawkynt/Polypiler/issues/1085),
+[#1086](https://github.com/Hawkynt/Polypiler/issues/1086), [#1087](https://github.com/Hawkynt/Polypiler/issues/1087) and
+[#1089](https://github.com/Hawkynt/Polypiler/issues/1089)), checked against the Visual Basic compiler and runtime
+of the pinned `dotnet-sdk` (layer `visualbasic`, [runner](#verification-of-visual-basic-net)).
+
+`polypiler translate <file> --to visualbasic --output <directory> --profile vbnet/vb<version>[/<framework>]`
+writes `<Module>.vb`, one `Public Module`, and `<Module>.vbproj`, a library for the profile's framework
+and language version with every option stated, `TreatWarningsAsErrors`, and `RemoveIntegerChecks`,
+which the code needs for its wrapping arithmetic; for .NET Standard it embeds the core of the Visual
+Basic runtime (`VBRuntime=Embed`), which that framework lacks. The generated code names every type
+of the framework in full and calls nothing of `Microsoft.VisualBasic`.
+
+| Profile | What it is |
+| --- | --- |
+| `vbnet/vb9` … `vbnet/vb16.9` | Visual Basic 9 (Visual Studio 2008), 10, 11, 12, 14, 15, 15.3, 15.5, 16 and 16.9, the last, on .NET 10 |
+| `vbnet/vb<version>/<framework>` | the same for `net2.0`, `net3.5`, `net4.6`, `net4.8`, `netstandard2.0`, `netstandard2.1`, `netcoreapp3.1`, `net8.0` or `net10.0` |
+
+The tree (`Net/VnSyntax.cs`) is built by the writer (`Net/VbNetWriter*.cs`) and printed by `VnPrinter`:
+four spaces, LF, parentheses where the operator precedence of the language reference needs them, a
+keyword name in brackets (`[Next]`) so that the compiled member keeps the IR's name. `VbNetCapabilities`
+chooses by language version and framework:
+
+| Construct | First | Below |
+| --- | --- | --- |
+| implicit line continuation (a long table over several lines) | Visual Basic 10 | ` _` at the end of each line |
+| `BitConverter.SingleToInt32Bits`, `Int32BitsToSingle` | .NET Standard 2.1 | through `BitConverter.GetBytes` |
+| `Math.Min`, `Math.Max` ordering -0 before +0 | .NET Core 3.0 | `PlyMin`, `PlyMax` |
+| the shortest text of a `Double` (`ToString` in the invariant culture) | .NET Core 3.0 | refused, `PLY2657` |
+| `Trim`, `TrimStart`, `TrimEnd` of `Char.IsWhiteSpace` | .NET Framework 4 | refused, `PLY2657` |
+
+| IR | Visual Basic .NET |
+| --- | --- |
+| `i8` … `u64`, `f32`, `f64`, `bool`, string | `SByte` … `ULong`, `Single`, `Double`, `Boolean`, `String`; literals with their type suffix (`5UI`, `5L`, `CByte(5)`), the smallest values in hexadecimal |
+| array, struct | `T()` from 0, `New T(n - 1) {}`; a `Structure` with a constructor of its fields; equality `PlyEquals` |
+| wrapping `+ - *`, negation, shifts, `Divide`, `Remainder` | the operators: `\` and `Mod` throw as the IR traps; a logical shift of a signed value through its unsigned type |
+| checked `+ - *`, negation, conversion | `PlyAddChk`, `PlySubChk`, `PlyMulChk`, `PlyNegChk`, `PlyChk<T>`: the exact result in `Decimal`, an `OverflowException` outside the type |
+| floating point to integer | `PlySat<T>` (truncated, saturated, 0 for a NaN) or `PlyFix<T>` (truncated, an `OverflowException` for a NaN or outside the type) |
+| a step or an assignment as a value, a throw as a value | `PlyStep`, `PlyStepChk`, `PlyBind`, `PlyThrow(Of T)` |
+| `&&`, `||`, conditional | `AndAlso`, `OrElse`, `If(c, a, b)` |
+| loops, `continue` of a `for` with a step, switch, `break` | `Do … Loop`, a `GoTo` to a label before the step, `Select Case` with `Case Else` last, `Exit Do` / `Exit Select` |
+| try, catch with filter, finally, throw, rethrow | `Try`, `Catch e As T When c`, `Finally`, `Throw`, `Throw` |
+| globals, tables, the module's initializer | `Private` fields with initializers, `Private ReadOnly` arrays, `Sub New` |
+
+Refused: classes of the module's own and interfaces, the dynamic type, foreign functions, structs
+without fields (`PLY2656`), and the string operations of ECMA-262 (split, pad) (`PLY2657`).
+
+### Verification of Visual Basic .NET
+
+- `VbNetDifferentialTests`: every prototype fixture, emitted for `vbnet/vb16.9`, compiled by Roslyn in
+  memory with the project's options and called, returns what the IR interpreter returns; the first
+  fixtures compile without a warning in every language version. `VbNetBackendTests` compiles them
+  against the reference assemblies of all nine frameworks.
+- `VbNetOracleTests` (layer `visualbasic`): `VbNetRunner` builds the modules with a generated driver by
+  `dotnet build` of the pinned SDK, offline, and runs it: the prototype fixtures in every language
+  version, the Visual Basic .NET fixtures as written and after the round trip, and the generated project.

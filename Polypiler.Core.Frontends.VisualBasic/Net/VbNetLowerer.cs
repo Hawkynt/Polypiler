@@ -98,7 +98,6 @@ internal sealed partial class VbNetLowerer(string file, VisualBasicCompilation c
   }
 
   private IEnumerable<INamedTypeSymbol> Types() {
-    IEnumerable<INamedTypeSymbol> Within(INamespaceOrTypeSymbol container) => container.GetTypeMembers().SelectMany(type => Within(type).Prepend(type));
     return tree.GetRoot().DescendantNodes().OfType<TypeBlockSyntax>().Select(block => this._model.GetDeclaredSymbol(block)).OfType<INamedTypeSymbol>()
       .Concat(tree.GetRoot().DescendantNodes().OfType<EnumBlockSyntax>().Select(block => this._model.GetDeclaredSymbol(block)).OfType<INamedTypeSymbol>())
       .Distinct(SymbolEqualityComparer.Default).Cast<INamedTypeSymbol>();
@@ -107,6 +106,9 @@ internal sealed partial class VbNetLowerer(string file, VisualBasicCompilation c
   /// <summary>The IR type of a Visual Basic type; <c>Integer</c> after refusing one the IR has no form of.</summary>
   private IrType Type(ITypeSymbol type, ISymbol? where = null) {
     switch (type) {
+      case IArrayTypeSymbol { Rank: 1, ElementType: IArrayTypeSymbol }:
+        this.Refuse(where?.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax(), "an array of arrays");
+        return IrType.Array(IrType.I32);
       case IArrayTypeSymbol { Rank: 1 } array:
         return IrType.Array(this.Type(array.ElementType, where));
       case INamedTypeSymbol { TypeKind: TypeKind.Enum, EnumUnderlyingType: { } underlying }:
@@ -147,8 +149,7 @@ internal sealed partial class VbNetLowerer(string file, VisualBasicCompilation c
   /// <summary>The default value of a type: zero, <c>False</c>, the empty string, a structure of defaults, or <c>Nothing</c> of an array or an exception.</summary>
   private static IrExpr Default(IrType type) => type switch {
     { IsStruct: true } => new IrStructDefault(type),
-    { IsString: true } => new IrStrConst(""),
-    { IsArray: true } or { IsObject: true } => new IrNull(type),
+    { IsString: true } => new IrStrConst(""), { IsArray: true } or { IsObject: true } => new IrNull(type),
     { IsFloat: true } => new IrConst(type, IrOperators.Bits(type, 0.0)),
     _ => new IrConst(type, 0)
   };

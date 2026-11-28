@@ -65,9 +65,19 @@ public sealed class VbNetOracleTests {
   private static string Floating(string text) => text.Contains('.', StringComparison.Ordinal) || text.Contains('E', StringComparison.Ordinal) ? text : text + ".0";
 
   private static string ElementName(Type type) => Type.GetTypeCode(type) switch {
-    TypeCode.Byte => "Byte", TypeCode.SByte => "SByte", TypeCode.Int16 => "Short", TypeCode.UInt16 => "UShort", TypeCode.Int32 => "Integer",
-    TypeCode.UInt32 => "UInteger", TypeCode.Int64 => "Long", TypeCode.UInt64 => "ULong", TypeCode.Single => "Single", TypeCode.Double => "Double",
-    TypeCode.Char => "Char", TypeCode.Boolean => "Boolean", _ => "String"
+    TypeCode.Byte => "Byte",
+    TypeCode.SByte => "SByte",
+    TypeCode.Int16 => "Short",
+    TypeCode.UInt16 => "UShort",
+    TypeCode.Int32 => "Integer",
+    TypeCode.UInt32 => "UInteger",
+    TypeCode.Int64 => "Long",
+    TypeCode.UInt64 => "ULong",
+    TypeCode.Single => "Single",
+    TypeCode.Double => "Double",
+    TypeCode.Char => "Char",
+    TypeCode.Boolean => "Boolean",
+    _ => "String"
   };
 
   /// <summary>What the IR interpreter computes for a call, as the driver prints it: the value in the invariant culture, or <c>!</c> and the exception's name.</summary>

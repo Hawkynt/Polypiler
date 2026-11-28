@@ -59,10 +59,10 @@ internal sealed partial class VbNetWriter {
       VnExpression left = new VnMember(new VnName("a"), this._fieldNames[field]);
       VnExpression right = new VnMember(new VnName("b"), this._fieldNames[field]);
       VnExpression same = field.Type switch {
-        { IsStruct: true, Declaration: IrStructType inner } => new VnInvoke(new VnName("PlyEquals"), [left, right]),
+        { IsStruct: true } => new VnInvoke(new VnName("PlyEquals"), [left, right]),
         { IsFloat: true } => new VnInvoke(new VnMember(left, "Equals"), [right]),
         { IsString: true } => new VnInvoke(new VnName("System.String.Equals"), [left, right]),
-        { IsArray: true } or { IsObject: true } => new VnBinary(left, "Is", right),
+        var reference when reference.IsArray || reference.IsObject => new VnBinary(left, "Is", right),
         _ => new VnBinary(left, "=", right)
       };
       test = test is null ? same : new VnBinary(test, "AndAlso", same);

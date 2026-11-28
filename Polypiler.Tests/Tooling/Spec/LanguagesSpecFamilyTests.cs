@@ -113,7 +113,7 @@ public sealed class LanguagesSpecFamilyTests {
   public void RepositorySeed_IsValid() {
     var validation = new SpecValidator(SpecFamilies.All).Run(SpecTree.Load(Path.Combine(PrototypeFixture.RepositoryRoot, "spec"), PrototypeFixture.RepositoryRoot), "languages");
     Assert.That(validation.Diagnostics.Select(DiagnosticRenderer.ToText), Is.Empty);
-    Assert.That(validation.Documents, Is.EqualTo(21));
+    Assert.That(validation.Documents, Is.EqualTo(31));
   }
 
   /// <summary>The seed profiles are the <c>--profile</c> values the backends accept.</summary>
@@ -123,7 +123,9 @@ public sealed class LanguagesSpecFamilyTests {
     string[] Profiles(string language) => [.. tree.Documents.Where(document => document.Path.StartsWith($"languages/{language}/profiles/", StringComparison.Ordinal)).Select(document => Path.GetFileNameWithoutExtension(document.Path)).Order(StringComparer.Ordinal)];
     Assert.That(Profiles("csharp"), Is.EquivalentTo(Polypiler.Core.Backends.CSharp.CSharpProfile.All.Select(profile => profile.Name)));
     Assert.That(Profiles("javascript"), Is.EquivalentTo(new[] { "es5", "es2015", "es2017", "es2020", "es2022" }));
-    Assert.That(Profiles("visualbasic").Select(name => "visualbasic/" + name), Is.EquivalentTo(Polypiler.Core.Backends.VisualBasic.VisualBasicProfile.Names));
+    // A Visual Basic .NET profile vbnet/vb16.9 is the file vbnet-vb16.9.yaml.
+    Assert.That(Profiles("visualbasic").Select(name => name.StartsWith("vbnet-", StringComparison.Ordinal) ? "vbnet/" + name["vbnet-".Length..] : "visualbasic/" + name),
+      Is.EquivalentTo(Polypiler.Core.Backends.VisualBasic.VisualBasicProfile.Names));
   }
 
   [Test]

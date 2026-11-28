@@ -157,7 +157,8 @@ internal sealed partial class VbNetLowerer {
       return Default(type);
     }
 
-    if (creation.Initializer is { } initializer) {
+    // New T(n) {} with empty braces is the sized form, every element its default.
+    if (creation.Initializer is { ElementValues.Length: > 0 } initializer) {
       if (initializer.ElementValues.Any(element => element is IArrayInitializerOperation)) {
         this.Refuse(creation.Syntax, "a nested array initializer");
         return Default(type);

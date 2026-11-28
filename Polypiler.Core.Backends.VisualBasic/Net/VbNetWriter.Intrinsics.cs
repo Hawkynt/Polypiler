@@ -145,6 +145,11 @@ internal sealed partial class VbNetWriter {
         return new VnBinary(Method(arguments[0], "IndexOf", Needle(1)), ">=", new VnLiteral("0"));
       case IrIntrinsicOp.StrReplaceAll:
         return Method(arguments[0], "Replace", Needle(1), Needle(2));
+      case IrIntrinsicOp.StrLastIndexOf when Unit(1):
+        return Method(arguments[0], "LastIndexOf", [Needle(1), .. arguments.Skip(2)]);
+      case IrIntrinsicOp.StrTrim or IrIntrinsicOp.StrTrimStart or IrIntrinsicOp.StrTrimEnd
+        when StringOperations.SetOf(intrinsic) == WhitespaceSet.DotNet && this.Has(VbNetCapabilities.WhiteSpaceTrim):
+        return Method(arguments[0], intrinsic.Op == IrIntrinsicOp.StrTrim ? "Trim" : intrinsic.Op == IrIntrinsicOp.StrTrimStart ? "TrimStart" : "TrimEnd");
       case IrIntrinsicOp.StrJoin:
         return Call("System.String.Join", arguments[0], arguments[1]);
       default:

@@ -22,7 +22,7 @@ public sealed class VisualBasicParseBackTests {
 
   private static IEnumerable<TestCaseData> Cases()
     => from fixture in PrototypeFixture.Names
-       from profile in VisualBasicProfile.Names
+       from profile in VisualBasicProfile.All.Select(classic => classic.Name)
        select new TestCaseData(fixture, profile).SetName($"VisualBasicParseBack({fixture}, {profile})");
 
   [TestCaseSource(nameof(Cases))]

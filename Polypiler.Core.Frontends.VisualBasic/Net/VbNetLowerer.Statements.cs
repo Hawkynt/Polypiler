@@ -146,10 +146,6 @@ internal sealed partial class VbNetLowerer {
       case IReDimOperation redim:
         this.ReDim(redim, statements);
         break;
-      case IBlockOperation block:
-        foreach (var inner in block.Operations)
-          this.Statement(inner, statements);
-        break;
       case IEmptyOperation:
         break;
       default:
@@ -233,7 +229,9 @@ internal sealed partial class VbNetLowerer {
     }
 
     var left = this.Convert(current, targetType, operand, compound.Syntax);
-    var right = this.Convert(this.Value(compound.Value), compound.Value.Type!, operand, compound.Syntax);
+    // The count of a shift stays the Integer it is; every other operand takes the operator's type.
+    var right = compound.OperatorKind is BinaryOperatorKind.LeftShift or BinaryOperatorKind.RightShift
+      ? this.Value(compound.Value) : this.Convert(this.Value(compound.Value), compound.Value.Type!, operand, compound.Syntax);
     var result = this.Binary(compound.OperatorKind, left, right, operand, operand, compound.IsChecked && checks, compound.Syntax);
     return this.Convert(result, operand, targetType, compound.Syntax);
   }
@@ -400,7 +398,7 @@ internal sealed partial class VbNetLowerer {
   /// </summary>
   private void Branch(IBranchOperation branch, List<IrStmt> statements) {
     if (SymbolEqualityComparer.Default.Equals(branch.Target, this._exit)) {
-      statements.Add(new IrReturn(this._method is { ReturnsVoid: false } method ? new IrLocalRef(this.FunctionValue(method)) : null));
+      statements.Add(new IrReturn(this._method is { ReturnsVoid: false } ? new IrLocalRef(this.FunctionValue()) : null));
       return;
     }
 
@@ -419,22 +417,8 @@ internal sealed partial class VbNetLowerer {
     this.Refuse(branch.Syntax, branch.BranchKind == BranchKind.GoTo ? "GoTo" : $"'{branch.Syntax}' out of a statement around the innermost one");
   }
 
-  /// <summary>The implicit local a function's name stands for, which its end returns.</summary>
-  private IrLocal FunctionValue(IMethodSymbol method) {
-    var symbol = this._locals.Keys.OfType<ILocalSymbol>().FirstOrDefault(local => local.IsFunctionValue);
-    return symbol is not null ? this._locals[symbol] : this.FunctionResult(method);
-  }
-
-  private IrLocal? _result;
-
-  private IrLocal FunctionResult(IMethodSymbol method) {
-    if (this._result is null || !this._temporaries.Contains(this._result)) {
-      this._result = new IrLocal(method.Name, this.Type(method.ReturnType, method));
-      this._temporaries.Add(this._result);
-    }
-
-    return this._result;
-  }
+  /// <summary>The implicit local a function's name stands for, which the procedure's declarations bind first and its end returns.</summary>
+  private IrLocal FunctionValue() => this._locals[this._locals.Keys.OfType<ILocalSymbol>().First(local => local.IsFunctionValue)];
 
   private void Try(ITryOperation attempt, List<IrStmt> statements) {
     var catches = new List<IrCatch>();

@@ -35,8 +35,6 @@ internal sealed partial class VbNetLowerer {
         return this.Binary(binary);
       case IUnaryOperation { OperatorMethod: null } unary:
         return this.Unary(unary);
-      case IConversionOperation { Operand: { Type: null } nothing } conversion when nothing.ConstantValue is { HasValue: true, Value: null }:
-        return Default(this.Type(conversion.Type!));
       case IConversionOperation { OperatorMethod: null } conversion:
         return this.Convert(this.Value(conversion.Operand), conversion.Operand.Type!, conversion.Type!, conversion.Syntax);
       case IConditionalOperation { WhenFalse: { } whenFalse } conditional:
@@ -47,8 +45,6 @@ internal sealed partial class VbNetLowerer {
         return this.Creation(creation);
       case IArrayCreationOperation creation:
         return this.ArrayCreation(creation);
-      case IDefaultValueOperation { Type: { } type }:
-        return Default(this.Type(type));
       default:
         this.Refuse(operation.Syntax, $"the expression '{operation.Syntax}'");
         return Default(operation.Type is null ? IrType.I32 : this.Type(operation.Type));
@@ -210,7 +206,7 @@ internal sealed partial class VbNetLowerer {
         return this.Arithmetic(IrBinaryOp.Divide, left, right, type, checks);
       case BinaryOperatorKind.Remainder when type.IsNumeric:
         return this.Arithmetic(IrBinaryOp.Remainder, left, right, type, false);
-      case BinaryOperatorKind.Concatenate when type.IsString && right.Type.IsString:
+      case BinaryOperatorKind.Concatenate or BinaryOperatorKind.Add when type.IsString && right.Type.IsString:
         return new IrIntrinsic(IrIntrinsicOp.StrConcat, IrType.String, [left, right]);
       case BinaryOperatorKind.Power when type == IrType.F64:
         return new IrIntrinsic(IrIntrinsicOp.Pow, IrType.F64, [left, right]);
@@ -331,7 +327,7 @@ internal sealed partial class VbNetLowerer {
       return compilation.GetSpecialType(SpecialType.System_String);
     if (kind is BinaryOperatorKind.LeftShift or BinaryOperatorKind.RightShift)
       return a.IsInteger ? left : null;
-    if (a == IrType.Bool && b == IrType.Bool && kind is BinaryOperatorKind.And or BinaryOperatorKind.Or or BinaryOperatorKind.ExclusiveOr)
+    if (a.IsString && b.IsString && kind == BinaryOperatorKind.Add)
       return left;
     if (!a.IsNumeric || !b.IsNumeric || left.SpecialType == SpecialType.System_Char || right.SpecialType == SpecialType.System_Char)
       return null;

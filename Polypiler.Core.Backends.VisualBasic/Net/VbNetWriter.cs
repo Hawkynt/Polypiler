@@ -104,13 +104,6 @@ internal sealed partial class VbNetWriter(VisualBasicProfile profile, VbNetCapab
     return new VnModule(moduleName, header, members);
   }
 
-  /// <summary>The Visual Basic name of every function, by its name in the IR.</summary>
-  public IReadOnlyDictionary<string, string> Names(IrModule module) {
-    this._moduleNames.UnionWith(VbNetNaming.Reserved);
-    this.NameFunctions(module);
-    return this._functions;
-  }
-
   private void NameFunctions(IrModule module) {
     foreach (var group in module.Functions.Where(function => function.IsPublic).GroupBy(function => VbNetNaming.Valid(function.Name, "Function"), StringComparer.OrdinalIgnoreCase)) {
       var first = group.First();

@@ -60,12 +60,20 @@ public sealed class VbNetCapabilities {
   /// </summary>
   public const string ShortestFloatText = "ShortestFloatText";
 
+  /// <summary>
+  /// <c>String.Trim</c>, <c>TrimStart</c> and <c>TrimEnd</c> without arguments removing what
+  /// <c>Char.IsWhiteSpace</c> accepts: .NET Framework 4. Below, a trim of .NET's white space is refused,
+  /// as those frameworks kept a list of their own.
+  /// </summary>
+  public const string WhiteSpaceTrim = "WhiteSpaceTrim";
+
   /// <summary>The table of the language versions and frameworks as their references state them.</summary>
   public static VbNetCapabilities Standard { get; } = new([
     new(ImplicitLineContinuation, new Version(10, 0), null, "an explicit ' _' continuation"),
     new(SingleBits, null, VisualBasicFramework.NetStandard21, "BitConverter.GetBytes"),
     new(SignedZeroMinMax, null, VisualBasicFramework.NetCoreApp31, "PlyMin, PlyMax"),
-    new(ShortestFloatText, null, VisualBasicFramework.NetCoreApp31)
+    new(ShortestFloatText, null, VisualBasicFramework.NetCoreApp31),
+    new(WhiteSpaceTrim, null, VisualBasicFramework.Net46)
   ]);
 
   /// <summary>The entries, in the order given.</summary>

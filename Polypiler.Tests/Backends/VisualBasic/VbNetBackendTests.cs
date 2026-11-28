@@ -57,6 +57,8 @@ public sealed class VbNetBackendTests {
   [TestCase("vbnet/vb16.9/netcoreapp3.1", VbNetCapabilities.SignedZeroMinMax, true)]
   [TestCase("vbnet/vb16.9/net2.0", VbNetCapabilities.ShortestFloatText, false)]
   [TestCase("vbnet/vb16.9", VbNetCapabilities.ShortestFloatText, true)]
+  [TestCase("vbnet/vb16.9/net3.5", VbNetCapabilities.WhiteSpaceTrim, false)]
+  [TestCase("vbnet/vb16.9/net4.6", VbNetCapabilities.WhiteSpaceTrim, true)]
   public void Capabilities_GoByLanguageVersionAndFramework(string profile, string capability, bool has)
     => Assert.That(VbNetCapabilities.Standard.Has(capability, VisualBasicProfile.Parse(profile)), Is.EqualTo(has));
 

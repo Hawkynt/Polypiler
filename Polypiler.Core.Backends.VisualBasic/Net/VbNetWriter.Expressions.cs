@@ -99,16 +99,14 @@ internal sealed partial class VbNetWriter {
         return new VnLiteral(Decimal(value) + "US");
       case IrTypeKind.I32:
         return new VnLiteral(value == int.MinValue ? "&H80000000" : Decimal(value));
+      case IrTypeKind.F32 or IrTypeKind.F64:
+        return FloatLiteral(type, IrOperators.Float(type, value));
       case IrTypeKind.U32:
         return new VnLiteral(((uint)value).ToString(CultureInfo.InvariantCulture) + "UI");
       case IrTypeKind.I64:
         return new VnLiteral(value == long.MinValue ? "&H8000000000000000L" : Decimal(value) + "L");
-      case IrTypeKind.U64:
-        return new VnLiteral(((ulong)value).ToString(CultureInfo.InvariantCulture) + "UL");
-      case IrTypeKind.F32 or IrTypeKind.F64:
-        return FloatLiteral(type, IrOperators.Float(type, value));
       default:
-        return new VnLiteral(Decimal(value));
+        return new VnLiteral(((ulong)value).ToString(CultureInfo.InvariantCulture) + "UL");
     }
   }
 
