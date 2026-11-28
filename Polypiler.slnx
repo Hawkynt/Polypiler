@@ -36,6 +36,7 @@
   <Project Path="Polypiler.Core.Optimize/Polypiler.Core.Optimize.csproj" />
   <Project Path="Polypiler.Core.Recognize/Polypiler.Core.Recognize.csproj" />
   <Project Path="Polypiler.Core.Recovery/Polypiler.Core.Recovery.csproj" />
+  <Project Path="Polypiler.Core.Syntax/Polypiler.Core.Syntax.csproj" />
   <Project Path="Polypiler.Core.Types/Polypiler.Core.Types.csproj" />
   <Project Path="Polypiler.Core.Verification/Polypiler.Core.Verification.csproj" />
   <Project Path="Polypiler.Interop/Polypiler.Interop.csproj" />

@@ -84,6 +84,7 @@
     <ProjectReference Include="..\Polypiler.Core.Optimize\Polypiler.Core.Optimize.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Recognize\Polypiler.Core.Recognize.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Recovery\Polypiler.Core.Recovery.csproj" />
+    <ProjectReference Include="..\Polypiler.Core.Syntax\Polypiler.Core.Syntax.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Types\Polypiler.Core.Types.csproj" />
     <ProjectReference Include="..\Polypiler.Core.Verification\Polypiler.Core.Verification.csproj" />
     <ProjectReference Include="..\Polypiler.Interop\Polypiler.Interop.csproj" />

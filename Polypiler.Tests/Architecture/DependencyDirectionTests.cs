@@ -66,6 +66,7 @@ public sealed class DependencyDirectionTests {
     "Polypiler.Core.Optimize",
     "Polypiler.Core.Recognize",
     "Polypiler.Core.Recovery",
+    "Polypiler.Core.Syntax",
     "Polypiler.Core.Types",
     "Polypiler.Core.Verification",
     "Polypiler.Interop",
@@ -152,6 +153,7 @@ public sealed class DependencyDirectionTests {
   /// <summary>The layer table of the module issue, name by name (test design 8 for the patterns).</summary>
   [TestCase("Polypiler.Core", 0)]
   [TestCase("Polypiler.Core.Types", 1)]
+  [TestCase("Polypiler.Core.Syntax", 1)]
   [TestCase("Polypiler.Core.IR", 2)]
   [TestCase("Polypiler.Core.Analysis", 3)]
   [TestCase("Polypiler.Core.Recognize", 4)]
