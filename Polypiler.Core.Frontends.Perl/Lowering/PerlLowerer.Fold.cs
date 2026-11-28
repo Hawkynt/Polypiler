@@ -164,8 +164,12 @@ internal sealed partial class PerlLowerer {
     var x = Big(a);
     var y = Big(b);
     switch (op) {
-      case "+" or "-" or "*" when integral:
-        return Integral(op switch { "+" => x + y, "-" => x - y, _ => x * y }, this._integer);
+      case "+" or "-" or "*" when integral: {
+        var exact = op switch { "+" => x + y, "-" => x - y, _ => x * y };
+        if (this._integer || exact >= long.MinValue && exact <= ulong.MaxValue)
+          return Integral(exact, this._integer);
+        return new(PerlNumeric.Of(op switch { "+" => a.Double + b.Double, "-" => a.Double - b.Double, _ => a.Double * b.Double }), null, null);
+      }
       case "+" or "-" or "*":
         return new(PerlNumeric.Of(op switch { "+" => a.Double + b.Double, "-" => a.Double - b.Double, _ => a.Double * b.Double }), null, null);
       case "/":

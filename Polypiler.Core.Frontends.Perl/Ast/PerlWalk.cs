@@ -44,6 +44,8 @@ internal static class PerlWalk {
         return [n.Target];
       case PerlBinary n:
         return [n.Left, n.Right];
+      case PerlComparisonChain n:
+        return n.Operands;
       case PerlAssign n:
         return [n.Target, n.Value];
       case PerlTernary n:

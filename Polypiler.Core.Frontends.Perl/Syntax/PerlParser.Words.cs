@@ -16,7 +16,12 @@ internal sealed partial class PerlParser {
       return null;
     var split = qualified.LastIndexOf("::", StringComparison.Ordinal);
     var module = qualified[..split];
-    return this._usedModules.Contains(module) && PerlPragmas.ExportedPrototype(module, qualified[(split + 2)..]) is { } prototype ? new KnownSub(prototype, true) : null;
+    if (!this._usedModules.Contains(module))
+      return null;
+    var shortName = qualified[(split + 2)..];
+    if (PerlPragmas.ExportedPrototype(module, shortName) is { } prototype)
+      return new KnownSub(prototype, true);
+    return PerlPragmas.DefaultExports(module) is { } exports && System.Linq.Enumerable.Contains(exports, shortName) ? new KnownSub(null, true) : null;
   }
 
   /// <summary>A term that starts with a word: a keyword, a builtin, a call, a class name, a bareword.</summary>
@@ -58,21 +63,7 @@ internal sealed partial class PerlParser {
   private bool IsActiveBuiltin(string name, bool core) {
     if (core)
       return true;
-    return name switch {
-      "say" => this.Feature("say"),
-      "state" => this.Feature("state"),
-      "fc" => this.Feature("fc"),
-      "evalbytes" => this.Feature("evalbytes"),
-      "__SUB__" => this.Feature("current_sub"),
-      "any" => this.Feature("keyword_any"),
-      "all" => this.Feature("keyword_all"),
-      "try" or "catch" or "finally" => this.Feature("try"),
-      "defer" => this.Feature("defer"),
-      "given" or "when" or "default" or "break" => this.Feature("switch"),
-      "isa" => this.Feature("isa"),
-      "class" or "field" or "method" or "ADJUST" or "__CLASS__" => this.Feature("class"),
-      _ => true
-    };
+    return !PerlWordSets.FeatureKeywords.TryGetValue(name, out var feature) || this.Feature(feature);
   }
 
   private PerlExpr? ParseKeywordTerm(string name, int line) {
@@ -119,7 +110,10 @@ internal sealed partial class PerlParser {
       var block = this.ParseBlock();
       return new PerlDoBlock(block) { Line = line };
     }
-    return new PerlCall("do", this.ParseUnaryArguments()) { Line = line, Builtin = true };
+    var file = this.ParseUnaryArguments();
+    if (file.Count == 0)
+      throw this.Unexpected(this.PeekTerm(), "a block or a file after do");
+    return new PerlCall("do", file) { Line = line, Builtin = true };
   }
 
   private PerlExpr ParseEval(int line) {
@@ -365,8 +359,7 @@ internal sealed partial class PerlParser {
     if (PerlLexer.IsIdentifierStart(c, this._scope.Utf8)) {
       var wordEnd = this._lexer.ScanIdentifier(after);
       var word = this._lexer.Text.Value[after..wordEnd];
-      return word is not ("x" or "lt" or "gt" or "le" or "ge" or "eq" or "ne" or "cmp" or "and" or "or" or "xor" or "if" or "unless"
-        or "while" or "until" or "for" or "foreach" or "isa");
+      return !PerlWordSets.IsOperatorWord(word, true);
     }
     return false;
   }
@@ -384,7 +377,8 @@ internal sealed partial class PerlParser {
     var token = this.PeekTerm();
     if (token.Is("{") && (name is "sort" or "any" or "all" || !this.LooksLikeAnonHash(token.End, statement: false))) {
       block = this.InScope(() => this.ParseBlock());
-      this.AcceptOperator(",");
+      if (this.PeekOperator().Is(","))
+        throw this.Unexpected(this.PeekOperator(), "the list after the block");
     } else if (name == "sort" && token.Kind == PerlTokenKind.Word && !token.AutoQuoted && !PerlBuiltins.IsBuiltin(token.Text) && this.StartsTermAfter(token.End)) {
       this.NextTerm();
       handle = new PerlString(token.Text) { Line = token.Line, Bareword = true };
@@ -522,8 +516,6 @@ internal sealed partial class PerlParser {
 
     if (!this.CanStartTerm(termToken))
       return new PerlString(qualified) { Line = line, Bareword = true };
-    if (isQualified && this._usedModules.Contains(qualified[..qualified.LastIndexOf("::", StringComparison.Ordinal)]))
-      return new PerlCall(qualified, Items(this.ParseCommaList())) { Line = line };
     if (this.MayImport || isQualified)
       throw new PerlUnsupportedException($"'{name}' followed by a term: a call only if a module or BEGIN code defines {name}", line);
     if (termToken.Is("{") || termToken.Is("[") || termToken.Is("("))
@@ -544,8 +536,7 @@ internal sealed partial class PerlParser {
       return true;
     if (PerlLexer.IsIdentifierStart(c, this._scope.Utf8)) {
       var end = this._lexer.ScanIdentifier(after);
-      return this._lexer.Text.Value[after..end] is not ("x" or "lt" or "gt" or "le" or "ge" or "eq" or "ne" or "cmp" or "and" or "or" or "xor" or "if"
-        or "unless" or "while" or "until" or "for" or "foreach" or "isa");
+      return !PerlWordSets.IsOperatorWord(this._lexer.Text.Value[after..end], true);
     }
     return false;
   }
@@ -583,8 +574,7 @@ internal sealed partial class PerlParser {
     if (PerlLexer.IsIdentifierStart(c, false)) {
       var end = this._lexer.ScanIdentifier(at);
       var word = this._lexer.Text.Value[at..end];
-      return word is "x" or "lt" or "gt" or "le" or "ge" or "eq" or "ne" or "cmp" or "and" or "or" or "xor" or "if" or "unless"
-        or "while" or "until" or "for" or "foreach" || word == "isa" && this.Feature("isa");
+      return PerlWordSets.IsOperatorWord(word, this.Feature("isa"));
     }
     return false;
   }

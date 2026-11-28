@@ -112,6 +112,9 @@ internal sealed record PerlStep(bool Increment, bool Prefix, PerlExpr Target) : 
 /// <summary>A binary operator, including the logical, range, binding and comparison operators.</summary>
 internal sealed record PerlBinary(string Operator, PerlExpr Left, PerlExpr Right) : PerlExpr;
 
+/// <summary>A chain of comparisons of one precedence level, <c>$a &lt; $b &lt;= $c</c>, which perl evaluates as the comparisons of neighbours joined by <c>and</c>, each operand once.</summary>
+internal sealed record PerlComparisonChain(IReadOnlyList<string> Operators, IReadOnlyList<PerlExpr> Operands) : PerlExpr;
+
 /// <summary>An assignment, <c>=</c> or a compound one such as <c>+=</c>.</summary>
 internal sealed record PerlAssign(string Operator, PerlExpr Target, PerlExpr Value) : PerlExpr;
 

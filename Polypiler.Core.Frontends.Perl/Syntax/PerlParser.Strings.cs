@@ -299,6 +299,8 @@ internal sealed partial class PerlParser {
             AppendCode(literal, code);
             return close + 1;
           }
+          if (name.StartsWith("U+", StringComparison.Ordinal))
+            throw this.Error("Invalid hexadecimal number in \\N{U+...}", line);
           throw new PerlUnsupportedException($"the named character \\N{{{name}}}", line);
         }
         throw new PerlUnsupportedException("\\N without braces", line);
@@ -334,7 +336,7 @@ internal sealed partial class PerlParser {
     if (i + 1 >= value.Length)
       return false;
     var c = value[i + 1];
-    if (PerlLexer.IsIdentifierStart(c, this._scope.Utf8) || char.IsAsciiDigit(c) || c is '{' or ':' && i + 2 < value.Length && value[i + 2] == ':')
+    if (PerlLexer.IsIdentifierStart(c, this._scope.Utf8) || char.IsAsciiDigit(c) || c == '{' || c == ':' && i + 2 < value.Length && value[i + 2] == ':')
       return c != ':' || i + 3 < value.Length && PerlLexer.IsIdentifierStart(value[i + 3], this._scope.Utf8);
     if (c == '$')
       return !pattern || i + 2 < value.Length && (PerlLexer.IsIdentifierStart(value[i + 2], this._scope.Utf8) || value[i + 2] is '{' or '$');
@@ -404,15 +406,22 @@ internal sealed partial class PerlParser {
         throw this.Error("Missing right curly in interpolated ${", line);
       var inner = value[(j + 1)..close].Trim();
       if (inner.Length == 1 && "&`'+_./,;!@<>[]\"-=~%?\\()|0123456789".Contains(inner[0], StringComparison.Ordinal))
-        return this.Subscripts(text, close + 1, pattern, line, inner, '$', special: true);
+        return (this.Variable('$', inner, line), close + 1);
       if (inner.Length > 0 && (PerlLexer.IsIdentifierStart(inner[0], this._scope.Utf8) || inner[0] == '^') && this.NameEnd(inner, inner[0] == '^' ? 1 : 0) == inner.Length && inner != "^") {
         var name = inner;
-        return this.Subscripts(text, close + 1, pattern, line, name, '$');
+        return (this.Variable('$', name, line), close + 1);
       }
-      scalar = new PerlDeref('$', this.ParseEmbedded(text, j + 1, close, block: true) is PerlDoBlock { Body.Statements: [PerlExpressionStatement { Modifier: null } only] } ? only.Expression : this.ParseEmbedded(text, j + 1, close, block: true)) { Line = line };
-      return this.SubscriptsOf(text, close + 1, pattern, line, scalar, '$');
+      var code = this.ParseEmbedded(text, j + 1, close, block: true);
+      var reference = code is PerlDoBlock { Body.Statements: [PerlExpressionStatement { Modifier: null } only] } ? only.Expression : code;
+      scalar = new PerlDeref('$', reference) { Line = line };
+      return this.SubscriptsOf(text, close + 1, pattern, line, scalar, '$', derefOf: reference);
     }
-    if (value[j] == '$' && j + 1 < value.Length && (PerlLexer.IsIdentifierStart(value[j + 1], this._scope.Utf8) || value[j + 1] is '{' or '$')) {
+    if (value[j] == '$' && j + 1 < value.Length && PerlLexer.IsIdentifierStart(value[j + 1], this._scope.Utf8)) {
+      var nameEnd = this.NameEnd(value, j + 1);
+      var reference = this.Variable('$', value[(j + 1)..nameEnd].Replace("'", "::", StringComparison.Ordinal), line);
+      return this.SubscriptsOf(text, nameEnd, pattern, line, new PerlDeref('$', reference) { Line = line }, '$', derefOf: reference);
+    }
+    if (value[j] == '$' && j + 1 < value.Length && value[j + 1] is '{' or '$') {
       var (inner, end) = this.InterpolatedScalar(text, j, pattern: false, line);
       if (inner is PerlElement or PerlCall)
         throw new PerlUnsupportedException("a subscripted dereference in a string", line);
@@ -481,7 +490,7 @@ internal sealed partial class PerlParser {
   private bool IsElementSubscript(string value, int open, bool pattern) {
     var close = Matching(value, open);
     if (close < 0)
-      return false;
+      return pattern ? false : throw this.Error("Missing right curly or square bracket within string", this._lexer.Line);
     if (!pattern)
       return true;
     var inner = value[(open + 1)..close].Trim();
@@ -506,7 +515,7 @@ internal sealed partial class PerlParser {
   private bool IsHashSubscript(string value, int open, bool pattern) {
     var close = Matching(value, open);
     if (close < 0)
-      return false;
+      return pattern ? false : throw this.Error("Missing right curly or square bracket within string", this._lexer.Line);
     if (!pattern)
       return true;
     var inner = value[(open + 1)..close];
@@ -551,9 +560,9 @@ internal sealed partial class PerlParser {
         throw this.Error("Missing right curly in interpolated @{", line);
       var inner = value[(j + 1)..close].Trim();
       if (inner.Length == 1 && inner[0] is '+' or '-' or '_' or ':') {
-        array = this.Variable('@', inner, line);
+        return (this.Variable('@', inner, line), close + 1);
       } else if (inner.Length > 0 && (PerlLexer.IsIdentifierStart(inner[0], this._scope.Utf8) || inner[0] == '^') && this.NameEnd(inner, inner[0] == '^' ? 1 : 0) == inner.Length) {
-        array = this.Variable('@', inner, line);
+        return (this.Variable('@', inner, line), close + 1);
       } else {
         var code = this.ParseEmbedded(text, j + 1, close, block: true);
         array = new PerlDeref('@', code is PerlDoBlock { Body.Statements: [PerlExpressionStatement { Modifier: null } only] } ? only.Expression : code) { Line = line };

@@ -118,11 +118,14 @@ internal sealed class PerlLexer {
     return i;
   }
 
+  /// <summary>Skips POD from the line at <paramref name="i"/> through the next line that starts with <c>=cut</c>; the first line never ends it.</summary>
   private int SkipPod(int i) {
+    var first = true;
     while (i < this._end) {
       var lineEnd = this.LineEnd(i);
-      var isCut = string.CompareOrdinal(this._text.Value, i, "=cut", 0, 4) == 0 && !IsWordChar(this._text[i + 4]);
+      var isCut = !first && string.CompareOrdinal(this._text.Value, i, "=cut", 0, 4) == 0 && !IsWordChar(this._text[i + 4]);
       i = lineEnd < this._end ? lineEnd + 1 : this._end;
+      first = false;
       if (isCut)
         return i;
     }
@@ -165,7 +168,7 @@ internal sealed class PerlLexer {
         continue;
       }
       if (this._host.ApostropheSeparates && this.At(i) == '\'' && i > start && IsIdentifierStart(this.At(i + 1), this._host.Utf8) && IsWordChar(this.At(i - 1), this._host.Utf8)
-          && !PerlBuiltins.IsBuiltin(this._text.Value[start..i]) && this._text.Value[start..i] is not ("q" or "qq" or "qw" or "qx" or "qr" or "m" or "s" or "tr" or "y")) {
+          && !PerlBuiltins.IsBuiltin(this._text.Value[start..i]) && !PerlWordSets.Quotes.Contains(this._text.Value[start..i])) {
         ++i;
         continue;
       }
@@ -217,7 +220,7 @@ internal sealed class PerlLexer {
       return this.Make(PerlTokenKind.Version, this._text.Value[start..vend], start, vend);
     }
 
-    if (term && text is "q" or "qq" or "qw" or "qx" or "m" or "qr" or "s" or "tr" or "y")
+    if (term && PerlWordSets.Quotes.Contains(text))
       if (this.TryQuoteLike(text, start, end) is { } quote)
         return quote;
 
@@ -506,7 +509,8 @@ internal sealed class PerlLexer {
       return this.Make(PerlTokenKind.Variable, "main::", start, i + 2) with { Sigil = sigil };
     if (IsIdentifierStart(c, this._host.Utf8) || c == ':' && this.At(i + 1) == ':') {
       var end = this.ScanIdentifier(i);
-      return this.Make(PerlTokenKind.Variable, this.IdentifierText(i, end), start, end) with { Sigil = sigil };
+      var name = this.IdentifierText(i, end);
+      return this.Make(PerlTokenKind.Variable, name.StartsWith("::", StringComparison.Ordinal) ? "main" + name : name, start, end) with { Sigil = sigil };
     }
     if (char.IsAsciiDigit(c)) {
       var end = i;

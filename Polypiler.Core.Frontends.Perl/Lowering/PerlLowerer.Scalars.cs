@@ -84,6 +84,8 @@ internal sealed partial class PerlLowerer {
         return this.LowerDoBlockExpr(block.Body, want);
       case PerlEvalBlock eval:
         return this.LowerEvalExpr(eval);
+      case PerlComparisonChain:
+        throw this.Fail(PerlFrontend.ScalarUnsupported, "chained comparison");
       case PerlPattern pattern:
         throw this.Fail(PerlFrontend.StringUnsupported, pattern.Kind switch { "m" => "match", "qr" => "qr", "s" => "subst", _ => "trans" });
       case PerlBinary or PerlAssign:

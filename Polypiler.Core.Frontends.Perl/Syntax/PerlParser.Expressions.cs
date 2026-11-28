@@ -171,8 +171,34 @@ internal sealed partial class PerlParser {
         continue;
       }
       var right = this.ParseBinary(level + 1);
+      if (level is 12 or 13) {
+        left = this.ParseComparisons(level, token, left, right);
+        continue;
+      }
       left = new PerlBinary(token.Text, left, right) { Line = token.Line };
     }
+  }
+
+  /// <summary>
+  /// The comparisons of one level after the first (perlop, "Operator Precedence and Associativity"):
+  /// the relational and the equality operators chain, <c>&lt;=&gt;</c>, <c>cmp</c> and <c>~~</c> do not
+  /// combine with any operator of their level.
+  /// </summary>
+  private PerlExpr ParseComparisons(int level, PerlToken first, PerlExpr left, PerlExpr right) {
+    static bool Chains(string op) => op is not ("<=>" or "cmp" or "~~");
+    var operators = new List<string> { first.Text };
+    var operands = new List<PerlExpr> { left, right };
+    while (this.BinaryLevel(this.PeekOperator()) == level) {
+      var token = this.PeekOperator();
+      if (!Chains(token.Text) || !Chains(operators[^1]))
+        throw this.Unexpected(token, "an operator of another precedence level");
+      this.NextOperator();
+      operators.Add(token.Text);
+      operands.Add(this.ParseBinary(level + 1));
+    }
+    return operators.Count == 1
+      ? new PerlBinary(first.Text, left, right) { Line = first.Line }
+      : new PerlComparisonChain(operators, operands) { Line = first.Line };
   }
 
   /// <summary>The operand of a named unary operator: everything binding tighter than the comparisons.</summary>
@@ -245,11 +271,9 @@ internal sealed partial class PerlParser {
       case PerlTokenKind.Word:
         if (token.AutoQuoted)
           return true;
-        return token.Text is not ("lt" or "gt" or "le" or "ge" or "eq" or "ne" or "cmp" or "and" or "or" or "xor"
-          or "if" or "unless" or "while" or "until" or "for" or "foreach")
-          && !(token.Text == "isa" && this.Feature("isa"));
+        return token.Text == "x" || !PerlWordSets.IsOperatorWord(token.Text, this.Feature("isa"));
       case PerlTokenKind.Operator:
-        return token.Text is "(" or "[" or "{" or "\\" or "-" or "+" or "!" or "~" or "~." or "++" or "--" or "<<>>";
+        return PerlWordSets.TermOperators.Contains(token.Text);
       default:
         return true;
     }

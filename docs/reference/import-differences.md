@@ -88,6 +88,26 @@ where the source has the construct:
 | `int32(x)` of a `float32`/`float64` | `go-float-to-int` | truncates, and saturates outside the type with a NaN becoming 0, where Go leaves the result to the implementation |
 | `x*y + z`, `z - x*y` of floating-point numbers | `go-fma-unfused` | rounds the product first, as Go does on amd64 and wherever the product is converted, where Go permits one fused rounding |
 
+## Perl: what perl decides only while it runs
+
+The Perl frontend ([Perl frontend](../architecture/PERL-FRONTEND.md)) parses the source itself;
+where its verdict differs from perl's it is a defect, which the Perl layer looks for on the tests
+and modules of the perl distribution. perl's grammar depends on what its BEGIN-time code defines:
+a sub a module imports changes how a call of it parses. The frontend knows the exports of the
+modules its table names and the subs of explicit import lists; where the parse of a bareword would
+depend on a sub it cannot see, it refuses the file with `PLY1701` rather than guess.
+
+The lowering makes perl's compile-time decisions itself, so the imported module no longer depends on
+the perl that would have compiled it:
+
+| Source | What the imported code does |
+| --- | --- |
+| several packages, classes or exports | in the order of the file and of their names, where perl's randomised hash order gave a different order on every run |
+| `!1`, `1 == 1` and other folded comparisons | a boolean constant, where perl 5.42's own constants were refused |
+| `$a->[0] += 1`, `$h{k} -= 1` (a compound assignment to an element) | stores the result, which the import of perl's op tree dropped |
+| `$s .= 'x'` | appends, where the import of perl's op tree assigned |
+| `do { STATEMENTS; VALUE }` with statements before the value | refused (`PLY1702`), where the import of perl's op tree dropped the statements |
+
 ## Oracle differences
 
 These calls differ because the original runtime does something its own specification does not say,

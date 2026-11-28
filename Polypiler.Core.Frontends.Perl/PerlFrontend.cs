@@ -216,6 +216,24 @@ public static class PerlFrontend {
 
   private static string StripPrefix(string message) => message.StartsWith("syntax error: ", StringComparison.Ordinal) ? message[14..] : message;
 
+  /// <summary>
+  /// The shape of the op tree perl builds for one expression, as the parser sees the expression:
+  /// every operator as <c>(name operand ...)</c> under the name of perl's op, package variables as
+  /// <c>$name</c>, constants as their value; <c>error: ...</c> if it is not valid Perl. The layer test
+  /// compares it with perl's own op tree, which checks precedence, associativity and how much named
+  /// unary and list operators take.
+  /// </summary>
+  /// <param name="expression">One Perl expression.</param>
+  /// <returns>The shape.</returns>
+  public static string ExpressionShape(string expression) {
+    ArgumentNullException.ThrowIfNull(expression);
+    var (document, _, diagnostic) = ParseDocument("expression.pl", "$Polypiler::Oracle::result = (" + expression + "\n);");
+    if (document is null)
+      return "error: " + diagnostic!.Message;
+    var value = ((PerlAssign)((PerlExpressionStatement)document.Statements[0]).Expression).Value;
+    return PerlOpShape.Of(value);
+  }
+
   /// <summary>Parses a Perl 5 source string and imports it into PolyIR.</summary>
   /// <param name="file">The logical file path used in diagnostics and module naming.</param>
   /// <param name="source">The Perl 5 source code.</param>
