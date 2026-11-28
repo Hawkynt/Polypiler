@@ -79,16 +79,35 @@ jobs:
 
       # The changelog commit happens BEFORE the release is cut, and the tag is placed ON that commit
       # (target_commitish below) so the bookkeeping commit stays inside the tag.
+      # It is created through the GraphQL API instead of `git push`, so GitHub signs it: main's branch
+      # protection requires signed commits.
       - name: Commit changelog (if it changed)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
+          rel_sha=$(git rev-parse HEAD)
           if ! git diff --quiet -- CHANGELOG.md; then
-            git config user.name  "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add CHANGELOG.md
-            git commit -m "* update changelog for $REL [skip ci]"
-            git push
+            base64 -w0 CHANGELOG.md > "$RUNNER_TEMP/changelog.b64"
+            jq -n \
+              --arg repo "$GITHUB_REPOSITORY" \
+              --arg branch "$GITHUB_REF_NAME" \
+              --arg head "$rel_sha" \
+              --arg headline "* update changelog for $REL [skip ci]" \
+              --rawfile contents "$RUNNER_TEMP/changelog.b64" \
+              '{
+                query: "mutation($input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: $input) { commit { oid } } }",
+                variables: { input: {
+                  branch: { repositoryNameWithOwner: $repo, branchName: $branch },
+                  expectedHeadOid: $head,
+                  message: { headline: $headline },
+                  fileChanges: { additions: [ { path: "CHANGELOG.md", contents: $contents } ] }
+                } }
+              }' > "$RUNNER_TEMP/commit.json"
+            rel_sha=$(gh api graphql --input "$RUNNER_TEMP/commit.json" --jq .data.createCommitOnBranch.commit.oid)
           fi
-          echo "REL_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "REL_SHA=$rel_sha" >> "$GITHUB_ENV"
 
       - name: Create GitHub Release (dated marker; tags vYYYYMMDD at the changelog commit)
         uses: softprops/action-gh-release@v2

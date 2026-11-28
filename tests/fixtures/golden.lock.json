@@ -7152,6 +7152,36 @@
       "bytes": 1746
     },
     {
+      "path": "tests/fixtures/runner-javascript/add.vectors.json",
+      "sha256": "9c785456325e0237a042995a985ef16c0f64c700e30c7009f19b054f401c266f",
+      "bytes": 893
+    },
+    {
+      "path": "tests/fixtures/runner-javascript/adler32.vectors.json",
+      "sha256": "5d2c28288dfd3ea2b0f3c0d2a2163e3647832546778861d2376b772cf997dd17",
+      "bytes": 741
+    },
+    {
+      "path": "tests/fixtures/runner-javascript/mismatch.vectors.json",
+      "sha256": "8a46a686c2aaff02c89f0186b119140a49841d7eaef22002d386c4a16be8277e",
+      "bytes": 576
+    },
+    {
+      "path": "tests/fixtures/runner-kotlin/add.vectors.json",
+      "sha256": "81d657a82da0b2ed8032ab63b2896779d2291d05b50315124f32b52f3ba183f3",
+      "bytes": 795
+    },
+    {
+      "path": "tests/fixtures/runner-kotlin/div.vectors.json",
+      "sha256": "cb8e9d982d60211bb864034278055104962b08111d1dff0a2ff438246631c2ce",
+      "bytes": 949
+    },
+    {
+      "path": "tests/fixtures/runner-kotlin/sum.vectors.json",
+      "sha256": "5314ca60d027997e5318123af96d85025dcaf10a79120c3d605bc671468ac73c",
+      "bytes": 732
+    },
+    {
       "path": "tests/fixtures/verify/adler32.vectors.json",
       "sha256": "f0bb9ef0d19281add39928d0953daf2b93bb9496957ee5b97d7e59af07548640",
       "bytes": 625

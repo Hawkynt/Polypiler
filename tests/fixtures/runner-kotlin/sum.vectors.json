@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "fixture": "runner-kotlin.sum",
+  "provenance": {
+    "kind": "published",
+    "source": "Kotlin standard library",
+    "detail": "IntArray.sum adds the elements with the wrapping + of Int",
+    "generatedBy": "hand"
+  },
+  "export": "sum",
+  "signature": {
+    "parameters": [
+      {
+        "name": "a",
+        "type": "seq<i32>"
+      }
+    ],
+    "result": "i32"
+  },
+  "vectors": [
+    {
+      "name": "sum([1, 2, 3])",
+      "input": {
+        "hex": "03000000010000000200000003000000"
+      },
+      "expected": {
+        "hex": "06000000"
+      }
+    },
+    {
+      "name": "sum([])",
+      "input": {
+        "hex": "00000000"
+      },
+      "expected": {
+        "hex": "00000000"
+      }
+    }
+  ]
+}

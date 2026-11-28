@@ -1,0 +1,29 @@
+# The error table of the dialect vbnet: the Err.Number Visual Basic .NET gives each exception, and
+# when Err keeps and clears it, recorded by tests/fixtures/visualbasic/vbnet/ErrProbe.vb on the Visual
+# Basic compiler and runtime of dotnet-sdk (10.0.114 on the development host). The oracle layer runs
+# the probes again on the pinned SDK, the unit tests on the running .NET, and both compare with this
+# table; the VB.NET frontend's error traps follow it. Data, not a spec document (spec/README.md).
+dialect: vbnet
+# NumberOf(kind): Err.Number after the error of a kind under On Error Resume Next.
+numbers:
+  divide-by-zero: 11
+  overflow: 6
+  index-out-of-range: 9
+  invalid-cast: 13
+  null-reference: 91
+  other: 5
+  raise: 1234
+# Each probe procedure of ErrProbe.vb and the number it returns.
+rules:
+  KeptAfterSuccess: 6
+  ClearedByErrClear: 0
+  ClearedByOnError: 0
+  ClearedByResumeNext: 0
+  CaughtByTry: 11
+  ClearedAfterCatch: 0
+  InCalledProcedure: 9
+  KeptAfterReturn: 6
+  ResumeNextInIfCondition: 111
+  ResumeNextInDoWhileCondition: 311
+  ResumeNextInSelectCase: 11
+  ResumeWithoutError: 20

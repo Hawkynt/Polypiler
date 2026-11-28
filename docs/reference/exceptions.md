@@ -240,6 +240,7 @@ The interpreter tests the clauses in a .NET exception filter, which gives the CL
   one table each there.
 
 - **Rust:** see [Rust](#rust), which covers both directions.
+- **Kotlin:** see [Kotlin](#kotlin), which covers both directions.
 
 ## Forms per profile
 
@@ -378,6 +379,53 @@ enum's or a number's parse, a cast, a view) gives the trap as its value there an
 form, a trap inside a closure, a step of locked module state and a type named `Error` are refused with
 `PLY1552`.
 
+## Kotlin
+
+**Backend** ([the Kotlin backend](../architecture/KOTLIN-BACKEND.md)). A trap is the throw of the JVM
+exception of its class; where the JVM has no class of the IR's meaning the file declares one, only where
+it throws it, deriving from the JVM class of the nearest meaning, so that a caller still catches an
+`ArithmeticException` or an `IllegalArgumentException`. A trap is compared by its class, as everywhere;
+the only messages the comparison reads are those of `ArithmeticException`, which the JVM throws for a
+division by zero and `Math.*Exact` for an overflow.
+
+| IR class (trap) | Kotlin throws | Message where the backend throws |
+| --- | --- | --- |
+| `DivideByZeroException` (`DivideByZero`) | the JVM's own `ArithmeticException("/ by zero")` of `/` and `%`; a throw of the class a declared `DivideByZeroException : ArithmeticException` | - |
+| `OverflowException` (`IntegerOverflow`) | `ArithmeticException("integer overflow")` of a helper, `ArithmeticException("integer overflow"/"long overflow")` of `Math.addExact` and its siblings; a throw of the class a declared `OverflowException : ArithmeticException` | integer overflow |
+| `ArithmeticException` (`InvalidOperation`) | `ArithmeticException` with .NET's message | Function does not accept floating point Not-a-Number values. |
+| `IndexOutOfRangeException` (`IndexOutOfRange`) | the JVM's `ArrayIndexOutOfBoundsException` and `StringIndexOutOfBoundsException`; `IndexOutOfBoundsException` of the copy helper and of a throw | index out of range |
+| an array created with a negative length (`IntegerOverflow`) | the JVM's `NegativeArraySizeException` | - |
+| `NullReferenceException` (`NullReference`) | `NullPointerException` | - |
+| `InvalidCastException` (`InvalidCast`) | `ClassCastException` | - |
+| `InvalidOperationException` (`MissingValue`, `CollectionModified`) | `IllegalStateException`; the JVM's `ConcurrentModificationException` | missing value, collection modified |
+| `KeyNotFoundException` (`KeyNotFound`) | `NoSuchElementException` | - |
+| `ArgumentException` (`DuplicateKey`, `UnknownName`) | `IllegalArgumentException` | duplicate key, unknown name |
+| `ArgumentOutOfRangeException` (`ArgumentOutOfRange`) | a declared `ArgumentOutOfRangeException : IllegalArgumentException` | - |
+| `FormatException` (`InvalidFormat`) | a declared `FormatException : RuntimeException` | - |
+| `AssertionException` | a declared `AssertionException : RuntimeException` | - |
+| `Exception` | `Exception` (`java.lang.Exception`, which every exception above derives from) | - |
+
+A JVM that throws a preallocated exception from compiled code (HotSpot's `OmitStackTraceInFastThrow`)
+leaves out the message of its implicit `ArithmeticException`, which only a division by zero raises:
+an `ArithmeticException` without a message is a division by zero.
+
+**The runner** ([#426](https://github.com/Hawkynt/Polypiler/issues/426), `KotlinTrapTable`) classifies by the
+issue's table: `ArithmeticException` with the message `/ by zero` (or none) `divide-by-zero`, otherwise
+`overflow`; `ArrayIndexOutOfBoundsException`, `IndexOutOfBoundsException`, `StringIndexOutOfBoundsException`
+and `NegativeArraySizeException` `bounds`; `NullPointerException` `null`; `IllegalArgumentException`
+`invalid-argument`; `NoWhenBranchMatchedException` and `IllegalStateException` `unreachable` for the message
+`unreachable`; every other `Throwable` `other:` and its simple name.
+
+**Frontend** ([the Kotlin frontend](../architecture/KOTLIN-FRONTEND.md)). `throw` of `Exception`,
+`RuntimeException`, `ArithmeticException`, `IllegalArgumentException`, `IllegalStateException`,
+`UnsupportedOperationException`, `IndexOutOfBoundsException`, `ArrayIndexOutOfBoundsException`,
+`NullPointerException`, `ClassCastException`, `NoSuchElementException` and `NumberFormatException` is
+the throw of the library class of the same meaning (`IllegalStateException` and
+`UnsupportedOperationException` are `InvalidOperationException`); `require` throws `ArgumentException`
+with "Failed requirement.", `check` and `error` `InvalidOperationException`. Kotlin's own arithmetic
+needs no exception the IR's does not: the smallest value divided by -1 wraps, through a function of the
+module. `try`/`catch` is refused (#425).
+
 ## Visual Basic
 
 Classic Visual Basic (VB6 / VBA) has no exception objects: an error is a number in `Err.Number`, raised
@@ -414,7 +462,7 @@ Visual Basic .NET has the exceptions of .NET: the frontend and the backend of th
 [frontend](../architecture/VISUALBASIC-FRONTEND.md#visual-basic-net)). An integer overflow is an
 `OverflowException` unless integer checks are removed; `\` and `Mod` by zero a `DivideByZeroException`.
 The dialect also keeps `Err`: `ErrProbe.vb` records, on the compiler and runtime of `dotnet-sdk`, the
-table of the dialect `vbnet` (`tests/fixtures/visualbasic/vbnet/ErrProbe.expected.txt`):
+table of the dialect `vbnet` ([`spec/languages/visualbasic/vbnet-errors.yaml`](../../spec/languages/visualbasic/vbnet-errors.yaml)):
 
 | Exception | `Err.Number` |
 | --- | --- |
@@ -426,9 +474,14 @@ table of the dialect `vbnet` (`tests/fixtures/visualbasic/vbnet/ErrProbe.expecte
 | any other, such as `InvalidOperationException` | 5 |
 | `Err.Raise(n)` | n |
 
-`Err` keeps its number after a later statement that succeeds; `Err.Clear`, `Resume Next` and an
-executed `On Error` clear it; a `Catch` sets it to the number of the exception caught. The frontend
-refuses `On Error` and `Err` (`PLY2611`).
+`Err` keeps its number after a later statement that succeeds and after the procedure that set it
+returns; `Err.Clear`, `Resume Next` and an executed `On Error` clear it; a `Catch` sets it to the
+number of the exception caught and clears it where it ends. Under `Resume Next` an error in the
+condition of an `If` or a `Do While` goes on inside it, one in the value of a `Select Case` after
+`End Select`; `Resume` outside a handler is error 20. The frontend lowers `On Error`, `Resume` and
+`Err.Number`/`Clear`/`Raise` to the IR's exceptions as a state machine with this table
+([frontend](../architecture/VISUALBASIC-FRONTEND.md#jumps-and-unstructured-error-handling)); the
+backend writes the IR's try and catch, not `On Error`.
 
 ## Known differences
 

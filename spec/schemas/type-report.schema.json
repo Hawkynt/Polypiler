@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Hawkynt/Polypiler/spec/schemas/type-report.schema.json",
+  "title": "Static-typing report",
+  "description": "What polypiler translate --type-report writes (ADR 0300 decision 7): the places of the translated module - locals, parameters and results of its own functions - counted by the lattice level of their type and their certainty, with the static ratio, and the reason of every place that stayed a variant.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "module", "summary", "functions"],
+  "$defs": {
+    "count": { "type": "integer", "minimum": 0 },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["places", "levels", "certainty", "staticRatio"],
+      "properties": {
+        "places": { "$ref": "#/$defs/count" },
+        "levels": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["exact", "nominal", "shape", "optional", "union", "variant"],
+          "properties": {
+            "exact": { "$ref": "#/$defs/count" },
+            "nominal": { "$ref": "#/$defs/count" },
+            "shape": { "$ref": "#/$defs/count" },
+            "optional": { "$ref": "#/$defs/count" },
+            "union": { "$ref": "#/$defs/count" },
+            "variant": { "$ref": "#/$defs/count" }
+          }
+        },
+        "certainty": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["proven", "contextual", "guarded", "dynamic"],
+          "properties": {
+            "proven": { "$ref": "#/$defs/count" },
+            "contextual": { "$ref": "#/$defs/count" },
+            "guarded": { "$ref": "#/$defs/count" },
+            "dynamic": { "$ref": "#/$defs/count" }
+          }
+        },
+        "staticRatio": { "type": "number", "minimum": 0, "maximum": 1, "description": "Places below a variant over all places, two decimals; 1 for no place." }
+      }
+    }
+  },
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "module": { "type": "string" },
+    "summary": { "$ref": "#/$defs/counts" },
+    "functions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "counts", "variants"],
+        "properties": {
+          "name": { "type": "string" },
+          "counts": { "$ref": "#/$defs/counts" },
+          "variants": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["name", "kind", "reason"],
+              "properties": {
+                "name": { "type": "string" },
+                "kind": { "enum": ["local", "parameter", "result"] },
+                "reason": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

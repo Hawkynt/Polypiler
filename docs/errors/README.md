@@ -163,6 +163,10 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY1106](PLY1106.md) | error | 3 (UnsupportedConstruct) | `<reason>` | PROTOTYPE |
 | [PLY1107](PLY1107.md) | error | 3 (UnsupportedConstruct) | `a thrown value that is not an Error reaches <place>, which observes it` | #1323 |
 | [PLY1152](PLY1152.md) | error | 3 (UnsupportedConstruct) | `'<operation>' cannot be expressed in JavaScript profile '<profile>'` | PROTOTYPE |
+| [PLY1191](PLY1191.md) | error | 6 (TargetBuildFailure) | `node rejected the input: <file>:<line>: SyntaxError: <text>` | #234 |
+| [PLY1192](PLY1192.md) | error | 7 (OracleFailure) | `the JavaScript driver exited with code <code>: <standard error>` | #234 |
+| [PLY1194](PLY1194.md) | error | 5 (SemanticMismatch) | `call <index>: expected <values>, actual <values>` | #234 |
+| [PLY1195](PLY1195.md) | error | 7 (OracleFailure) | `<reason>` | #234 |
 
 ## PLY1400–PLY1499 · cpp
 
@@ -221,6 +225,27 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY1591](PLY1591.md) | error | 6 (TargetBuildFailure) | `the Rust compiler rejected the input: <every error with its code, text and location>` | #468 |
 | [PLY1592](PLY1592.md) | error | 7 (OracleFailure) | `the Rust driver died with exit code <code>: <standard error>` | #468 |
 | [PLY1595](PLY1595.md) | error | 7 (OracleFailure) | `<reason>` | #468 |
+
+## PLY1600–PLY1699 · kotlin
+
+| Code | Severity | Exit code | Message | Owner |
+| --- | --- | --- | --- | --- |
+| [PLY1600](PLY1600.md) | error | 4 (InvalidSource) | `Kotlin syntax error: <detail>` | #424 |
+| [PLY1601](PLY1601.md) | error | 3 (UnsupportedConstruct) | `<the operator, conversion or literal and why>` | #424 |
+| [PLY1610](PLY1610.md) | error | 3 (UnsupportedConstruct) | `<the construct and why>` | #421 |
+| [PLY1620](PLY1620.md) | error | 3 (UnsupportedConstruct) | `<the construct and why>` | #423 |
+| [PLY1630](PLY1630.md) | error | 3 (UnsupportedConstruct) | `<the function or name and why>` | #422 |
+| [PLY1640](PLY1640.md) | error | 3 (UnsupportedConstruct) | `<the class, interface, object or nullable type>` | #425 |
+| [PLY1650](PLY1650.md) | error | 3 (UnsupportedConstruct) | `type '<type>' has no Kotlin representation in profile '<profile>'` | #419 |
+| [PLY1651](PLY1651.md) | error | 3 (UnsupportedConstruct) | `'<operation>' cannot be expressed in Kotlin profile '<profile>'` | #419 |
+| [PLY1658](PLY1658.md) | error | 3 (UnsupportedConstruct) | `<the statement or jump and why>` | #416 |
+| [PLY1666](PLY1666.md) | error | 3 (UnsupportedConstruct) | `<the layout, view or pointer and why>` | #418 |
+| [PLY1674](PLY1674.md) | error | 3 (UnsupportedConstruct) | `exports '<a>' and '<b>' both map to the Kotlin name '<name>'` | #417 |
+| [PLY1682](PLY1682.md) | error | 3 (UnsupportedConstruct) | `<the class, interface or struct and why>` | #420 |
+| [PLY1691](PLY1691.md) | error | 6 (TargetBuildFailure) | `the Kotlin toolchain rejected the input: <the compiler's errors with file and line>` | #426 |
+| [PLY1692](PLY1692.md) | error | 7 (OracleFailure) | `the Kotlin driver died with exit code <code>: <standard error>` | #426 |
+| [PLY1694](PLY1694.md) | error | 7 (OracleFailure) | `call <call>: expected <expected>, actual <actual>` | #426 |
+| [PLY1695](PLY1695.md) | error | 7 (OracleFailure) | `<reason>` | #426 |
 
 ## PLY1700–PLY1799 · perl
 
@@ -323,7 +348,7 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY2692](PLY2692.md) | error | 7 (OracleFailure) | `the LibreOffice Basic driver exited with code <code>: <standard error>` | #1096 |
 | [PLY2693](PLY2693.md) | error | 7 (OracleFailure) | `the Visual Basic .NET driver exited with code <code> without its answer: <standard error>` | #1096 |
 | [PLY2695](PLY2695.md) | error | 7 (OracleFailure) | `<the driver answered another number of calls, or a line that is no answer>` | #1096 |
-| [PLY2696](PLY2696.md) | error | 7 (OracleFailure) | `the recorded dialect table differs from tests/fixtures/visualbasic/vbnet/ErrProbe.expected.txt at '<entry>'` | #1096 |
+| [PLY2696](PLY2696.md) | error | 7 (OracleFailure) | `the recorded dialect table differs from spec/languages/visualbasic/vbnet-errors.yaml at '<entry>'` | #1096 |
 
 ## PLY2800–PLY2899 · batch
 

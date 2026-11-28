@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "fixture": "runner-kotlin.div",
+  "provenance": {
+    "kind": "published",
+    "source": "Kotlin language specification",
+    "detail": "Int division truncates towards zero and throws ArithmeticException on a zero divisor",
+    "generatedBy": "hand"
+  },
+  "export": "div",
+  "signature": {
+    "parameters": [
+      {
+        "name": "a",
+        "type": "i32"
+      },
+      {
+        "name": "b",
+        "type": "i32"
+      }
+    ],
+    "result": "i32"
+  },
+  "vectors": [
+    {
+      "name": "div(7, 2)",
+      "input": {
+        "hex": "0700000002000000"
+      },
+      "expected": {
+        "hex": "03000000"
+      }
+    },
+    {
+      "name": "div(1, 0)",
+      "input": {
+        "hex": "0100000000000000"
+      },
+      "expectedTrap": "divide-by-zero"
+    },
+    {
+      "name": "div(-7, 2)",
+      "input": {
+        "hex": "f9ffffff02000000"
+      },
+      "expected": {
+        "hex": "fdffffff"
+      }
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "fixture": "runner-javascript/add",
+  "provenance": {
+    "kind": "published",
+    "source": "fixture",
+    "detail": "two's-complement little-endian images written by hand",
+    "generatedBy": "hand"
+  },
+  "export": "F",
+  "signature": {
+    "parameters": [
+      {
+        "name": "a",
+        "type": "i32"
+      },
+      {
+        "name": "b",
+        "type": "i32"
+      }
+    ],
+    "result": "i32"
+  },
+  "vectors": [
+    {
+      "name": "small",
+      "input": {
+        "hex": "0200000003000000"
+      },
+      "expected": {
+        "hex": "05000000"
+      }
+    },
+    {
+      "name": "zero",
+      "input": {
+        "hex": "ffffffff01000000"
+      },
+      "expected": {
+        "hex": "00000000"
+      }
+    },
+    {
+      "name": "out-of-range",
+      "input": {
+        "hex": "ffffff7f01000000"
+      },
+      "expectedTrap": "other:RangeError"
+    }
+  ]
+}
