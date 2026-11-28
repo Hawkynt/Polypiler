@@ -71,11 +71,15 @@ public sealed class VariantBackendTests {
     Assert.That(VisualBasicFixtures.Translate(module).Source, Does.Contain("Err.Raise 94"));
   }
 
-  [TestCase(IrVariantTag.Currency)]
-  [TestCase(IrVariantTag.Date)]
-  public void VisualBasic_RefusesCurrencyAndDate(IrVariantTag tag) {
-    var problems = VisualBasicEmitter.Check(Nodes(tag), VisualBasicProfile.Vba7x64);
-    Assert.That(problems.Select(problem => problem.Message), Has.Some.Contains($"tag {tag}"));
+  [Test]
+  public void VisualBasic_WritesCurrencyAndDate() {
+    var date = VisualBasicFixtures.Translate(Nodes(IrVariantTag.Date), VisualBasicProfile.Vba7);
+    Assert.That(date.Problems, Is.Empty);
+    Assert.That(date.Source, Does.Contain("CDate(x)").And.Contain("CDbl("));
+    var currency = VisualBasicFixtures.Translate(Nodes(IrVariantTag.Currency), VisualBasicProfile.Vba7x64);
+    Assert.That(currency.Problems, Is.Empty);
+    Assert.That(currency.Source, Does.Contain("CCur(CDec(x) / 10000)").And.Contain("CLngLng(CDec("));
+    Assert.That(VisualBasicEmitter.Check(Nodes(IrVariantTag.Currency), VisualBasicProfile.Vba7).Select(problem => problem.Message), Has.Some.Contains("LongLong"));
   }
 
 
@@ -88,7 +92,9 @@ public sealed class VariantBackendTests {
     Assert.That(text, Does.Contain("global::System.DBNull.Value").And.Contain("(object)null").And.Contain("VariantTag("));
     var nodes = CSharpEmitter.Emit(Nodes(), CSharpProfile.Default).Single().Content;
     Assert.That(nodes, Does.Contain("VariantPayload(v)").And.Contain("(object)(short)"));
-    Assert.That(CSharpEmitter.Check(Nodes(IrVariantTag.Currency), CSharpProfile.Default).Select(problem => problem.Message), Has.Some.Contains("not supported by the C# backend"));
+    Assert.That(CSharpEmitter.Check(Nodes(IrVariantTag.Currency), CSharpProfile.Default), Is.Empty);
+    Assert.That(CSharpEmitter.Emit(Nodes(IrVariantTag.Currency), CSharpProfile.Default).Single().Content, Does.Contain("(decimal)x / (decimal)10000").And.Contain("* (decimal)10000"));
+    Assert.That(CSharpEmitter.Emit(Nodes(IrVariantTag.Date), CSharpProfile.Default).Single().Content, Does.Contain("new VariantDate(x)").And.Contain("public sealed class VariantDate").And.Contain(".Value"));
   }
 
   [Test, Category("Slow")]
@@ -133,7 +139,8 @@ public sealed class VariantBackendTests {
     Assert.That(text, Does.Contain("[0]").And.Contain("[1]").And.Contain("[tag, value]"));
     var nodes = JavaScriptEmitter.Emit(Nodes(), JavaScriptProfile.Default).Single().Content;
     Assert.That(nodes, Does.Contain("function $variant(value, tag)").And.Contain("$variant(v, 2)").And.Contain("[2, "));
-    foreach (var tag in new[] { IrVariantTag.I64, IrVariantTag.Currency, IrVariantTag.Date })
+    Assert.That(JavaScriptEmitter.Emit(Nodes(IrVariantTag.Date), JavaScriptProfile.Default).Single().Content, Does.Contain("[7, "));
+    foreach (var tag in new[] { IrVariantTag.I64, IrVariantTag.Currency })
       Assert.That(() => JavaScriptEmitter.Emit(Nodes(tag), JavaScriptProfile.Default), Throws.ArgumentException.With.Message.Contains($"a variant of the tag {tag}"));
   }
 
@@ -144,7 +151,8 @@ public sealed class VariantBackendTests {
     Assert.That(text, Does.Contain("(0,)").And.Contain("(1,)").And.Contain("-> tuple"));
     var nodes = PythonEmitter.Emit(Nodes(), PythonProfile.Default).Single().Content;
     Assert.That(nodes, Does.Contain("def _ply_variant(value: tuple, tag: int) -> object:").And.Contain("_ply_variant(v, 2)").And.Contain("[1]"));
-    Assert.That(() => PythonEmitter.Emit(Nodes(IrVariantTag.Currency), PythonProfile.Default), Throws.ArgumentException.With.Message.Contains("a variant of the tag Currency"));
+    Assert.That(PythonEmitter.Emit(Nodes(IrVariantTag.Currency), PythonProfile.Default).Single().Content, Does.Contain("(6, "));
+    Assert.That(PythonEmitter.Emit(Nodes(IrVariantTag.Date), PythonProfile.Default).Single().Content, Does.Contain("(7, "));
   }
 
   private static IEnumerable<TestCaseData> Others() {
@@ -161,5 +169,15 @@ public sealed class VariantBackendTests {
   [TestCaseSource(nameof(Others))]
   public void BackendWithoutTheType_RefusesIt(string backend, System.Func<IrModule, IReadOnlyList<Diagnostic>> check)
     => Assert.That(check(Nodes()), Is.Not.Empty, backend);
+
+  /// <summary>A module that writes a Double as Visual Basic's CStr writes it.</summary>
+  private static IrModule Formatted() {
+    var x = new IrLocal("x", IrType.F64);
+    return new IrModule("Text", [new IrFunction("F", true, IrType.String, [x], [], new IrBlock([new IrReturn(NumberTextOperations.VisualBasic(new IrLocalRef(x), ','))]))]);
+  }
+
+  [TestCaseSource(nameof(Others))]
+  public void BackendWithoutVisualBasicText_RefusesIt(string backend, System.Func<IrModule, IReadOnlyList<Diagnostic>> check)
+    => Assert.That(check(Formatted()), Is.Not.Empty, backend);
 
 }

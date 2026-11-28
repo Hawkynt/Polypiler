@@ -236,6 +236,7 @@ public static partial class CSharpEmitter {
       CSharpCollectionClasses.FloatKeysName => CSharpCollectionClasses.FloatKeys,
       CSharpCollectionClasses.AssertionExceptionName => CSharpCollectionClasses.AssertionException,
       CSharpCollectionClasses.UninitializedName => CSharpCollectionClasses.Uninitialized,
+      CSharpCollectionClasses.VariantDateName => CSharpCollectionClasses.VariantDate,
       _ => CSharpCollectionClasses.SingleKeys
     })) with { Leading = CsTrivia.Blank });
 

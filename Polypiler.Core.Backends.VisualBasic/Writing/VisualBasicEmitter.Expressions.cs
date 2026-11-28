@@ -434,7 +434,8 @@ public static partial class VisualBasicEmitter {
     /// <summary>
     /// A value of the dynamic type as a <c>Variant</c>: <c>Empty</c>, <c>Null</c>, or the payload through
     /// the conversion function of its type, which gives the <c>Variant</c> that subtype also where a
-    /// literal would have another (<c>5</c> is an <c>Integer</c>, <c>CLng(5)</c> a <c>Long</c>).
+    /// literal would have another (<c>5</c> is an <c>Integer</c>, <c>CLng(5)</c> a <c>Long</c>); a date
+    /// through <c>CDate</c>, a currency's ten thousandths through <c>CCur</c> of the exact quotient.
     /// </summary>
     private VbExpression VariantOf(IrVariantOf made) {
       switch (made.Tag) {
@@ -444,8 +445,11 @@ public static partial class VisualBasicEmitter {
           return new VbName("Null");
         case IrVariantTag.String:
           return this.Expression(made.Value!);
-        case IrVariantTag.Currency or IrVariantTag.Date:
-          return this.Inexpressible($"a Variant of the tag {made.Tag}");
+        case IrVariantTag.Date:
+          return Call("CDate", this.Expression(made.Value!));
+        case IrVariantTag.Currency:
+          // The ten thousandths, a LongLong, divided exactly as a Decimal.
+          return Call("CCur", new VbBinary(Call("CDec", this.Expression(made.Value!)), "/", new VbInteger(10000)));
         default:
           var value = this.Expression(made.Value!);
           return Call(this.Conversion(made.Value!.Type)!, value);
@@ -459,14 +463,14 @@ public static partial class VisualBasicEmitter {
     /// </summary>
     private VbExpression VariantValue(IrVariantValue value) {
       var variant = this.Expression(value.Value);
-      if (value.Tag is IrVariantTag.Currency or IrVariantTag.Date)
-        return this.Inexpressible($"the payload of a Variant of the tag {value.Tag}");
       if (!value.IsTested) {
         variant = this.Variable(value.Value, variant);
         var raise = new VbCallStatement(new VbMember(new VbName("Err"), "Raise"), [new VbInteger(13)]);
         this._out.Add(new VbIf([new(new VbBinary(Call("VarType", variant), "<>", new VbInteger((int)value.Tag)), [raise])], null));
       }
 
+      if (value.Tag == IrVariantTag.Currency)
+        return Call("CLngLng", new VbBinary(Call("CDec", variant), "*", new VbInteger(10000)));
       return Call(this.Conversion(value.Type)!, variant);
     }
 
@@ -668,6 +672,11 @@ public static partial class VisualBasicEmitter {
           return this.CallHelper(VisualBasicHelpers.IndexOf, arguments[0], needle, arguments.Count == 3 ? arguments[2] : new VbInteger(0));
         case IrIntrinsicOp.StrRepeat when !intrinsic.Arguments[0].Type.IsString:
           return this.CallHelper(VisualBasicHelpers.Repeat, Call("ChrW", arguments[0]), arguments[1]);
+        case IrIntrinsicOp.FormatVisualBasic when NumberTextOperations.SeparatorOf(intrinsic) is { } separator:
+          return this.CallHelper(first == IrType.F32 ? VisualBasicHelpers.FormatSingle : VisualBasicHelpers.FormatDouble, arguments[0], new VbString(separator.ToString()));
+        case IrIntrinsicOp.ParseDotNet when intrinsic.Type.IsFloat:
+          var parsed = this.CallHelper(VisualBasicHelpers.ParseDouble, arguments[0]);
+          return intrinsic.Type == IrType.F32 ? Call("CSng", parsed) : parsed;
         case IrIntrinsicOp.FormatRadix when intrinsic.Arguments is [_, IrConst { Value: var radix }, IrConst { Value: 1 }, IrConst { Value: var upper }, IrConst { Value: var radixMode }]:
           return this.FormatRadix(intrinsic.Arguments[0].Type, arguments[0], radix, upper != 0, (RadixMode)radixMode) ?? this.Inexpressible(op.ToString());
         default:
