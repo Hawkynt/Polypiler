@@ -68,14 +68,15 @@ internal static class VbNetFixtures {
 
   private static VisualBasicCompilation Compilation(string source, VisualBasicProfile profile, IEnumerable<MetadataReference>? references, bool removeIntegerChecks) {
     var tree = VisualBasicSyntaxTree.ParseText(source, new VisualBasicParseOptions(LanguageOf(profile)), "Generated.vb");
-    var options = new VisualBasicCompilationOptions(OutputKind.DynamicallyLinkedLibrary, optionStrict: OptionStrict.On, optionExplicit: true, optionInfer: true,
+    var options = new VisualBasicCompilationOptions(OutputKind.DynamicallyLinkedLibrary, globalImports: GlobalImport.Parse(["Microsoft.VisualBasic", "System", "System.Collections.Generic"]),
+      optionStrict: OptionStrict.On, optionExplicit: true, optionInfer: true,
       checkOverflow: !removeIntegerChecks, generalDiagnosticOption: ReportDiagnostic.Error, deterministic: true);
     return VisualBasicCompilation.Create("Generated" + Guid.NewGuid().ToString("N"), [tree], references ?? _references.Value, options);
   }
 
   /// <summary>Compiles a source for a profile and loads it; fails with the compiler's complaints.</summary>
-  public static Assembly Load(string source, VisualBasicProfile? profile = null) {
-    var compilation = Compilation(source, profile ?? VisualBasicProfile.VbNetLatest, null, true);
+  public static Assembly Load(string source, VisualBasicProfile? profile = null, bool removeIntegerChecks = true) {
+    var compilation = Compilation(source, profile ?? VisualBasicProfile.VbNetLatest, null, removeIntegerChecks);
     using var stream = new MemoryStream();
     var result = compilation.Emit(stream);
     if (!result.Success)
