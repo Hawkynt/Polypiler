@@ -25,7 +25,7 @@ namespace Polypiler.Tests.Acceptance.VisualBasic;
 /// as written print what the IR interpreter computes from their import, and again after the round
 /// trip through the backend; the prototype fixtures translated from C# print what the interpreter
 /// computes, in every language version; the project the backend writes builds for the frameworks;
-/// the error numbers and clearing rules of the dialect <c>vbnet</c> are what <c>ErrProbe.expected.txt</c> records.
+/// the error numbers and clearing rules of the dialect <c>vbnet</c> are what <c>spec/languages/visualbasic/vbnet-errors.yaml</c> records.
 /// </summary>
 [TestFixture, Layer("visualbasic"), Category("EndToEnd")]
 public sealed class VbNetOracleTests {
@@ -160,7 +160,7 @@ public sealed class VbNetOracleTests {
   [Test, RequiresToolchain(VbNetRunner.Toolchain)]
   public async Task ErrProbe_RecordsTheTableOfTheDialect() {
     var probe = File.ReadAllText(Path.Combine(VbNetCases.Folder, "ErrProbe.vb"));
-    var table = VbNetRunner.Table(File.ReadAllText(Path.Combine(VbNetCases.Folder, "ErrProbe.expected.txt")));
+    var table = VbNetRunner.Table(File.ReadAllText(Path.Combine(PrototypeFixture.RepositoryRoot, VbNetRunner.TablePath)));
     var cases = table.Select(entry => new VisualBasicCase(entry.Key.StartsWith("number:", StringComparison.Ordinal) ? $"NumberOf(\"{entry.Key["number:".Length..]}\")" : entry.Key + "()")).ToList();
     var output = await RunAsync(new Dictionary<string, string> { ["ErrProbe.vb"] = probe }, cases, removeIntegerChecks: false);
     Assert.That(VbNetRunner.Compare(table, output), Is.Empty, string.Join("\n", output));

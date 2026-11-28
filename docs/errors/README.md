@@ -323,7 +323,7 @@ Every diagnostic Polypiler reports carries a code, `PLY` and four digits, that m
 | [PLY2692](PLY2692.md) | error | 7 (OracleFailure) | `the LibreOffice Basic driver exited with code <code>: <standard error>` | #1096 |
 | [PLY2693](PLY2693.md) | error | 7 (OracleFailure) | `the Visual Basic .NET driver exited with code <code> without its answer: <standard error>` | #1096 |
 | [PLY2695](PLY2695.md) | error | 7 (OracleFailure) | `<the driver answered another number of calls, or a line that is no answer>` | #1096 |
-| [PLY2696](PLY2696.md) | error | 7 (OracleFailure) | `the recorded dialect table differs from tests/fixtures/visualbasic/vbnet/ErrProbe.expected.txt at '<entry>'` | #1096 |
+| [PLY2696](PLY2696.md) | error | 7 (OracleFailure) | `the recorded dialect table differs from spec/languages/visualbasic/vbnet-errors.yaml at '<entry>'` | #1096 |
 
 ## PLY2800–PLY2899 · batch
 

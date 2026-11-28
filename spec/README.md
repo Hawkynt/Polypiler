@@ -15,6 +15,9 @@ spec/
   <family>/**/*.yaml      the documents of one family
   targets/**/cost.yaml    not spec documents: the cost profiles beside the target documents
                           (schemas/cost-profile.schema.json, targets/README.md), checked by the cost model
+  languages/visualbasic/vbnet-errors.yaml
+                          not a spec document: the error table of the dialect vbnet, read by the
+                          Visual Basic .NET runner and checked against the runtime by the oracle
   adapters/<adapter>/     not spec documents: the adapter licence audits (schemas/adapter-audit.schema.json),
                           checked by polypiler-tooling catalog audit-adapter
 ```

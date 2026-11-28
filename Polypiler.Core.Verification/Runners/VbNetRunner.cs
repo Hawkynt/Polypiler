@@ -1,12 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Polypiler.Core.Verification.Images;
 using Polypiler.Core.Verification.Running;
+using YamlDotNet.Core;
+using YamlDotNet.RepresentationModel;
 
 namespace Polypiler.Core.Verification.Runners;
 
@@ -23,7 +26,7 @@ public static class VbNetRunnerDiagnostics {
 
   /// <summary><c>PLY2696</c>: the recorded dialect table differs from the committed one. Argument: the first entry that differs.</summary>
   [Diagnostic]
-  public static readonly DiagnosticDescriptor TableDiffers = new("PLY2696", DiagnosticSeverity.Error, ExitCode.OracleFailure, "the recorded dialect table differs from tests/fixtures/visualbasic/vbnet/ErrProbe.expected.txt at '{0}'", "visualbasic.net.runner.table");
+  public static readonly DiagnosticDescriptor TableDiffers = new("PLY2696", DiagnosticSeverity.Error, ExitCode.OracleFailure, "the recorded dialect table differs from spec/languages/visualbasic/vbnet-errors.yaml at '{0}'", "visualbasic.net.runner.table");
 
 }
 
@@ -163,16 +166,33 @@ public sealed class VbNetRunner {
     return Read(Encoding.UTF8.GetString(result.Stdout.Span), cases.Count, result.ExitCode, Encoding.UTF8.GetString(result.Stderr.Span));
   }
 
+  /// <summary>The path of the error table of the dialect <c>vbnet</c>, relative to the repository.</summary>
+  public const string TablePath = "spec/languages/visualbasic/vbnet-errors.yaml";
+
   /// <summary>
-  /// The entries of a dialect table, <c>key=value</c> per line, <c>#</c> a comment: what
-  /// <c>ErrProbe.expected.txt</c> records.
+  /// The entries of a dialect table as <see cref="TablePath"/> holds it: each kind of <c>numbers</c> as
+  /// <c>number:&lt;kind&gt;</c>, then each probe of <c>rules</c>, in the order of the file.
   /// </summary>
-  /// <param name="text">The text of the table.</param>
+  /// <param name="text">The YAML text of the table.</param>
   /// <returns>The entries in order.</returns>
+  /// <exception cref="FormatException">The text is no mapping with the mappings <c>numbers</c> and <c>rules</c>.</exception>
   public static IReadOnlyList<(string Key, string Value)> Table(string text) {
     ArgumentNullException.ThrowIfNull(text);
-    return [.. text.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n').Where(line => line.Length > 0 && !line.StartsWith('#'))
-      .Select(line => (line[..line.IndexOf('=')], line[(line.IndexOf('=') + 1)..]))];
+    var stream = new YamlStream();
+    try {
+      stream.Load(new StringReader(text));
+    } catch (YamlException exception) {
+      throw new FormatException($"The dialect table is no YAML: {exception.Message}", exception);
+    }
+
+    if (stream.Documents.FirstOrDefault()?.RootNode is not YamlMappingNode root)
+      throw new FormatException("The dialect table is no mapping.");
+
+    IEnumerable<(string Key, string Value)> Section(string name, string prefix)
+      => root.Children.TryGetValue(new YamlScalarNode(name), out var node) && node is YamlMappingNode section
+        ? section.Children.Select(pair => (prefix + ((YamlScalarNode)pair.Key).Value, pair.Value is YamlScalarNode { Value: { } value } ? value : throw new FormatException($"The entry '{pair.Key}' of '{name}' is no number.")))
+        : throw new FormatException($"The dialect table has no mapping '{name}'.");
+    return [.. Section("numbers", "number:"), .. Section("rules", "")];
   }
 
   /// <summary>Compares what a run recorded with a table: <c>PLY2696</c> at the first entry that differs, none when all agree.</summary>
