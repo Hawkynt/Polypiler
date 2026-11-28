@@ -1,0 +1,25 @@
+# run.sh on 2026-11-28: go1.27.4 (GOROOT/src), .NET SDK 10.0.114, Release, Linux x64, 16 cores; single-threaded.
+corpus /usr/lib/go/src: 8088 files, 88,4 MiB
+cold: hand 4862 ms (18,2 MiB/s), antlr 377026 ms (0,2 MiB/s), ratio 77,5x, LL fallbacks 4650
+warm 1: hand 4007 ms (22,1 MiB/s), antlr 112355 ms (0,8 MiB/s), ratio 28,0x, LL fallbacks 4650
+warm 2: hand 4257 ms (20,8 MiB/s), antlr 109735 ms (0,8 MiB/s), ratio 25,8x, LL fallbacks 4650
+warm 3: hand 4666 ms (18,9 MiB/s), antlr 102605 ms (0,9 MiB/s), ratio 22,0x, LL fallbacks 4650
+verdicts: both accept 8002, both refuse 42, only hand accepts 41, only antlr accepts 3
+  antlr refuses: builtin/builtin.go
+  antlr refuses: bytes/bytes_test.go
+  antlr refuses: cmd/compile/internal/importer/testdata/genmeth.go
+  antlr refuses: cmd/compile/internal/syntax/testdata/fallthrough.go
+  antlr refuses: cmd/compile/internal/types2/trie_test.go
+  antlr refuses: embed/internal/embedtest/embed_test.go
+  antlr refuses: encoding/json/v2/arshal_test.go
+  antlr refuses: encoding/json/v2/example_marshaljson_test.go
+  antlr refuses: encoding/json/v2/example_orderedobject_test.go
+  antlr refuses: fmt/example_test.go
+  antlr refuses: go/internal/gcimporter/testdata/genmeth.go
+  antlr refuses: go/types/trie_test.go
+  antlr accepts, hand refuses: cmd/compile/internal/syntax/testdata/issue69506.go
+  antlr accepts, hand refuses: internal/types/testdata/fixedbugs/issue50372.go
+  antlr accepts, hand refuses: internal/types/testdata/spec/range.go
+largest cmd/compile/internal/ssa/opGen.go 3856 KiB: hand 272,2 ms, antlr 2045,8 ms
+largest cmd/compile/internal/ssa/rewriteAMD64.go 2561 KiB: hand 260,7 ms, antlr 2299,7 ms
+largest time/tzdata/zzipdata.go 1343 KiB: hand 6,2 ms, antlr 8,5 ms
