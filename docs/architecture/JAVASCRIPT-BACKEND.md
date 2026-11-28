@@ -166,3 +166,31 @@ the output in Node for each packaging/level combination and compare against the 
 and compiled source. Parsing as the requested level checks the syntax independently of a modern
 Node engine accepting newer syntax. These checks establish the tested contracts; they do not
 claim that an actual ES5-era engine ran the output.
+
+The runner (`Polypiler.Core.Verification/Runners`, [#234](https://github.com/Hawkynt/Polypiler/issues/234)):
+`NodeRunner` is the language runner `javascript` on the locked `node`, built on `LanguageRunnerBase`
+(`ExecuteFunction`, `RunVectors`, `Record`) and an `IHelperRunner` for the frontend's bridge script.
+`Compile` is `node --check` of every `.js`, `.mjs` and `.cjs` file; a rejection is `PLY0030` with
+`PLY1191` (`file:line: SyntaxError: text`). A call runs `__driver.mjs` (`NodeDriverGenerator` in front
+of the driver and image codec `Runners/Node/images.mjs.txt`) in a process of its own per operation.
+The entry module is `exports` or `main` of `package.json`, else `index.mjs`, `index.cjs`, `index.js`,
+else the one JavaScript file. A `.cjs` entry, or a `.js` entry without `"type": "module"`, loads
+through `createRequire`; any other through `import()`. The export is a dotted path into the module's
+exports. The signature always comes from the caller.
+
+The driver maps the images to JavaScript values: integers up to 32 bits and `char16` are `Number`,
+64-bit integers and `bigint` are `BigInt`, `bytes` and sequences of numeric scalars are their typed
+arrays, other sequences and tuples are `Array`, records are plain objects, `opt` is `null` when
+absent. A result is accepted only when it is of its type's class and range, so 0.5 for `i32` is
+`!result-type number:0.5`, never a coerced value. `NaN` is written in its canonical pattern. `inout`
+sequences, records and tuples are re-encoded after the call; other `inout` and every `out` parameter
+go in as a holder `{ value }`. Thrown values: an error with `code` `Overflow`, `DivideByZero`,
+`IndexOutOfRange`, `NullReference` or `Unreachable` is that trap; `RangeError: Division by zero` is
+divide-by-zero; a `TypeError` reading or setting properties of `null`/`undefined` is null; an invalid
+array or buffer length is invalid-argument; any other named error is `other:<name>`, any other value
+`other:NonError`. Output written by the function under test is `PLY1195`, as is driver output that is
+no image or trap line. A module that throws while loading, or a missing export, is `PLY1192`.
+`RunTests` runs `node --test --test-reporter=tap` and reads the TAP counts and failures.
+`NodeRunner.Explain` adds `PLY1194` with the call's values after each `PLY0051`/`PLY0052`. The
+acceptance tests (`NodeRunnerCaseTests`, `NodeRunnerTests`, `infra-run-js.feature`) run in the
+layer `js` against `tests/fixtures/runner-javascript`.

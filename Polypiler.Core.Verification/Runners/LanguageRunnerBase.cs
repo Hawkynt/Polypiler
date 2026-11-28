@@ -38,8 +38,20 @@ public abstract class LanguageRunnerBase : ILanguageRunner {
     if (run.Outcome != RunOutcome.Completed || run.ExitCode != 0)
       throw new LanguageRunnerException($"the {this.Language} driver ended with {run.Outcome} (exit code {run.ExitCode})", run.Diagnostics);
 
-    return LanguageRunnerProtocol.Read(run.Stdout.Span, signature, inputImages.Count);
+    try {
+      return LanguageRunnerProtocol.Read(run.Stdout.Span, signature, inputImages.Count);
+    } catch (ImageException exception) when (this.ProtocolError(exception.Message) is { } diagnostic) {
+      throw new LanguageRunnerException($"the {this.Language} driver output does not follow the protocol: {exception.Message}", [diagnostic]);
+    }
   }
+
+  /// <summary>
+  /// The runner's diagnostic of driver output that does not follow the protocol (a line that is neither
+  /// an image nor a trap line, a wrong line count, an image that does not fit the signature); the
+  /// operation then fails with it. <see langword="null"/>, the default, lets the <see cref="ImageException"/> through.
+  /// </summary>
+  /// <param name="reason">What is wrong with the output.</param>
+  protected virtual Diagnostic? ProtocolError(string reason) => null;
 
   /// <inheritdoc />
   public ComparisonReport RunVectors(RunnerInput input, VectorFile vectors) {

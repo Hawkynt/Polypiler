@@ -22,6 +22,7 @@
   <!-- petcat's named escapes, recorded from petcat itself; the normalisation of its listings reads them. -->
   <ItemGroup>
     <EmbeddedResource Include="Emulators\Resources\petcat-escapes.tsv" LogicalName="Polypiler.Core.Verification.Emulators.petcat-escapes.tsv" />
+    <EmbeddedResource Include="Runners\Node\images.mjs.txt" LogicalName="Polypiler.Core.Verification.Runners.Node.images.mjs.txt" />
   </ItemGroup>
 
   <!-- The manifest schema and the sub-schemas of its sections travel with the validator. -->
