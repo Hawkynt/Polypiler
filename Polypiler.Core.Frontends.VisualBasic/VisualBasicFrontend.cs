@@ -48,6 +48,13 @@ public static class VisualBasicFrontend {
   [Diagnostic]
   public static readonly DiagnosticDescriptor Unresolved = new(UnresolvedCode, DiagnosticSeverity.Error, ExitCode.InvalidSource, "{0}", "visualbasic.frontend.symbol");
 
+  /// <summary>
+  /// The semantics table of classic Visual Basic (ADR 0300 decision 4): the kinds a <c>Variant</c>
+  /// operation gives, its errors and the typed IR of the pairs that have one, which the shared
+  /// de-dynamicization reads for a module whose <see cref="IrModule.DynamicSemantics"/> names it.
+  /// </summary>
+  public static Polypiler.Core.Analysis.Dynamic.IDynamicSemantics Semantics => VbaLowerer.Semantics.Instance;
+
   /// <summary>Parses and lowers a standard module.</summary>
   /// <param name="fileName">The file name, which names the module when it has no <c>Attribute VB_Name</c>.</param>
   /// <param name="source">The text of the module.</param>

@@ -362,7 +362,8 @@ internal sealed partial class VbaLowerer {
         else if (op == "+" && (a == VbaTags.Empty) != (b == VbaTags.Empty))
           result |= a == VbaTags.Empty ? b : a;
         else if (a == VbaTags.String || b == VbaTags.String)
-          result |= VbaTags.Double;
+          // A string is read as a Double; with a Date, + and - give a Date, as the helpers do.
+          result |= (a | b) == (VbaTags.String | VbaTags.Date) && op != "*" ? Chain(VbaKind.Date) : VbaTags.Double;
         else
           result |= Chain(ArithmeticType(op, new(Numeric(a)), new(Numeric(b))).Kind);
       }

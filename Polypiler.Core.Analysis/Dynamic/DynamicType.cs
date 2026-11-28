@@ -95,8 +95,20 @@ public abstract record DynamicType {
     ArgumentNullException.ThrowIfNull(type);
     if (type.IsVariant || type == IrType.Void || type.IsUnion)
       throw new ArgumentException($"The type {type} is no exact element.", nameof(type));
-    return new DynamicExact(type, tag);
+    return new DynamicExact(type, tag == IrVariants.TagOf(type) ? null : tag);
   }
+
+  /// <summary>
+  /// The element of a value of the dynamic type that holds a tag: the missing value <c>Empty</c> or
+  /// <c>Null</c>, else the exact payload type with the tag where the payload type alone does not name it.
+  /// </summary>
+  /// <param name="tag">The tag.</param>
+  /// <returns>The element.</returns>
+  public static DynamicType OfTag(IrVariantTag tag) => tag switch {
+    IrVariantTag.Empty => Optional(Nothing, DynamicMissing.Empty),
+    IrVariantTag.Null => Optional(Nothing, DynamicMissing.Null),
+    _ => Exact(IrVariants.PayloadType(tag) ?? throw new ArgumentException($"The tag {tag} has no element.", nameof(tag)), tag)
+  };
 
   /// <summary>One declared class, struct, interface or enum.</summary>
   /// <param name="declaration">The declaration.</param>
@@ -289,6 +301,9 @@ public sealed record DynamicExact : DynamicType {
   /// <summary>The kind the language tells the value apart by, or <see langword="null"/>.</summary>
   public IrVariantTag? Tag { get; }
 
+  /// <summary>The tag a value of the element is boxed with in a variant: its kind, else the tag of its type; <see langword="null"/> for a type no tag holds.</summary>
+  public IrVariantTag? BoxTag => this.Tag ?? IrVariants.TagOf(this.Type);
+
   /// <inheritdoc/>
   public override int Level => 1;
 
@@ -296,7 +311,7 @@ public sealed record DynamicExact : DynamicType {
   public override IrType? ToIrType() => this.Type;
 
   /// <inheritdoc/>
-  public override string ToString() => this.Tag is { } tag && IrVariants.TagOf(this.Type) != tag ? $"{this.Type} {tag}" : this.Type.ToString();
+  public override string ToString() => this.Tag is { } tag ? $"{this.Type} {tag}" : this.Type.ToString();
 
 }
 

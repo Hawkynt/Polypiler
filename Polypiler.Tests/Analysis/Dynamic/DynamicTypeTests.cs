@@ -186,6 +186,18 @@ public sealed class DynamicTypeTests {
   }
 
   [Test]
+  public void Tags_HaveTheirElements() {
+    Assert.That(DynamicType.OfTag(IrVariantTag.Empty), Is.EqualTo(DynamicType.Optional(DynamicType.Nothing, DynamicMissing.Empty)));
+    Assert.That(DynamicType.OfTag(IrVariantTag.Null), Is.EqualTo(DynamicType.Optional(DynamicType.Nothing, DynamicMissing.Null)));
+    Assert.That(DynamicType.OfTag(IrVariantTag.I32), Is.EqualTo(E(IrType.I32)), "the tag of the type is no kind of its own");
+    Assert.That(DynamicType.OfTag(IrVariantTag.Currency), Is.EqualTo(DynamicType.Exact(IrType.I64, IrVariantTag.Currency)));
+    Assert.That(((DynamicExact)DynamicType.OfTag(IrVariantTag.Date)).BoxTag, Is.EqualTo(IrVariantTag.Date));
+    Assert.That(((DynamicExact)E(IrType.I16)).BoxTag, Is.EqualTo(IrVariantTag.I16));
+    Assert.That(((DynamicExact)E(IrType.U32)).BoxTag, Is.Null);
+    Assert.That(() => DynamicType.OfTag((IrVariantTag)99), Throws.ArgumentException);
+  }
+
+  [Test]
   public void Levels_AreTheAdrs() {
     DynamicType[] elements = [DynamicType.Nothing, E(IrType.I32), DynamicType.Nominal(_point), S(("x", E(IrType.I32))),
       DynamicType.Optional(E(IrType.I32), DynamicMissing.Null), DynamicType.Union(Vb, E(IrType.I32), E(IrType.String)), DynamicType.Variant];

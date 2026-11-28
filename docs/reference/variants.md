@@ -67,3 +67,26 @@ JavaScript and Python keep the tag because their own values cannot tell an `i16`
 whose `FromOADate` rounds to the millisecond. JavaScript refuses a payload of 64 bits, a currency too;
 Visual Basic writes a currency only where the profile has `LongLong` (vba7-64). Rust, Go, C++, the JVM,
 MSIL, Perl, Batch and VBScript have no form of the type yet and refuse it with their type diagnostic.
+
+## Semantics tables
+
+What a language computes with its dynamic values is data the shared framework reads
+([ADR 0300](../adr/0300-static-types-first.md) decision 4): an `IDynamicSemantics`
+(`Polypiler.Core.Analysis.Dynamic`) states, per `DynamicOperation` and pair of operand elements of the
+[lattice](../architecture/IR.md), the element of the result (`Result`), how it may fail (`Trap`: an IR
+trap or the language's error number), and the typed IR of the pairs that have one (`Expand`, or none,
+where the language's helper stays). `Classify` recognises the frontend's helper calls as operations,
+so the framework never names a helper itself. `IrModule.DynamicSemantics` names the table of a
+module by its language.
+
+The first table is classic Visual Basic's, `VisualBasicFrontend.Semantics`: the kinds are computed by
+the very rules the lowering uses, so the table and the frontend cannot disagree; `Integer` arithmetic
+promotes to `Long` and `Long` to `Double` instead of raising error 6, `Null` propagates, `Empty` is 0
+or `""`, a string that is no number raises error 13, a division by zero error 11, a `Double` beyond
+range error 6, and every two kinds are told apart (`VarType` does), so their join is a union. Typed
+expansions exist where the result has one kind: `+ - *` with a `Double` result (through `PlyCheckD`),
+`/` with a `Double` quotient (`PlyDivD`), `^` (`PlyPow`), the comparisons of numbers, `&` and `+` of two
+strings, the negation of a `Double`, a number or a `Boolean` as a condition and a number as a `Double`.
+The tests run every operator on every pair of sample values of the scalar kinds through the helpers in
+the interpreter and hold each result's kind against the table, each failure against its trap; they
+found that `"12" + date` is a `Date`, as the helpers compute it, where the lowering had said `Double`.
