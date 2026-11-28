@@ -33,8 +33,15 @@ public sealed class VbNetOracleTests {
   private static async Task<IReadOnlyList<string>> RunAsync(IReadOnlyDictionary<string, string> sources, IReadOnlyList<VisualBasicCase> cases, string version = "16.9", bool removeIntegerChecks = true) {
     var execution = await new VbNetRunner(new CrossLanguageRunner(Host, Toolchains)).ExecuteAsync(sources, cases, version, removeIntegerChecks);
     Assert.That(execution.Diagnostics, Is.Empty, string.Join("\n", execution.Diagnostics.Select(diagnostic => $"{diagnostic}: {diagnostic.Cause}")));
-    return [.. execution.Outcomes!.Select(outcome => outcome.ToString())];
+    return [.. execution.Outcomes!.Select(outcome => Bounds(outcome.ToString()))];
   }
+
+  /// <summary>
+  /// An outcome with the bounds trap named as the IR names it: <c>Substring</c> and <c>Array.Copy</c>
+  /// report a range outside the string or array as an <c>ArgumentException</c>, which the IR's bounds
+  /// trap stands for, as the prototype harness reads it.
+  /// </summary>
+  private static string Bounds(string outcome) => outcome is "!ArgumentOutOfRangeException" or "!ArgumentException" ? "!IndexOutOfRangeException" : outcome;
 
   /// <summary>A value as a Visual Basic .NET literal of its type.</summary>
   internal static string Literal(object value) => value switch {
@@ -83,7 +90,7 @@ public sealed class VbNetOracleTests {
   /// <summary>What the IR interpreter computes for a call, as the driver prints it: the value in the invariant culture, or <c>!</c> and the exception's name.</summary>
   internal static string Interpreted(IrModule module, PrototypeCall call) {
     try {
-      return System.Convert.ToString(IrInterpreter.Call(module, call.Method, call.FreshArguments()), CultureInfo.InvariantCulture)!;
+      return System.Convert.ToString(IrInterpreter.Call(module, call.Method, call.FreshArguments()), CultureInfo.InvariantCulture) ?? "";
     } catch (IrTrapException trap) {
       return "!" + IrExceptionClass.Of(trap.Trap).Name;
     } catch (IrException exception) {
@@ -91,7 +98,11 @@ public sealed class VbNetOracleTests {
     }
   }
 
-  private static VisualBasicCase Case(PrototypeCall call) => new($"{VbNetNaming.Valid(call.Method, "Function")}({string.Join(", ", call.Arguments.Select(Literal))})");
+  /// <summary>The case of a call: its value printed, or a procedure without one called first and the empty text printed.</summary>
+  private static VisualBasicCase Case(PrototypeCall call) {
+    var text = $"{VbNetNaming.Valid(call.Method, "Function")}({string.Join(", ", call.Arguments.Select(Literal))})";
+    return call.Returns == typeof(void) ? new([text], "\"\"") : new(text);
+  }
 
   private static IEnumerable<TestCaseData> Fixtures() => from name in VbNetCases.Names select new TestCaseData(name);
 
@@ -119,7 +130,7 @@ public sealed class VbNetOracleTests {
     var module = PrototypeFixture.Imported(fixture);
     var translation = VbNetFixtures.Translate(module, VisualBasicProfile.Parse(VisualBasicProfile.NetPrefix + version));
     Assert.That(translation.Problems, Is.Empty, string.Join("\n", translation.Problems));
-    var calls = PrototypeCases.For(fixture).Where(call => call.Arguments.All(argument => argument is not char[])).Take(40).ToList();
+    var calls = PrototypeFixture.Typed(fixture, PrototypeCases.For(fixture)).Where(call => call.Arguments.All(argument => argument is not char[])).Take(40).ToList();
     var output = await RunAsync(new Dictionary<string, string> { [fixture + ".vb"] = translation.Source! }, [.. calls.Select(Case)], version);
     Assert.That(output, Is.EqualTo(calls.Select(call => Interpreted(module, call))), translation.Source);
   }
