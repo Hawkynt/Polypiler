@@ -42,17 +42,34 @@ jobs:
           name: translation-showcase
           path: docs/translation-showcase.md
           if-no-files-found: error
+      # The commit is created through the GraphQL API instead of `git push`: GitHub signs commits the
+      # workflow token creates that way, and main's branch protection requires signed commits.
+      # expectedHeadOid makes the mutation fail rather than overwrite a branch that moved meanwhile.
       - name: Commit refreshed showcase on same-repo PRs
         if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'github-actions[bot]' }}
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           if git diff --quiet -- docs/translation-showcase.md; then
             echo "docs/translation-showcase.md is already up to date."
             exit 0
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/translation-showcase.md
-          git commit -m "* docs: refresh generated translation showcase"
-          git push origin "HEAD:${GITHUB_HEAD_REF}"
+          base64 -w0 docs/translation-showcase.md > "$RUNNER_TEMP/showcase.b64"
+          jq -n \
+            --arg repo "$GITHUB_REPOSITORY" \
+            --arg branch "$GITHUB_HEAD_REF" \
+            --arg head "$(git rev-parse HEAD)" \
+            --rawfile contents "$RUNNER_TEMP/showcase.b64" \
+            '{
+              query: "mutation($input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: $input) { commit { oid } } }",
+              variables: { input: {
+                branch: { repositoryNameWithOwner: $repo, branchName: $branch },
+                expectedHeadOid: $head,
+                message: { headline: "* docs: refresh generated translation showcase" },
+                fileChanges: { additions: [ { path: "docs/translation-showcase.md", contents: $contents } ] }
+              } }
+            }' > "$RUNNER_TEMP/commit.json"
+          oid=$(gh api graphql --input "$RUNNER_TEMP/commit.json" --jq .data.createCommitOnBranch.commit.oid)
+          echo "Committed the refreshed showcase as $oid."
