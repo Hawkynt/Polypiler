@@ -180,7 +180,7 @@ public sealed class PythonSyntaxOracleTests {
 
     TestContext.Out.WriteLine($"fixtures: {tally.Compared} compared, {tally.Disagreements.Count} disagreements");
     Assert.That(tally.Disagreements.Take(20), Is.Empty);
-    Assert.That(tally.Compared, Is.GreaterThan(20));
+    Assert.That((tally.Compared, fixtures.Count > 10), Is.EqualTo((fixtures.Count, true)));
   }
 
   /// <summary>

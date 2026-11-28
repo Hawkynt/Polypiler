@@ -25,6 +25,17 @@ def text(value):
     return json.dumps(value, ensure_ascii=True)
 
 
+def integer_text(value):
+    # A literal of up to 4300 digits parses, but the same limit stops str() of its value, and a hex
+    # literal may have a longer decimal form still: the limit is lifted for the conversion alone.
+    limit = sys.get_int_max_str_digits()
+    sys.set_int_max_str_digits(0)
+    try:
+        return str(value)
+    finally:
+        sys.set_int_max_str_digits(limit)
+
+
 def write(out, value):
     if value is None:
         out.append("None")
@@ -50,7 +61,7 @@ def write(out, value):
     elif isinstance(value, bool):
         out.append("True" if value else "False")
     elif isinstance(value, int):
-        out.append(str(value))
+        out.append(integer_text(value))
     elif isinstance(value, float):
         out.append(value.hex())
     elif isinstance(value, complex):
